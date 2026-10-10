@@ -1,0 +1,14 @@
+Illumin Academy prototype — TBD register (8 topics remaining after the TBD cleanup)
+Exported 8 Oct 2026. Counted by topic, not by instance: 3 Pending client · 5 Client to supply.
+Format: ID | role/view | screen/route | element | exact TBD text — ID is the original register ID(s); each topic is listed once with every place it appears.
+
+T01 (012, 055) | Finance Admin, Super Admin, Agency | Approvals Queue → agency invoice purchase item (Finance / Super Admin); Agency → Buy bundles → bank transfer | Pending-client tag | Pending client: how agencies receive VAT invoices for bank-transfer purchases
+T02 (013) | Super Admin, System Admin | Learner 360 → Overview → Data region (learners outside the UK/UAE) | Pending-client tag | Pending client: storage region for learners outside the UK/UAE, and two-region hosting cost
+T03 (019, 121) | Super Admin, System Admin, Learner | Course editor → prices (Super / System Admin); learner checkout | Pending-client tag | Pending client: exchange-rate source, update frequency, rounding, and price lock at enrolment
+T04 (034) | Agency | Agency → Purchases → approved bank-transfer purchase | Client-to-supply placeholder | Client to supply: bank payment instructions
+T05 (039, 045, 152 + untagged) | Agency, Learner, Admin console (sign-in), Public verification, Workplace contact | Agency receive-only messages, agency Help, agency deactivated sign-in, verification page footer and revoked result, learner Help, learner contact page, learner suspended / archived / paused sign-in notices, admin suspended sign-in, workplace pages (footer, help, FAQ, accessibility, email footer) | Client-to-supply placeholder | Client to supply: Academy contact email and phone
+T06 (153, 163) | Public verification, Workplace contact | Verification page privacy notice; workplace privacy notice; workplace email footer | Client-to-supply placeholder | Client to supply: privacy notice URL
+T07 (154) | Learner | Learner certificates → Copy verification link | Client-to-supply placeholder | Client to supply: verification domain
+T08 (G6.6) | Teacher / Assessor, Super Admin, Academic Admin, Academic Coordinator, Learner | Assessor propose observation (office), assessor and admin observation lists, Coordinator observations, learner Observations, learner contact page | Client-to-supply placeholder | Client to supply: Academy office address
+
+All other IDs of the previous register (TBD-001 to TBD-166) are resolved: KEEP (behaviour as built), CHANGE or REMOVE — see the UX Changelog, "TBD cleanup".
