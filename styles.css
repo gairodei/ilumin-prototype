@@ -1109,3 +1109,43 @@ kbd { font-family: var(--f-mono); font-size: .8em; border: 1px solid var(--line-
 .dt tr.kb-cur > td:first-child { box-shadow: inset 3px 0 0 var(--brand); }
 .save-chip.local { background: var(--grey-bg); color: var(--grey); }
 .rel-keys { margin-top: var(--sp-2); }
+
+/* Client sheet items */
+.cs-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--sp-3); }
+.cs-card { gap: 6px; align-content: start; }
+.cs-card h2 { margin: 0; font-weight: 600; }
+.cs-kvs { display: flex; flex-wrap: wrap; gap: 14px; }
+.cs-kv { display: grid; gap: 0; }
+.cs-n { font-size: 1.35rem; font-weight: 700; line-height: 1.2; }
+.cs-attn { border-color: var(--amber); }
+.cs-attn .list .li { padding: 8px 0; }
+.cs-attn .linklike { text-align: left; }
+.cs-remind { display: grid; gap: 8px; justify-items: start; }
+.cs-remind .note { width: 100%; align-items: center; flex-wrap: wrap; }
+.cs-remind .note .li-b { flex: 1 1 200px; min-width: 0; }
+.cs-modhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 14px 18px 0; }
+.cs-asg-list { display: grid; gap: 2px; justify-items: start; }
+.cs-asg-list .linklike { text-align: left; }
+.cs-crit { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0; }
+.cs-crit dt { color: var(--muted); }
+.cs-crit dd { margin: 0; min-width: 0; }
+.cs-dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; }
+.cs-dl dt { color: var(--muted); }
+.cs-dl dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.cs-file { overflow-wrap: anywhere; text-align: left; }
+.cs-ph, .cs-phone { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; }
+.cs-ph { margin-right: 2px; }
+.cs-disc { white-space: nowrap; }
+.cs-pdf { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 16px; background: #fff; color: #111; display: grid; gap: 12px; }
+.cs-pdf .muted, .cs-pdf .cs-dl dt { color: #555; }
+.cs-pdf ol { margin: 0; padding-left: 18px; display: grid; gap: 14px; }
+.cs-pdf li { display: grid; gap: 6px; }
+.cs-docview { border: 1px solid var(--line); border-radius: var(--r-sm); min-height: 220px; display: grid; place-items: center; gap: 8px; background: var(--surface-2); color: var(--muted); padding: 18px; }
+.cs-docview.pdf { background: #fff; color: #111; place-items: stretch; align-content: start; }
+.cs-docview.pdf i { display: block; height: 8px; border-radius: 4px; background: #E5E7EB; }
+.cs-docview.pdf i:nth-of-type(3n) { width: 70%; }
+/* Phones: receipt, document and criteria previews open as a full-screen sheet */
+@media (max-width: 640px) {
+  .modal.cs-sheet { top: 0; left: 0; right: 0; bottom: 0; transform: none; width: 100vw; height: 100%; max-height: none; border-radius: 0; }
+}
+body.frame-mobile .modal.cs-sheet { top: 0; bottom: 0; left: 50%; transform: translateX(-50%); width: min(390px, 100vw); height: 100%; max-height: none; border-radius: 0; }

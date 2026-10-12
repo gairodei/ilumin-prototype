@@ -113,12 +113,12 @@
     const st = id => ([...fu.querySelectorAll('tbody tr')].find(tr => tr.firstChild.textContent === id) || {}).textContent || '';
     ok('F2, F3b, F8 Pending client; the rest Applied', ['F2', 'F3b', 'F8'].every(x => /Pending client/.test(st(x))) && ['F1', 'F3a', 'F4', 'F5', 'F6', 'F7', 'F9', 'F10', 'F11', 'F12'].every(x => /Applied/.test(st(x))));
     ok('Approval Routes document: Returned by client', /Approval Routes document\W{0,3}Returned by client/.test(t));
-    ok('#16, #17 listed; #2–#5 still Illustrative', /Learner moves country/.test(t) && /Coordinator vs Academic Admin edit/.test(t) && /All 17 run end to end/.test(t));
+    ok('#16, #17, #18 listed; #2–#5 still Illustrative', /Learner moves country/.test(t) && /Coordinator vs Academic Admin edit/.test(t) && /Client sheet items/.test(t) && /All 18 run end to end/.test(t));
     go('ux-changelog'); ok('UX Changelog: one entry per F item', ['F1', 'F2', 'F3', 'F4', 'F5', 'F6, F7, F9', 'F8', 'F10', 'F11', 'F12'].every(x => new RegExp(x.replace(/,/g, ',') + ':').test(main())));
     go('tbd-register'); ok('TBD register: F4 and F11 removals listed', /F4/.test(main()) && /F11/.test(main()));
     SA(); go('a-index'); ok('screen index: template attachments', /workplace templates → Attachments/.test(main()));
     S.coo.v = 'A'; cooEnter(); S.signedIn = true; go('c-index'); ok('screen index: Coordinator Edit staff', /Edit staff/.test(main()));
-    ACT.scOpen(); go('demo-scenarios'); ok('17 scenarios', document.querySelectorAll('main section[id^="sc-"]').length === 17);
+    ACT.scOpen(); go('demo-scenarios'); ok('18 scenarios (#18 Client sheet items added)', document.querySelectorAll('main section[id^="sc-"]').length === 18);
   });
   const out = document.createElement('pre'); out.id = 'ft-out'; out.textContent = R.join('\n') + '\n' + R.filter(x => x.startsWith('PASS')).length + '/' + R.length; document.body.appendChild(out);
 })();
