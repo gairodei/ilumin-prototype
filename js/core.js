@@ -255,8 +255,8 @@ function lockFor(r) {
     return { title: 'This area is for NVQ/RQF learners', msg: 'You are not enrolled on an NVQ/RQF programme. You can apply for one from Browse Courses.', cta: ['browse', 'Browse Courses'] };
   if (S.edge === 'archived' && !['dashboard', 'courses', 'course', 'certificates', 'profile', 'notifications', 'help', 'index'].includes(r))
     return { title: 'Your account is archived', msg: 'Archived accounts are read-only. You can still view your course history, certificates and profile.' };
-  if (!f.admitted && f.nvq && S.variant === 'B' && !B_OPEN.includes(r))
-    return { title: 'Programme content is locked', msg: W.admission.status === 'Approved' ? 'You are on the waitlist for a batch. Programme content unlocks when a batch place is confirmed.' : 'Programme content unlocks after admission is approved.', cta: ['admission', 'Go to Admission & Documents'] };
+  if (f.nvq && W.signup && !W.signup.done && !B_OPEN.includes(r)) // CH-10: content opens when the sign-up is complete, not on admission approval
+    return { title: 'Finish your sign-up', msg: 'Programme content opens as soon as you finish your sign-up: documents, offer letter and payment. The Academy reviews your application while you learn.', cta: ['admission', 'Continue sign-up'] };
   if ((S.edge === 'paused' || W.accessPaused) && PAUSE_LOCK.includes(r))
     return { title: 'Access paused', msg: `Your access is paused because ${(po => `${po.label.toLowerCase()} is ${po.days} days overdue`)(pausedRow())}. Pay the overdue amount and your access comes back straight away — your work and progress are kept. Payments, Messages, Profile, Certificates and Notifications stay available.`, cta: ['payments', 'Go to Payments'], tone: 'red' };
   return null;
@@ -489,7 +489,7 @@ ACT.sessExpireNow = () => { clearTimer('sess'); signOut('expired'); };
 /* ---------- Demo panel ---------- */
 const VARIANT_INFO = {
   A: ['B2C short-course learner', 'Daniel Okafor · Manchester · pays personally · no NVQ tabs'],
-  B: ['NVQ applicant (pre-admission)', 'Priya Raman · Dubai · programme content locked'],
+  B: ['NVQ applicant (signing up)', 'Priya Raman · Dubai · sign-up step 2 of 5'],
   C: ['Active NVQ learner', 'Aisha Rahman · Leicester · every tab'],
   D: ['Agency-sponsored learner', 'Grace Mensah · Croydon · sponsored by BrightCare Staffing'],
   E: ['Multi-role user', 'Tom Whitfield · staff + learner · role switcher in header'],
@@ -546,7 +546,6 @@ const EDGES = [
   ['discontinued', '7 · Discontinued (one course)', 'C'],
   ['expired', '8 · Expired-Incomplete', 'A'],
   ['unassigned', '9 · Seat unassigned by agency', 'D'],
-  ['waitlist', '10 · Batch waitlisted / next intake', 'B'],
   ['cancelRefund', '11a · Batch cancelled — refund', 'C'],
   ['cancelMoved', '11b · Batch cancelled — moved batch', 'C'],
   ['archived', '12 · Archived account', 'A'],
@@ -594,7 +593,7 @@ INP.edge = el => {
   setEdge(el.value);
   if (S.signedIn || !EDGES.find(x => x[0] === el.value)?.[3]) {
     S.signedIn = true;
-    const target = { paypending: 'courses', underreview: 'admission', rejected: 'admission', withdrawn: 'admission', discontinued: 'courses', expired: 'course.mh26', unassigned: 'courses', waitlist: 'admission', cancelRefund: 'courses.nvq', cancelMoved: 'course.nvq', qualified: 'progress', arrangement: 'payments' }[el.value];
+    const target = { paypending: 'courses', underreview: 'admission', rejected: 'admission', withdrawn: 'admission', discontinued: 'courses', expired: 'course.mh26', unassigned: 'courses', cancelRefund: 'courses.nvq', cancelMoved: 'course.nvq', qualified: 'progress', arrangement: 'payments' }[el.value];
     if (target) { const [r, id] = target.split('.'); if (r === 'courses' && id) go('course', { id }); else go(r, { id }); return; }
   }
   render();

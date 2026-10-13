@@ -245,8 +245,8 @@
   /* ---------- Demo Scenario #18 ---------- */
   await T('Scenario #18', async () => {
     fresh(); const L = SC_LIST(), sc = L[L.length - 1];
-    ok('#18 is last; #16 removed (CH-01)', L.length === 17 && sc[0] === '18' && sc[1] === 'Client sheet items' && L.map(x => x[0]).join() === '1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18');
-    ACT.scOpen(); ok('#18 on the page; heading says Seventeen (CH-01)', /Seventeen end-to-end walkthroughs/.test(main()) && !!app().querySelector('#sc-18'));
+    ok('#18 is last; #16 is the new sign-up (CH-07)', L.length === 18 && sc[0] === '18' && sc[1] === 'Client sheet items' && L.every((x, i) => x[0] === String(i + 1)));
+    ACT.scOpen(); ok('#18 on the page; heading says Eighteen (CH-07)', /Eighteen end-to-end walkthroughs/.test(main()) && !!app().querySelector('#sc-18'));
     const chk = [['assignment', () => !!app().querySelector('[data-act="csCritPdf"]')], ['certificates', () => !!app().querySelector('.cs-exp')], ['dashboard', () => !!app().querySelector('.hello .cs-status[data-s="attn"]')], ['payments', () => /Purchase history/.test(main())], ['t-students', () => !!app().querySelector('input[data-onchange="csShowDisc"]')]];
     sc[3].forEach((st, k) => { ACT.scOpen(); ACT.scStep({ dataset: { r: st.r, t: st.t } }); ok(`#18.${k + 1} opens ${st.r} → ${st.t} and shows the item`, S.route === chk[k][0] && chk[k][1](), S.route); });
   });
@@ -257,14 +257,14 @@
     const sec = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client suggestion sheet');
     ok('Index: Client suggestion sheet entries, each with a purpose line', !!sec && sec.querySelectorAll('.idx-list > li').length === 10 && [...sec.querySelectorAll('.idx-list > li')].every(li => li.querySelector('.idx-purpose')));
     ok('Index: new pop-ups listed', ['Criteria PDF preview', 'Receipt preview pop-up', 'Document preview pop-up'].every(t => sec && sec.textContent.includes(t)));
-    ok('Index: "17 walkthroughs" (CH-01)', /Demo Scenarios — 17 walkthroughs/.test(main()));
+    ok('Index: "18 walkthroughs" (CH-07)', /Demo Scenarios — 18 walkthroughs/.test(main()));
     sec.querySelector('[data-m="csReceipt"]').click(); await wait(120); ok('Index: receipt pop-up entry opens it', !!MODAL && /^Receipt/.test(MODAL.title)); closeModal();
     staff('A'); go('t-index'); ok('Assessor index: My Students, PD phone and Calendar entries', ['t-students', 't-pd', 't-calendar'].every(t => [...app().querySelectorAll('.idx-sec')].some(s => s.querySelector('h2').textContent === 'Client suggestion sheet' && s.querySelector(`[data-t="${t}"]`))));
     ACT.scOpen(); go('ux-changelog'); const ux = [...app().querySelectorAll('section.card')].find(s => /Client suggestion sheet/.test(s.querySelector('h2').textContent));
     ok('UX Changelog: one line per item ID', !!ux && ['C1', 'C2', 'C3', 'C4', 'C5', 'C7', 'C8', 'C10', 'C11', 'C12', 'C14', 'C15'].every(id => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(id + ':'))));
     go('cd-log'); const t = main();
-    ok('Client Decisions Log: built and held row', /Built: 1, 2, 3, 4, 5, 7, 8, 10, 11, 12, 14, 15\. Held pending client: 6 \(observation fee\), 9 \(pay during review\), 13 \(module quizzes\)\./.test(t));
-    ok('Client Decisions Log: #18 in the Demo scenarios table; "All 17 run end to end" (CH-01)', /All 17 run end to end in the prototype\./.test(t) && !/All 18 run/.test(t) && CDL_SCEN.some(r => r[0] === '18' && r[1] === 'Client sheet items'));
+    ok('Client Decisions Log: built and held row (CH-07 – CH-11: item 9 built)', /Built: 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 14, 15\. Held pending client: 6 \(observation fee — P-27\), 13 \(module quizzes — CH-16, Batch 4\)\./.test(t));
+    ok('Client Decisions Log: #18 in the Demo scenarios table; "All 18 run end to end" (CH-07)', /All 18 run end to end in the prototype\./.test(t) && !/All 17 run/.test(t) && CDL_SCEN.some(r => r[0] === '18' && r[1] === 'Client sheet items'));
   });
 
   fresh();

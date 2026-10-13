@@ -251,13 +251,12 @@ ACT.qOverride = el => {
 };
 
 /* ---------- Shared learner-data effects ---------- */
-function admissionApprove(v, r, batchCode) {
+function admissionApprove(v, r) {
+  // CH-07: approval confirms the intake the learner chose and paid for at sign-up — no placement, no waitlist
   const w = STORE.worlds[v], ad = w.admission, nowI = now().toISOString();
-  const b = ADMIN.batches.find(x => x.code === (batchCode || 'L3AC-NOV26'));
   ad.status = 'Approved'; ad.history.push(['Approved', nowI]);
-  if (b && b.enrolled >= b.cap) { b.wait++; ad.waitlist = { pos: b.wait, next: D(92) }; notifyLearner(v, 'Schedule', 'Waitlisted', `Admission approved — ${b.label} is full. You're #${b.wait} on the waitlist.`, 'admission'); }
-  else { if (b) { b.enrolled++; ad.batch = b.label + ' — ' + b.code; ad.batchStart = b.start; w.nvq.batch = ad.batch; } w.flags.admitted = true; w.nvq.status = 'Active'; if (!w.enrolments.includes(w.nvq)) w.enrolments.unshift(w.nvq); notifyLearner(v, 'Admission', 'Admission status changed', 'Your application was approved. Programme content is unlocked.', 'admission'); }
-  logA('Admissions', VNAME(v), 'Admission approved', 'Under Review', ad.waitlist ? 'Approved — waitlisted' : 'Approved — placed in ' + (b ? b.code : 'batch'), r);
+  notifyLearner(v, 'Admission', 'Admission status changed', `Your application was approved. Your place on ${ad.batch} is confirmed.`, 'admission');
+  logA('Admissions', VNAME(v), 'Admission approved', 'Under Review', 'Approved — intake confirmed: ' + (ad.batch.split(' — ')[1] || ad.batch), r);
 }
 function docDecision(v, d, status, r) {
   if (d.replacement) { const rep = d.replacement, nv = d.versions.find(x => x[0] === rep.file && x[2] === 'Replacement (in review)'), cv = d.versions.find(x => x[2] === 'Current (valid)'); if (status === 'Approved') { if (cv) cv[2] = 'Replaced'; if (nv) nv[2] = 'Approved'; d.file = rep.file; d.uploaded = rep.uploaded; d.repResult = null; } else { if (nv) nv[2] = status === 'Rejected' ? 'Rejected' : 'Resubmission Required'; if (cv) cv[2] = 'Approved'; d.repResult = { status, reason: r }; } delete d.replacement; d.status = 'Approved'; notifyLearner(v, 'Admission', status === 'Approved' ? 'Replacement document approved' : 'Replacement document not accepted', `${d.name}: ${status === 'Approved' ? 'your replacement is now the current document.' : status.toLowerCase() + ' — ' + r + ' Your current document is still valid.'}`, 'admission'); logA('Admissions & Documents', `${VNAME(v)} · ${d.name}`, 'Replacement decision', 'Replacement in review', status, r); return; }
@@ -425,7 +424,7 @@ function allApplications() {
   ['B', 'C', 'D'].forEach(v => { const w = STORE.worlds[v], ad = w.admission; if (!ad) return; const assigned = ad.history.find(h => h[0] === 'Under Review'); out.push({ id: 'APP-' + v, v, name: VNAME(v), programme: w.nvq.title, ref: w.me.referral, applied: ad.history[0][1], status: ad.status, reviewer: ad.reviewer.replace(' (Admissions)', ''), days: -daysTo((assigned || ad.history[0])[1]), docsOk: w.docs.filter(d => d.mand && d.status === 'Approved').length, docsAll: w.docs.filter(d => d.mand).length, docs: w.docs, escalated: false }); });
   return out.concat(ADMIN.apps = ADMIN.apps || [
     ['APP-2207', 'Mohammed Al Hashimi', 'Level 3 Diploma in Adult Care (England)', 'Agent — GCR-118', D(-14), 'Under Review', 'Rachel Hughes', 9, 4, true],
-    ['APP-2210', 'Anjali Nair', 'Level 2 Diploma in Care (England)', 'Self-registration', D(-3), 'Pending — Documents Required', '— Unassigned', 0, 1, false],
+    ['APP-2210', 'Anjali Nair', 'Level 2 Diploma in Care (England)', 'Self-registration', D(-3), 'Awaiting review', '— Unassigned', 0, 1, false],
     ['APP-2212', 'Leah Fernandes', 'Level 3 Diploma in Adult Care (England)', 'Agency — Emirates Home Health Staffing', D(-8), 'Under Review', 'Owen Price', 5, 6, false],
     ['APP-2198', 'Kofi Asante', 'Level 3 Diploma in Adult Care (England)', 'Agency — BrightCare Staffing Ltd', D(-40), 'Approved', 'Rachel Hughes', 0, 6, false],
     ['APP-2185', 'Zainab Hussain', 'Level 5 Diploma in Leadership and Management for Adult Care', 'Self-registration', D(-55), 'Rejected', 'Rachel Hughes', 0, 3, false],
@@ -442,7 +441,7 @@ SCREENS['a-admissions'] = (p) => {
   if (t === 'builder') return head + st + checklistBuilder();
   const rows = allApplications();
   return head + st + dt({ id: 'apps', name: 'Applications', rows, search: a => a.name + a.id, bulk: [{ l: 'Bulk assign reviewer', fn: ids => assignReviewer(ids) }],
-    filters: [{ k: 'st', l: 'Status', get: a => a.escalated ? 'Escalated|' + a.status : a.status, opts: ['Pending — Documents Required', 'Under Review', 'Approved', 'Rejected', 'Withdrawn', 'Escalated'] }, { k: 'prog', l: 'Programme', get: a => a.programme }],
+    filters: [{ k: 'st', l: 'Status', get: a => a.escalated ? 'Escalated|' + a.status : a.status, opts: ['Sign-up in progress', 'Awaiting review', 'Under Review', 'Pending — Documents Required', 'Approved', 'Rejected', 'Withdrawn', 'Escalated'] }, { k: 'prog', l: 'Programme', get: a => a.programme }],
     cols: [{ k: 'name', l: 'Applicant', h: a => `<a href="#a-admissions.${a.id}" data-go="a-admissions" data-id="${a.id}" class="strong">${esc(a.name)}</a><div class="xs mono muted">${a.id}</div>` }, { k: 'programme', l: 'Programme', h: a => `<span class="small">${esc(a.programme)}</span>` }, { k: 'ref', l: 'Referral source', h: a => `<span class="small">${esc(a.ref)}</span>` }, { k: 'applied', l: 'Applied', h: a => fd(a.applied), s: a => a.applied }, { k: 'status', l: 'Status', h: a => chip(a.status) + (a.escalated ? ' ' + chip('Escalated', 'red') : '') }, { k: 'reviewer', l: 'Reviewer' }, { k: 'days', l: 'Days since assignment', h: a => ['Under Review', 'Pending — Documents Required'].includes(a.status) ? daysChip(a.days) : '—', s: a => a.days }, { k: 'docs', l: 'Docs approved', h: a => `${a.docsOk}/${a.docsAll}`, s: a => a.docsOk }],
     act: a => `<button class="btn btn-sm" data-act="assignRev" data-id="${a.id}">Assign</button> <button class="btn btn-sm" data-go="a-admissions" data-id="${a.id}">Open</button>` });
 };
@@ -450,11 +449,11 @@ const REVIEWERS = ['Rachel Hughes', 'Owen Price', 'Dr Helen Carter'];
 ACT.assignRev = el => assignReviewer([el.dataset.id]);
 function assignReviewer(ids) {
   openModal({ title: ids.length > 1 ? `Assign reviewer to ${ids.length} applications` : 'Assign / reassign reviewer', body: `<div class="field"><label for="rv">Reviewer (document-review capability)</label><select class="select" id="rv">${REVIEWERS.map(r => `<option>${r}</option>`).join('')}</select></div>`,
-    actions: [{ label: 'Cancel' }, { label: 'Assign', cls: 'btn-primary', fn: () => { const rv = mval('#rv'); allApplications().filter(a => ids.includes(a.id)).forEach(a => { if (a.v) { const ad = STORE.worlds[a.v].admission; ad.reviewer = rv + ' (Admissions)'; if (ad.status === 'Pending — Documents Required') { ad.status = 'Under Review'; ad.history.push(['Under Review', now().toISOString()]); notifyLearner(a.v, 'Admission', 'Admission status changed', 'Your application is now: Under Review.', 'admission'); } } else { const s = ADMIN.apps.find(x => x.id === a.id); s.reviewer = rv; s.days = 0; } logA('Admissions', a.id, 'Reviewer assigned', a.reviewer, rv, ''); }); dts('apps') && (dts('apps').sel = []); render(); toast(`Reviewer assigned. ${ids.some(x => x.startsWith('APP-') && x.length === 5) ? 'The learner now sees "Under Review".' : ''}`); } }] });
+    actions: [{ label: 'Cancel' }, { label: 'Assign', cls: 'btn-primary', fn: () => { const rv = mval('#rv'); allApplications().filter(a => ids.includes(a.id)).forEach(a => { if (a.v) { const ad = STORE.worlds[a.v].admission; ad.reviewer = rv + ' (Admissions)'; if (['Awaiting review', 'Pending — Documents Required'].includes(ad.status)) { ad.status = 'Under Review'; ad.history.push(['Under Review', now().toISOString()]); notifyLearner(a.v, 'Admission', 'Admission status changed', 'Your application is now: Under Review.', 'admission'); } } else { const s = ADMIN.apps.find(x => x.id === a.id); s.reviewer = rv; s.days = 0; } logA('Admissions', a.id, 'Reviewer assigned', a.reviewer, rv, ''); }); dts('apps') && (dts('apps').sel = []); render(); toast(`Reviewer assigned. ${ids.some(x => x.startsWith('APP-') && x.length === 5) ? 'The learner now sees "Under Review".' : ''}`); } }] });
 }
 function appDetail(id) {
   const a = allApplications().find(x => x.id === id); if (!a) return notFound();
-  const mandOk = a.docs.filter(d => d.mand).every(d => d.status === 'Approved'), open = ['Pending — Documents Required', 'Under Review'].includes(a.status);
+  const mandOk = a.docs.filter(d => d.mand).every(d => d.status === 'Approved'), open = ['Awaiting review', 'Pending — Documents Required', 'Under Review'].includes(a.status);
   return `${pageA(esc(a.name), `${esc(a.programme)} · applied ${fd(a.applied)}`, chip(a.status), [['Admissions & Documents', 'a-admissions'], [a.id]])}
   ${a.escalated ? `<div class="note b-red">${ic('alert')}<div><strong>Escalated automatically — no decision by ${esc(a.reviewer)} for 7 days.</strong></div></div>` : ''}
   <section class="card"><div class="row-b"><h2>Checklist</h2><span class="small">${a.docs.filter(d => d.status === 'Approved').length} approved · reviewer ${esc(a.reviewer)} <button class="linklike" data-act="assignRev" data-id="${a.id}">Reassign</button></span></div>
@@ -469,9 +468,9 @@ ACT.docDec = el => {
 };
 ACT.appApprove = el => {
   const a = allApplications().find(x => x.id === el.dataset.id);
-  const opts = ADMIN.batches.filter(b => b.course === a.programme && ['Planned', 'Open'].includes(b.status));
-  reasonDlg({ title: 'Approve admission — ' + esc(a.name), ok: 'Approve admission', label: 'Note (required)', extra: `<div class="field"><label for="ab">Batch placement</label><select class="select" id="ab">${opts.map(b => `<option value="${b.code}">${b.label} — ${b.code} (${b.enrolled}/${b.cap})${b.enrolled >= b.cap ? ' · full → waitlist' : ''}</option>`).join('') || '<option value="">No open batch — waitlist</option>'}</select></div>`,
-    onOk: r => { if (a.v) admissionApprove(a.v, r, $('#ab').value); else { const s = ADMIN.apps.find(x => x.id === a.id); s.status = 'Approved'; s.escalated = false; logA('Admissions', a.id, 'Admission approved', 'Under Review', 'Approved', r); } render(); toast('Admission approved.' + (a.v ? ' The learner\'s tracker has updated.' : '')); } });
+  const intake = a.v ? STORE.worlds[a.v].admission.batch : (a.intake || 'the intake chosen at sign-up');
+  reasonDlg({ title: 'Approve admission — ' + esc(a.name), ok: 'Approve admission', label: 'Note (required)', extra: `<dl class="kv"><dt>Intake</dt><dd>${esc(intake)} <span class="xs muted">(chosen at sign-up — approval confirms it)</span></dd></dl>`,
+    onOk: r => { if (a.v) admissionApprove(a.v, r); else { const s = ADMIN.apps.find(x => x.id === a.id); s.status = 'Approved'; s.escalated = false; logA('Admissions', a.id, 'Admission approved', 'Under Review', 'Approved', r); } render(); toast('Admission approved.' + (a.v ? ' The learner\'s tracker has updated.' : '')); } });
 };
 ACT.appReject = el => { const a = allApplications().find(x => x.id === el.dataset.id); reasonDlg({ title: 'Reject application — ' + esc(a.name), ok: 'Reject application', danger: true, label: 'Reason (shown to the applicant)', onOk: r => { if (a.v) { const ad = STORE.worlds[a.v].admission; ad.status = 'Rejected'; ad.rejectReason = r; ad.history.push(['Rejected', now().toISOString()]); notifyLearner(a.v, 'Admission', 'Admission status changed', 'Your application was not approved.', 'admission'); if (ad.deposit && ad.deposit.paid) depositRefund(a.name, a.v, ad.deposit.min, STORE.worlds[a.v].me.cur, 'Admission rejected', r); } else ADMIN.apps.find(x => x.id === a.id).status = 'Rejected'; logA('Admissions', a.id, 'Application rejected', a.status, 'Rejected', r); render(); toast('Application rejected.'); } }); };
 ACT.appWithdraw = el => { const a = allApplications().find(x => x.id === el.dataset.id); reasonDlg({ title: 'Withdraw application — ' + esc(a.name), ok: 'Withdraw', danger: true, onOk: r => { if (a.v) { const ad = STORE.worlds[a.v].admission; ad.status = 'Withdrawn'; ad.history.push(['Withdrawn', now().toISOString()]); } else ADMIN.apps.find(x => x.id === a.id).status = 'Withdrawn'; logA('Admissions', a.id, 'Application withdrawn', a.status, 'Withdrawn', r); render(); } }); };

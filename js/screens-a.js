@@ -41,13 +41,10 @@ function actionItems() {
   const f = W.flags, out = [];
   if (f.nvq && W.admission) {
     const ad = W.admission;
-    const pend = W.docs.filter(d => d.mand && d.status === 'Pending');
-    if (pend.length && ['Pending — Documents Required'].includes(ad.status)) out.push({ sev: 'blue', t: `Upload documents — ${plural(pend.length, 'mandatory document')} to upload`, d: pend.map(x => x.name).join(', '), btn: 'Upload documents', go: 'admission' });
+    if (W.signup && !W.signup.done && !['Withdrawn'].includes(ad.status)) out.push(chSignupItem()); // CH-07
     W.docs.filter(d => ['Rejected', 'Resubmission Required'].includes(d.status)).forEach(d => out.push({ sev: 'red', t: `Fix a rejected document: ${d.name}`, d: d.reason, btn: 'Re-upload', go: 'admission' }));
     const exp = W.docs.find(d => d.expires && daysTo(d.expires) <= 30 && daysTo(d.expires) > 0 && d.status === 'Approved');
     if (exp) out.push({ sev: 'amber', t: `Replace an expiring document: ${exp.name}`, d: `Expires ${fd(exp.expires)} (in ${daysTo(exp.expires)} days).`, btn: 'Replace', go: 'admission' });
-    const allApproved = W.docs.filter(d => d.mand).every(d => d.status === 'Approved');
-    if (allApproved && !ad.deposit.paid && !['Rejected', 'Withdrawn'].includes(ad.status)) out.push({ sev: 'red', t: `Pay your deposit to hold your seat (${money(ad.deposit.min)})`, d: `Seat offer ends in <span class="countdown" data-count="${D(7, '22:59')}">${cdown(new Date(D(7, '22:59')) - now())}</span>`, btn: 'Pay deposit', act: 'payDeposit' });
     if (ad.deposit.paid && ad.deposit.holdUntil && new Date(ad.deposit.holdUntil) > now()) out.push({ sev: 'amber', t: `Pay your balance — seat held until ${fd(ad.deposit.holdUntil)}`, d: `Seat hold ends in <span class="countdown" data-count="${ad.deposit.holdUntil}">${cdown(new Date(ad.deposit.holdUntil) - now())}</span> · balance ${money(ad.deposit.balance)}`, btn: 'Pay balance', act: 'payBalance' });
   }
   if (f.nvq && f.admitted) {
@@ -80,7 +77,7 @@ SCREENS.dashboard = () => {
     <ul class="ap-list">${acts.map(a => `<li class="ap-item"><span class="ap-sev ${a.sev}" aria-hidden="true"></span><div class="ap-b"><div class="strong">${esc(a.t)}</div><div class="small muted">${a.d}</div></div>
     <button class="btn btn-sm ${a.sev === 'red' ? 'btn-primary' : ''}" ${a.go ? `data-go="${a.go}" ${a.id ? `data-id="${a.id}"` : ''} ${a.tab ? `data-tab="${a.tab}"` : ''}` : `data-act="${a.act}" data-e="${a.e || ''}" data-n="${a.n || ''}"`}>${a.btn}</button></li>`).join('')}</ul></section>`;
   if (!active.length && !W.enrolments.some(e => e.kind === 'nvq')) {
-    html += `<section class="card"><div class="empty">${ic('book', 40)}<h2>You don't have an active course yet</h2><p>${ad ? 'Your NVQ programme starts once your admission is approved. Finish your admission tasks above, or browse short courses you can start today.' : 'Browse short courses you can start today.'}</p><div class="row" style="justify-content:center">${ad ? '<button class="btn btn-primary" data-go="admission">Continue my application</button>' : ''}<button class="btn" data-go="browse">Browse courses</button></div></div>
+    html += `<section class="card"><div class="empty">${ic('book', 40)}<h2>You don't have an active course yet</h2><p>${ad ? 'Your NVQ programme starts as soon as you finish your sign-up. Continue it above, or browse short courses you can start today.' : 'Browse short courses you can start today.'}</p><div class="row" style="justify-content:center">${ad ? '<button class="btn btn-primary" data-go="admission">Continue my sign-up</button>' : ''}<button class="btn" data-go="browse">Browse courses</button></div></div>
       <h3>Popular short courses</h3><div class="grid">${CATALOGUE.filter(c => c.kind === 'short').slice(0, 3).map(catCard).join('')}</div></section>`;
   }
   if (W.enrolments.some(e => e.status !== 'Discontinued' || S.edge === 'discontinued')) html += `<section class="stack" aria-labelledby="pc-h"><div class="row-b"><h2 id="pc-h">My learning</h2><button class="btn btn-sm btn-ghost" data-go="courses">All courses ${ic('chev', 14)}</button></div><div class="grid">${W.enrolments.filter(e => e.status !== 'Discontinued' || S.edge === 'discontinued').map(enrolCard).join('')}</div></section>`;
@@ -104,7 +101,6 @@ function edgeNotices(where) {
     ? `<div class="note b-red" role="alert">${ic('alert')}<div><strong>Your batch ${esc(W.nvq.batch)} has been cancelled.</strong> Refund in progress: ${money(W.batchCancelled.amount)} will be returned to your original payment method within 5–10 working days. We're sorry for the disruption.<div class="b-act"><button class="btn btn-sm" data-go="payments">View refund</button><button class="btn btn-sm btn-ghost" data-go="messages">Message the Academy</button></div></div></div>`
     : `<div class="note b-blue" role="status">${ic('info')}<div><strong>Your original batch was cancelled.</strong> You've been moved to batch <strong>${esc(W.batchCancelled.moved)}</strong> starting ${fd(W.batchCancelled.start)}. Your progress, submissions and payments carry over.<div class="b-act"><button class="btn btn-sm" data-go="course" data-id="nvq">View programme</button></div></div></div>`);
   if (S.edge === 'paypending' && ['dashboard', 'courses'].includes(where)) out.push(`<div class="note b-amber" role="status">${ic('clock')}<div><strong>We're confirming your payment for Fire Safety Awareness.</strong> This usually takes a few minutes. The course unlocks automatically once your bank confirms.</div></div>`);
-  if (S.edge === 'waitlist' && where === 'dashboard') out.push(`<div class="note b-amber">${ic('users')}<div><strong>Admission approved — the batch is full.</strong> You're #${W.admission.waitlist.pos} on the waitlist. We've also offered you the next intake starting ${fd(W.admission.waitlist.next)}.<div class="b-act"><button class="btn btn-sm" data-go="admission">See options</button></div></div></div>`);
   return out.join('');
 }
 function enrolCard(e) {
@@ -401,6 +397,6 @@ ACT.buyCourse = el => {
 };
 ACT.applyNvq = el => {
   const c = CATALOGUE.find(x => x.id === el.dataset.id);
-  if (W.admission) { toast('You already have an application in progress. Continue it from Admission & Documents.', 'info'); go('admission'); return; }
-  confirmDlg({ title: 'Apply for ' + esc(c.title) + '?', ok: 'Start application', body: `<p>Applying starts your admission. First you upload some documents, such as ID, right to work and proof of address. Then the Academy checks your application. This usually takes up to 7 days.</p><p class="small muted">Programme content unlocks after admission is approved.</p>`, onOk: () => { toast('Application started. In this prototype, variant B shows the applicant journey.', 'info'); S.edge = 'none'; setVariant('B'); go('admission'); } });
+  if (W.admission) { toast('You already have a sign-up in progress. Continue it from Admission & Documents.', 'info'); go('admission'); return; }
+  confirmDlg({ title: 'Sign up for ' + esc(c.title) + '?', ok: 'Start sign-up', body: `<p>Signing up takes five steps: your details and intake, your documents, your offer letter, your payment, then you start.</p><p class="small muted">You start learning as soon as you've paid. The Academy reviews your application while you learn, usually within 7 days.</p>`, onOk: () => { toast('Sign-up started. In this prototype, variant B shows the applicant journey.', 'info'); S.edge = 'none'; setVariant('B'); go('admission'); } });
 };

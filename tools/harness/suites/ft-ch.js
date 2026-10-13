@@ -209,22 +209,154 @@
     ok('Decisions Log: sources S1–S6 listed', !!ch && ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].every(s => ch.textContent.includes(s)));
     ok('Decisions Log: CH-01, 02, 03, 05, 31 Applied (Batch 1), 13 Oct 2026', ['CH-01', 'CH-02', 'CH-03', 'CH-05', 'CH-31'].every(id => /Applied \(Batch 1\)13 Oct 2026/.test(row(id))));
     ok('Decisions Log: sources as in the change list', /S3→S4/.test(row('CH-01')) && /S3→S4\/S5/.test(row('CH-02')) && /S1→S2→S4/.test(row('CH-18')) && /S1\/S6/.test(row('CH-24')));
-    ok('Decisions Log: later batches scheduled', /Scheduled \(Batch 6\)/.test(row('CH-06')) && /Scheduled \(Batch 2\)/.test(row('CH-07')) && /Scheduled \(Batch 2\/3\)/.test(row('CH-11')) && /Scheduled \(Batch 5\)/.test(row('CH-17')));
+    ok('Decisions Log: Batch 2 applied, CH-11 partly, later batches scheduled', ['CH-07', 'CH-08', 'CH-09', 'CH-10'].every(id => /Applied \(Batch 2\)13 Oct 2026/.test(row(id))) && /Partly applied \(Batch 2; Batch 3 to come\)/.test(row('CH-11')) && /Scheduled \(Batch 6\)/.test(row('CH-06')) && /Scheduled \(Batch 3\)/.test(row('CH-12')) && /Scheduled \(Batch 5\)/.test(row('CH-17')));
     ok('Decisions Log: earlier and confirmed items', /Confirmed: already built, no change/.test(row('CH-04')) && /Applied earlier \(C7, b8bce5b\)/.test(row('CH-24')) && /Confirmed: no change/.test(row('CH-30')));
     const pc = secs.find(s => s.querySelector('h2') && s.querySelector('h2').textContent === 'Pending client'), prow = pc ? [...pc.querySelectorAll('tbody tr')].map(r => r.textContent) : [];
     ok('Decisions Log: P-27 … P-30 Pending client', prow.length === 4 && ['P-27', 'P-28', 'P-29', 'P-30'].every((p, i) => prow[i].startsWith(p) && /Pending client/.test(prow[i])) && /Observation fee/.test(prow[0]) && /Mistyped country/.test(prow[1]) && /Data Correction/.test(prow[1]) && /Intake choice at sign-up/.test(prow[3]));
     const fu = secs.find(s => /Follow-up decisions \(P-05 – P-26\)/.test(s.textContent)), st = id => ([...fu.querySelectorAll('tbody tr')].find(tr => tr.firstChild.textContent === id) || {}).textContent || '';
     ok('Decisions Log: F1 Superseded (CH-01); F2, F3b, F8 Resolved; F3a Superseded', /Superseded \(CH-01\)/.test(st('F1')) && /Resolved \(CH-02\)/.test(st('F2')) && /Superseded \(CH-02\)/.test(st('F3a')) && /Resolved \(CH-03\)/.test(st('F3b')) && /Resolved \(CH-05\)/.test(st('F8')));
-    ok('Decisions Log: 17 scenarios, #16 gone', /All 17 run end to end in the prototype\./.test(main()) && !CDL_SCEN.some(r => r[0] === '16'));
+    ok('Decisions Log: 18 scenarios; #16 is the new sign-up', /All 18 run end to end in the prototype\./.test(main()) && CDL_SCEN.filter(r => r[0] === '16').length === 1 && CDL_SCEN.find(r => r[0] === '16')[1] === 'New sign-up: documents → offer letter → payment → start' && !CDL_SCEN.some(r => r[1] === 'Learner moves country'));
     go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 1/.test(s.textContent));
     ok('UX Changelog: Batch 1 entry lists its CH IDs', !!ux && ['CH-01:', 'CH-02:', 'CH-03:', 'CH-05:', 'CH-31:'].every(x => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(x))));
-    go('demo-scenarios'); ok('Demo Scenarios: "Seventeen", 17 sections, no #16', /Seventeen end-to-end walkthroughs/.test(main()) && app().querySelectorAll('main section[id^="sc-"]').length === 17 && !app().querySelector('#sc-16'));
-    renderDemo(); AFTER.forEach(f => f()); const b = document.querySelector('#demo-root [data-act="scOpen"]'); ok('Demo panel: "Open the 17 Demo Scenarios"', !b || b.textContent === 'Open the 17 Demo Scenarios', b && b.textContent);
+    go('demo-scenarios'); ok('Demo Scenarios: "Eighteen", 18 sections, #16 is the new sign-up', /Eighteen end-to-end walkthroughs/.test(main()) && app().querySelectorAll('main section[id^="sc-"]').length === 18 && /New sign-up/.test((app().querySelector('#sc-16') || {}).textContent || ''));
+    renderDemo(); AFTER.forEach(f => f()); const b = document.querySelector('#demo-root [data-act="scOpen"]'); ok('Demo panel: "Open the 18 Demo Scenarios"', !b || b.textContent === 'Open the 18 Demo Scenarios', b && b.textContent);
     learner('A'); go('index'); const ix = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
-    ok('Learner index: CH entries (incl. registration confirmation, 1b), each with a purpose line', !!ix && ix.querySelectorAll('li').length === 3 && !!ix.querySelector('[data-act="regStart"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 17 walkthroughs/.test(main()));
+    ok('Learner index: CH entries (incl. registration confirmation, 1b), each with a purpose line', !!ix && ix.querySelectorAll('li').length === 12 && !!ix.querySelector('[data-act="regStart"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 18 walkthroughs/.test(main()));
     ix.querySelector('[data-m="chCheckout"]').click(); await wait(150); ok('Learner index: checkout entry opens the checkout with the Stripe line', !!MODAL && !!mroot().querySelector('.ch-stripe')); closeModal();
     SA(); go('a-index'); const ax = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
-    ok('Admin index: contact setting, country/region and data residency entries with purposes', !!ax && ax.querySelectorAll('li').length === 3 && [...ax.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && !/Priya Nair \(moved country/.test(main()));
+    ok('Admin index: Batch 1 and 2 entries with purposes', !!ax && ax.querySelectorAll('li').length === 6 && ['a-config', 'a-learner.IA-L-31900', 'a-dataprotection..residency', 'a-programmes.NV-L3.letter', 'a-admissions.APP-C', 'a-learner.IA-L-31188.admission'].every(t => ax.querySelector(`[data-t="${t}"]`)) && [...ax.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && !/Priya Nair \(moved country/.test(main()));
+  });
+
+  /* ================= Batch 2 ================= */
+  const stepCur = () => { const c = app().querySelector('.ch-su .step.cur .s-l'); return c ? c.textContent : ''; };
+  const btnAct = a => app().querySelector(`main [data-act="${a}"]`);
+
+  /* ---------- CH-07 stepper: details + intake → documents ---------- */
+  await T('CH-07 sign-up: order, intake, documents', async () => {
+    fresh(); learner('B'); go('admission');
+    ok('CH-07 applicant sees the 5-step sign-up, on step 2 Documents', app().querySelectorAll('.ch-su .step').length === 5 && stepCur() === 'Documents' && [...app().querySelectorAll('.ch-su .s-l')].map(x => x.textContent).join() === 'Personal details,Documents,Offer letter,Payment,Start');
+    ok('CH-07 status "Sign-up in progress"; no admission-approval wording', W.admission.status === 'Sign-up in progress' && !/unlocks after admission is approved|deposit card is now visible|All your mandatory documents are approved/.test(html()));
+    go('assignments'); ok('CH-10 content locked until the sign-up is done ("Finish your sign-up")', !!app().querySelector('main .lockpage') && /Finish your sign-up/.test(main()) && !/admission is approved/.test(main()));
+    go('admission'); const cont = btnAct('suNext');
+    ok('CH-07 Continue disabled while a mandatory document is missing, with its reason', !!cont && cont.disabled && /CV/.test(cont.title) && /CV/.test(main()), cont && cont.title);
+    ok('CH-07 approval not required: rejected / resubmission documents count as uploaded', chMandMissing(W).map(d => d.id).join() === 'd6' && W.docs.some(d => d.status === 'Rejected'));
+    ACT.sampleUpload({ dataset: { id: 'd6' } }); await wait(2000);
+    ok('CH-07 every mandatory document uploaded → Continue enabled', !btnAct('suNext').disabled && /6 of 6 mandatory documents uploaded/.test(main()));
+    ACT.suBack(); ok('CH-07 Back to step 1', stepCur() === 'Personal details');
+    const codes = [...app().querySelectorAll('input[name="su-batch"]')].map(i => i.value);
+    ok('P-30 intake choice: only intakes with a place', codes.includes('L3AC-DEC26-AUH') && codes.includes('L3AC-NOV26-LEI') && codes.includes('L3AC-OCT26-ONL') && !codes.includes('L3AC-NOV26') && codes.every(c => chHasPlace(chBatch(c))), codes.join());
+    ok('P-30 intake shows its start date and whether a deposit can hold the seat', new RegExp('in ' + daysTo(chBatch('L3AC-DEC26-AUH').start) + ' days').test(main()) && /A deposit can hold your seat/.test(main()) && /Starts in under 28 days/.test(main()), [daysTo(chBatch('L3AC-DEC26-AUH').start), (main().match(/in d+ days/g) || []).join()].join(' '));
+    ACT.suNext(); ok('CH-07 step 1 saved → step 2', stepCur() === 'Documents' && W.signup.batch === 'L3AC-DEC26-AUH');
+    ACT.suNext(); ok('CH-07 → step 3 Offer letter', stepCur() === 'Offer letter');
+  });
+
+  /* ---------- CH-08 / CH-09 offer letter, signature, declaration ---------- */
+  await T('CH-08 / CH-09 offer letter', async () => {
+    const L = app().querySelector('main .ch-letter');
+    ok('CH-08 letter filled with name and Student ID; watermark; signatory', !!L && L.textContent.includes('Priya Raman') && L.textContent.includes('IA-L-31188') && /Welfare Academy/.test(L.querySelector('.ch-wm').textContent) && /Jenson Thomas/.test(L.textContent) && !/\{\{/.test(L.textContent));
+    ok('CH-08 no decline option', ![...app().querySelectorAll('main button')].some(b => /decline/i.test(b.textContent)));
+    ok('CH-09 declaration text', main().includes(CH_DECL));
+    const sign = () => $('#su-sign'), why = () => $('#su-why').textContent;
+    ok('CH-09 "Sign and continue" disabled with its reason until both are done', sign().disabled && /Type your full name and tick the declaration/.test(sign().title) && !$('#su-why').hidden);
+    $('#su-sig').value = 'P Raman'; INP.suSig($('#su-sig')); ok('CH-08 signature must be the full name', sign().disabled && /exactly as registered: Priya Raman/.test(why()));
+    $('#su-sig').value = '  priya   raman '; INP.suSig($('#su-sig')); ok('CH-09 declaration still required', sign().disabled && /Tick the declaration/.test(why()));
+    $('#su-decl').checked = true; INP.suDecl($('#su-decl')); ok('CH-09 both done → enabled, no reason', !sign().disabled && !sign().title && $('#su-why').hidden);
+    const n0 = STORE.agy.lmails.length; ACT.suSign(); const s = W.signup.sig;
+    ok('CH-08 signing record: name, date/time, mock IP, letter version', !!s && s.name === 'priya raman' && !!s.at && s.ip === '94.204.18.44' && s.v === 1, JSON.stringify(s));
+    const lm = STORE.agy.lmails.slice(0, STORE.agy.lmails.length - n0);
+    ok('CH-08 signed copy emailed to the learner and to the Academy (info@welfarehs.co.uk)', lm.some(m => !m.academy && m.email === 'priya.raman@gmail.com' && /signed offer letter/.test(m.subj)) && lm.some(m => m.academy && m.email === 'info@welfarehs.co.uk' && /Priya Raman/.test(m.subj)));
+    ok('CH-08 signing audited', ADMIN.audit.some(a => a.action === 'Offer letter signed' && /IA-L-31188/.test(a.entity)));
+    ok('CH-07 → step 4 Payment', stepCur() === 'Payment');
+  });
+
+  /* ---------- CH-10 payment (deposit case), CH-11 start ---------- */
+  await T('CH-10 payment — deposit case, card', async () => {
+    ok('CH-10 deposit offered (intake 28+ days away) and instalments; no pay in full', !!$('input[name="su-opt"][value="deposit"]') && !!$('input[name="su-opt"][value="instalment"]') && !/pay in full|full amount/i.test(main()));
+    ok('CH-10 methods: card and bank transfer', !!$('input[name="su-m"][value="card"]') && !!$('input[name="su-m"][value="bank"]'));
+    setUi('suMethod', 'bank'); render(); ok('CH-10 bank transfer: instructions placeholder (T04), reference, "Awaiting confirmation by Finance"', /Client to supply: bank payment instructions/.test(main()) && /IA-31188-DEP/.test(main()) && /Awaiting confirmation by Finance/.test(main()));
+    setUi('suMethod', 'card'); render(); const b = chBatch('L3AC-DEC26-AUH'), e0 = b.enrolled;
+    ACT.suPay(); ok('CH-02 card checkout shows the Stripe line', !!mroot().querySelector('.ch-stripe') && /£300\.00/.test(mroot().textContent));
+    prim(); await wait(2500); closeModal();
+    ok('CH-07 / CH-11 lands in the LMS straight away', S.route === 'dashboard' && W.signup.done && W.flags.admitted && W.enrolments.includes(W.nvq), S.route);
+    ok('CH-10 deposit paid; seat held 28 days; balance due in the hold', W.admission.deposit.paid && daysTo(W.admission.deposit.holdUntil) >= 27 && W.plans.find(p => p.e === 'nvq').rows[0].amount === 2100 && b.enrolled === e0 + 1);
+    ok('CH-07 review after payment: "Awaiting review", no reviewer decision yet', W.admission.status === 'Awaiting review' && allApplications().find(a => a.id === 'APP-B').status === 'Awaiting review');
+    go('assignments'); ok('CH-10 content open once signed up (not tied to admission)', !app().querySelector('main .lockpage'));
+    go('admission'); ok('CH-08 learner\'s Admission & Documents: sign-up summary with the signed PDF', /Sign-up/.test(main()) && !!btnAct('chSignedPdf'));
+    btnAct('chSignedPdf').click(); await wait(80);
+    ok('CH-08 signed PDF: letter, filled fields, signature block', !!MODAL && /Priya Raman/.test(mroot().textContent) && /IA-L-31188/.test(mroot().textContent) && /Signed electronically/.test(mroot().textContent) && /94\.204\.18\.44/.test(mroot().textContent) && /version 1/.test(mroot().textContent)); closeModal();
+    SA(); go('a-admissions', { id: 'APP-B' }); ok('CH-08 admin application: signing record and signed PDF', /Sign-up/.test(main()) && /View signed PDF/.test(main()) && /94\.204\.18\.44/.test(main()));
+    go('a-learner', { id: 'IA-L-31188', tab: 'admission' }); ok('CH-08 Learner 360 → Admission & Documents: signing record', /View signed PDF/.test(main()));
+  });
+
+  /* ---------- Inboxes ---------- */
+  await T('CH-08 Academy inbox (demo)', async () => {
+    ACT.switchRole({ dataset: { r: 'ainbox' } }); await wait(30);
+    ok('Academy inbox page', S.route === 'm-inbox' && /Academy inbox \(demo\)/.test(main()) && /Offer letter signed — Priya Raman/.test(main()) && !/Your signed offer letter/.test(main()));
+    ACT.switchRole({ dataset: { r: 'linbox' } }); await wait(30);
+    ok('Learner inbox has the learner copy only', /Learner inbox \(demo\)/.test(main()) && /Your signed offer letter/.test(main()) && !/Offer letter signed — Priya Raman/.test(main()));
+    renderDemo(); S.demoOpen = true; renderDemo(); ok('Demo controls: "Academy inbox (demo)"', !!document.querySelector('#demo-root [data-r="ainbox"]')); S.demoOpen = false;
+    learner('A');
+  });
+
+  /* ---------- CH-10 instalment case + CH-11 bank transfer; intake fills up ---------- */
+  await T('CH-10 / CH-11 under 28 days, bank transfer', async () => {
+    fresh(); ACT.chScInstalment(); const b = chBatch('L3AC-OCT26-ONL');
+    ok('CH-10 intake under 28 days: deposit hidden, with the reason', stepCur() === 'Payment' && !$('input[name="su-opt"][value="deposit"]') && /No deposit for this intake/.test(main()) && new RegExp('starts in ' + daysTo(b.start) + ' days').test(main()));
+    ACT.suPay();
+    ok('CH-11 bank transfer: starts straight away', S.route === 'dashboard' && W.signup.done && W.flags.admitted && !MODAL);
+    const r1 = W.plans.find(p => p.e === 'nvq').rows[0];
+    ok('CH-11 first instalment "Awaiting confirmation by Finance"', r1.status === 'Awaiting confirmation by Finance' && r1.amount === 400 && W.plans.find(p => p.e === 'nvq').rows.length === 6);
+    go('payments'); ok('CH-11 Payments shows the awaiting status', /Awaiting confirmation by Finance/.test(main()));
+    ok('CH-11 bank sign-up recorded for Finance (Batch 3)', (STORE.chBank || []).some(x => x.lid === 'IA-L-31188' && x.status === 'Awaiting confirmation'));
+    fresh(); ACT.chStep({ dataset: { s: '4' } }); ACT.chIntakeFills(); go('admission');
+    ok('CH-07 chosen intake fills before payment → asked to choose another', /is now full/.test(main()) && !!app().querySelector('[data-act="suGo"][data-s="1"]') && !app().querySelector('[data-act="suPay"]'));
+    app().querySelector('[data-act="suGo"][data-s="1"]').click(); await wait(30); ok('CH-07 back to step 1 to choose another intake; documents and signature kept', stepCur() === 'Personal details' && !!W.signup.sig && !chMandMissing(W).length);
+  });
+
+  /* ---------- F4 agency-sponsored ---------- */
+  await T('F4 sponsored sign-up: no payment step', async () => {
+    fresh(); ACT.chSponsoredSignup();
+    ok('F4 4 steps, no Payment', [...app().querySelectorAll('.ch-su .s-l')].map(x => x.textContent).join() === 'Personal details,Documents,Offer letter,Start' && stepCur() === 'Offer letter');
+    $('#su-sig').value = 'Grace Mensah'; INP.suSig($('#su-sig')); $('#su-decl').checked = true; INP.suDecl($('#su-decl')); ACT.suSign();
+    ok('F4 after signing → Start (no payment)', stepCur() === 'Start' && !app().querySelector('input[name="su-opt"]') && /nothing to pay/.test(main()));
+    ACT.suStart(); ok('F4 starts with no payment, deposit or fee schedule', W.signup.done && W.flags.admitted && !W.signup.pay && !W.plans.some(p => p.e === 'nvq'));
+  });
+
+  /* ---------- CH-08 admin: Offer letter tab ---------- */
+  await T('CH-08 NVQ course editor — Offer letter tab', async () => {
+    fresh(); SA(); go('a-programmes', { id: 'NV-L3', tab: 'letter' });
+    ok('CH-08 "Offer letter" tab next to the others', [...app().querySelectorAll('.subtabs [data-tab], .subtabs button')].some(b => /Offer letter/.test(b.textContent)) && /Hierarchy builder/.test(main()));
+    ok('CH-08 tab: merge fields, current version, template', /\{\{full_name\}\}/.test(main()) && /\{\{student_id\}\}/.test(main()) && /Version 1/.test(main()) && !!app().querySelector('main .ch-letter'));
+    ok('CH-08 a letter for every NVQ course (retired one excepted)', ['NV-L2', 'NV-L3', 'NV-L4', 'NV-L5'].every(id => chLetters(id).length === 1) && !chLetters('NV-L3O').length);
+    btnAct('chLetterPrev').click(); await wait(60); ok('CH-08 preview filled with a sample learner', !!MODAL && /Aisha Rahman/.test(mroot().textContent) && /IA-L-18022/.test(mroot().textContent)); closeModal();
+    ACT.chLetterUp({ dataset: { id: 'NV-L3' } }); $('#rsn').value = 'New fees paragraph'; ok('CH-08 upload needs a file', prim() === false && !!MODAL);
+    ACT.chLetterSample(); prim(); ok('CH-08 new version 2, audited', chLetterCur('NV-L3').v === 2 && ADMIN.audit.some(a => a.action === 'Offer letter uploaded' && a.after === 'Version 2'));
+    learner('B'); ok('CH-08 an applicant who already started keeps version 1', chLetterFor(W).v === 1);
+    STORE.worlds.B = makeWorld('B'); setVariant('B'); ok('CH-08 a new applicant gets version 2', chLetterFor(W).v === 2);
+    S.portal = 'admin'; role('acaA'); go('a-programmes', { id: 'NV-L2', tab: 'letter' }); ok('CH-08 Academic Admin has the tab', /Offer letter/.test(main()) && !!btnAct('chLetterUp'));
+    fresh();
+  });
+
+  /* ---------- CH-07 approval confirms the intake; placement and waitlist removed ---------- */
+  await T('CH-07 approval confirms the intake; no placement or waitlist', async () => {
+    fresh(); chQuickSignup(STORE.worlds.B); SA(); ACT.appApprove({ dataset: { id: 'APP-B' } });
+    ok('CH-07 approve dialog shows the intake chosen at sign-up; no placement select', !!MODAL && !$('#ab') && /Abu Dhabi Cohort 1 — L3AC-DEC26-AUH/.test(MODAL.body) && /chosen at sign-up/.test(MODAL.body)); closeModal();
+    ok('CH-07 waitlist edge, Accept next intake and Place removed', !EDGES.some(e => e[0] === 'waitlist') && !ACT.acceptIntake && !ACT.stayWaitlist && !ACT.kPlace && !ACT.payDeposit);
+    role('acaA'); go('k-dashboard'); ok('CH-07 Academic Admin dashboard: no "awaiting batch placement"', !/awaiting batch placement/i.test(main()));
+    S.edge = 'underreview'; learner('B'); go('admission'); ok('Demo state "under review" comes after a completed sign-up', W.signup.done && W.admission.status === 'Under Review' && /Signed up/.test(main()) && !app().querySelector('.ch-su')); S.edge = 'none';
+    fresh();
+  });
+
+  /* ---------- Records (Batch 2) ---------- */
+  await T('CH records (Batch 2)', async () => {
+    fresh(); ACT.scOpen(); go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 2/.test(s.textContent));
+    ok('UX Changelog: Batch 2 entry lists its CH IDs', !!ux && ['CH-07:', 'CH-08:', 'CH-09:', 'CH-10:', 'CH-11'].every(x => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(x))));
+    const L = SC_LIST(), s16 = L.find(x => x[0] === '16'), s2 = L.find(x => x[0] === '2');
+    ok('Scenario #16 replaced: "New sign-up: documents → offer letter → payment → start" with deposit, instalment and bank-transfer steps', !!s16 && s16[1] === 'New sign-up: documents → offer letter → payment → start' && s16[3].some(s => /deposit/.test(s.text)) && s16[3].some(s => /bank transfer/.test(s.text)) && s16[3].some(s => /Awaiting confirmation by Finance/.test(s.text)));
+    ok('Scenario #2 in the new order (sign-up and deposit → review → balance)', /finishes her sign-up/.test(s2[3][0].text) && /approves admission/.test(s2[3][1].text) && /balance/.test(s2[3][2].text));
+    learner('A'); go('index'); const ix = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
+    ok('Screen index: sign-up steps, signed PDF and Academy inbox, each with a purpose', ['chStep', 'chScInstalment', 'chSponsoredSignup', 'chSignedPdf'].every(a => ix.querySelector(`[data-act="${a}"]`)) && !!ix.querySelector('[data-r="ainbox"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')));
+    ix.querySelector('[data-act="chStep"][data-s="3"]').click(); await wait(60); ok('Screen index: step 3 entry opens the offer letter step', S.route === 'admission' && stepCur() === 'Offer letter');
   });
 
   fresh();

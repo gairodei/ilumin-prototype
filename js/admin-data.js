@@ -110,8 +110,9 @@ function buildAdmin(av) {
     b('L2DC-SEP25', 'Level 2 Diploma in Care (England)', D(-390), D(-25), 15, 15, 'Blended', 'Dr Helen Carter', ['Hannah Lewis'], ['Kevin Doyle'], 'Completed'),
     b('L5LM-JAN25', 'Level 5 Diploma in Leadership and Management for Adult Care', D(-640), D(-90), 12, 11, 'Online', 'Dr Helen Carter', ['Marcus Bell'], ['Sarah Okonkwo'], 'Archived'),
     b('L3AC-DEC26-AUH', 'Level 3 Diploma in Adult Care (England)', D(62), D(426), 12, 5, 'Blended', 'Dr Helen Carter', ['Omar Siddiqui'], ['Omar Siddiqui'], 'Planned'),
+    b('L3AC-OCT26-ONL', 'Level 3 Diploma in Adult Care (England)', D(16), D(380), 20, 12, 'Online', 'Dr Helen Carter', ['Omar Siddiqui'], ['Omar Siddiqui'], 'Open'), // CH-10: starts in under 28 days (instalments only)
   ];
-  A.batches[0].label = 'Leicester Cohort 7'; A.batches[1].label = 'Croydon Cohort 4'; A.batches[2].label = 'Dubai Cohort 2'; A.batches[3].label = 'Leicester Cohort 8'; A.batches[4].label = 'Manchester Cohort 3'; A.batches[5].label = 'Birmingham Cohort 1'; A.batches[6].label = 'Abu Dhabi Cohort 1';
+  A.batches[0].label = 'Leicester Cohort 7'; A.batches[1].label = 'Croydon Cohort 4'; A.batches[2].label = 'Dubai Cohort 2'; A.batches[3].label = 'Leicester Cohort 8'; A.batches[4].label = 'Manchester Cohort 3'; A.batches[5].label = 'Birmingham Cohort 1'; A.batches[6].label = 'Abu Dhabi Cohort 1'; A.batches[7].label = 'Online Cohort 9';
 
   /* ---------- Bundles & licences ---------- */
   A.bundles = [
@@ -279,6 +280,7 @@ function demoLearners() {
     return { id: m.id, v, name: m.first + ' ' + m.last, email: m.email, mobile: m.mobile, agency: m.sponsor, courses: w.enrolments.map(e => e.title).concat(w.admission && !w.flags.admitted ? [w.nvq.title + ' (applicant)'] : []), acct: STORE.acct[v] === 'Archived' ? 'Active' : STORE.acct[v] || (v === 'B' ? 'Active' : 'Active'), rec: STORE.acct[v] === 'Archived' ? 'Archived' : 'Active', region: regionOf(m.country), last: D(0, '07:55'), flags, dob: m.dob, address: m.address, postcode: m.postcode, country: m.country, joined: m.joined, referral: m.referral, cur: m.cur, demo: true };
   });
 }
+const ad0 = w => w.admission && w.admission.status;
 function allLearners() { return demoLearners().concat(ADMIN.learners); }
 function learnerById(id) { return allLearners().find(l => l.id === id); }
 function logA(module, entity, action, before, after, reason) {
@@ -301,8 +303,8 @@ function derivedQueue() {
       const open = r.status === 'Requested', days = -daysTo(r.raised);
       out.push({ id: 'AQ-' + r.id + (v === 'A' ? '' : '-' + v), type: t, raisedBy: name, raised: r.raised, status: open ? (r._qs || (days >= 7 ? 'Escalated' : 'Pending')) : REQ_STATUS[r.status], escalated: open && !r._qs && days >= 7, override: r._override, first: t === 'Learner profile change' ? 'Owen Price' : 'Rachel Hughes', related: [`${name} · ${r.target}`, 'a-learners.' + w.me.id + '.requests'], reason: r.reason, decidedBy: open ? null : r.status === 'Cancelled' ? name + ' (learner — cancelled)' : 'Rachel Hughes', decision: r.decision, req: r, v, tbd: null, history: [[name, r.raised, 'Raised', r.reason]].concat(r.decided && !r._hist ? [['Rachel Hughes', r.decided, r.status, r.decision]] : []).concat(r._hist || []), notes: r._notes || (r._notes = []) });
     });
-    if (w.admission && v === 'B') {
-      const ad = w.admission, open = ['Pending — Documents Required', 'Under Review'].includes(ad.status);
+    if (w.admission && v === 'B' && ad0(w) !== 'Sign-up in progress') {
+      const ad = w.admission, open = ['Awaiting review', 'Pending — Documents Required', 'Under Review'].includes(ad.status);
       out.push({ id: 'AQ-ADM-' + v, type: 'Admission application', raisedBy: name, raised: ad.history[0][1], status: open ? 'Pending' : ad.status === 'Approved' ? 'Approved' : ad.status === 'Rejected' ? 'Rejected' : 'Returned to Requester', decidedBy: open ? null : ad.reviewer, decision: open ? null : 'Admission ' + ad.status.toLowerCase(), first: ad.reviewer.replace(' (Admissions)', ''), related: [`${name} · ${w.nvq.title}`, 'a-admissions.APP-' + v], reason: 'Online application', v, adm: true, data: { checklist: `${w.docs.filter(d => d.mand && d.status === 'Approved').length} of ${w.docs.filter(d => d.mand).length} mandatory documents approved` }, history: ad.history.map(h => [name, h[1], h[0], '']).concat(ad._hist || []), notes: ad._notes || (ad._notes = []) });
     }
     (w.docs || []).filter(d => (d.status === 'Submitted' || d.replacement) && d.versions.length).forEach(d => out.push({ id: 'AQ-DOC-' + v + '-' + d.id, type: 'Replace / re-upload document', raisedBy: name, raised: (d.replacement && d.replacement.uploaded) || d.uploaded || D(-2), status: 'Pending', first: (w.admission && w.admission.reviewer ? w.admission.reviewer.replace(' (Admissions)', '') : 'Rachel Hughes'), related: [`${name} · ${d.name}`, 'a-admissions.APP-' + v], reason: d.replacement ? `Replacement uploaded: ${d.replacement.file} (current document stays valid)` : `Uploaded ${d.file}`, v, doc: d, history: [[name, d.uploaded || D(-2), 'Uploaded', d.file]].concat(d._hist || []), notes: d._notes || (d._notes = []) }));

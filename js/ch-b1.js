@@ -49,6 +49,7 @@ SCREENS['demo-scenarios'] = p => _scPageCh(p).replace(/[A-Z][a-z-]+ end-to-end w
 AFTER.push(() => { const b = document.querySelector('#demo-root .demo-panel [data-act="scOpen"]'); if (b && /^Open the \d+ Demo Scenarios$/.test(b.textContent)) b.textContent = `Open the ${chScenN()} Demo Scenarios`; });
 const chScenFix = h => h.replace(/Demo Scenarios — \d+ walkthroughs/, `Demo Scenarios — ${chScenN()} walkthroughs`);
 // The Client Decisions Log lists every scenario that still exists (CH-01 removes #16 "Learner moves country")
+{ const k = CDL_SCEN.findIndex(r => r[1] === 'Learner moves country'); if (k >= 0) CDL_SCEN.splice(k, 1); }
 const chCdlScenSync = () => { const ids = SC_LIST().map(s => s[0]); for (let i = CDL_SCEN.length - 1; i >= 0; i--) if (!ids.includes(CDL_SCEN[i][0])) CDL_SCEN.splice(i, 1); };
 
 /* ---------- Records: the CH change list ---------- */
@@ -93,7 +94,8 @@ const chStatus = b => {
   if (typeof b === 'string' && !/^\d/.test(b)) return [b, /^Applied/.test(b) ? 'green' : 'blue', ''];
   const nums = String(b).split('/'), done = nums.filter(n => CH_APPLIED[n]);
   if (done.length === nums.length) return [`Applied (Batch ${b})`, 'green', CH_APPLIED[nums[nums.length - 1]]];
-  return [`Scheduled (Batch ${b})`, 'amber', done.length ? `Batch ${done.join('/')}: ${CH_APPLIED[done[0]]}` : ''];
+  if (done.length) return [`Partly applied (Batch ${done.join('/')}; Batch ${nums.filter(n => !CH_APPLIED[n]).join('/')} to come)`, 'amber', CH_APPLIED[done[done.length - 1]]];
+  return [`Scheduled (Batch ${b})`, 'amber', ''];
 };
 // Pending client — the open items after the change list
 const CH_PENDING = [

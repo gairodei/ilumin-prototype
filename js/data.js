@@ -92,7 +92,7 @@ function makeWorld(v) {
       sponsor: flags.sponsored ? me.sponsor : null, desc: 'A competence-based qualification for people working in adult care, assessed through assignments, workplace observation and a Professional Discussion.',
       people: [['Academic Coordinator', 'Dr Helen Carter'], ['Teacher', 'Marcus Bell'], ['Assessor', 'Sarah Okonkwo'], ['Assessor (observations)', 'James Pryce']],
     };
-    if (v === 'B') { w.nvq.title = 'Level 3 Diploma in Adult Care (England)'; w.nvq.batch = 'Dubai Cohort 2 — L3AC-NOV26'; w.nvq.batchStart = D(36); w.nvq.batchEnd = D(400); w.nvq.start = D(36); w.nvq.end = D(400); }
+    if (v === 'B') { w.nvq.title = 'Level 3 Diploma in Adult Care (England)'; w.nvq.batch = 'Abu Dhabi Cohort 1 — L3AC-DEC26-AUH'; w.nvq.batchStart = D(62); w.nvq.batchEnd = D(426); w.nvq.start = D(62); w.nvq.end = D(426); }
     if (flags.admitted) w.enrolments.unshift(w.nvq);
 
     /* NVQ hierarchy: Unit → Module → Learning Outcome (type) → Criterion */
@@ -260,10 +260,10 @@ function makeWorld(v) {
     /* Admission */
     const B = v === 'B';
     w.admission = {
-      status: B ? 'Pending — Documents Required' : 'Approved', reviewer: 'Rachel Hughes (Admissions)',
-      history: B ? [['Application started', D(-12, '10:15')], ['Pending — Documents Required', D(-12, '10:20')]] : [['Application started', D(-300)], ['Pending — Documents Required', D(-300)], ['Under Review', D(-290)], ['Approved', D(-283)]],
+      status: B ? 'Sign-up in progress' : 'Approved', reviewer: 'Rachel Hughes (Admissions)',
+      history: B ? [['Sign-up started', D(-12, '10:15')], ['Details and intake confirmed', D(-12, '10:20')]] : [['Sign-up started', D(-300)], ['Sign-up complete', D(-296)], ['Under Review', D(-290)], ['Approved', D(-283)]],
       deposit: { min: amt(300), paid: !B, paidAt: D(-280), holdUntil: B ? null : D(-252), balance: amt(2100) },
-      batch: w.nvq.batch, batchStart: w.nvq.batchStart, waitlist: null,
+      batch: w.nvq.batch, batchStart: w.nvq.batchStart,
       rejectReason: 'Your application does not meet the entry requirement of current employment in an adult care role (at least 16 hours a week). You can re-apply once you are in a qualifying role.',
     };
     const doc = (id, name, mand, status, extra = {}) => ({ id, name, mand, status, formats: 'PDF, JPG or PNG', max: '5 MB', ...extra });
@@ -276,17 +276,20 @@ function makeWorld(v) {
       doc('d6', 'CV', true, B ? 'Pending' : 'Approved', { formats: 'PDF or DOCX', guide: 'Include your care experience from the last 5 years.', versions: [] }),
       doc('d7', 'Employer reference letter', false, 'Pending', { formats: 'PDF', guide: 'Optional. Speeds up the review if you are currently employed in care.', versions: [] }),
     ];
+    // CH-07: the sign-up record — B is on step 2 (documents); the others signed up before they started
+    const code = w.nvq.batch.split(' — ')[1];
+    w.signup = B ? { step: 2, done: false, batch: code } : { step: 5, done: true, batch: code, sig: { name: me.first + ' ' + me.last, at: D(-297, '19:05'), ip: '86.12.44.201', v: 1 }, pay: flags.sponsored ? null : { opt: 'deposit', method: 'card', amount: amt(300), at: D(-296, '18:30'), status: 'Paid', ref: 'TXN-70419' } };
     if (!B) w.docs.forEach(d => { if (d.status === 'Approved') { d.versions = d.versions.length ? d.versions.map(x => [x[0], x[1], 'Approved']) : [[d.name.toLowerCase().replace(/\W+/g, '_') + '.pdf', D(-295), 'Approved']]; d.uploaded = d.uploaded || D(-295); } });
   } else { w.docs = []; }
 
   /* ---------- Payments ---------- */
   const p = [];
-  if (flags.nvq && !flags.sponsored) {
-    const rows = v === 'B' ? [] : [
+  if (flags.nvq && !flags.sponsored && v !== 'B') { // CH-07: B's fee schedule starts when she pays in step 4 of her sign-up
+    const rows = [
       { n: 1, amount: amt(350), due: D(-200), status: 'Paid', paid: amt(350) }, { n: 2, amount: amt(350), due: D(-140), status: 'Paid', paid: amt(350) },
       { n: 3, amount: amt(350), due: D(-80), status: 'Paid', paid: amt(350) }, { n: 4, amount: amt(350), due: D(-45), status: 'Partially paid', paid: amt(150) },
       { n: 5, amount: amt(350), due: D(-15), status: 'Overdue', paid: 0 }, { n: 6, amount: amt(350), due: D(15), status: 'Pending', paid: 0 }];
-    p.push({ e: 'nvq', title: w.nvq.title, plan: 'Instalments', total: amt(2400), partial: true, deposit: { amount: amt(300), status: v === 'B' ? 'Pending' : 'Paid', paidAt: D(-280), hold: v === 'B' ? null : D(-252) }, rows });
+    p.push({ e: 'nvq', title: w.nvq.title, plan: 'Instalments', total: amt(2400), partial: true, deposit: { amount: amt(300), status: 'Paid', paidAt: D(-280), hold: D(-252) }, rows });
   }
   w.enrolments.filter(e => e.kind === 'short').forEach(e => {
     if (flags.sponsored) return;
@@ -388,7 +391,6 @@ function makeWorld(v) {
     N('Schedule', 'Schedule changed', 'Thursday\'s class moved from 17:00 to 18:00.', D(-1), 'calendar', false),
     N('Schedule', 'Content unlocked', 'Unit 307 resources are now available.', D(-14), 'resources', false),
     N('Schedule', 'Batch assigned', 'You have been placed in ' + (w.nvq ? w.nvq.batch : 'a batch') + '.', D(-283), 'course.nvq', false),
-    N('Schedule', 'Waitlisted', 'The batch is full — you are #3 on the waitlist (example).', D(-284), 'admission', false),
     N('Schedule', 'Batch cancelled', 'A previous batch was cancelled (example).', D(-300), 'admission', false),
     N('Payments', 'Payment receipt', 'Receipt RCP for ' + money(amt(45), cur) + ' — Moving and Handling People.', D(-40, '19:23'), 'payments', false),
     N('Payments', 'Payment failed', 'Your card was declined for Care Certificate instalment 2.', D(-1, '20:14'), 'payments', false),
@@ -472,7 +474,6 @@ function applyEdge() {
   if (e === 'underreview' && w.admission) { w.admission.status = 'Under Review'; w.docs.forEach(d => { if (d.mand) { d.status = d.status === 'Approved' ? 'Approved' : 'Submitted'; d.file = d.file || 'cv_priya_raman.pdf'; d.uploaded = d.uploaded || D(-2, '20:10'); } }); w.admission.history.push(['Under Review', D(-1, '09:00')]); }
   if (e === 'rejected' && w.admission) { w.admission.status = 'Rejected'; w.admission.history.push(['Under Review', D(-6)], ['Rejected', D(-1, '14:00')]); }
   if (e === 'withdrawn' && w.admission) { w.admission.status = 'Withdrawn'; w.admission.history.push(['Withdrawn', D(-2, '19:45')]); }
-  if (e === 'waitlist' && w.admission) { w.admission.status = 'Approved'; w.docs.forEach(d => { d.status = 'Approved'; d.file = d.file || 'reference_letter.pdf'; d.uploaded = d.uploaded || D(-6, '18:30'); }); w.admission.deposit.paid = true; w.admission.deposit.paidAt = D(-3); w.admission.deposit.holdUntil = D(25); w.admission.waitlist = { pos: 3, next: D(92) }; w.admission.history.push(['Under Review', D(-6)], ['Approved', D(-4, '11:00')]); }
   if (e === 'paused' && w.plans) { const pl = w.plans.find(p => p.e === 'nvq'); if (pl) { pl.rows[4].due = D(-30); } }
   if (e === 'arrangement' && w.plans) { const pl = w.plans.find(p => p.e === 'nvq'); if (pl) { pl.rows[4].due = D(14); pl.rows[4].status = 'Pending'; pl.rows[4].arrangement = true; } }
   if (e === 'discontinued') { const m = en('mh26'); if (m) { m.status = 'Discontinued'; m.reason = 'Discontinued by the Academy on ' + fd(D(-3)) + ': your identity check was not completed within 30 days of enrolment. Contact the Academy if you think this is wrong.'; } }

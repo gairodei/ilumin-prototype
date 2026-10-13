@@ -1149,3 +1149,20 @@ kbd { font-family: var(--f-mono); font-size: .8em; border: 1px solid var(--line-
   .modal.cs-sheet { top: 0; left: 0; right: 0; bottom: 0; transform: none; width: 100vw; height: 100%; max-height: none; border-radius: 0; }
 }
 body.frame-mobile .modal.cs-sheet { top: 0; bottom: 0; left: 50%; transform: translateX(-50%); width: min(390px, 100vw); height: 100%; max-height: none; border-radius: 0; }
+
+/* CH changes */
+/* CH-07 – CH-10 sign-up stepper and offer letter */
+.ch-su .step { min-width: 92px; }
+.ch-nav { margin-top: 12px; }
+.ch-why { margin: 6px 0 0; }
+.ch-intakes { border: 0; padding: 0; margin: 12px 0 0; }
+.ch-intake { align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.ch-nodep { margin: 0; }
+.ch-letter { position: relative; overflow: hidden; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px 22px; margin: 12px 0; max-width: 720px; line-height: 1.55; }
+.ch-letter > * { position: relative; }
+.ch-wm { position: absolute !important; inset: 0; display: grid; place-items: center; font-size: clamp(1.6rem, 7vw, 3.4rem); font-weight: 800; color: var(--brand); opacity: .06; transform: rotate(-24deg); pointer-events: none; white-space: nowrap; }
+.ch-lh { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 10px; }
+.ch-merge { font-family: ui-monospace, monospace; font-size: .85em; background: var(--line); border-radius: 4px; padding: 0 4px; }
+.ch-sig { max-width: 420px; font-style: italic; }
+.ch-sigblock { border-top: 2px solid var(--fg); padding-top: 8px; margin-top: 4px; font-size: .86rem; max-width: 720px; }
+.ch-pdf { max-width: 720px; }
