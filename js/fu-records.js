@@ -46,6 +46,6 @@ SCREENS['cd-log'] = p => _cdLogFu(p).replace('All 15 run end to end in the proto
 
 /* ---------- Screen index: template attachments, Coordinator "Edit staff" ---------- */
 const _aIdxFu = SCREENS['a-index'];
-SCREENS['a-index'] = p => _aIdxFu(p) + `<section class="card idx-sec"><h2>Follow-up decisions — screens</h2><ul class="idx-list"><li><button class="linklike" data-act="aJump" data-t="a-notifsettings">Notification Settings → workplace templates → Attachments (open "Template")</button></li><li><button class="linklike" data-act="aJump" data-t="a-learner.IA-L-40990">Learner 360 — Priya Nair (moved country; region unchanged)</button></li></ul></section>`;
+SCREENS['a-index'] = p => _aIdxFu(p) + `<section class="card idx-sec"><h2>Follow-up decisions — screens</h2><ul class="idx-list"><li><button class="linklike" data-act="aJump" data-t="a-notifsettings">Notification Settings → workplace templates → Attachments (open "Template")</button></li></ul></section>`;
 const _cIdxFu = SCREENS['c-index'];
 SCREENS['c-index'] = p => { const b = (myBatches().find(x => !(typeof roBatch === 'function' && roBatch(x))) || {}).code; return _cIdxFu(p) + (b ? `<section class="card idx-sec"><h2>Follow-up decisions</h2><ul class="idx-list"><li><button class="linklike" data-act="goTok" data-t="c-batches.${b}">Batch detail → Edit staff (${b})</button></li></ul></section>` : ''); };

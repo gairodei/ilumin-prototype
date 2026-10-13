@@ -74,7 +74,7 @@ function verRun(no, via) {
 function verShell(body) {
   return `<div class="wpc ver"><header class="wpc-h"><span class="ver-brand" aria-label="Illumin Academy — certificate verification"><b class="ver-mark">Illumin Academy</b><span>Certificate verification</span></span><span class="row" style="gap:6px">${S.vBack ? `<button class="btn btn-sm btn-ghost ver-noprint" data-act="vBack">${ic('back', 14)}Back to prototype</button>` : `<span class="wpc-demo-tag ver-noprint">Demo — public page</span>`}</span></header>
   <main id="main" class="wpc-main" tabindex="-1">${body}</main>
-  <footer class="wpc-f"><p>Questions about a certificate? Contact Illumin Academy — ${c2s('Academy contact email and phone')}</p><p class="ver-noprint"><button class="linklike" data-act="vPrivacy">Privacy notice</button> · <button class="linklike" data-act="wpcA11y">Accessibility statement</button></p></footer></div>`;
+  <footer class="wpc-f"><p>Questions about a certificate? Contact Illumin Academy — ${academyContact()}</p><p class="ver-noprint"><button class="linklike" data-act="vPrivacy">Privacy notice</button> · <button class="linklike" data-act="wpcA11y">Accessibility statement</button></p></footer></div>`;
 }
 const verCard = (inner, cls = '') => `<section class="card wpc-card ver-card ${cls}">${inner}</section>`;
 
@@ -111,7 +111,7 @@ function verResult(res) {
   const rows = fld('Full name', `<strong>${esc(r.holder)}</strong>`) + fld('Course', esc(r.course)) + fld('Issue date', r.issued ? fd(r.issued) : '—') + fld('Status', VER_LABEL[st]);
   return verCard(`<div class="ver-status t-${T[0]}" role="status"><span class="ver-ic" aria-hidden="true">${ic(T[1], 30)}</span><div><h1>${T[2]}</h1><p>${T[3]}</p></div></div>
     <dl class="wpc-dl ver-dl">${rows}</dl>
-    ${st === 'revoked' ? `<p class="small">If you have questions about this certificate, contact Illumin Academy (${c2s('Academy contact email and phone')}).</p>` : ''}
+    ${st === 'revoked' ? `<p class="small">If you have questions about this certificate, contact Illumin Academy (${academyContact()}).</p>` : ''}
     ${verChecked(res)}
     <div class="note b-blue">${ic('info')}<div class="small">This confirms that the certificate is genuine. It does not confirm the identity of the person showing it to you — check their photo ID as well.</div></div>
     ${again}</div>`, 'ver-res');

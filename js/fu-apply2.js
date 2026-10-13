@@ -1,52 +1,32 @@
 /* ============================================================
-   Follow-up decisions — Step 2, continued: F1 (Priya Nair, currency stamping), F5 (Coordinator edits),
+   Follow-up decisions — Step 2, continued: mock learner Priya Nair, F5 (Coordinator edits),
    F10 (Super Admin notifications). Loads after fu-apply.js.
    ============================================================ */
 'use strict';
 
-/* ---------- F1 Learner moves country ---------- */
-// Every enrolment, instalment plan, deposit and transaction carries the currency it was agreed in.
-// Anything without one is stamped with the learner's current currency — at load for existing records,
-// and on the next render for new purchases, so a country change only affects what is bought afterwards.
-function fuStampCur(w) {
-  if (!w || !w.me) return; const c = w.me.cur;
-  (w.enrolments || []).forEach(e => { if (!e.cur) e.cur = c; });
-  (w.plans || []).forEach(p => { if (!p.cur) p.cur = ((w.enrolments || []).find(e => e.id === p.e) || {}).cur || c; if (p.deposit && !p.deposit.cur) p.deposit.cur = p.cur; });
-  (w.tx || []).forEach(t => { if (!t.cur) t.cur = c; });
-  if (w.admission && w.admission.deposit && !w.admission.deposit.cur) w.admission.deposit.cur = c;
-  if (w.batchCancelled && !w.batchCancelled.cur) w.batchCancelled.cur = c;
-}
-AFTER.unshift(() => { if (typeof STORE !== 'undefined' && STORE.worlds) Object.values(STORE.worlds).forEach(fuStampCur); });
-// Mock learner Priya Nair (world H): registered in the UAE (AED, UAE region), has since moved to the UK
-const PRIYA = { id: 'IA-L-40990', first: 'Priya', last: 'Nair', email: 'priya.nair@example.com', mobile: '+44 7700 900877', dob: '22 Jun 1994', address: '18 Kings Road, Reading', postcode: 'RG1 3AB', country: 'United Kingdom', tz: 'Europe/London', cur: 'GBP', joined: '12 Mar 2026', referral: 'Self-registration', sponsor: null, region: 'UAE', registered: '2026-03-12T09:00:00.000Z' };
-function fuShortEnrol(id, base, cur, at, status) {
+/* ---------- Mock learner Priya Nair (world H) ----------
+   CH-01 / CH-02: a plain UK learner — country set at registration, everything in GBP (the F1 moved-country state is removed). */
+const PRIYA = { id: 'IA-L-40990', first: 'Priya', last: 'Nair', email: 'priya.nair@example.com', mobile: '+44 7700 900877', dob: '22 Jun 1994', address: '18 Kings Road, Reading', postcode: 'RG1 3AB', country: 'United Kingdom', tz: 'Europe/London', cur: 'GBP', joined: '12 Mar 2026', referral: 'Self-registration', sponsor: null };
+const PRIYA_JOINED = '2026-03-12T09:00:00.000Z';
+function fuShortEnrol(id, base, at, status) {
   const tpl = STORE.worlds.A.enrolments.find(e => e.kind === 'short' && (e.base || e.title).startsWith(base)) || STORE.worlds.A.enrolments.find(e => e.kind === 'short');
-  const e = JSON.parse(JSON.stringify(tpl)), price = coursePrice(base, cur === 'AED' ? 'AED' : 'GBP');
-  return Object.assign(e, { id, base, title: base, status, enrolled: at, start: at, end: new Date(new Date(at).getTime() + 365 * DAY).toISOString(), progress: 20, sponsor: null, price, cur, certId: undefined, completedAt: undefined, reason: undefined, quiz: { ...e.quiz, attempts: [] }, reqs: (e.reqs || []).map(([r]) => [r, false]) });
+  const e = JSON.parse(JSON.stringify(tpl)), price = coursePrice(base);
+  return Object.assign(e, { id, base, title: base, status, enrolled: at, start: at, end: new Date(new Date(at).getTime() + 365 * DAY).toISOString(), progress: 20, sponsor: null, price, cur: 'GBP', certId: undefined, completedAt: undefined, reason: undefined, quiz: { ...e.quiz, attempts: [] }, reqs: (e.reqs || []).map(([r]) => [r, false]) });
 }
-function fuPriya(before) {
-  PERSONAS.H = { ...PRIYA, ...(before ? { country: 'United Arab Emirates', tz: 'Asia/Dubai', cur: 'AED', address: 'Apt 1204, Marina Gate, Dubai Marina', postcode: '—', mobile: '+971 50 412 7781' } : {}) };
+function fuPriya() {
+  PERSONAS.H = { ...PRIYA };
   VARIANTS.H = { nvq: false, fresh: true };
-  const w = STORE.worlds.H = makeWorld('H'), t0 = '2026-03-14T10:00:00.000Z';
+  const w = STORE.worlds.H = makeWorld('H'), t0 = '2026-03-14T10:00:00.000Z', t1 = D(-6, '11:20');
   Object.assign(w, { enrolments: [], certs: [], tx: [], plans: [], threads: [], requests: [], attendance: [], resources: [], events: [], payOverdue: null, referral: null });
-  w.me.region = 'UAE'; w.me.registered = PRIYA.registered;
-  const e1 = fuShortEnrol('pn1', 'Moving and Handling People', 'AED', t0, 'Active');
-  w.enrolments.push(e1); w.plans.push({ e: 'pn1', title: e1.title, plan: 'One-time payment', cur: 'AED', rows: [{ n: 1, amount: e1.price, due: t0, status: 'Paid', paid: e1.price, receipt: 'RCP-40991' }] });
-  w.tx.push({ at: t0, ref: 'TXN-40991', method: 'Visa •••• 2290', amount: e1.price, status: 'Succeeded', desc: e1.title, cur: 'AED' });
-  if (!before) {
-    const t1 = D(-6, '11:20'), e2 = fuShortEnrol('pn2', 'Fire Safety Awareness', 'GBP', t1, 'Active');
-    w.enrolments.unshift(e2); w.plans.unshift({ e: 'pn2', title: e2.title, plan: 'One-time payment', cur: 'GBP', rows: [{ n: 1, amount: e2.price, due: t1, status: 'Paid', paid: e2.price, receipt: 'RCP-40995' }] });
-    w.tx.unshift({ at: t1, ref: 'TXN-40995', method: 'Visa •••• 2290', amount: e2.price, status: 'Succeeded', desc: e2.title, cur: 'GBP' });
-    w.me.countryChanged = { from: 'United Arab Emirates', to: 'United Kingdom', at: D(-20, '09:00') };
-    w.requests.push({ id: 'R-1101', type: 'Profile change', target: 'Country of residence', raised: D(-22, '18:00'), status: 'Approved', reason: 'Moved to Reading for a new job.', decided: D(-20, '09:00'), decision: 'Approved by Owen Price.' });
-  }
-  w.notifs = [{ id: 'nph', cat: 'Account', title: 'Welcome to Illumin Academy', body: 'Browse courses to get started.', at: PRIYA.registered, unread: false, go: 'browse' }];
-  STORE.acct.H = 'Active'; fuStampCur(w); return w;
+  const e1 = fuShortEnrol('pn1', 'Moving and Handling People', t0, 'Active'), e2 = fuShortEnrol('pn2', 'Fire Safety Awareness', t1, 'Active');
+  w.enrolments.push(e2, e1);
+  w.plans.push({ e: 'pn2', title: e2.title, plan: 'One-time payment', cur: 'GBP', rows: [{ n: 1, amount: e2.price, due: t1, status: 'Paid', paid: e2.price, receipt: 'RCP-40995' }] }, { e: 'pn1', title: e1.title, plan: 'One-time payment', cur: 'GBP', rows: [{ n: 1, amount: e1.price, due: t0, status: 'Paid', paid: e1.price, receipt: 'RCP-40991' }] });
+  w.tx.push({ at: t1, ref: 'TXN-40995', method: 'Visa •••• 2290', amount: e2.price, status: 'Succeeded', desc: e2.title, cur: 'GBP' }, { at: t0, ref: 'TXN-40991', method: 'Visa •••• 2290', amount: e1.price, status: 'Succeeded', desc: e1.title, cur: 'GBP' });
+  w.notifs = [{ id: 'nph', cat: 'Account', title: 'Welcome to Illumin Academy', body: 'Browse courses to get started.', at: PRIYA_JOINED, unread: false, go: 'browse' }];
+  STORE.acct.H = 'Active'; return w;
 }
 const _isFu = initStore; initStore = function () { _isFu(); fuPriya(); };
 if (typeof STORE !== 'undefined' && STORE.worlds && !STORE.worlds.H) fuPriya();
-// Demo Scenario #16 starts from before the move
-ACT.scPriyaBefore = () => { fuPriya(true); S.variant = 'H'; ACT.switchRole({ dataset: { r: 'learner' } }); go('profile'); toast('Demo: Priya is back to before her move — UAE, AED, one course.', 'info'); };
 
 /* ---------- F5 Coordinator edits own batch; last save wins; both versions kept; the other party is told ---------- */
 const fuHist = key => ((STORE.fuHist = STORE.fuHist || {})[key] = STORE.fuHist[key] || []);

@@ -2,12 +2,13 @@
    Final decisions G2 — learner self-registration (prototype only)
    Sign-in → "Create an account" → Register → Verify (6-digit code by email or SMS) → Welcome → Dashboard.
    A learner who signs in before verifying lands on the verify screen. Emails and codes go to the
-   Learner inbox (demo). Cross-view: the new learner appears in Learners (country, data region, currency)
+   Learner inbox (demo). Cross-view: the new learner appears in Learners (country, data region)
    and a referral code adds to that code's registration count. Loads after every portal file.
    ============================================================ */
 'use strict';
 
-const REG_COUNTRIES = [['United Kingdom', 'GBP', 'UK', '+44'], ['United Arab Emirates', 'AED', 'UAE', '+971'], ['India', 'INR', null, '+91'], ['Ireland', 'EUR', null, '+353'], ['Nigeria', 'NGN', null, '+234'], ['Pakistan', 'PKR', null, '+92'], ['Philippines', 'PHP', null, '+63'], ['South Africa', 'ZAR', null, '+27']];
+// [country, currency, data region, dial code] — CH-03: UAE → UAE, every other country → UK; CH-02: everyone pays in GBP
+const REG_COUNTRIES = [['United Kingdom', 'GBP', 'UK', '+44'], ['United Arab Emirates', 'GBP', 'UAE', '+971'], ['India', 'GBP', 'UK', '+91'], ['Ireland', 'GBP', 'UK', '+353'], ['Nigeria', 'GBP', 'UK', '+234'], ['Pakistan', 'GBP', 'UK', '+92'], ['Philippines', 'GBP', 'UK', '+63'], ['South Africa', 'GBP', 'UK', '+27']];
 const regCountry = n => REG_COUNTRIES.find(c => c[0] === n);
 const REG_CODE_MIN = 15;
 
@@ -30,7 +31,7 @@ function regForm() {
       <div class="field"><label for="rg-name">Full name</label><input class="input" id="rg-name" autocomplete="name" value="${esc(d.name || '')}"></div>
       <div class="field"><label for="rg-email">Email</label><input class="input" id="rg-email" type="email" autocomplete="email" value="${esc(d.email || '')}"></div>
       <div class="field"><label for="rg-mob">Mobile</label><div class="row" style="gap:6px;flex-wrap:nowrap"><label class="sr" for="rg-dial">Country code</label><select class="select" id="rg-dial" style="width:auto">${[...new Set(REG_COUNTRIES.map(c => c[3]))].map(c => `<option ${c === d.dial ? 'selected' : ''}>${c}</option>`).join('')}</select><input class="input" id="rg-mob" type="tel" autocomplete="tel-national" value="${esc(d.mob || '')}" placeholder="7700 900123"></div></div>
-      <div class="field"><label for="rg-country">Country</label><select class="select" id="rg-country" data-onchange="regCountry"><option value="">Choose your country</option>${REG_COUNTRIES.map((c, i) => `${i === 2 ? '<option disabled>──────────</option>' : ''}<option ${d.country === c[0] ? 'selected' : ''}>${c[0]}</option>`).join('')}</select><span class="hint">Your country sets the money you pay in (for example £ GBP in the UK, AED in the UAE). It also sets where your data is kept. To change it later, ask the Academy.</span></div>
+      <div class="field"><label for="rg-country">Country</label><select class="select" id="rg-country" data-onchange="regCountry"><option value="">Choose your country</option>${REG_COUNTRIES.map((c, i) => `${i === 2 ? '<option disabled>──────────</option>' : ''}<option ${d.country === c[0] ? 'selected' : ''}>${c[0]}</option>`).join('')}</select><span class="hint">Your country sets where your data is kept. It can't be changed after you register. All prices are in £ GBP.</span></div>
       ${pwField('rg-pw', 'Password', 'new')}${pwField('rg-pw2', 'Confirm password', 'confirm')}${pwPolicy('rg-pol')}
       <div class="field"><label for="rg-ref">Referral / Agent Code <span class="muted small">(optional)</span></label><input class="input mono" id="rg-ref" value="${esc(d.ref)}" ${d.refLocked ? 'readonly' : ''} data-oninput="regRef" autocomplete="off">${d.refLocked ? `<span class="hint">${ic('lock', 12)} Added from your referral link.</span>` : ''}<span id="rg-ref-st" class="small" role="status">${rs ? regRefMsg(rs) : ''}</span></div>
       <label class="check small"><input type="checkbox" id="rg-terms" ${d.terms ? 'checked' : ''}> <span>I agree to the <button type="button" class="linklike" data-act="regDoc" data-d="Terms &amp; Conditions">Terms &amp; Conditions</button></span></label>
@@ -116,12 +117,12 @@ function regCreate() {
   const r = STORE.regs.find(x => x.email === d.email); if (r) r.verified = true;
   STORE.acct.G = 'Active';
   if (d.refOk) { const ref = ADMIN.referrals.find(x => x.code === d.refOk); if (ref) ref.regs = (ref.regs || 0) + 1; }
-  logA('Learners', id, 'Self-registration', '—', `Verified · ${c[0]} · ${c[1]}${d.refOk ? ' · code ' + d.refOk : ''}`, 'Consents: Terms v3.2, Privacy v4.0 at ' + fdt(d.consents[0][2]));
+  logA('Learners', id, 'Self-registration', '—', `Verified · ${c[0]}${d.refOk ? ' · code ' + d.refOk : ''}`, 'Consents: Terms v3.2, Privacy v4.0 at ' + fdt(d.consents[0][2]));
   S.variant = 'G'; W = w; S.edge = 'none'; S.portal = 'learner';
 }
-// The registered learner joins the demo-learner list so admin views show them (country, data region, currency)
+// The registered learner joins the demo-learner list so admin views show them (country, data region)
 const _demoLR = demoLearners;
-demoLearners = function () { const list = _demoLR(); const w = STORE.worlds && STORE.worlds.G; if (!w) return list; const m = w.me, c = regCountry(m.country) || []; return list.concat([{ id: m.id, v: 'G', name: (m.first + ' ' + m.last).trim(), email: m.email, mobile: m.mobile, agency: null, courses: w.enrolments.map(e => e.title), acct: 'Active', rec: 'Active', region: c[2] || null, last: now().toISOString(), flags: [], dob: m.dob, address: m.address, postcode: m.postcode, country: m.country, joined: m.joined, referral: m.referral, cur: m.cur, demo: true }]); };
+demoLearners = function () { const list = _demoLR(); const w = STORE.worlds && STORE.worlds.G; if (!w) return list; const m = w.me, c = regCountry(m.country) || []; return list.concat([{ id: m.id, v: 'G', name: (m.first + ' ' + m.last).trim(), email: m.email, mobile: m.mobile, agency: null, courses: w.enrolments.map(e => e.title), acct: 'Active', rec: 'Active', region: regionOf(m.country), last: now().toISOString(), flags: [], dob: m.dob, address: m.address, postcode: m.postcode, country: m.country, joined: m.joined, referral: m.referral, cur: m.cur, demo: true }]); };
 // Learner demo panel + sign-in hint: open a referral link
 const _rdR = renderDemo;
 renderDemo = function () { _rdR(); const fs = $('#demo-root .demo-panel'); if (fs && (S.portal === 'learner' || !S.signedIn) && !fs.querySelector('[data-act="regLink"]')) fs.insertAdjacentHTML('beforeend', '<fieldset><legend>Registration — demo only</legend><div class="btns"><button class="btn btn-sm" data-act="regLink">Open referral link (demo)</button><button class="btn btn-sm" data-act="regStart">Create an account</button></div></fieldset>'); };

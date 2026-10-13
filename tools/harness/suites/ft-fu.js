@@ -10,37 +10,27 @@
   const SA = () => { setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; S.ui = {}; };
   const learner = v => { S.variant = v; ACT.switchRole({ dataset: { r: 'learner' } }); };
 
-  await T('F1 Priya mock + Learner 360', () => {
+  // CH-01 / CH-02 / CH-03: F1 superseded — Priya Nair is a plain UK learner; the country never changes
+  await T('F1 superseded (CH-01): Priya Nair, plain UK learner in GBP', () => {
     const w = STORE.worlds.H; ok('Priya exists (world H)', !!w && VNAME('H') === 'Priya Nair');
-    ok('one AED enrolment, one GBP enrolment', w.enrolments.some(e => e.cur === 'AED') && w.enrolments.some(e => e.cur === 'GBP'), w.enrolments.map(e => e.title + ':' + e.cur).join());
-    SA(); go('a-learner', { id: 'IA-L-40990' }); ok('Learner 360: Data region UAE (registered 12 Mar 2026)', /UAE\s*\(registered 12 Mar 2026\)/.test(main()), (main().match(/Data region[^\n]{0,80}/) || [''])[0]);
-    ok('Learner 360: Country changed to United Kingdom on …', /Country changed to United Kingdom on \d{1,2} \w{3,4} \d{4}/.test(main()));
-    learner('H'); go('payments'); const t = main(); ok('Payments: AED and GBP amounts side by side', /AED/.test(t) && /£/.test(t), (t.match(/Paid so far[^\n]{0,60}/) || [''])[0]);
+    ok('CH-02: both enrolments in GBP', w.enrolments.length === 2 && w.enrolments.every(e => e.cur === 'GBP'), w.enrolments.map(e => e.title + ':' + e.cur).join());
+    SA(); go('a-learner', { id: 'IA-L-40990' }); ok('CH-01 / CH-03 Learner 360: Country (set at registration), Data region UK, no "Country changed"', /Country\s*United Kingdom\s*\(set at registration\)/.test(main()) && /Data region\s*UK/.test(main()) && !/Country changed/.test(main()), (main().match(/Country[^\n]{0,80}/) || [''])[0]);
+    learner('H'); go('payments'); const t = main(); ok('CH-02 Payments: GBP only', /£/.test(t) && !/AED/.test(t), (t.match(/Paid so far[^\n]{0,60}/) || [''])[0]);
   });
-  await T('F1 country change: new purchases only, region stays', async () => {
-    ACT.scPriyaBefore(); ok('before: UAE / AED / one course', W.me.country === 'United Arab Emirates' && W.me.cur === 'AED' && W.enrolments.length === 1);
-    go('profile'); ACT.reqChange({ dataset: { f: 'Country of residence', v: W.me.country } });
-    ok('modal note', /Changing country affects new purchases only\. Your current courses and payments stay in AED\./.test(MODAL.body));
-    $('#pc-new').value = 'United Kingdom'; $('#pc-r').value = 'Moved to Reading'; prim(); const r = W.requests[0];
-    ACT.switchRole({ dataset: { r: 'sysA' } }); const qid = 'AQ-' + r.id + '-H'; go('a-queue', { id: qid }); ok('System Admin sees the request', !!qItem(qid), qid);
-    ACT.qDo({ dataset: { id: qid, a: 'approve' } }); rsn('Proof of address checked'); prim();
-    const w = STORE.worlds.H, m = w.me; ok('approved: new purchases in GBP, region still UAE', m.cur === 'GBP' && m.region === 'UAE' && m.country === 'United Kingdom', m.cur + ' ' + m.region);
-    ok('existing enrolment, plan and payment stay AED', w.enrolments[0].cur === 'AED' && w.plans[0].cur === 'AED' && w.tx[0].cur === 'AED');
-    learner('H'); go('browse'); const b = [...document.querySelectorAll('main [data-act="buyCourse"]')].find(x => !w.enrolments.some(e => (x.dataset.id || '').length && e.base && e.base === x.dataset.t)) || document.querySelector('main [data-act="buyCourse"]');
-    ok('browse prices in GBP', /£/.test(main())); const n0 = w.enrolments.length; ACT.buyCourse({ dataset: { ...b.dataset } }); let guard = 0; while (MODAL && guard++ < 3) { prim(); await wait(2500); } closeModal(); render();
-    const ne = w.enrolments.find(e => !['pn1'].includes(e.id)); ok('new course priced in GBP', w.enrolments.length > n0 && ne && ne.cur === 'GBP', ne && ne.title + ':' + ne.cur);
-    go('payments'); ok('old course still AED on Payments', /AED/.test(main()) && /£/.test(main()));
-    SA(); go('a-learner', { id: 'IA-L-40990' }); ok('data region unchanged; change line shown', /UAE\s*\(registered/.test(main()) && /Country changed to United Kingdom/.test(main()));
-    ok('Finance keeps each payment\'s currency', allTx().filter(x => x.payer === 'Priya Nair').map(x => x.cur).sort().join() .includes('AED'));
+  await T('CH-01 country is read-only (F1 country change removed)', async () => {
+    learner('H'); go('profile'); const row = [...document.querySelectorAll('main .li')].find(li => /Country of residence/.test(li.textContent));
+    ok('CH-01 Country of residence is read-only (no Request change)', !!row && !row.querySelector('[data-act="reqChange"]') && /Read-only/.test(row.textContent), row && row.textContent);
+    ok('CH-01 no moved-country demo step', typeof ACT.scPriyaBefore !== 'function' && !W.requests.some(r => r.target === 'Country of residence'));
   });
-  await T('F2 / F3 / F8 pending tags', () => {
-    SA(); go('a-courses', { id: ADMIN.courses[0].id }); ok('F2 pricing tag', /Pending client: exchange-rate source/.test(html()));
-    learner('A'); go('browse'); const b = document.querySelector('main [data-act="buyCourse"]'); ACT.buyCourse({ dataset: { ...b.dataset } }); ok('F2 checkout tag', MODAL && /Pending client: exchange-rate source/.test(MODAL.body)); closeModal();
-    const inr = allLearners().filter(l => l.cur === 'INR'); ok('F3a INR learners exist', inr.length > 0, inr.map(l => l.name).join());
-    setAdminIdentity('FA'); S.portal = 'admin'; go('f-ledger'); ok('F3a Finance shows INR separately', /INR/.test(main()));
-    SA(); go('a-learner', { id: inr[0].id }); ok('F3b region tag for learners outside UK/UAE', /Pending client: storage region for learners outside the UK\/UAE/.test(html()));
-    ACT.switchRole({ dataset: { r: 'agyA' } }); ACT.agBuy({ dataset: { id: 'CAT-1' } }); const inv = $('#modal-root input[name="gpm"][value="inv"]'); if (inv) inv.checked = true; prim(); ok('F8 agency bank transfer tag', MODAL && /Pending client: how agencies receive VAT invoices/.test(MODAL.body)); prim();
-    const i = ADMIN.queue.find(x => x.type === 'Agency invoice (offline) purchase'); setAdminIdentity('FA'); S.portal = 'admin'; go('a-queue', { id: i.id }); ok('F8 Finance invoice item tag', /Pending client: how agencies receive VAT invoices/.test(html()));
+  // CH-02 / CH-03 / CH-05: the F2, F3 and F8 pending tags are resolved
+  await T('F2 / F3 / F8 resolved (CH-02, CH-03, CH-05)', () => {
+    SA(); go('a-courses', { id: ADMIN.courses[0].id }); ok('CH-02 no exchange-rate tag, no AED price field', !/exchange-rate source/.test(html()) && !$('#cd-a'));
+    learner('A'); go('browse'); const b = document.querySelector('main [data-act="buyCourse"]'); ACT.buyCourse({ dataset: { ...b.dataset } }); ok('CH-02 checkout: no exchange-rate tag; Stripe local-currency line', MODAL && !/exchange-rate source/.test(MODAL.body) && /Stripe may show this amount in your local currency\. You'll be charged £[\d,]+\.\d\d\./.test(MODAL.body)); closeModal();
+    const ind = allLearners().filter(l => l.country === 'India'); ok('CH-02 learners from India pay in GBP', ind.length > 0 && ind.every(l => l.cur === 'GBP'), ind.map(l => l.name + ':' + l.cur).join());
+    setAdminIdentity('FA'); S.portal = 'admin'; go('f-ledger'); ok('CH-02 Finance ledger: no INR / AED', !/INR|AED|₹/.test(main()));
+    SA(); go('a-learner', { id: ind[0].id }); ok('CH-03 no storage-region tag; data region UK', !/storage region/.test(html()) && /Data region\s*UK/.test(main()));
+    ACT.switchRole({ dataset: { r: 'agyA' } }); ACT.agBuy({ dataset: { id: 'CAT-1' } }); const inv = $('#modal-root input[name="gpm"][value="inv"]'); if (inv) inv.checked = true; prim(); ok('CH-05 agency bank transfer: VAT invoice note, no tag', MODAL && /VAT invoices are sent by the Academy by email\./.test(MODAL.body) && !/Pending client/.test(MODAL.body)); prim();
+    const i = ADMIN.queue.find(x => x.type === 'Agency invoice (offline) purchase'); setAdminIdentity('FA'); S.portal = 'admin'; go('a-queue', { id: i.id }); ok('CH-05 Finance invoice item: VAT invoice sent by email, no tag', /Sent by the Academy by email/.test(main()) && !/how agencies receive VAT invoices/.test(html()));
   });
   await T('F4 sponsored NVQ', () => {
     learner('D'); go('payments'); ok('Payments: fees covered by the agency', /Your course fees are covered by/.test(main()) && !/who pays/i.test(html()));
@@ -82,7 +72,7 @@
     ok('"Documents from Illumin Academy"; placeholder gone', /Documents from Illumin Academy/.test(t) && /Workplace FAQ\.pdf/.test(t) && !/Visit description/.test(t));
     ok('duration / contact / FAQ TBDs gone', [...document.querySelectorAll('.tbd')].every(x => /^(Client to supply|Pending client):/.test(x.textContent) || x.textContent === 'Demo only'));
     ACT.switchRole({ dataset: { r: 'bizA' } }); ACT.newAgency(); const st = MODAL; ok('wizard opens', !!st);
-    $('#oa-n').value = 'Riverside Care'; $('#oa-r').value = '09876543'; $('#oa-cur').value = 'GBP'; prim(); $('#oa-pe').value = 'ops@riverside-care.co.uk'; $('#oa-pc').value = 'Ana Reyes (Ops)'; prim(); ok('Login step: Attach data-sharing terms', /Attach data-sharing terms/.test(MODAL.body)); ACT.oaTermsSample(); $('#oa-li').value = 'ops@riverside-care.co.uk'; prim(); prim(); prim(); prim(); prim();
+    $('#oa-n').value = 'Riverside Care'; $('#oa-r').value = '09876543'; prim(); $('#oa-pe').value = 'ops@riverside-care.co.uk'; $('#oa-pc').value = 'Ana Reyes (Ops)'; prim(); ok('Login step: Attach data-sharing terms', /Attach data-sharing terms/.test(MODAL.body)); ACT.oaTermsSample(); $('#oa-li').value = 'ops@riverside-care.co.uk'; prim(); prim(); prim(); prim(); prim();
     const ag = ADMIN.agencies.find(a => a.name === 'Riverside Care'); ok('agency created with terms', ag && ag.terms && ag.terms.length === 1, ag && JSON.stringify(ag.terms));
     const m = STORE.agy.lmails.find(x => x.kind === 'agency' && x.agency === 'Riverside Care'); go('m-inbox', { id: m.id }); ok('set-password email shows the attachment', /data-sharing terms\.pdf/.test(main()));
     agyEnter('AG-02', true); go('g-profile'); ok('Agency Profile → Data protection lists it, no TBD', /Illumin Academy data-sharing terms\.pdf/.test(main()) && ![...document.querySelectorAll('main section')].find(s => /Data protection/.test(s.textContent)).querySelector('.tbd'));
@@ -111,14 +101,14 @@
     S.route = ''; S.variant = 'C'; ACT.switchRole({ dataset: { r: 'learner' } }); go('cd-log'); const t = document.getElementById('app').textContent;
     const fu = [...document.getElementById('app').querySelectorAll('section')].find(s => /Follow-up decisions \(P-05 – P-26\)/.test(s.textContent)); ok('Client Decisions Log: F1–F12 rows', !!fu && fu.querySelectorAll('tbody tr').length === 13);
     const st = id => ([...fu.querySelectorAll('tbody tr')].find(tr => tr.firstChild.textContent === id) || {}).textContent || '';
-    ok('F2, F3b, F8 Pending client; the rest Applied', ['F2', 'F3b', 'F8'].every(x => /Pending client/.test(st(x))) && ['F1', 'F3a', 'F4', 'F5', 'F6', 'F7', 'F9', 'F10', 'F11', 'F12'].every(x => /Applied/.test(st(x))));
+    ok('CH: F1, F3a Superseded; F2, F3b, F8 Resolved; the rest Applied', ['F1', 'F3a'].every(x => /Superseded \(CH-0[12]\)/.test(st(x))) && ['F2', 'F3b', 'F8'].every(x => /Resolved \(CH-0[235]\)/.test(st(x))) && ['F4', 'F5', 'F6', 'F7', 'F9', 'F10', 'F11', 'F12'].every(x => /Applied/.test(st(x))));
     ok('Approval Routes document: Returned by client', /Approval Routes document\W{0,3}Returned by client/.test(t));
-    ok('#16, #17, #18 listed; #2–#5 still Illustrative', /Learner moves country/.test(t) && /Coordinator vs Academic Admin edit/.test(t) && /Client sheet items/.test(t) && /All 18 run end to end/.test(t));
+    ok('CH-01: #16 "Learner moves country" removed from the Demo scenarios table; #17, #18 listed', !CDL_SCEN.some(r => r[1] === 'Learner moves country') && /Coordinator vs Academic Admin edit/.test(t) && /Client sheet items/.test(t) && /All 17 run end to end/.test(t));
     go('ux-changelog'); ok('UX Changelog: one entry per F item', ['F1', 'F2', 'F3', 'F4', 'F5', 'F6, F7, F9', 'F8', 'F10', 'F11', 'F12'].every(x => new RegExp(x.replace(/,/g, ',') + ':').test(main())));
     go('tbd-register'); ok('TBD register: F4 and F11 removals listed', /F4/.test(main()) && /F11/.test(main()));
     SA(); go('a-index'); ok('screen index: template attachments', /workplace templates → Attachments/.test(main()));
     S.coo.v = 'A'; cooEnter(); S.signedIn = true; go('c-index'); ok('screen index: Coordinator Edit staff', /Edit staff/.test(main()));
-    ACT.scOpen(); go('demo-scenarios'); ok('18 scenarios (#18 Client sheet items added)', document.querySelectorAll('main section[id^="sc-"]').length === 18);
+    ACT.scOpen(); go('demo-scenarios'); ok('CH-01: 17 scenarios (#16 removed)', document.querySelectorAll('main section[id^="sc-"]').length === 17 && !document.querySelector('#sc-16'));
   });
   const out = document.createElement('pre'); out.id = 'ft-out'; out.textContent = R.join('\n') + '\n' + R.filter(x => x.startsWith('PASS')).length + '/' + R.length; document.body.appendChild(out);
 })();

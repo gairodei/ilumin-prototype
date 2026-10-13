@@ -590,7 +590,7 @@ ACT.cancelBatch = el => {
       sels.forEach(s => {
         const alt = ADMIN.batches.find(x => x.code === s.value), name = s.dataset.n;
         if (s.dataset.id === 'IA-L-31188') { STORE.worlds.B.batchCancelled = s.value === 'refund' ? { refund: true, amount: STORE.worlds.B.amt(300) } : { moved: `${alt.label} — ${alt.code}`, start: alt.start }; notifyLearner('B', 'Schedule', 'Batch cancelled', s.value === 'refund' ? 'Your batch was cancelled — refund in progress.' : `Your batch was cancelled — you've been moved to ${alt.label}.`, 'admission'); }
-        if (s.value === 'refund') { const lv = s.dataset.id === 'IA-L-31188' ? 'B' : null; depositRefund(name, lv, lv ? STORE.worlds.B.amt(300) : 300, lv ? STORE.worlds.B.me.cur : (b.label.includes('Dubai') ? 'AED' : 'GBP'), 'Batch cancelled', 'Batch ' + b.code + ' cancelled before start: ' + r); }
+        if (s.value === 'refund') { const lv = s.dataset.id === 'IA-L-31188' ? 'B' : null; depositRefund(name, lv, lv ? STORE.worlds.B.amt(300) : 300, lv ? STORE.worlds.B.me.cur : 'GBP', 'Batch cancelled', 'Batch ' + b.code + ' cancelled before start: ' + r); }
         else if (alt) { alt.enrolled++; alt.roster.push([name, s.dataset.id, 'Moved after cancellation']); }
       });
       b.status = 'Cancelled'; b.cancelled = now().toISOString(); touch(b.code); logA('Batches', `${b.label} (${b.code})`, 'Batch cancelled', 'Open', 'Cancelled', r); render(); toast('Batch cancelled. Learners notified; refund choices sent to Finance.');

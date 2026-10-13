@@ -103,7 +103,7 @@ function staffSignin(e) {
 }
 function learnerGate() {
   const a = STORE.acct[S.variant];
-  if (a === 'Deactivated') { S.authMsg = { html: '<strong>Your account is inactive — contact the Academy.</strong> ' + c2s('Academy contact email and phone') }; render(); return true; }
+  if (a === 'Deactivated') { S.authMsg = { html: '<strong>Your account is inactive — contact the Academy.</strong> ' + academyContact() }; render(); return true; }
   if (a === 'Archived') { S.edge = 'archived'; logA('Learners', W.me.id + ' · ' + W.me.first + ' ' + W.me.last, 'Archived learner login', 'Archived', 'Archived (read-only session)', 'Learner signed in to an archived account'); }
   return false;
 }

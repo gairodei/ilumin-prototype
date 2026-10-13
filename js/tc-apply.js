@@ -5,9 +5,8 @@
 
 /* TBD-094: an overpayment is refunded, not held as credit — record the payment, then pre-fill a refund for the surplus */
 ACT.opSurplus = () => {
-  const t = payTargets().find(x => x.key === $('#op-t').value), a = +$('#op-a').value, c = $('#op-c').value, ref = ($('#op-r') || {}).value || ('OFF-' + Date.now().toString().slice(-6)), r = mval('#rsn');
+  const t = payTargets().find(x => x.key === $('#op-t').value), a = +$('#op-a').value, c = 'GBP', ref = ($('#op-r') || {}).value || ('OFF-' + Date.now().toString().slice(-6)), r = mval('#rsn');
   if (!t) return;
-  if (c !== t.cur) { fieldErr('#op-c', `Currency must match the enrolment (${t.cur})`); return; }
   if (!(a > t.due)) { fieldErr('#op-a', 'There is no surplus to refund'); return; }
   if (!r) { fieldErr('#rsn', 'Enter a reason'); return; }
   const surplus = Math.round((a - t.due) * 100) / 100;
@@ -28,13 +27,10 @@ ACT.reqCancel = el => {
   } });
 };
 
-/* The TBD topics that remain after the cleanup (§B4 + the office address): [kind, topic, original IDs, places] */
+/* The TBD topics that remain after the cleanup (§B4 + the office address), less those the client change list resolved
+   (CH-05 VAT invoices, CH-03 storage region, CH-02 exchange rates, CH-31 contact details): [kind, topic, original IDs, places] */
 const TBD_TOPICS = [
-  ['Pending client', 'how agencies receive VAT invoices for bank-transfer purchases', '012, 055', 'Approvals Queue → agency invoice purchase item (Finance / Super Admin); Agency → Buy bundles → bank transfer'],
-  ['Pending client', 'storage region for learners outside the UK/UAE, and two-region hosting cost', '013', 'Learner 360 → Overview → Data region (learners outside the UK/UAE)'],
-  ['Pending client', 'exchange-rate source, update frequency, rounding, and price lock at enrolment', '019, 121', 'Course editor → prices (Super / System Admin); learner checkout'],
   ['Client to supply', 'bank payment instructions', '034', 'Agency → Purchases → approved bank-transfer purchase'],
-  ['Client to supply', 'Academy contact email and phone', '039, 045, 152 + untagged', 'Agency receive-only messages, agency Help, agency deactivated sign-in, verification page footer and revoked result, learner Help, learner contact page, learner suspended / archived / paused sign-in notices, admin suspended sign-in, workplace pages (footer, help, FAQ, accessibility, email footer)'],
   ['Client to supply', 'privacy notice URL', '153, 163', 'Verification page privacy notice; workplace privacy notice; workplace email footer'],
   ['Client to supply', 'verification domain', '154', 'Learner certificates → Copy verification link'],
   ['Client to supply', 'Academy office address', 'G6.6', 'Assessor propose observation (office), assessor and admin observation lists, Coordinator observations, learner Observations, learner contact page'],

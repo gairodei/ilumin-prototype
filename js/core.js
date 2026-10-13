@@ -450,7 +450,7 @@ SUBMIT.signin = (form) => {
   if (e.includes('wrong')) { S.failCount++; S.authMsg = { html: `<strong>Email or password is incorrect.</strong> Check them and try again.${S.failCount >= 3 ? ` ${5 - S.failCount} attempts left before your account is locked for 15 minutes.` : ''}` }; if (S.failCount >= 5) S.authMsg = { html: '<strong>Your account is temporarily locked</strong> after 5 unsuccessful attempts. Try again in 15 minutes.' }; render(); return; }
   if (typeof staffSignin === 'function' && staffSignin(e)) return;
   if (e.includes('unverified') || S.edge === 'unverified') { S.auth = 'verify'; S.authMsg = null; render(); return; }
-  if (e.includes('inactive') || S.edge === 'deactivated') { S.authMsg = { html: '<strong>Your account is inactive — contact the Academy.</strong> ' + c2s('Academy contact email and phone') }; render(); return; }
+  if (e.includes('inactive') || S.edge === 'deactivated') { S.authMsg = { html: '<strong>Your account is inactive — contact the Academy.</strong> ' + academyContact() }; render(); return; }
   if (typeof learnerGate === 'function' && learnerGate()) return;
   S.portal = 'learner';
   S.signedIn = true; S.failCount = 0; S.authMsg = null;
@@ -564,7 +564,7 @@ function setEdge(e) {
   S.edge = e;
   if (def && def[2] && def[2] !== S.variant) S.variant = def[2];
   W = makeWorld(S.variant); if (typeof STORE !== 'undefined' && STORE.worlds) STORE.worlds[S.variant] = W; applyEdge();
-  if (def && def[3] === 'auth') { signOut(); if (e === 'unverified') { S.auth = 'verify'; S.authEmail = W.me.email; } else S.authMsg = { html: '<strong>Your account is inactive — contact the Academy.</strong> ' + c2s('Academy contact email and phone') }; }
+  if (def && def[3] === 'auth') { signOut(); if (e === 'unverified') { S.auth = 'verify'; S.authEmail = W.me.email; } else S.authMsg = { html: '<strong>Your account is inactive — contact the Academy.</strong> ' + academyContact() }; }
 }
 function renderDemo() {
   const root = $('#demo-root');
@@ -618,7 +618,7 @@ ACT.drawer = () => { S.drawer = !S.drawer; render(); };
 ACT.skip = () => { const m = $('#main'); m && m.focus(); };
 ACT.modalClose = () => closeModal();
 ACT.modalScrim = () => { if (MODAL && MODAL.dismissable) closeModal(); };
-ACT.policy = el => openModal({ title: el.dataset.p, body: `<p>${el.dataset.p === 'Contact' ? 'Illumin Academy · ' + c2s('Academy office address') + ' · ' + c2s('Academy contact email and phone') : `The full ${el.dataset.p.toLowerCase()} opens here. This prototype shows a placeholder.`}</p><p class="small muted">Version 3.2 · published 1 Aug 2026</p>`, actions: [{ label: 'Close', cls: 'btn-primary' }] });
+ACT.policy = el => openModal({ title: el.dataset.p, body: `<p>${el.dataset.p === 'Contact' ? 'Illumin Academy · ' + c2s('Academy office address') + ' · ' + academyContact() : `The full ${el.dataset.p.toLowerCase()} opens here. This prototype shows a placeholder.`}</p><p class="small muted">Version 3.2 · published 1 Aug 2026</p>`, actions: [{ label: 'Close', cls: 'btn-primary' }] });
 
 /* ---------- Event delegation ---------- */
 document.addEventListener('click', e => {

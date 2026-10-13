@@ -68,7 +68,7 @@
       if (must || hits.length) ok(`${k}: data-driven entries ${lbl} are looked up by item type (${hits.length})`, hits.length > 0 && !wrong.length, wrong.map(li => li.querySelector('button, a').textContent.trim() + ' → ' + (li.querySelector('.idx-purpose') || { dataset: {} }).dataset.pk).slice(0, 4).join(' | '));
     });
   }));
-  T('Screen index: the placeholder topics list is untouched', () => { learner('C'); go('index'); const tbd = [...document.querySelectorAll('#main section.card:not(.idx-sec) .idx-list li')]; ok('no purpose added to the 8 placeholder topics', tbd.length === 8 && !tbd.some(li => li.querySelector('.idx-purpose')), tbd.length + ' items'); });
+  T('Screen index: the placeholder topics list is untouched', () => { learner('C'); go('index'); const tbd = [...document.querySelectorAll('#main section.card:not(.idx-sec) .idx-list li')]; ok('no purpose added to the 4 placeholder topics (CH: was 8)', tbd.length === 4 && !tbd.some(li => li.querySelector('.idx-purpose')), tbd.length + ' items'); });
 
   /* ---------- Dialogs: focus trap and return ---------- */
   T('Dialog focus trap', () => {

@@ -35,26 +35,26 @@
     releaseNow(key); ok('D2 after release the learner gets the feedback', a.status === 'Feedback Received' && w.notifs.length === n0 + 1, a.status);
   });
 
-  // ---------- D3 Currency: existing enrolments keep their currency; re-purchase is a new purchase in the current currency ----------
-  T('D3 Currency', () => {
+  // ---------- D3 Currency — CH-02: every course, instalment, receipt and transaction is in GBP; re-purchase is a new purchase in GBP ----------
+  T('D3 Currency (CH-02: GBP only)', () => {
     S.variant = 'H'; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true;
     const e = W.enrolments.find(x => x.id === 'pn1');
     go('course', { id: 'pn1' });
     const pp = [...document.querySelectorAll('main dt')].find(d => d.textContent === 'Price paid');
-    ok('D3 AED course shows "Price paid" in AED', pp && /AED/.test(pp.nextElementSibling.textContent), pp && pp.nextElementSibling.textContent);
+    ok('D3 course shows "Price paid" in GBP (CH-02)', pp && /£/.test(pp.nextElementSibling.textContent) && !/AED/.test(pp.nextElementSibling.textContent), pp && pp.nextElementSibling.textContent);
     go('payments');
     const card = [...document.querySelectorAll('main section.card')].find(s => (s.querySelector('h2') || {}).textContent === e.title);
-    ok('D3 AED instalment shown in AED', card && /AED\s?[\d,]+\.\d\d/.test(card.querySelector('tbody').textContent) && !/£/.test(card.querySelector('tbody').textContent), card && card.querySelector('tbody').textContent.slice(0, 80));
+    ok('D3 instalment shown in GBP (CH-02)', card && /£[\d,]+\.\d\d/.test(card.querySelector('tbody').textContent) && !/AED/.test(card.querySelector('tbody').textContent), card && card.querySelector('tbody').textContent.slice(0, 80));
     const rc = card && card.querySelector('[data-f^="Receipt RCP-40991"]');
-    ok('D3 AED receipt states its amount in AED', rc && /AED/.test(rc.dataset.f) && !/£/.test(rc.dataset.f), rc && rc.dataset.f);
+    ok('D3 receipt states its amount in GBP (CH-02)', rc && /£/.test(rc.dataset.f) && !/AED/.test(rc.dataset.f), rc && rc.dataset.f);
     const tx = [...document.querySelectorAll('main tbody tr')].find(tr => /TXN-40991/.test(tr.textContent));
-    ok('D3 AED transaction shown in AED', tx && /AED/.test(tx.textContent) && !/£/.test(tx.textContent), tx && tx.textContent);
+    ok('D3 transaction shown in GBP (CH-02)', tx && /£/.test(tx.textContent) && !/AED/.test(tx.textContent), tx && tx.textContent);
     setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; const P = allLearners().find(l => l.v === 'H');
-    if (P) { go('a-learner', { id: P.id, tab: 'payments' }); const c360 = [...document.querySelectorAll('main section.card')].find(s => (s.querySelector('h3') || {}).textContent === e.title); ok('D3 Learner 360 shows the AED course in AED', c360 && /AED/.test(c360.textContent) && !/£/.test(c360.textContent), c360 && c360.textContent.slice(0, 80)); }
+    if (P) { go('a-learner', { id: P.id, tab: 'payments' }); const c360 = [...document.querySelectorAll('main section.card')].find(s => (s.querySelector('h3') || {}).textContent === e.title); ok('D3 Learner 360 shows the course in GBP (CH-02)', c360 && /£/.test(c360.textContent) && !/AED/.test(c360.textContent), c360 && c360.textContent.slice(0, 80)); }
     S.variant = 'H'; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true;
     e.status = 'Expired-Incomplete'; e.end = D(-2); go('course', { id: 'pn1' });
     const rb = document.querySelector('main [data-act="repurchase"]');
-    ok('D3 re-purchase priced in the current currency (GBP)', rb && /£/.test(rb.textContent) && !/AED/.test(rb.textContent), rb && rb.textContent);
+    ok('D3 re-purchase priced in GBP', rb && /£/.test(rb.textContent) && !/AED/.test(rb.textContent), rb && rb.textContent);
     ACT.repurchase({ dataset: { id: 'pn1' } });
     ok('D3 re-purchase checkout charges GBP', MODAL && /£/.test(MODAL.body), MODAL && MODAL.body.slice(0, 120));
     closeModal();

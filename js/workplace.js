@@ -122,10 +122,10 @@ const wFirst = l => l.learner.split(' ')[0];
 function wShell(body, opts = {}) {
   return `<div class="wpc"><header class="wpc-h"><a class="logo" aria-label="Illumin Academy">${LOGO}<div><b>Illumin Academy</b><span>Secure link</span></div></a>${opts.demo ? `<span class="wpc-demo-tag">Demo — what the contact sees</span>` : ''}</header>
   <main id="main" class="wpc-main" tabindex="-1">${S.offline ? `<div class="note b-amber wpc-card-w" role="status">${ic('wifioff')}<div class="small"><strong>You're offline.</strong> Your choices are kept — reconnect to send them.</div></div>` : ''}${body}</main>
-  <footer class="wpc-f"><p>Questions? Contact Illumin Academy — ${c2s('Academy contact email and phone')}</p><p><button class="linklike" data-act="wpcPrivacy">Privacy notice</button> · <button class="linklike" data-act="wpcA11y">Accessibility statement</button></p><p class="xs muted">You don't need an account. This page only shows what you need to make this decision.</p></footer></div>`;
+  <footer class="wpc-f"><p>Questions? Contact Illumin Academy — ${academyContact()}</p><p><button class="linklike" data-act="wpcPrivacy">Privacy notice</button> · <button class="linklike" data-act="wpcA11y">Accessibility statement</button></p><p class="xs muted">You don't need an account. This page only shows what you need to make this decision.</p></footer></div>`;
 }
 const wCard = (inner, cls = '') => `<section class="card wpc-card ${cls}">${inner}</section>`;
-const wHelp = () => `<p class="small muted">Need help? Contact Illumin Academy — ${c2s('Academy contact email and phone')}.</p>`;
+const wHelp = () => `<p class="small muted">Need help? Contact Illumin Academy — ${academyContact()}.</p>`;
 const wStateCard = (icon, tone, h, body) => wCard(`<div class="wpc-ic t-${tone}" aria-hidden="true">${ic(icon, 28)}</div><h1>${h}</h1>${body}${wHelp()}`, 'wpc-state');
 
 function wTokenPage(l, st) {
@@ -173,7 +173,7 @@ function wPermPage(l, step) {
       <dt>Documents from Illumin Academy</dt><dd>${wDocs('Workplace permission link')}</dd><dt>What happens</dt><dd><ul><li>The assessor visits for ${WPC_DUR}.</li><li>They watch and do not step in to give care.</li><li><strong>No personal information about your residents or service users is recorded.</strong></li></ul></dd>
       <dt>What you're agreeing to</dt><dd>Permission for observation visits during ${esc(wFirst(l))}'s programme. We'll ask you to agree each visit date separately.</dd>
       <dt>Your data</dt><dd>We record your name, job title, the date and time, and your IP address, so there is a record of your decision on ${esc(wFirst(l))}'s file. <button class="linklike" data-act="wpcPrivacy">Privacy notice</button></dd></dl>
-    <details class="wpc-faq"><summary>Frequently asked questions</summary><h3>Can I say no?</h3><p class="small">Yes. Choose "Decline". ${esc(wFirst(l))} will be told and can talk to you about it.</p><h3>Can I change the date?</h3><p class="small">Yes. Each visit date is sent to you separately and you can suggest a different one.</p><h3>Who do I contact?</h3><p class="small">Illumin Academy — ${c2s('Academy contact email and phone')}.</p></details>
+    <details class="wpc-faq"><summary>Frequently asked questions</summary><h3>Can I say no?</h3><p class="small">Yes. Choose "Decline". ${esc(wFirst(l))} will be told and can talk to you about it.</p><h3>Can I change the date?</h3><p class="small">Yes. Each visit date is sent to you separately and you can suggest a different one.</p><h3>Who do I contact?</h3><p class="small">Illumin Academy — ${academyContact()}.</p></details>
     <p class="small"><strong>This link expires on ${wfmt(l.expires, l.tz)}.</strong></p>
     <div class="wpc-actions"><button class="btn btn-primary btn-block wpc-btn" data-act="wpcStep" data-t="${l.token}" data-s="grant">Grant permission</button><button class="btn btn-block wpc-btn" data-act="wpcStep" data-t="${l.token}" data-s="decline">Decline</button></div>`);
 }
@@ -264,7 +264,7 @@ ACT.wpcGo = el => { const [r, id, tab] = el.dataset.t.split('.'); S.wpcOutcome =
 ACT.wpcStep = el => { STORE.wpc.err = null; go(S.route, { id: el.dataset.t, tab: el.dataset.s || undefined }); };
 ACT.wpcRetry = () => render();
 ACT.wpcPrivacy = () => openModal({ title: 'Privacy notice', body: `<p class="small">Illumin Academy records your decision (your name, job title, the date and time, and your IP address) so that there is evidence of permission on the learner's file. We keep it for as long as the learner's records are kept. We never ask for information about your residents or service users.</p><p class="small">Full privacy notice: ${c2s('privacy notice URL')}</p>`, actions: [{ label: 'Close', cls: 'btn-primary' }] });
-ACT.wpcA11y = () => openModal({ title: 'Accessibility statement', body: `<p class="small">These pages are designed to meet WCAG 2.2 AA. They work on small screens, with keyboard only and with screen readers. If something doesn't work for you, contact us (${c2s('Academy contact email and phone')}).</p>`, actions: [{ label: 'Close', cls: 'btn-primary' }] });
+ACT.wpcA11y = () => openModal({ title: 'Accessibility statement', body: `<p class="small">These pages are designed to meet WCAG 2.2 AA. They work on small screens, with keyboard only and with screen readers. If something doesn't work for you, contact us (${academyContact()}).</p>`, actions: [{ label: 'Close', cls: 'btn-primary' }] });
 ACT.wpcIcs = () => toast('Calendar file downloaded (simulated).', 'info');
 INP.wpcDraft = el => {
   const d = STORE.wpc.drafts[el.dataset.t]; if (!d) return;
@@ -377,7 +377,7 @@ function wEmailBody(e) {
   return `<div class="mail"><div class="mail-h"><div class="small"><strong>From:</strong> Illumin Academy</div><div class="small"><strong>To:</strong> ${esc(e.to.name)} &lt;${esc(e.to.email)}&gt;</div><div class="small muted">${wfmt(e.sent, tz)}</div><h2>${esc(subj)}</h2></div>
     <div class="mail-b"><p>Dear ${esc(e.to.name)} (${esc(e.to.title)}),</p>${body}
     ${btn ? `<p><button class="btn btn-primary wpc-btn" data-act="wpcGo" data-t="${route}.${e.token}">${btn}</button></p><p class="xs muted">Secure link: <span class="mono">https://portal.illumin-academy.example/w/${route.slice(2)}/${e.token}</span>${['permRequest', 'permReminder', 'obsProposed', 'obsRevised'].includes(e.kind) ? ` · expires ${wfmt(l.expires, tz)}` : ''}</p>` : ''}
-    <hr><p class="xs muted">Illumin Academy · ${c2s('Academy contact email and phone')}<br>We use your details only to manage this request. Privacy notice: ${c2s('privacy notice URL')}<br>If you weren't expecting this, contact us.</p></div></div>`;
+    <hr><p class="xs muted">Illumin Academy · ${academyContact()}<br>We use your details only to manage this request. Privacy notice: ${c2s('privacy notice URL')}<br>If you weren't expecting this, contact us.</p></div></div>`;
 }
 function wInbox(p) {
   const sel = p.id && STORE.wpc.emails.find(e => e.id === p.id), f = ui('wpcF', 'All'), q = (ui('wpcQ', '') || '').toLowerCase();

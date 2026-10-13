@@ -4,7 +4,7 @@
 /* ---------- Shared: checkout ---------- */
 function checkout({ title, amount, partial = false, min = 0, onSuccess, cur }) {
   cur = cur || W.me.cur;
-  const body = () => `<div class="kv"><dt>For</dt><dd>${esc(title)}</dd><dt>Amount due</dt><dd class="strong num">${money(amount, cur)} ${pend('exchange-rate source, update frequency, rounding, and price lock at enrolment')}</dd></div>
+  const body = () => `<div class="kv"><dt>For</dt><dd>${esc(title)}</dd><dt>Amount due</dt><dd class="strong num">${money(amount, cur)}</dd></div><p class="xs muted ch-stripe">Stripe may show this amount in your local currency. You'll be charged ${money(amount, 'GBP')}.</p>
     ${partial ? `<fieldset class="stack" style="border:0;padding:0;margin:0"><legend class="lbl">How much do you want to pay?</legend>
       <label class="check"><input type="radio" name="payamt" value="full" checked data-onchange="payAmt"> Full amount (${money(amount, cur)})</label>
       <label class="check"><input type="radio" name="payamt" value="part" data-onchange="payAmt"> Part payment</label>
@@ -285,12 +285,8 @@ ACT.reqTime = el => {
     actions: [{ label: 'Cancel' }, { label: 'Send request', cls: 'btn-primary', fn: () => { const r = mval('#rt-reason'); if (!r) { fieldErr('#rt-reason', 'Enter a reason for your request'); return false; } const id = 'R-' + (1060 + W.requests.length); W.requests.unshift({ id, type: 'More time on course', target: e.title, raised: now().toISOString(), status: 'Requested', reason: r, decision: null }); render(); openModal({ title: 'Request sent', body: `<p>Request <strong>${id}</strong> has been sent to the Academy.</p><button class="linklike" data-act="simGrant" data-e="${e.id}" data-r="${id}">Prototype: Academy grants +14 days</button>`, actions: [{ label: 'View My Requests', cls: 'btn', fn: () => go('requests') }, { label: 'Done', cls: 'btn-primary' }] }); } }] });
 };
 ACT.simGrant = el => { const e = enrolById(el.dataset.e), r = W.requests.find(x => x.id === el.dataset.r); e.status = 'Active'; e.end = extEnd(e, 14); r.status = 'Granted'; r.decided = now().toISOString(); r.decision = 'Granted: +14 days.'; r.grant = '+14 days, new end date ' + fd(e.end); closeModal(); render(); toast(`Extension granted. ${e.title} is active again until ${fd(e.end)} — progress kept at ${e.progress}%.`); };
-// A re-purchase is a new purchase: priced and charged in the learner's current currency. Existing enrolments keep the currency they were bought in.
-function repurchasePrice(e) {
-  if (!e.cur || e.cur === W.me.cur) return e.price;
-  const k = CATALOGUE.find(x => x.title === e.base) || CATALOGUE.find(x => (e.base || '').startsWith(x.title));
-  return W.me.cur === 'AED' ? coursePrice(e.base, 'AED') : W.amt(k ? k.price : coursePrice(e.base, 'GBP'));
-}
+// A re-purchase is a new purchase at the same GBP price (CH-02)
+function repurchasePrice(e) { return e.price; }
 ACT.repurchase = el => {
   const e = enrolById(el.dataset.id), price = repurchasePrice(e);
   checkout({ title: `${e.base} — new enrolment (${new Date(now()).getFullYear()})`, amount: price, cur: W.me.cur, onSuccess: () => { const id = e.id + 'r' + W.enrolments.length; W.enrolments.unshift({ ...e, price, cur: W.me.cur, id, title: e.base + ' — ' + new Date(now()).getFullYear() + ' (re-purchase)', status: 'Active', enrolled: now().toISOString(), start: now().toISOString(), end: D(90), progress: 0, content: shortContent(e.topic), quiz: { ...e.quiz, attempts: [] }, reqs: e.reqs.map(([r]) => [r, false]) }); } });
@@ -386,7 +382,7 @@ const CATALOGUE = [
 ];
 function catCard(c) {
   return `<article class="card catalogue-card"><div class="thumb">${ic(c.kind === 'nvq' ? 'award' : 'book', 30)}</div><div class="row"><span class="typebadge ${c.kind === 'nvq' ? 'nvq' : ''}">${c.kind === 'nvq' ? 'NVQ / RQF' : 'Short course'}</span><span class="small muted">${c.dur}</span></div><h3>${esc(c.title)}</h3><p class="small muted">${esc(c.desc)}</p>
-  <div class="row-b"><span class="strong num">${c.kind === 'nvq' ? 'From ' : ''}${money(W.amt(c.price))}${CONV_NOTE(W.me.cur)}</span>${c.kind === 'nvq' ? `<button class="btn btn-sm" data-act="applyNvq" data-id="${c.id}">Apply</button>` : `<button class="btn btn-sm" data-act="buyCourse" data-id="${c.id}">Buy now</button>`}</div>${c.validity ? `<span class="xs muted">Certificate validity: ${c.validity}</span>` : ''}</article>`;
+  <div class="row-b"><span class="strong num">${c.kind === 'nvq' ? 'From ' : ''}${money(W.amt(c.price))}</span>${c.kind === 'nvq' ? `<button class="btn btn-sm" data-act="applyNvq" data-id="${c.id}">Apply</button>` : `<button class="btn btn-sm" data-act="buyCourse" data-id="${c.id}">Buy now</button>`}</div>${c.validity ? `<span class="xs muted">Certificate validity: ${c.validity}</span>` : ''}</article>`;
 }
 SCREENS.browse = () => {
   const f = ui('browseF', 'all'), q = (ui('browseQ', '') || '').toLowerCase();

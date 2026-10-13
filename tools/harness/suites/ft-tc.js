@@ -22,10 +22,10 @@
     const shown = (main().match(/Unanswered agency message \(2\+ working days\)/g) || []).length; ok('alerts = open agency threads 2+ working days old', shown === due && !/older than N hours/.test(html()), shown + ' / ' + due);
     const d = new Date(Date.UTC(2026, 9, 2, 10)); const fri = d.toISOString(); ok('working days skip weekends', workDaysSince(fri) === (({ 0: 0, 6: 0 })[now().getUTCDay()] ?? 0) + (now().getUTCDay() === 1 ? 1 : now().getUTCDay() > 1 ? now().getUTCDay() - 1 + 1 : 0) || workDaysSince(fri) <= 5, String(workDaysSince(fri)));
   });
-  await T('061 / 062 / 065 registration number + billing currency required', () => {
+  await T('061 / 062 / 065 registration number required (CH-02: no billing currency)', () => {
     ACT.switchRole({ dataset: { r: 'bizA' } }); ACT.newAgency(); $('#oa-n').value = 'Test Agency Ltd'; const r1 = prim(); ok('blocked without registration number', r1 === false && /Step 1|step 1/.test(MODAL.title) && /registration number/i.test(MODAL ? document.getElementById('modal-root').textContent : ''));
-    $('#oa-r').value = '01234567'; $('#oa-cur').value = ''; const r2 = prim(); ok('blocked without billing currency', r2 === false && /step 1/.test(MODAL.title));
-    $('#oa-cur').value = 'GBP'; prim(); ok('continues when both are filled', /step 2/.test(MODAL.title)); closeModal();
+    ok('CH-02 no billing-currency field', !$('#oa-cur'));
+    $('#oa-r').value = '01234567'; prim(); ok('continues when the registration number is filled', /step 2/.test(MODAL.title)); closeModal();
     go('a-agencies', { id: 'AG-02' }); ok('profile: "Registration number", no TBD', /Registration number/.test(main()) && !tbdTexts().length);
   });
   await T('067 bundle minimum price — Super Admin only', () => {
@@ -37,7 +37,7 @@
   await T('079 Coordinator sees email only', () => { S.coo.v = 'A'; cooEnter(); S.signedIn = true; go('c-learner', { id: 'IA-L-18022' }); const L = learnerById('IA-L-18022'); ok('email shown, mobile not', main().includes(L.email) && !main().includes(L.mobile)); });
   await T('094 overpayment → refund for the surplus', async () => {
     setAdminIdentity('FA'); S.portal = 'admin'; S.signedIn = true; go('f-ledger'); ACT.finOffline({ dataset: {} }); await wait(50);
-    const t = payTargets().find(x => x.key === $('#op-t').value); $('#op-a').value = String(t.due + 40); $('#op-c').value = t.cur; INP.opPrev();
+    const t = payTargets().find(x => x.key === $('#op-t').value); $('#op-a').value = String(t.due + 40); INP.opPrev(); // CH-02: no currency select (GBP only)
     ok('no "Record as credit"; surplus button shown', !/Record as credit/.test(document.getElementById('modal-root').textContent) && !!document.querySelector('#modal-root [data-act="opSurplus"]'));
     $('#rsn').value = 'Paid by bank transfer'; ACT.opSurplus(); await wait(50); ok('refund pre-filled with the surplus', MODAL && /Raise refund/.test(MODAL.title) && +$('#rr-a').value === 40, MODAL && MODAL.title + ' ' + ($('#rr-a') || {}).value); closeModal();
   });
@@ -87,12 +87,12 @@
     go('w-inbox', { id: STORE.wpc.emails[0].id }); ok('166 no SMS version', !/SMS version|sms-phone/.test(html()));
   });
   await T('remaining tags + contact details', () => {
-    ok('8 topics: 3 Pending client, 5 Client to supply', TBD_TOPICS.length === 8 && TBD_TOPICS.filter(t => t[0] === 'Pending client').length === 3);
+    ok('4 topics: 0 Pending client, 4 Client to supply (CH-02, CH-03, CH-05, CH-31 resolved T01, T02, T03, T05)', TBD_TOPICS.length === 4 && TBD_TOPICS.every(t => t[0] === 'Client to supply'));
     const pages = [['learner:C', 'help'], ['learner:C', 'checkout'], ['agyA', 'g-help'], ['agyA', 'g-messages'], ['ver', ''], ['learner:A', 'certificates'], ['learner:C', 'observations']];
     const seen = new Set(); learner('C'); go('help'); tbdTexts().forEach(t => seen.add(t)); agyEnter('AG-03', true); go('g-messages'); tbdTexts().forEach(t => seen.add(t)); go('g-help'); tbdTexts().forEach(t => seen.add(t));
     ok('every tag on these pages is a remaining topic', [...seen].every(t => TBD_TOPICS.some(x => t === x[0] + ': ' + x[1])), [...seen].join(' | '));
     ok('no fake contact details rendered', !/illumin\.academy|116 496|555 0142/.test(document.getElementById('app').innerHTML));
-    ACT.scOpen(); go('tbd-register'); ok('TBD register lists 8 topics', /Remaining — 8 topics/.test(main()) && /3 Pending client · 5 Client to supply/.test(main()));
+    ACT.scOpen(); go('tbd-register'); ok('TBD register lists 4 topics (CH)', /Remaining — 4 topics/.test(main()) && /0 Pending client · 4 Client to supply/.test(main()));
     go('cd-log'); ok('Decisions Log row', /TBD cleanup — 154 of 166 tags resolved by agreed defaults/.test(document.getElementById('app').textContent));
     go('ux-changelog'); ok('UX Changelog entry', /CHANGE 011:/.test(main()) && /REMOVE 166:/.test(main()));
   });

@@ -3,11 +3,11 @@
 
 const PERSONAS = {
   A: { id: 'IA-L-20417', first: 'Daniel', last: 'Okafor', email: 'daniel.okafor@outlook.com', mobile: '+44 7700 900412', dob: '14 Mar 1991', address: '14 Ellesmere Road, Chorlton, Manchester', postcode: 'M21 0SN', country: 'United Kingdom', tz: 'Europe/London', cur: 'GBP', joined: '3 Feb 2025', referral: 'Self-registration', sponsor: null },
-  B: { id: 'IA-L-31188', first: 'Priya', last: 'Raman', email: 'priya.raman@gmail.com', mobile: '+971 50 123 4471', dob: '2 Nov 1994', address: 'Apt 1204, Marina Pinnacle, Dubai Marina, Dubai', postcode: '—', country: 'United Arab Emirates', tz: 'Asia/Dubai', cur: 'AED', joined: '22 Sep 2026', referral: 'Agent — Gulf Care Recruitment (code GCR-118)', sponsor: null },
+  B: { id: 'IA-L-31188', first: 'Priya', last: 'Raman', email: 'priya.raman@gmail.com', mobile: '+971 50 123 4471', dob: '2 Nov 1994', address: 'Apt 1204, Marina Pinnacle, Dubai Marina, Dubai', postcode: '—', country: 'United Arab Emirates', tz: 'Asia/Dubai', cur: 'GBP', joined: '22 Sep 2026', referral: 'Agent — Gulf Care Recruitment (code GCR-118)', sponsor: null },
   C: { id: 'IA-L-18022', first: 'Aisha', last: 'Rahman', email: 'aisha.rahman@gmail.com', mobile: '+44 7700 900188', dob: '9 Jul 1988', address: '41 Evington Lane, Leicester', postcode: 'LE5 5PQ', country: 'United Kingdom', tz: 'Europe/London', cur: 'GBP', joined: '28 Nov 2025', referral: 'Welfare Buddy referral (code WB-HASSAN22)', sponsor: null },
   D: { id: 'IA-L-24560', first: 'Grace', last: 'Mensah', email: 'grace.mensah@brightcare-staff.co.uk', mobile: '+44 7700 900631', dob: '23 Jan 1996', address: '7 Lansdowne Road, Croydon', postcode: 'CR0 2BX', country: 'United Kingdom', tz: 'Europe/London', cur: 'GBP', joined: '4 Mar 2026', referral: 'Created by agency', sponsor: 'BrightCare Staffing Ltd' },
   E: { id: 'IA-L-09931', first: 'Tom', last: 'Whitfield', email: 'tom.whitfield@illumin-academy.example', mobile: '+44 7700 900255', dob: '30 Apr 1985', address: '3 Cotham Vale, Bristol', postcode: 'BS6 6HR', country: 'United Kingdom', tz: 'Europe/London', cur: 'GBP', joined: '15 Jun 2024', referral: 'Created by admin', sponsor: null },
-  F: { id: 'IA-L-27703', first: 'Fatima', last: 'Al Mansoori', email: 'fatima.almansoori@outlook.ae', mobile: '+971 55 778 2190', dob: '17 Aug 1992', address: 'Villa 22, Al Bateen, Abu Dhabi', postcode: '—', country: 'United Arab Emirates', tz: 'Asia/Dubai', cur: 'AED', joined: '9 May 2025', referral: 'Self-registration', sponsor: null },
+  F: { id: 'IA-L-27703', first: 'Fatima', last: 'Al Mansoori', email: 'fatima.almansoori@outlook.ae', mobile: '+971 55 778 2190', dob: '17 Aug 1992', address: 'Villa 22, Al Bateen, Abu Dhabi', postcode: '—', country: 'United Arab Emirates', tz: 'Asia/Dubai', cur: 'GBP', joined: '9 May 2025', referral: 'Self-registration', sponsor: null },
 };
 const VARIANTS = {
   A: { nvq: false }, B: { nvq: true, admitted: false }, C: { nvq: true, admitted: true },
@@ -37,18 +37,12 @@ function shortContent(topic) {
   return T.map((r, i) => ({ id: 'c' + (i + 1), kind: r[0], title: r[1], dur: r[2], state: r[3], dl: !!r[4], watch: r[5] || 0, resume: r[6] || '0:00', score: r[7] || 0 }));
 }
 
-/* G3.1: UK → GBP (base price), UAE → AED (set price), other countries → local currency converted from the base price.
-   [rate per GBP, rounding step]. Converted currencies show "Converted from the base price". */
-const FX = { AED: [4.65, 5], INR: [105, 10], EUR: [1.17, 1], NGN: [2050, 50], PKR: [355, 10], PHP: [72, 5], ZAR: [23, 5] };
-const FX_CONVERTED = c => !!FX[c] && c !== 'AED';
-const fxAmt = (g, cur) => FX[cur] ? Math.round(g * FX[cur][0] / FX[cur][1]) * FX[cur][1] : g;
-const LCURS = ['GBP', 'AED', 'INR']; // learner currencies in the mock data — totals are always shown per currency, never summed
-const CONV_NOTE = cur => FX_CONVERTED(cur) ? ' <span class="xs muted">Converted from the base price</span>' : '';
+/* CH-02: every price, payment, receipt and refund is in GBP — whatever the learner's country. */
 function makeWorld(v) {
   const me = { ...PERSONAS[v] };
   const flags = { ...VARIANTS[v] };
   const cur = me.cur;
-  const amt = g => FX[cur] ? Math.round(g * FX[cur][0] / FX[cur][1]) * FX[cur][1] : g;
+  const amt = g => g; // CH-02: GBP list prices, never converted
   const w = { v, me, flags };
   W = w; // formatters read W.me while the world is built
   w.amt = amt;

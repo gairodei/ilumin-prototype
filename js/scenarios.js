@@ -79,7 +79,7 @@ function SC_LIST() {
     ['10', 'Registration', 'G2', [
       s('Open a referral link (demo) — the code is already added.', '', '', 'scReg'),
       s('Register with country → enter the OTP → welcome.', '', ''),
-      s('The new learner is visible in admin with region and currency.', 'admin', 'a-learners'),
+      s('The new learner is visible in admin with country and data region.', 'admin', 'a-learners'),
       s('The referral attribution is counted.', 'admin', 'a-referrals')]],
     ['11', 'Agency link with consent', 'G9.2', [
       s('Hartwell Home Care has asked to link Daniel Okafor for a new course — status "Awaiting learner consent".', 'agyH', 'g-learners'),
@@ -107,13 +107,6 @@ function SC_LIST() {
       s('Assessor (Sarah Okonkwo) requests reactivation of Ben Carter\x27s discontinued enrolment (My Approvals → Recommendations).', 'staff', 't-approvals..recs'),
       s('Academic Admin approves it.', 'acaA', 'a-queue'),
       s('The learner regains access — the enrolment is Active again.', 'admin', 'a-learner.IA-L-30755')]],
-    ['16', 'Learner moves country', 'F1', [
-      s('Start from before the move: Priya Nair registered in the UAE and pays in AED (demo).', '', '', 'scPriyaBefore'),
-      s('Priya requests a change of country (Profile → Country of residence → Request change).', 'learner:H', 'profile'),
-      s('System Admin approves the profile change.', 'sysA', 'a-queue'),
-      s('Her new course is priced in GBP.', 'learner:H', 'browse'),
-      s('Her old course stays in AED.', 'learner:H', 'payments'),
-      s('Her data region is unchanged: UAE (registered 12 Mar 2026), "Country changed to United Kingdom on …".', 'admin', 'a-learner.IA-L-40990')]],
     ['17', 'Coordinator vs Academic Admin edit', 'F5', [
       s('Coordinator moves an assignment deadline in their batch (reason required).', 'coord', 'c-timeline'),
       s('Academic Admin changes the same deadline again — the last save wins.', 'acaA', 'a-scheduling'),

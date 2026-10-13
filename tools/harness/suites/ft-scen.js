@@ -112,7 +112,7 @@
     const fill = v => Object.entries(v).forEach(([k, x]) => { const el = $(k); if (el.type === 'checkbox') el.checked = x; else el.value = x; });
     fill({ '#rg-name': 'Meera Iyer', '#rg-email': 'meera.iyer@example.in', '#rg-dial': '+91', '#rg-mob': '98200 44556', '#rg-country': 'India', '#rg-pw': 'Abcdefgh12!x', '#rg-pw2': 'Abcdefgh12!x', '#rg-terms': true, '#rg-priv': true }); SUBMIT.regSubmit();
     ok('#10.2 OTP screen', S.auth === 'regVerify'); $$('.otp-i').forEach((b, k) => b.value = '123456'[k]); SUBMIT.regCode(); ok('#10.2 welcome', S.auth === 'welcome'); ACT.finishWelcome(); ok('#10.2 learner dashboard', S.route === 'dashboard' && S.signedIn);
-    step(10, 3); const L = allLearners().find(l => l.email === 'meera.iyer@example.in'); ok('#10.3 visible in admin with region and currency', !!L && L.country === 'India' && L.cur === 'INR', L && L.cur);
+    step(10, 3); const L = allLearners().find(l => l.email === 'meera.iyer@example.in'); ok('#10.3 visible in admin with country and data region (CH-02 GBP, CH-03 region UK)', !!L && L.country === 'India' && L.cur === 'GBP' && L.region === 'UK', L && L.cur + ' ' + L.region);
     step(10, 4); ok('#10.4 attribution counted', ADMIN.referrals.find(r => r.code === 'WB-FATIMA07').regs === before + 1);
   });
 
@@ -157,16 +157,8 @@
     step(15, 3); const L = learnerById('IA-L-30755'); ok('#15.3 enrolment Active again', !(L.flags || []).includes('Discontinued enrolment') && !/Discontinued/.test((document.querySelector('main .page-h') || {}).textContent || ''), (L.flags || []).join());
   });
 
-  await S_('#16 Learner moves country', async () => {
-    step(16, 1); ok('#16.1 Priya before the move: UAE, AED, one course', W === STORE.worlds.H && W.me.country === 'United Arab Emirates' && W.me.cur === 'AED' && W.enrolments.length === 1);
-    step(16, 2); ACT.reqChange({ dataset: { f: 'Country of residence', v: W.me.country } }); ok('#16.2 note: affects new purchases only', /Changing country affects new purchases only/.test(MODAL.body)); $('#pc-new').value = 'United Kingdom'; $('#pc-r').value = 'Moved to Reading'; prim(); const r = W.requests[0];
-    step(16, 3); const qid = 'AQ-' + r.id + '-H'; go('a-queue', { id: qid }); ACT.qDo({ dataset: { id: qid, a: 'approve' } }); rsn('Proof of address checked'); prim(); const w = STORE.worlds.H;
-    ok('#16.3 approved: new purchases in GBP; region UAE', w.me.cur === 'GBP' && w.me.region === 'UAE');
-    step(16, 4); ok('#16.4 new course priced in GBP', /£/.test(main())); const b = document.querySelector('main [data-act="buyCourse"]'); const n0 = w.enrolments.length; ACT.buyCourse({ dataset: { ...b.dataset } }); let g = 0; while (MODAL && g++ < 3) { prim(); await wait(2500); } closeModal();
-    ok('#16.4 bought in GBP', w.enrolments.length > n0 && w.enrolments.find(e => e.id !== 'pn1').cur === 'GBP');
-    step(16, 5); ok('#16.5 old course stays AED', w.enrolments.find(e => e.id === 'pn1').cur === 'AED' && /AED/.test(main()) && /£/.test(main()));
-    step(16, 6); ok('#16.6 data region unchanged', /UAE\s*\(registered 12 Mar 2026\)/.test(main()) && /Country changed to United Kingdom on/.test(main()));
-  });
+  // CH-01: scenario #16 "Learner moves country" removed (a new #16 comes with the sign-up flow)
+  await S_('#16 removed (CH-01)', async () => { ok('CH-01 no scenario #16 "Learner moves country"', !SC_LIST().some(x => x[1] === 'Learner moves country')); });
 
   await S_('#17 Coordinator vs Academic Admin edit', async () => {
     step(17, 1); const b = myBatches().find(x => !roBatch(x)), e = batchEvents(b).find(x => x.type === 'deadline'); ok('#17.1 own batch deadline', !!e, b.code + ' ' + (e && e.title));

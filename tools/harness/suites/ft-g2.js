@@ -16,10 +16,10 @@
     $$('.otp-i').forEach((b, i) => b.value = '000000'[i]); SUBMIT.regCode(); ok('expired code', /expired/.test(main()));
     ACT.regVia(); ok('SMS option', /by SMS/.test(main()) && /SMS/.test(STORE.agy.lmails[0].by));
     $$('.otp-i').forEach((b, i) => b.value = '123456'[i]); SUBMIT.regCode(); ok('welcome', S.auth === 'welcome' && /Arjun/.test(main()));
-    ACT.finishWelcome(); ok('dashboard', S.route === 'dashboard' && S.signedIn); ok('world G INR', W.me.cur === 'INR');
-    go('browse'); ok('browse in INR', /₹/.test(main()), (main().match(/₹[\d,.]+/) || [''])[0]);
+    ACT.finishWelcome(); ok('dashboard', S.route === 'dashboard' && S.signedIn); ok('world G pays in GBP (CH-02)', W.me.cur === 'GBP');
+    go('browse'); ok('browse in GBP (CH-02)', /£/.test(main()) && !/₹/.test(main()), (main().match(/£[\d,.]+/) || [''])[0]);
     ok('referral count +1', ADMIN.referrals.find(r => r.code === 'WB-FATIMA07').regs === before + 1);
-    const L = allLearners().find(l => l.email === 'arjun.mehta@example.in'); ok('in admin learners', !!L && L.country === 'India' && L.cur === 'INR', L && (L.country + ' ' + L.cur + ' ' + L.region));
+    const L = allLearners().find(l => l.email === 'arjun.mehta@example.in'); ok('in admin learners (CH-02 GBP, CH-03 region UK)', !!L && L.country === 'India' && L.cur === 'GBP' && L.region === 'UK', L && (L.country + ' ' + L.cur + ' ' + L.region));
   });
   T('too many attempts + pending verification', () => { ACT.regStart(); fill({ '#rg-name': 'Lena Brook', '#rg-email': 'lena.brook@example.co.uk', '#rg-mob': '7700 955111', '#rg-country': 'United Kingdom', '#rg-pw': 'Abcdefgh12!x', '#rg-pw2': 'Abcdefgh12!x', '#rg-terms': true, '#rg-priv': true }); SUBMIT.regSubmit(); for (let k = 0; k < 3; k++) { $$('.otp-i').forEach((b, i) => b.value = '222222'[i]); SUBMIT.regCode(); } ok('locked', /Too many attempts/.test(main()));
     S.auth = 'signin'; render(); $('#si-email').value = 'lena.brook@example.co.uk'; $('#si-pw').value = 'x'; SUBMIT.signin(); ok('pending verification on sign-in', S.auth === 'regVerify' && /Pending verification/.test(main())); });

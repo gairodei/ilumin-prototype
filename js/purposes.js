@@ -270,7 +270,7 @@ const IDX_P = {
     "Workplace Contact (link pages)|w-inbox#1": "Every email sent to workplace contacts, with its link.",
     "Workplace Contact (link pages)|w-inbox#2": "The confirmation pages after granting or declining.",
     "Agency portal|switchRole:r=agyA#1": "Opens the Agency portal as an agency that buys bundles.",
-    "Agency portal|switchRole:r=agyB#1": "An agency that only receives seats, with prices in AED.",
+    "Agency portal|switchRole:r=agyB#1": "An agency in the UAE that only receives seats.",
     "Agency portal|agyEdge:e=empty#1": "A new agency before its first bundle.",
     "Agency portal|agyEdge:e=deact#1": "What a deactivated agency login sees.",
     "Agency portal|switchRole:r=linbox#1": "Emails sent to learners an agency added, with their set-password links.",
@@ -381,7 +381,6 @@ const IDX_P = {
     "Final decisions — new screens|a-observations..permissions#1": "Workplace permissions, including withdrawn ones.",
     "Final decisions — new screens|a-notifsettings#1": "The newer events that can send an email or alert.",
     "Follow-up decisions — screens|a-notifsettings#1": "The files attached to emails sent to workplaces.",
-    "Follow-up decisions — screens|a-learner.IA-L-40990#1": "A learner who moved country; their region stays as it was.",
   },
   "c-index": {
     "Screens|c-dashboard#1": "What needs you across your batches: releases, at-risk learners and deadlines.",

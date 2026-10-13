@@ -80,20 +80,20 @@ function buildAdmin(av) {
     if ([8, 15, 20].includes(i)) flags.push('At risk');
     if ([15, 18].includes(i)) flags.push('Discontinued enrolment');
     const courses = [pool[i % pool.length], ...(i % 3 === 0 ? [pool[(i + 4) % pool.length]] : [])];
-    return { id: 'IA-L-' + (30200 + i * 37), name: n, email: `${parts[0]}.${parts[parts.length - 1]}@${region === 'UAE' ? 'mail.ae' : 'example.co.uk'}`, mobile: region === 'UAE' ? `+971 5${i % 6} ${300 + i * 11} ${4000 + i * 37}` : `+44 7700 9${String(10000 + i * 313).slice(-5)}`, agency, courses, acct, rec, region, last: D(-(i * 3 % 40) - (rec === 'Archived' ? 400 : 0), '10:00'), flags, dob: `${1 + i % 27} ${['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov'][i % 6]} ${1980 + i % 20}`, address: region === 'UAE' ? `Villa ${i + 3}, Al Barsha, Dubai` : `${i + 7} Church Lane, ${['Leeds', 'Bristol', 'Nottingham', 'Croydon', 'Leicester', 'Manchester'][i % 6]}`, postcode: region === 'UAE' ? '—' : ['LS6 2AB', 'BS7 8QT', 'NG5 1DB', 'CR0 4XY', 'LE3 9PL', 'M14 6HT'][i % 6], country: region === 'UAE' ? 'United Arab Emirates' : 'United Kingdom', joined: fd(D(-30 - i * 21)), referral: agency ? 'Created by agency' : i % 4 === 0 ? 'Welfare Buddy referral (code WB-FATIMA07)' : 'Self-registration', cur: region === 'UAE' ? 'AED' : 'GBP' };
+    return { id: 'IA-L-' + (30200 + i * 37), name: n, email: `${parts[0]}.${parts[parts.length - 1]}@${region === 'UAE' ? 'mail.ae' : 'example.co.uk'}`, mobile: region === 'UAE' ? `+971 5${i % 6} ${300 + i * 11} ${4000 + i * 37}` : `+44 7700 9${String(10000 + i * 313).slice(-5)}`, agency, courses, acct, rec, region, last: D(-(i * 3 % 40) - (rec === 'Archived' ? 400 : 0), '10:00'), flags, dob: `${1 + i % 27} ${['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov'][i % 6]} ${1980 + i % 20}`, address: region === 'UAE' ? `Villa ${i + 3}, Al Barsha, Dubai` : `${i + 7} Church Lane, ${['Leeds', 'Bristol', 'Nottingham', 'Croydon', 'Leicester', 'Manchester'][i % 6]}`, postcode: region === 'UAE' ? '—' : ['LS6 2AB', 'BS7 8QT', 'NG5 1DB', 'CR0 4XY', 'LE3 9PL', 'M14 6HT'][i % 6], country: region === 'UAE' ? 'United Arab Emirates' : 'United Kingdom', joined: fd(D(-30 - i * 21)), referral: agency ? 'Created by agency' : i % 4 === 0 ? 'Welfare Buddy referral (code WB-FATIMA07)' : 'Self-registration', cur: 'GBP' };
   });
 
-  // G3.1: learners from one other country (India → INR, converted from the base price; no data-region rule)
-  [['Kavya Iyer', 'kavya.iyer@example.in', '+91 98450 21734', 'Moving and Handling People — 2026', 'Self-registration'], ['Vikram Nair', 'vikram.nair@example.in', '+91 99300 55812', 'The Care Certificate (15 Standards)', 'Welfare Buddy referral (code WB-HASSAN22)']].forEach(([name, email, mobile, course, referral], k) => A.learners.push({ id: 'IA-L-' + (31900 + k * 41), name, email, mobile, agency: null, courses: [course], acct: 'Active', rec: 'Active', region: null, last: D(-2 - k, '11:20'), flags: [], dob: ['4 Feb 1993', '19 Oct 1989'][k], address: ['12 Indiranagar 100 Ft Road, Bengaluru', '6 Marine Drive, Kochi'][k], postcode: ['560038', '682031'][k], country: 'India', joined: fd(D(-60 - k * 30)), referral, cur: 'INR', g31: true }));
+  // G3.1: learners from one other country (India) — CH-02: pay in GBP; CH-03: data region UK
+  [['Kavya Iyer', 'kavya.iyer@example.in', '+91 98450 21734', 'Moving and Handling People — 2026', 'Self-registration'], ['Vikram Nair', 'vikram.nair@example.in', '+91 99300 55812', 'The Care Certificate (15 Standards)', 'Welfare Buddy referral (code WB-HASSAN22)']].forEach(([name, email, mobile, course, referral], k) => A.learners.push({ id: 'IA-L-' + (31900 + k * 41), name, email, mobile, agency: null, courses: [course], acct: 'Active', rec: 'Active', region: 'UK', last: D(-2 - k, '11:20'), flags: [], dob: ['4 Feb 1993', '19 Oct 1989'][k], address: ['12 Indiranagar 100 Ft Road, Bengaluru', '6 Marine Drive, Kochi'][k], postcode: ['560038', '682031'][k], country: 'India', joined: fd(D(-60 - k * 30)), referral, cur: 'GBP', g31: true }));
 
   /* ---------- Courses, programmes, batches ---------- */
   A.courses = [
-    ['SC-01', 'Moving and Handling People', 'Health and safety', 'Published', 45, 210, '12 months', 90, 412, 81], ['SC-02', 'Basic Life Support and Anaphylaxis', 'Clinical skills', 'Published', 39, 180, '12 months', 90, 286, 74],
-    ['SC-03', 'Infection Prevention and Control', 'Health and safety', 'Published', 35, 165, '12 months', 90, 351, 69], ['SC-04', 'Fire Safety Awareness', 'Health and safety', 'Published', 29, 135, '12 months', 60, 198, 88],
-    ['SC-05', 'Medication Awareness', 'Clinical skills', 'Published', 49, 230, '12 months', 90, 143, 71], ['SC-06', 'Dementia Awareness', 'Person-centred care', 'Published', 35, 165, '24 months', 90, 220, 84],
-    ['SC-07', 'The Care Certificate (15 Standards)', 'Induction', 'Published', 180, 840, 'No expiry', 180, 96, 52], ['SC-08', 'Oral Health in Care Homes', 'Person-centred care', 'Draft', 25, 115, '24 months', 60, 0, 0],
-    ['SC-09', 'First Aid Awareness', 'Clinical skills', 'Retired', 30, 140, '36 months', 60, 512, 90],
-  ].map(r => ({ id: r[0], title: r[1], cat: r[2], status: r[3], gbp: r[4], aed: r[5], validity: r[6], access: r[7], enrol: r[8], comp: r[9], version: r[3] === 'Draft' ? 1 : 3 }));
+    ['SC-01', 'Moving and Handling People', 'Health and safety', 'Published', 45, '12 months', 90, 412, 81], ['SC-02', 'Basic Life Support and Anaphylaxis', 'Clinical skills', 'Published', 39, '12 months', 90, 286, 74],
+    ['SC-03', 'Infection Prevention and Control', 'Health and safety', 'Published', 35, '12 months', 90, 351, 69], ['SC-04', 'Fire Safety Awareness', 'Health and safety', 'Published', 29, '12 months', 60, 198, 88],
+    ['SC-05', 'Medication Awareness', 'Clinical skills', 'Published', 49, '12 months', 90, 143, 71], ['SC-06', 'Dementia Awareness', 'Person-centred care', 'Published', 35, '24 months', 90, 220, 84],
+    ['SC-07', 'The Care Certificate (15 Standards)', 'Induction', 'Published', 180, 'No expiry', 180, 96, 52], ['SC-08', 'Oral Health in Care Homes', 'Person-centred care', 'Draft', 25, '24 months', 60, 0, 0],
+    ['SC-09', 'First Aid Awareness', 'Clinical skills', 'Retired', 30, '36 months', 60, 512, 90],
+  ].map(r => ({ id: r[0], title: r[1], cat: r[2], status: r[3], gbp: r[4], validity: r[5], access: r[6], enrol: r[7], comp: r[8], version: r[3] === 'Draft' ? 1 : 3 }));
   A.programmes = [
     { id: 'NV-L2', title: 'Level 2 Diploma in Care (England)', level: 'Level 2', ref: 'QN 603/2873/4', version: 1, status: 'Active', batches: 3, learners: 41 },
     { id: 'NV-L3', title: 'Level 3 Diploma in Adult Care (England)', level: 'Level 3', ref: 'QN 603/2851/9', version: 2, status: 'Active', batches: 4, learners: 63 },
@@ -116,10 +116,10 @@ function buildAdmin(av) {
   /* ---------- Bundles & licences ---------- */
   A.bundles = [
     { id: 'BN-01', name: 'BrightCare mandatory training 2026', agency: 'BrightCare Staffing Ltd', courses: ['Moving and Handling People', 'Basic Life Support and Anaphylaxis', 'Fire Safety Awareness'], seats: 60, used: 47, validity: D(85), mode: 'Automatic (−15%)', price: 9435, cur: 'GBP', avail: 'Specific agencies', status: 'Active' },
-    { id: 'BN-02', name: 'Gulf Care induction pack', agency: 'Gulf Care Recruitment', courses: ['The Care Certificate (15 Standards)', 'Dementia Awareness'], seats: 25, used: 22, validity: D(19), mode: 'Customised', price: 19800, cur: 'AED', avail: 'Specific agencies', status: 'Pending approval', belowFloor: true },
+    { id: 'BN-02', name: 'Gulf Care induction pack', agency: 'Gulf Care Recruitment', courses: ['The Care Certificate (15 Standards)', 'Dementia Awareness'], seats: 25, used: 22, validity: D(19), mode: 'Customised', price: 4258.06, cur: 'GBP', avail: 'Specific agencies', status: 'Pending approval', belowFloor: true },
     { id: 'BN-03', name: 'CarePlus NVQ Level 2 seats', agency: 'CarePlus Recruitment', courses: ['Level 2 Diploma in Care (England)'], seats: 8, used: 5, validity: D(240), mode: 'Customised', price: 13600, cur: 'GBP', avail: 'Specific agencies', status: 'Active' },
     { id: 'BN-04', name: 'Starter bundle (any agency)', agency: '—', courses: ['Moving and Handling People', 'Infection Prevention and Control'], seats: 10, used: 0, validity: null, mode: 'Automatic (volume slab 10+)', price: 680, cur: 'GBP', avail: 'Global', status: 'Active' },
-    { id: 'BN-05', name: 'EHHS clinical skills', agency: 'Emirates Home Health Staffing', courses: ['Basic Life Support and Anaphylaxis', 'Medication Awareness'], seats: 30, used: 29, validity: D(11), mode: 'Automatic (−10%)', price: 10890, cur: 'AED', avail: 'Specific agencies', status: 'Active' },
+    { id: 'BN-05', name: 'EHHS clinical skills', agency: 'Emirates Home Health Staffing', courses: ['Basic Life Support and Anaphylaxis', 'Medication Awareness'], seats: 30, used: 29, validity: D(11), mode: 'Automatic (−10%)', price: 2341.94, cur: 'GBP', avail: 'Specific agencies', status: 'Active' },
     { id: 'BN-06', name: 'Northern Lights 2025 refresh', agency: 'Northern Lights Care Agency', courses: ['Moving and Handling People'], seats: 20, used: 20, validity: D(-20), mode: 'Automatic', price: 900, cur: 'GBP', avail: 'Specific agencies', status: 'Expired' },
     { id: 'BN-07', name: 'BrightCare NVQ Level 2 seats', agency: 'BrightCare Staffing Ltd', courses: ['Level 2 Diploma in Care (England)'], seats: 10, used: 7, validity: D(300), mode: 'Customised', price: 16200, cur: 'GBP', avail: 'Specific agencies', status: 'Active' },
   ];
@@ -151,8 +151,8 @@ function buildAdmin(av) {
     q('AQ-1008', 'Discontinue enrolment — academic', 'James Pryce', D(-3, '12:00'), 'Pending', 'Rachel Hughes', ['Ben Carter · Level 2 Diploma in Care', 'a-learners.IA-L-30755'], { reason: 'No evidence submitted for 4 months despite 3 action plans.' }),
     q('AQ-1009', 'Discontinue enrolment — non-payment', 'Mark Bennett', D(-12, '10:00'), 'Approved', 'No approval (direct)', ['Megan Roberts · Medication Awareness', 'a-learners.IA-L-30792'], { reason: 'Unpaid for 45 days after access paused.', decidedBy: 'Mark Bennett', decision: 'Discontinued directly (no approval step).' }),
     q('AQ-1012', 'Refund', 'Mark Bennett', D(-10, '09:15'), 'Approved', 'Leila Haddad', ['Isla Morgan · TXN-77201', 'a-finance'], { amount: 180, cur: 'GBP', reason: 'Enrolled on the wrong course (Care Certificate instead of Dementia Awareness).', decidedBy: 'Leila Haddad', decision: 'Approved — full refund, revoke access.', data: { tx: 'TXN-77201', consequence: 'Revoke access' } }),
-    q('AQ-1013', 'Refund', av === 'C' ? A.me.name : 'Mark Bennett', D(-2, '13:40'), av === 'C' ? 'Approved' : 'Pending', av === 'C' ? 'No approval (Super Admin)' : 'Leila Haddad', ['Maria Santos · TXN-79118', 'a-finance'], { amount: 840, cur: 'AED', reason: 'Duplicate payment flagged for the Care Certificate.', ...(av === 'C' ? { saImmediate: true, decidedBy: A.me.name, processed: D(-2, '13:41'), decision: 'Processed immediately — Super Admin — no approval required. Duplicate payment flagged for the Care Certificate.' } : {}), data: { tx: 'TXN-79118', consequence: 'Retain access' } }),
-    q('AQ-1014', 'Bundle price below minimum', 'Sophie Turner', D(-6, '16:00'), 'Pending', 'Owen Price', ['Gulf Care Recruitment · BN-02', 'a-bundles'], { amount: 19800, cur: 'AED', reason: 'Two-year partnership; volume commitment of 25 seats.', data: { floor: 22500, requested: 19800, bundle: 'BN-02' } }),
+    q('AQ-1013', 'Refund', av === 'C' ? A.me.name : 'Mark Bennett', D(-2, '13:40'), av === 'C' ? 'Approved' : 'Pending', av === 'C' ? 'No approval (Super Admin)' : 'Leila Haddad', ['Maria Santos · TXN-79118', 'a-finance'], { amount: 180, cur: 'GBP', reason: 'Duplicate payment flagged for the Care Certificate.', ...(av === 'C' ? { saImmediate: true, decidedBy: A.me.name, processed: D(-2, '13:41'), decision: 'Processed immediately — Super Admin — no approval required. Duplicate payment flagged for the Care Certificate.' } : {}), data: { tx: 'TXN-79118', consequence: 'Retain access' } }),
+    q('AQ-1014', 'Bundle price below minimum', 'Sophie Turner', D(-6, '16:00'), 'Pending', 'Owen Price', ['Gulf Care Recruitment · BN-02', 'a-bundles'], { amount: 4258.06, cur: 'GBP', reason: 'Two-year partnership; volume commitment of 25 seats.', data: { floor: 4838.71, requested: 4258.06, bundle: 'BN-02' } }),
     q('AQ-1015', 'Link existing learner to agency', 'CarePlus Recruitment', D(-11, '11:00'), 'Returned to Requester', 'Sophie Turner', ['Chloe Hughes → CarePlus Recruitment', 'a-agencies.AG-02'], { reason: 'Learner now works for CarePlus.', decidedBy: 'Sophie Turner', decision: 'Returned — please upload the learner\'s signed consent.' }),
     q('AQ-1016', 'Agency invoice (offline) purchase', 'Northern Lights Care Agency', D(-2, '10:30'), 'Pending', 'Mark Bennett', ['Northern Lights Care Agency · 15 seats Fire Safety', 'a-agencies.AG-05'], { amount: 435, cur: 'GBP', reason: 'PO-NLC-4471, 30-day terms.' }),
     // G4.4 / G4.7 new item types (mixed statuses)
@@ -177,10 +177,10 @@ function buildAdmin(av) {
   A.audit = [
     ['Owen Price', 'System Administrator', D(0, '07:41'), 'System Configuration', 'Session timeout', 'Updated', '20 min', '30 min', 'Staff feedback on timeouts during marking'],
     ['Rachel Hughes', 'Academic Admin', D(-1, '10:16'), 'Approvals Queue', 'R-1042', 'Approved', 'Requested', 'Granted (+3 attempts)', 'First fail by 5%'],
-    ['Leila Haddad', 'Finance Admin', D(-1, '09:02'), 'Finance', 'TXN-90011', 'Recorded offline payment', '—', 'AED 1,630.00 bank transfer', 'Remittance received'],
+    ['Leila Haddad', 'Finance Admin', D(-1, '09:02'), 'Finance', 'TXN-90011', 'Recorded offline payment', '—', '£350.54 bank transfer', 'Remittance received'],
     ['Nadia Qureshi', 'Super Administrator', D(-2, '15:00'), 'Approvals Queue', 'AQ-1006', 'Raised', '—', 'Pending', 'Agency confirmed by email'],
     ['Nadia Qureshi', 'Super Administrator', D(-2, '15:00'), 'Approvals Queue', 'AQ-1006', 'Super Admin — no approval required', 'Raised', 'Applied', 'Agency confirmed by email'],
-    ['Sophie Turner', 'Business Admin', D(-3, '12:22'), 'Bundles & Licences', 'BN-02', 'Price changed', 'AED 22,500.00', 'AED 19,800.00', 'Partnership discount'],
+    ['Sophie Turner', 'Business Admin', D(-3, '12:22'), 'Bundles & Licences', 'BN-02', 'Price changed', '£4,838.71', '£4,258.06', 'Partnership discount'],
     ['Mark Bennett', 'Finance Admin', D(-3, '08:10'), 'Learners', 'IA-L-30422', 'Access paused', 'Active', 'Paused', '30 days overdue (automatic)'],
     ['Sarah Okonkwo', 'Assessor', D(-3, '15:12'), 'Assessment', 'Aisha Rahman · Assignment 2', 'Feedback returned', 'Submitted', 'Resubmission Required', ''],
     ['Graham Ellis', 'Super Administrator', D(-5, '17:30'), 'Roles & Capabilities', 'Finance Admin', 'Capability added', 'Refunds: View', 'Refunds: View, Create', 'Refund workflow'],
@@ -213,8 +213,9 @@ function buildAdmin(av) {
     ['Security', 'Password policy', '12+ characters, upper, lower, number, symbol'], ['Security', 'OTP (2FA code) expiry', '15 minutes'], ['Links', 'Payment link expiry', '72 hours'], ['Links', 'Set-password / reset / workplace link expiry', '7 days'],
     ['Security', 'Session timeout', '30 minutes'], ['Payments', 'Payment-pending timeout', '24 hours'], ['Quizzes', 'Connection-loss grace period', '2 minutes'], ['Certificates', 'Certificate expiry reminder window', '30 / 15 / 7 days'],
     ['Documents', 'Document expiry reminder window', '30 days'], ['Assignments', 'Deadline reminder offsets', '−7 / −3 / −1 days'], ['Approvals', 'Stalled-item days (N)', '5 days'], ['Attendance', 'Attendance thresholds', 'Present ≥ 80% · Partial 30–79% · Late after 10 min'],
-    ['Payments', 'Overdue escalation days', '15 (notify) / 30 (notify + pause)'], ['Admissions', 'Deposit minimum and seat-hold days', '£300.00 / AED 1,395.00 · 28 days'], ['Commercial', 'Bundle minimum price', '−20% of list price'], ['Commercial', 'Seat return rule on unassignment', 'Return if < 10% progress'],
+    ['Payments', 'Overdue escalation days', '15 (notify) / 30 (notify + pause)'], ['Admissions', 'Deposit minimum and seat-hold days', '£300.00 · 28 days'], ['Commercial', 'Bundle minimum price', '−20% of list price'], ['Commercial', 'Seat return rule on unassignment', 'Return if < 10% progress'],
     ['Referrals', 'Invalid referral code behaviour', 'Warn and continue'], ['Workplace', 'Workplace contact titles', 'Manager, Coordinator, Deputy Manager, Clinical Lead'], ['Approvals', 'Approvals SLA', '7 days'], ['Data', 'Archive grace period', '12 months'], ['Assignments', 'Undo window', '15 seconds (fixed)'],
+    ['Contact', 'Academy contact details', '020 3983 0282 · info@welfarehs.co.uk · Mon–Sun 9:30 AM – 6 PM'], // CH-31
   ].map((r, i) => ({ id: 'CF-' + i, group: r[0], name: r[1], value: r[2], fixed: r[1] === 'Undo window', history: i === 4 ? [['Owen Price', D(0, '07:41'), '20 minutes', '30 minutes']] : [] })).filter(c => c.name !== 'Invalid referral code behaviour'); // TBD-072: fixed rule (warn and continue), IDs kept
   A.announcements = [
     { id: 'AN-01', title: 'Academy closed 25–26 December', aud: 'All users', ch: ['In-app', 'Email'], status: 'Published', by: 'Nadia Qureshi', at: D(-3) },
@@ -264,9 +265,9 @@ function buildAdmin(av) {
 
 /* ---------- Helpers shared by admin modules ---------- */
 const VNAME = v => { const m = STORE.worlds[v].me; return m.first + ' ' + m.last; };
-const demoWorlds = () => [...'ABCDEF'].concat(STORE.worlds && STORE.worlds.H ? ['H'] : []); // F1: Priya Nair (world H)
-const regionOf = c => c === 'United Arab Emirates' ? 'UAE' : c === 'United Kingdom' ? 'UK' : null;
-const fuJoined = m => m.registered || (Date.parse(m.joined) ? new Date(Date.parse(m.joined) + 43200e3).toISOString() : null);
+const demoWorlds = () => [...'ABCDEF'].concat(STORE.worlds && STORE.worlds.H ? ['H'] : []); // mock learner Priya Nair (world H)
+// CH-03: data region by country — UAE → UAE; the UK and every other country → UK
+const regionOf = c => c === 'United Arab Emirates' ? 'UAE' : 'UK';
 function demoLearners() {
   return demoWorlds().map(v => {
     const w = STORE.worlds[v], m = w.me;
@@ -275,7 +276,7 @@ function demoLearners() {
     if (v === 'C' && S.edge === 'paused' && S.variant === 'C') flags.push('Access paused');
     if (w.enrolments.some(e => e.status === 'Discontinued')) flags.push('Discontinued enrolment');
     if (v === 'C') flags.push('At risk');
-    return { id: m.id, v, name: m.first + ' ' + m.last, email: m.email, mobile: m.mobile, agency: m.sponsor, courses: w.enrolments.map(e => e.title).concat(w.admission && !w.flags.admitted ? [w.nvq.title + ' (applicant)'] : []), acct: STORE.acct[v] === 'Archived' ? 'Active' : STORE.acct[v] || (v === 'B' ? 'Active' : 'Active'), rec: STORE.acct[v] === 'Archived' ? 'Archived' : 'Active', region: m.region || regionOf(m.country), registered: fuJoined(m), countryChanged: m.countryChanged || null, last: D(0, '07:55'), flags, dob: m.dob, address: m.address, postcode: m.postcode, country: m.country, joined: m.joined, referral: m.referral, cur: m.cur, demo: true };
+    return { id: m.id, v, name: m.first + ' ' + m.last, email: m.email, mobile: m.mobile, agency: m.sponsor, courses: w.enrolments.map(e => e.title).concat(w.admission && !w.flags.admitted ? [w.nvq.title + ' (applicant)'] : []), acct: STORE.acct[v] === 'Archived' ? 'Active' : STORE.acct[v] || (v === 'B' ? 'Active' : 'Active'), rec: STORE.acct[v] === 'Archived' ? 'Archived' : 'Active', region: regionOf(m.country), last: D(0, '07:55'), flags, dob: m.dob, address: m.address, postcode: m.postcode, country: m.country, joined: m.joined, referral: m.referral, cur: m.cur, demo: true };
   });
 }
 function allLearners() { return demoLearners().concat(ADMIN.learners); }
