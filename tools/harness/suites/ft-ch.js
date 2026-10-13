@@ -1,6 +1,6 @@
 // Client decisions CH-01 … CH-31 — one block per batch.
 // Batch 1: CH-01 country fixed, CH-02 GBP only, CH-03 data region, CH-05 VAT invoices, CH-31 contact details,
-// the placeholder register (4 topics), CH-24 unchanged, and the CH records. … Batch 6: CH-06 VAT on agency bundles. Batch 7a: CH-32 – CH-36. Batch 7b: CH-37 – CH-41, CH-43. Batch 7c: CH-42, P-32, P-33.
+// the placeholder register (4 topics), CH-24 unchanged, and the CH records. … Batch 6: CH-06 VAT on agency bundles. Batch 7a: CH-32 – CH-36. Batch 7b: CH-37 – CH-41, CH-43. Batch 7c: CH-42, P-32, P-33. Gap fix: new NVQ programme.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -217,16 +217,16 @@
     ok('Decisions Log: still pending — P-31 and P-34 only', ['P-31', 'P-34'].every(p => /Pending client/.test(pst(p))) && prow.filter(x => /Pending client/.test(x)).length === 2 && /Still pending: P-31, P-34\./.test(pc.textContent));
     const fu = secs.find(s => /Follow-up decisions \(P-05 – P-26\)/.test(s.textContent)), st = id => ([...fu.querySelectorAll('tbody tr')].find(tr => tr.firstChild.textContent === id) || {}).textContent || '';
     ok('Decisions Log: F1 Superseded (CH-01); F2, F3b, F8 Resolved; F3a Superseded', /Superseded \(CH-01\)/.test(st('F1')) && /Resolved \(CH-02\)/.test(st('F2')) && /Superseded \(CH-02\)/.test(st('F3a')) && /Resolved \(CH-03\)/.test(st('F3b')) && /Resolved \(CH-05\)/.test(st('F8')));
-    ok('Decisions Log: 24 scenarios; #16 is the new sign-up', /All 24 run end to end in the prototype\./.test(main()) && CDL_SCEN.filter(r => r[0] === '16').length === 1 && CDL_SCEN.find(r => r[0] === '16')[1] === 'New sign-up: documents → offer letter → payment → start' && !CDL_SCEN.some(r => r[1] === 'Learner moves country'));
+    ok('Decisions Log: 25 scenarios; #16 is the new sign-up', /All 25 run end to end in the prototype\./.test(main()) && CDL_SCEN.filter(r => r[0] === '16').length === 1 && CDL_SCEN.find(r => r[0] === '16')[1] === 'New sign-up: documents → offer letter → payment → start' && !CDL_SCEN.some(r => r[1] === 'Learner moves country'));
     go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 1/.test(s.textContent));
     ok('UX Changelog: Batch 1 entry lists its CH IDs', !!ux && ['CH-01:', 'CH-02:', 'CH-03:', 'CH-05:', 'CH-31:'].every(x => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(x))));
-    go('demo-scenarios'); ok('Demo Scenarios: "Twenty-four", 24 sections, #16 is the new sign-up', /Twenty-four end-to-end walkthroughs/.test(main()) && app().querySelectorAll('main section[id^="sc-"]').length === 24 && /New sign-up/.test((app().querySelector('#sc-16') || {}).textContent || ''));
-    renderDemo(); AFTER.forEach(f => f()); const b = document.querySelector('#demo-root [data-act="scOpen"]'); ok('Demo panel: "Open the 24 Demo Scenarios"', !b || b.textContent === 'Open the 24 Demo Scenarios', b && b.textContent);
+    go('demo-scenarios'); ok('Demo Scenarios: "Twenty-five", 25 sections, #16 is the new sign-up', /Twenty-five end-to-end walkthroughs/.test(main()) && app().querySelectorAll('main section[id^="sc-"]').length === 25 && /New sign-up/.test((app().querySelector('#sc-16') || {}).textContent || ''));
+    renderDemo(); AFTER.forEach(f => f()); const b = document.querySelector('#demo-root [data-act="scOpen"]'); ok('Demo panel: "Open the 25 Demo Scenarios"', !b || b.textContent === 'Open the 25 Demo Scenarios', b && b.textContent);
     learner('A'); go('index'); const ix = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
-    ok('Learner index: CH entries (incl. registration confirmation, 1b), each with a purpose line', !!ix && ix.querySelectorAll('li').length === 21 && !!ix.querySelector('[data-act="regStart"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 24 walkthroughs/.test(main()));
+    ok('Learner index: CH entries (incl. registration confirmation, 1b), each with a purpose line', !!ix && ix.querySelectorAll('li').length === 21 && !!ix.querySelector('[data-act="regStart"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 25 walkthroughs/.test(main()));
     ix.querySelector('[data-m="chCheckout"]').click(); await wait(150); ok('Learner index: checkout entry opens the checkout with the Stripe line', !!MODAL && !!mroot().querySelector('.ch-stripe')); closeModal();
     SA(); go('a-index'); const ax = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
-    ok('Admin index: Batch 1–7c entries with purposes', !!ax && ax.querySelectorAll('li').length === 26 && ['a-config', 'a-learner.IA-L-31900', 'a-dataprotection..residency', 'a-programmes.NV-L3.letter', 'a-admissions.APP-C', 'a-learner.IA-L-31188.admission'].every(t => ax.querySelector(`[data-t="${t}"]`)) && [...ax.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && !/Priya Nair \(moved country/.test(main()));
+    ok('Admin index: Batch 1–7c and new-programme entries with purposes', !!ax && ax.querySelectorAll('li').length === 29 && ['a-config', 'a-learner.IA-L-31900', 'a-dataprotection..residency', 'a-programmes.NV-L3.letter', 'a-admissions.APP-C', 'a-learner.IA-L-31188.admission'].every(t => ax.querySelector(`[data-t="${t}"]`)) && [...ax.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && !/Priya Nair \(moved country/.test(main()));
   });
 
   /* ================= Batch 2 ================= */
@@ -1051,6 +1051,99 @@
     ok('UX Changelog: Batch 7c entry', !!ux && ['CH-42:', 'P-32', 'P-33:'].every(k => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(k))));
     SA(); go('a-index'); ok('Admin index: 7c entries', !!app().querySelector('[data-t="a-learner.IA-L-31188.enrolments"]') && !!app().querySelector('[data-t="a-batches.L2DC-MAR26.staff"]'));
     role('bizA'); go('b-index'); ok('Business index: Batch assignment', !!app().querySelector('[data-t="b-batchassign"]'));
+  });
+
+  /* ================= New NVQ programme (gap fix) ================= */
+  const np = () => (STORE.chNewProgs || []).slice(-1)[0];
+  const fill8 = o => Object.entries(o).forEach(([k, v]) => { const e = document.querySelector(k); e.value = v; });
+  const add8 = (act, ds, vals) => { ACT[act]({ dataset: ds }); fill8(vals); return prim(); };
+
+  await T('New NVQ programme: who, details, Draft Version 1', async () => {
+    fresh(); acaEnter('KA'); S.signedIn = true; go('a-programmes');
+    ok('NP Academic Admin: "New NVQ programme" on NVQ Programmes', !!app().querySelector('[data-act="chProgNew"]'));
+    SA(); go('a-programmes'); ok('NP Super Admin: button shown', !!app().querySelector('[data-act="chProgNew"]'));
+    role('sysA'); go('a-programmes'); ok('NP System Admin: button shown', !!app().querySelector('[data-act="chProgNew"]'));
+    role('finA'); ACT.chProgNew(); ok('NP Finance can\'t create a programme (refused, logged)', !MODAL && ADMIN.audit[0].action === 'Blocked: create programme');
+    acaEnter('KA'); S.signedIn = true; go('a-programmes'); ACT.chProgNew();
+    ok('NP details: title, level, reference, duration, description, price (GBP), Support type with the P-31 tag', ['#np-t', '#np-l', '#np-r', '#np-d', '#np-ds', '#np-p'].every(s => document.querySelector(s)) && document.querySelectorAll('input[name="np-s"]').length === 2 && /Pending client: Fully assisted vs self-paced/.test(mroot().textContent));
+    prim(); ok('NP required fields', !!MODAL && /Enter a title/.test(mroot().textContent));
+    closeModal(); ACT.chProgNew(); fill8({ '#np-t': 'Level 3 Diploma in Adult Care (England)', '#np-r': 'QN 1', '#np-p': '2000' }); prim(); ok('NP title must be unique', !!MODAL && /already exists/.test(mroot().textContent) && !(STORE.chNewProgs || []).some(p => !p.seed)); closeModal(); ACT.chProgNew();
+    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12 months', '#np-p': '2600', '#np-ds': 'For team leaders.' }); document.querySelector('input[name="np-s"][value="Self-paced"]').checked = true; prim();
+    const pr = np();
+    ok('NP created as Draft, Version 1, with details and Support type', !!pr && pr.status === 'Draft' && pr.version === 1 && pr.price === 2600 && pr.level === 'Level 4' && chSupportOf(pr.id) === 'Self-paced' && S.route === 'a-programmes' && S.params && true);
+    ok('NP audited', ADMIN.audit.some(a => a.module === 'NVQ Programmes' && a.action === 'Programme created (Draft, Version 1)' && a.entity.includes(pr.id)));
+    go('a-programmes', { id: pr.id, tab: 'details' }); ok('NP setup wizard: six steps, Draft chip', app().querySelectorAll('.ch8-steps .step').length === 6 && /Draft/.test(main()) && /Version 1/.test(main()));
+    document.querySelector('#np-p').value = '2700'; ACT.ch8SaveDetails({ dataset: { id: pr.id } }); ok('NP details editable while Draft, audited', pr.price === 2700 && ADMIN.audit[0].action === 'Details changed');
+    go('a-programmes'); ok('NP listed on NVQ Programmes as Draft', /Level 4 Certificate in Care Leadership/.test(main()));
+  });
+
+  await T('New NVQ programme: structure, letter, documents, plan, review, publish', async () => {
+    fresh(); acaEnter('KA'); S.signedIn = true; go('a-programmes'); ACT.chProgNew();
+    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12 months', '#np-p': '2600' }); prim(); const pr = np(), id = pr.id;
+    go('a-programmes', { id, tab: 'review' }); const pub0 = app().querySelector('[data-act="ch8Publish"]');
+    ok('NP review: blocking items listed; Publish disabled with a reason', /Add at least one unit/.test(main()) && /No offer letter uploaded/.test(main()) && pub0.disabled && !!pub0.title);
+    ACT.ch8Publish({ dataset: { id } }); ok('NP publish refused while items are missing (logged)', /Can't publish/.test(MODAL.title) && pr.status === 'Draft' && ADMIN.audit[0].action === 'Blocked: publish (items missing)'); closeModal();
+    go('a-programmes', { id, tab: 'structure' });
+    add8('ch8AddUnit', { id }, { '#u-c': 'u410', '#u-t': 'Lead care teams' });
+    add8('ch8AddMod', { id, u: 0 }, { '#m-t': 'Team leadership', '#m-ab': 'A/650/4101' });
+    add8('ch8AddMod', { id, u: 0 }, { '#m-t': 'No code', '#m-ab': '' }); ok('NP module needs its awarding-body code', !!MODAL && /awarding-body code/.test(mroot().textContent)); closeModal();
+    add8('ch8AddLo', { id, u: 0, m: 0 }, { '#lo-t': 'Understand leadership styles', '#lo-y': 'Knowledge' });
+    add8('ch8AddLo', { id, u: 0, m: 0 }, { '#lo-t': 'Lead a team shift', '#lo-y': '' });
+    add8('ch8AddCrit', { id, u: 0, m: 0, l: 0 }, { '#c-d': 'Compare two leadership styles', '#c-e': 'Written account' });
+    add8('ch8AddCrit', { id, u: 0, m: 0, l: 1 }, { '#c-d': 'Allocate tasks fairly', '#c-e': 'Observed during a shift' });
+    const t = ch8Tree(id);
+    ok('NP structure: unit → module (awarding-body code) → Learning Outcomes → criteria', t.length === 1 && t[0].code === 'U410' && t[0].mods[0].ab === 'A/650/4101' && t[0].mods[0].los.length === 2 && t[0].mods[0].los[0].crit[0].ev === 'Written account');
+    ACT.ch8Key({ dataset: { id, u: 0, m: 0 } }); ACT.ch8KeySample(); prim(); ok('NP answer key per module (optional)', t[0].mods[0].key && /sample/.test(t[0].mods[0].key.file));
+    go('a-programmes', { id, tab: 'review' }); ok('NP review: Learning Outcome without a type is blocking; uncovered criteria is a warning', /Learning Outcome without a type: U410 M1 LO2/.test(main()) && /not yet covered by assignments/.test(main()) && /Warning/.test(main()));
+    go('a-programmes', { id, tab: 'structure' }); const sel = document.querySelector('[data-onchange="ch8LoType"][data-l="1"]'); sel.value = 'Observation'; INP.ch8LoType(sel);
+    ok('NP Learning Outcome type set, audited', t[0].mods[0].los[1].type === 'Observation' && ADMIN.audit.some(a => a.action === 'Learning Outcome type set'));
+    go('a-programmes', { id, tab: 'letter' }); ok('NP offer letter step: upload (existing tab)', !!app().querySelector('[data-act="chLetterUp"][data-id="' + id + '"]'));
+    ACT.chLetterUp({ dataset: { id } }); ACT.chLetterSample(); document.querySelector('#rsn').value = 'First version'; press();
+    go('a-programmes', { id, tab: 'letter' }); ok('NP offer letter uploaded: merge fields and preview', !!chLetterCur(id) && /\{\{full_name\}\}/.test(main()) && !!app().querySelector('[data-act="chLetterPrev"]'));
+    go('a-programmes', { id, tab: 'docs' }); ok('NP document checklist: choose required documents', document.querySelectorAll('.ch8-doc').length === 7);
+    document.querySelector('.ch8-doc[value="Employer reference letter"]').checked = true; ACT.ch8SaveDocs({ dataset: { id } }); ok('NP checklist saved, audited', ch8Docs(id).includes('Employer reference letter') && ADMIN.audit[0].action === 'Document checklist saved');
+    go('a-programmes', { id, tab: 'plan' }); ok('NP payment plan: Academic Admin read-only (Finance / Super Admin edit)', !document.querySelector('#pp-d') && /Set by Finance or the Super Admin/.test(main()));
+    ACT.ch8SavePlan({ dataset: { id } }); ok('NP plan save refused for the Academic Admin (logged)', ADMIN.audit[0].action === 'Blocked: payment plan');
+    SA(); go('a-programmes', { id, tab: 'plan' }); fill8({ '#pp-d': '400', '#pp-n': '8' }); ACT.ch8SavePlan({ dataset: { id } });
+    ok('NP Super Admin sets the plan in GBP, audited', pr.plan.deposit === 400 && pr.plan.inst === 8 && ADMIN.audit[0].action === 'Payment plan saved');
+    FA(); go('f-plans'); ok('NP Finance → Payment Plans: link to edit the plan', !!app().querySelector('.ch8-plans [data-tab="plan"][data-id="' + id + '"]'));
+    acaEnter('KA'); S.signedIn = true; go('a-programmes', { id, tab: 'review' }); const pub = app().querySelector('[data-act="ch8Publish"]');
+    ok('NP review: nothing blocking; Publish enabled', !pub.disabled && !/Blocking/.test(main()));
+    ACT.ch8Publish({ dataset: { id } }); document.querySelector('#rsn').value = 'Ready'; press();
+    ok('NP published: Active, Version 1, audited', pr.status === 'Active' && pr.version === 1 && ADMIN.audit.some(a => a.action === 'Programme published (Version 1)'));
+    ok('NP available for sign-up (Browse) and fees', CATALOGUE.some(c => c.title === pr.title && c.kind === 'nvq' && c.price === 2600) && NVQ_FEES[pr.title] === 2600);
+    go('a-programmes', { id }); ok('NP after publishing: links to the existing screens (assignments, batches)', /Published \(Version 1\)/.test(main()) && !!app().querySelector('[data-act="newBatch"]') && !app().querySelector('[data-act="ch8AddUnit"]'));
+    ACT.newBatch(); ok('NP Create batch offers the new programme', [...document.querySelectorAll('#nb-co option')].some(o => o.textContent === pr.title)); closeModal();
+    learner('A'); go('browse'); ok('NP learner Browse Courses lists it', /Level 4 Certificate in Care Leadership/.test(main()));
+    fresh(); ok('NP reset removes created programmes (the two seeded ones stay)', !ADMIN.programmes.some(p => p.chNew && !p.seed) && ADMIN.programmes.filter(p => p.seed).length === 2 && !CATALOGUE.some(c => c.title === 'Level 4 Certificate in Care Leadership'));
+  });
+
+  await T('New NVQ programme: sign-up uses its checklist, offer letter and payment plan', async () => {
+    fresh(); const pr = ch8Pr('NV-N2');
+    ok('NP seeded: NV-N1 Draft (sample) and NV-N2 published with batch L2PW-DEC26-ONL', ch8Pr('NV-N1').status === 'Draft' && pr.status === 'Active' && ADMIN.batches.some(b => b.code === 'L2PW-DEC26-ONL' && b.course === pr.title));
+    ok('NP its batches are in the nearest-batch rule', chNearest(pr.title, 'United Kingdom').code === 'L2PW-DEC26-ONL' && chNearest(pr.title, 'India').code === 'L2PW-DEC26-ONL');
+    learner('A'); go('browse'); ok('NP Browse Courses lists the published programme', !!app().querySelector('[data-act="applyNvq"][data-id="k-NV-N2"]'));
+    ACT.applyNvq({ dataset: { id: 'k-NV-N2' } }); prim(); const w = W;
+    ok('NP sign-up started on the new programme', S.route === 'admission' && w.signup && w.signup.prog === 'NV-N2' && w.nvq.title === pr.title && stepCur() === 'Personal details');
+    ok('NP step 1: nearest batch of the new programme', /Your batch: Online Cohort 1 \(Preparing to Work\)/.test(main()));
+    ACT.suNext(); ok('NP step 2: the programme\'s document checklist', stepCur() === 'Documents' && w.docs.map(d => d.name).join('|') === ch8Docs('NV-N2').join('|') && w.docs.every(d => d.mand));
+    w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext();
+    ok('NP step 3: the programme\'s offer letter', stepCur() === 'Offer letter' && main().includes(pr.title) && chLetterFor(w).file === 'NV-N2 offer letter v1.docx');
+    setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign();
+    ok('NP step 4: the programme\'s payment plan (deposit £150 or 3 instalments of £300)', stepCur() === 'Payment' && main().includes('Deposit (holds your seat) — ' + money(150, 'GBP')) && main().includes('3 monthly payments of ' + money(300, 'GBP')));
+    setUi('suMethod', 'bank'); render(); ACT.suPay();
+    const pl = w.plans.find(p => p.e === 'nvq');
+    ok('NP completed: deposit £150, balance £750, seat taken', w.signup.done && w.signup.pay.amount === 150 && w.admission.deposit.min === 150 && w.admission.deposit.balance === 750 && pl.total === 900 && pl.rows[0].amount === 750 && chBatch('L2PW-DEC26-ONL').enrolled === 3);
+    learner('B'); go('admission'); ok('NP existing demo programmes unchanged (Priya Raman: Level 3, £300 deposit)', W.nvq.title === 'Level 3 Diploma in Adult Care (England)' && !W.signup.prog && W.admission.deposit.min === 300);
+    const s8 = SC_LIST().find(x => x[0] === '25')[3]; ok('Scenario #25 steps open the wizard pages (crawl coverage)', ['a-programmes.NV-N1.details', 'a-programmes.NV-N1.structure', 'a-programmes.NV-N1.letter', 'a-programmes.NV-N1.docs', 'a-programmes.NV-N1.plan', 'a-programmes.NV-N1.review', 'a-programmes.NV-N2'].every(t => s8.some(x => x.t === t)));
+  });
+
+  await T('New NVQ programme: Scenario #25 and records', async () => {
+    fresh(); const s25 = SC_LIST().find(x => x[0] === '25');
+    ok('Scenario #25 "Create a new NVQ programme": create → structure → offer letter → checklist → plan → publish → batch', !!s25 && s25[1] === 'Create a new NVQ programme' && s25[3].length === 8 && /signs up/.test(s25[3][7].text) && /New NVQ programme/.test(s25[3][0].text) && /Offer letter/.test(s25[3][2].text) && /Document checklist/.test(s25[3][3].text) && /Payment plan/.test(s25[3][4].text) && /publish/.test(s25[3][5].text) && /Coordinator and assessors/.test(s25[3][6].text));
+    ACT.chSc25Structure(); const pr = (STORE.chNewProgs || [])[0]; ok('Scenario #25 sample draft: one Learning Outcome without a type', !!pr && ch8Check(pr).block.some(b => /without a type/.test(b)));
+    ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: new NVQ programme entry', /New NVQ programme \(setup wizard\)/.test(main()));
+    SA(); go('a-index'); ok('Admin index: new NVQ programme entries with purposes', !!app().querySelector('[data-act="aJump"][data-t="a-programmes"]') && /create a Draft programme/.test(main()));
   });
 
   fresh();
