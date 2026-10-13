@@ -10,7 +10,7 @@
   T('consents mandatory', () => { ACT.regStart(); fill({ '#rg-name': 'Arjun Mehta', '#rg-email': 'arjun.mehta@example.in', '#rg-mob': '98200 11223', '#rg-country': 'India', '#rg-pw': 'Abcdefgh12!x', '#rg-pw2': 'Abcdefgh12!x', '#rg-terms': true, '#rg-priv': false }); SUBMIT.regSubmit(); ok('privacy required', /privacy consent/i.test(main())); });
   T('register India via referral link → OTP → welcome → dashboard', () => {
     const before = ADMIN.referrals.find(r => r.code === 'WB-FATIMA07').regs;
-    ACT.regLink(); fill({ '#rg-name': 'Arjun Mehta', '#rg-email': 'arjun.mehta@example.in', '#rg-dial': '+91', '#rg-mob': '98200 11223', '#rg-country': 'India', '#rg-pw': 'Abcdefgh12!x', '#rg-pw2': 'Abcdefgh12!x', '#rg-terms': true, '#rg-priv': true }); SUBMIT.regSubmit();
+    ACT.regLink(); fill({ '#rg-name': 'Arjun Mehta', '#rg-email': 'arjun.mehta@example.in', '#rg-dial': '+91', '#rg-mob': '98200 11223', '#rg-country': 'India', '#rg-pw': 'Abcdefgh12!x', '#rg-pw2': 'Abcdefgh12!x', '#rg-terms': true, '#rg-priv': true }); SUBMIT.regSubmit(); MODAL.actions.find(a => a.label === 'Confirm').fn(); /* CH-01: confirm the country */
     ok('verify screen', S.auth === 'regVerify' && /Verify your account/.test(main())); ok('code email in inbox', STORE.agy.lmails[0].email === 'arjun.mehta@example.in' && /123456/.test(STORE.agy.lmails[0].html));
     $$('.otp-i').forEach((b, i) => b.value = '111111'[i]); SUBMIT.regCode(); ok('wrong code', /incorrect/.test(main()));
     $$('.otp-i').forEach((b, i) => b.value = '000000'[i]); SUBMIT.regCode(); ok('expired code', /expired/.test(main()));
@@ -21,7 +21,7 @@
     ok('referral count +1', ADMIN.referrals.find(r => r.code === 'WB-FATIMA07').regs === before + 1);
     const L = allLearners().find(l => l.email === 'arjun.mehta@example.in'); ok('in admin learners (CH-02 GBP, CH-03 region UK)', !!L && L.country === 'India' && L.cur === 'GBP' && L.region === 'UK', L && (L.country + ' ' + L.cur + ' ' + L.region));
   });
-  T('too many attempts + pending verification', () => { ACT.regStart(); fill({ '#rg-name': 'Lena Brook', '#rg-email': 'lena.brook@example.co.uk', '#rg-mob': '7700 955111', '#rg-country': 'United Kingdom', '#rg-pw': 'Abcdefgh12!x', '#rg-pw2': 'Abcdefgh12!x', '#rg-terms': true, '#rg-priv': true }); SUBMIT.regSubmit(); for (let k = 0; k < 3; k++) { $$('.otp-i').forEach((b, i) => b.value = '222222'[i]); SUBMIT.regCode(); } ok('locked', /Too many attempts/.test(main()));
+  T('too many attempts + pending verification', () => { ACT.regStart(); fill({ '#rg-name': 'Lena Brook', '#rg-email': 'lena.brook@example.co.uk', '#rg-mob': '7700 955111', '#rg-country': 'United Kingdom', '#rg-pw': 'Abcdefgh12!x', '#rg-pw2': 'Abcdefgh12!x', '#rg-terms': true, '#rg-priv': true }); SUBMIT.regSubmit(); MODAL.actions.find(a => a.label === 'Confirm').fn(); /* CH-01: confirm the country */ for (let k = 0; k < 3; k++) { $$('.otp-i').forEach((b, i) => b.value = '222222'[i]); SUBMIT.regCode(); } ok('locked', /Too many attempts/.test(main()));
     S.auth = 'signin'; render(); $('#si-email').value = 'lena.brook@example.co.uk'; $('#si-pw').value = 'x'; SUBMIT.signin(); ok('pending verification on sign-in', S.auth === 'regVerify' && /Pending verification/.test(main())); });
   const pre = document.createElement('pre'); pre.id = 'ft-out'; pre.textContent = R.join('\n'); document.body.appendChild(pre);
 })();

@@ -75,12 +75,15 @@ SUBMIT.regSubmit = () => {
   if (err) { if (/terms|priv/.test(err[0])) { S.authMsg = { html: err[1] + '.' }; render(); } else fieldErr(err[0], err[1]); return; }
   const mob = (d.dial + d.mob).replace(/\D/g, ''), dup = allLearners().find(l => l.email.toLowerCase() === d.email.toLowerCase() || (l.mobile || '').replace(/\D/g, '') === mob) || (STORE.regs || []).find(r => r.email.toLowerCase() === d.email.toLowerCase());
   if (dup) { S.authMsg = { html: '<strong>An account already exists</strong> with this email or mobile. <button class="linklike" data-act="authGo" data-a="signin">Sign in</button> / <button class="linklike" data-act="authGo" data-a="forgot">Reset password</button>' }; render(); return; }
+  regConfirmCountry(d, () => regFinish(d)); // CH-01: the country can't be changed later — confirm it first
+};
+function regFinish(d) {
   const rs = regRefState(d.ref), at = now().toISOString();
   d.consents = [['Terms & Conditions', 'v3.2', at], ['Privacy consent', 'v4.0', at]]; d.refOk = rs && rs.st === 'valid' ? rs.r.code : null;
   (STORE.regs = STORE.regs || []).push({ email: d.email, name: d.name, at, verified: false });
   S.regV = { via: 'email', expires: Date.now() + REG_CODE_MIN * 60000, resendAt: Date.now() + 30000, tries: 0 };
   regSendCode(); S.authMsg = rs && rs.st !== 'valid' ? { tone: 'amber', html: 'Registered without the referral code (' + esc(rs.st === 'expired' ? 'expired' : 'not found') + ').' } : null; S.auth = 'regVerify'; render(); regTick();
-};
+}
 function regSendCode() {
   const d = S.reg, v = S.regV, sms = v.via === 'sms';
   STORE.agy.lmails.unshift({ id: 'LM-R' + Date.now() + Math.random().toString(36).slice(2, 4), kind: 'code', name: d.name, email: sms ? d.dial + ' ' + d.mob + ' (SMS)' : d.email, agency: 'Illumin Academy', by: sms ? 'SMS (demo)' : 'Illumin Academy', subj: sms ? 'SMS: your Illumin Academy code' : 'Confirm your Illumin Academy account', html: `<p>${sms ? '' : `Hello ${esc(d.name.split(' ')[0])},</p><p>`}Your verification code is:</p><p class="mono" style="font-size:1.6rem;letter-spacing:.2em">123456</p><p class="small">It expires in ${REG_CODE_MIN} minutes. If you didn't create an account, ignore this message.</p>`, sent: now().toISOString(), used: false });

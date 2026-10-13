@@ -110,7 +110,7 @@
     const before = ADMIN.referrals.find(r => r.code === 'WB-FATIMA07').regs;
     step(10, 1); ok('#10.1 referral code prefilled and locked', $('#rg-ref') && $('#rg-ref').value === 'WB-FATIMA07' && $('#rg-ref').readOnly);
     const fill = v => Object.entries(v).forEach(([k, x]) => { const el = $(k); if (el.type === 'checkbox') el.checked = x; else el.value = x; });
-    fill({ '#rg-name': 'Meera Iyer', '#rg-email': 'meera.iyer@example.in', '#rg-dial': '+91', '#rg-mob': '98200 44556', '#rg-country': 'India', '#rg-pw': 'Abcdefgh12!x', '#rg-pw2': 'Abcdefgh12!x', '#rg-terms': true, '#rg-priv': true }); SUBMIT.regSubmit();
+    fill({ '#rg-name': 'Meera Iyer', '#rg-email': 'meera.iyer@example.in', '#rg-dial': '+91', '#rg-mob': '98200 44556', '#rg-country': 'India', '#rg-pw': 'Abcdefgh12!x', '#rg-pw2': 'Abcdefgh12!x', '#rg-terms': true, '#rg-priv': true }); SUBMIT.regSubmit(); MODAL.actions.find(a => a.label === 'Confirm').fn(); /* CH-01: confirm the country */
     ok('#10.2 OTP screen', S.auth === 'regVerify'); $$('.otp-i').forEach((b, k) => b.value = '123456'[k]); SUBMIT.regCode(); ok('#10.2 welcome', S.auth === 'welcome'); ACT.finishWelcome(); ok('#10.2 learner dashboard', S.route === 'dashboard' && S.signedIn);
     step(10, 3); const L = allLearners().find(l => l.email === 'meera.iyer@example.in'); ok('#10.3 visible in admin with country and data region (CH-02 GBP, CH-03 region UK)', !!L && L.country === 'India' && L.cur === 'GBP' && L.region === 'UK', L && L.cur + ' ' + L.region);
     step(10, 4); ok('#10.4 attribution counted', ADMIN.referrals.find(r => r.code === 'WB-FATIMA07').regs === before + 1);

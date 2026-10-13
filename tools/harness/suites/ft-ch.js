@@ -43,6 +43,50 @@
     fresh();
   });
 
+  /* ---------- CH-01 (1b) registration: UK / UAE pinned, country confirmed before the account is created ---------- */
+  await T('CH-01 1b registration country confirmation', async () => {
+    fresh(); ACT.regStart(); await wait(30);
+    const opts = [...$('#rg-country').options].filter(o => o.value && !o.disabled).map(o => o.textContent);
+    ok('1b UK and UAE are the first two options', opts[0] === 'United Kingdom' && opts[1] === 'United Arab Emirates', opts.slice(0, 3).join(' | '));
+    const all = [...$('#rg-country').options]; ok('1b separated from the rest of the list', all[3] && all[3].disabled && /─/.test(all[3].textContent) && all.slice(4).every(o => !o.disabled));
+    const vals = { '#rg-name': 'Nadia Okoro', '#rg-email': 'nadia.okoro@example.ng', '#rg-mob': '803 555 0199', '#rg-country': 'Nigeria', '#rg-pw': 'Abcdefgh12!x', '#rg-pw2': 'Abcdefgh12!x', '#rg-ref': '' };
+    Object.entries(vals).forEach(([k, v]) => { $(k).value = v; }); $('#rg-dial').value = '+234'; $('#rg-terms').checked = true; $('#rg-priv').checked = true;
+    const regs0 = (STORE.regs || []).length;
+    SUBMIT.regSubmit();
+    ok('1b confirmation names the chosen country', !!MODAL && MODAL.title === 'Confirm your country' && /You selected\s*Nigeria\. This can't be changed later\./.test(mroot().textContent), MODAL && mroot().textContent.trim().slice(0, 120));
+    ok('1b Confirm and Go back offered', !!MODAL && MODAL.actions.map(a => a.label).join() === 'Go back,Confirm');
+    ok('1b not registered before Confirm', (STORE.regs || []).length === regs0 && S.auth === 'register');
+    [...mroot().querySelectorAll('button')].find(b => b.textContent.trim() === 'Go back').click(); await wait(60);
+    ok('1b Go back returns to the form', !MODAL && S.auth === 'register' && !!$('#rg-country'));
+    ok('1b Go back keeps everything entered', Object.entries(vals).every(([k, v]) => $(k).value === v) && $('#rg-dial').value === '+234' && $('#rg-terms').checked && $('#rg-priv').checked, Object.keys(vals).map(k => k + '=' + $(k).value).join(' '));
+    ok('1b still not registered after Go back', (STORE.regs || []).length === regs0);
+    SUBMIT.regSubmit(); [...mroot().querySelectorAll('button')].find(b => b.textContent.trim() === 'Confirm').click(); await wait(60);
+    ok('1b Confirm completes registration (code step)', !MODAL && S.auth === 'regVerify' && (STORE.regs || []).length === regs0 + 1 && STORE.regs[STORE.regs.length - 1].email === 'nadia.okoro@example.ng');
+    $$('.otp-i').forEach((b, i) => b.value = '123456'[i]); SUBMIT.regCode(); ACT.finishWelcome && ACT.finishWelcome();
+    ok('1b the account keeps the confirmed country (data region UK)', W.me.country === 'Nigeria' && regionOf(W.me.country) === 'UK');
+    ACT.resetDemo(); ACT.regStart(); ['#rg-name', '#rg-email'].forEach(k => { $(k).value = ''; }); SUBMIT.regSubmit();
+    ok('1b form errors come first — no confirmation on an invalid form', !MODAL);
+    ACT.resetDemo();
+  });
+
+  /* ---------- Defect fix (1b): Reset demo data after registering a new learner ---------- */
+  await T('1b Reset demo data after registering a new learner', async () => {
+    fresh(); const errs = []; const onErr = e => errs.push(e.message); window.addEventListener('error', onErr);
+    const learners0 = allLearners().length, worlds0 = Object.keys(STORE.worlds).sort().join();
+    ACT.regStart(); const vals = { '#rg-name': 'Reset Tester', '#rg-email': 'reset.tester@example.co.uk', '#rg-mob': '7700 955444', '#rg-country': 'United Kingdom', '#rg-pw': 'Abcdefgh12!x', '#rg-pw2': 'Abcdefgh12!x' };
+    const fill = () => { Object.entries(vals).forEach(([k, v]) => { $(k).value = v; }); $('#rg-terms').checked = true; $('#rg-priv').checked = true; };
+    fill(); SUBMIT.regSubmit(); MODAL.actions.find(a => a.label === 'Confirm').fn(); $$('.otp-i').forEach((b, i) => b.value = '123456'[i]); SUBMIT.regCode(); ACT.finishWelcome();
+    ok('Reset fix: signed in as the new learner first', S.variant === 'G' && S.signedIn && W === STORE.worlds.G && allLearners().length === learners0 + 1);
+    renderDemo(); const btn = document.querySelector('#demo-root [data-act="resetDemo"]');
+    let threw = ''; try { if (btn) btn.click(); else ACT.resetDemo(); } catch (e) { threw = e.message; } await wait(80);
+    ok('Reset fix: no error', !threw && !errs.length, threw || errs.join(' | '));
+    ok('Reset fix: demo data restored (worlds rebuilt, new learner and registration gone)', Object.keys(STORE.worlds).sort().join() === worlds0 && !STORE.worlds.G && !allLearners().some(l => l.email === vals['#rg-email']) && allLearners().length === learners0 && !(STORE.regs || []).length, Object.keys(STORE.worlds).join());
+    ok('Reset fix: lands on a valid screen (default learner dashboard)', S.variant === 'A' && W === STORE.worlds.A && S.route === 'dashboard' && S.signedIn && app().querySelectorAll('h1').length === 1 && !/Page not found|couldn't find this/i.test(main()), S.variant + ' ' + S.route);
+    ACT.regStart(); fill(); SUBMIT.regSubmit(); ok('Reset fix: the same email can register again (not a duplicate)', !!MODAL && MODAL.title === 'Confirm your country'); closeModal();
+    learner('H'); ACT.resetDemo(); ok('Reset fix: reset while on Priya Nair (world H) returns to her rebuilt world', S.variant === 'H' && W === STORE.worlds.H && app().querySelectorAll('h1').length === 1);
+    window.removeEventListener('error', onErr); fresh();
+  });
+
   /* ---------- CH-02 GBP only ---------- */
   await T('CH-02 GBP only — data', () => {
     fresh();
@@ -177,7 +221,7 @@
     go('demo-scenarios'); ok('Demo Scenarios: "Seventeen", 17 sections, no #16', /Seventeen end-to-end walkthroughs/.test(main()) && app().querySelectorAll('main section[id^="sc-"]').length === 17 && !app().querySelector('#sc-16'));
     renderDemo(); AFTER.forEach(f => f()); const b = document.querySelector('#demo-root [data-act="scOpen"]'); ok('Demo panel: "Open the 17 Demo Scenarios"', !b || b.textContent === 'Open the 17 Demo Scenarios', b && b.textContent);
     learner('A'); go('index'); const ix = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
-    ok('Learner index: CH entries, each with a purpose line', !!ix && ix.querySelectorAll('li').length === 2 && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 17 walkthroughs/.test(main()));
+    ok('Learner index: CH entries (incl. registration confirmation, 1b), each with a purpose line', !!ix && ix.querySelectorAll('li').length === 3 && !!ix.querySelector('[data-act="regStart"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 17 walkthroughs/.test(main()));
     ix.querySelector('[data-m="chCheckout"]').click(); await wait(150); ok('Learner index: checkout entry opens the checkout with the Stripe line', !!MODAL && !!mroot().querySelector('.ch-stripe')); closeModal();
     SA(); go('a-index'); const ax = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
     ok('Admin index: contact setting, country/region and data residency entries with purposes', !!ax && ax.querySelectorAll('li').length === 3 && [...ax.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && !/Priya Nair \(moved country/.test(main()));

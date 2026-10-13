@@ -12,6 +12,35 @@ const academyContact = () => {
   return `<span class="ch-contact">${esc(c ? c.value : CH_CONTACT_DEFAULT)}</span>`;
 };
 
+/* ---------- CH-01 (1b) Registration: UK and UAE pinned at the top of the country list (register.js);
+   the chosen country is confirmed before the account is created. Go back closes the dialog only,
+   so the form keeps everything entered (passwords included). ---------- */
+function regConfirmCountry(d, onConfirm) {
+  confirmDlg({ title: 'Confirm your country', body: `<p>You selected <strong>${esc(d.country)}</strong>. This can't be changed later.</p>`, cancel: 'Go back', ok: 'Confirm', onOk: () => { closeModal(); onConfirm(); } });
+}
+
+/* ---------- Defect fix (1b): "Reset demo data" after registering a new learner ----------
+   initStore() rebuilds the base worlds A–F and points W at S.variant before later layers add theirs, so rebuilding
+   while on a registered learner (world G, which a reset removes) or on Priya Nair (world H, re-added afterwards) threw.
+   The rebuild now runs on the default learner world, then returns to the previous world if it still exists, and W
+   always ends on the current learner's world.
+   Reset also clears the demo registrations; a learner whose world is gone lands on the default learner's dashboard. */
+const _initStoreCh = initStore;
+initStore = function () {
+  const v = S.variant; if (![...'ABCDEF'].includes(v)) S.variant = 'A';
+  _initStoreCh();
+  if (v !== S.variant && STORE.worlds[v]) S.variant = v;
+  W = STORE.worlds[S.variant]; // later layers build extra worlds with makeWorld(), which repoints W
+};
+const _resetCh = ACT.resetDemo;
+ACT.resetDemo = () => {
+  const v = S.variant, learnerView = S.portal === 'learner' && S.signedIn;
+  clearTimer('regtick'); S.reg = null; S.regV = null; delete STORE.regs; delete PERSONAS.G; delete VARIANTS.G;
+  if (['register', 'regVerify', 'welcome'].includes(S.auth)) S.auth = 'signin';
+  _resetCh();
+  if (v !== S.variant && learnerView) go('dashboard');
+};
+
 /* ---------- Demo Scenarios count: the page, index, demo panel and log say how many there are ---------- */
 const CH_NUMW = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty', 'Twenty-one', 'Twenty-two'];
 const chScenN = () => SC_LIST().length;
@@ -101,6 +130,7 @@ SCREENS['tbd-register'] = p => _tbdRegCh(p) + `<section class="card"><h2>Resolve
 /* ---------- Records: UX Changelog ---------- */
 UXC.push(['CH batch 1', 'Client decisions — Batch 1 (CH-01, CH-02, CH-03, CH-05, CH-31)', [
   'CH-01: Country is read-only everywhere — "Request change" removed from Country of residence (learner Profile) and the country branch removed from profile-change approval; Learner 360 shows "Country: <country> (set at registration)". The F1 moved-country state (Priya Nair, "Country changed to … on …", "new purchases use the new currency") and Demo Scenario #16 "Learner moves country" are removed. Registration keeps the required country list.',
+  'CH-01 (1b): Registration — United Kingdom and United Arab Emirates are pinned at the top of the country list, separated from the rest. Before the account is created, "Confirm your country" says "You selected [country]. This can\'t be changed later." with Go back (returns to the form with everything kept) and Confirm (completes registration).',
   'CH-02: GBP only — AED/INR prices, the AED course-price field, "Converted from the base price", exchange-rate tags, currency filters, currency columns, per-currency totals and the agency billing-currency field are removed. Mock AED/INR amounts converted at £1 = AED 4.65 = INR 105 (record IDs kept). Learner checkout adds "Stripe may show this amount in your local currency. You\'ll be charged £X.XX." Finance reports and dashboards show single GBP totals; agency bank-transfer purchases are in GBP.',
   'CH-03: Data region rule UK → UK, UAE → UAE, any other country → UK, shown in Learner 360, Learners, Data Protection → Data residency and the Finance learner record. The "Pending client: storage region…" tag is removed (T02).',
   'CH-05: "Pending client: how agencies receive VAT invoices…" removed (T01); agency bank-transfer purchases say "VAT invoices are sent by the Academy by email."',
@@ -108,13 +138,16 @@ UXC.push(['CH batch 1', 'Client decisions — Batch 1 (CH-01, CH-02, CH-03, CH-0
   'Placeholder register: 4 topics remain (T04, T06, T07, T08 — all "Client to supply"); T03 resolved by CH-02. TBD-register.txt regenerated.',
   'CH-24 was already applied (C7, b8bce5b) — no change.']]);
 
+UXC.find(x => x[0] === 'Defect fix')[2].push('"Reset demo data" after registering a new learner — fixed (found in CH batch 1b): the reset threw (Cannot read properties of undefined) because it rebuilt the demo worlds while still pointing at the registered learner\'s world, which a reset removes. Reset now rebuilds on the default learner world, clears the demo registrations, and returns to the previous world if it still exists (e.g. Priya Nair); otherwise it lands on the default learner\'s dashboard. After any reset the learner data shown is always the current learner\'s (building Priya Nair\'s world had left it pointing at hers). Test: ft-ch "1b Reset demo data after registering a new learner".');
+
 /* ---------- Screen index (with purpose lines) ---------- */
 const chIdxLi = (label, attrs, purpose) => `<li><button class="linklike" ${Object.entries(attrs).map(([k, v]) => `data-${k}="${v}"`).join(' ')}>${label}</button><span class="idx-purpose xs muted" data-pk="entry">${esc(purpose)}</span></li>`;
 MODALS.chCheckout = ['A', 'browse', () => checkout({ title: 'Moving and Handling People — 2026', amount: 45, onSuccess: () => {} })];
 const _idxCh = SCREENS.index;
 SCREENS.index = p => chScenFix(_idxCh(p)) + `<section class="card idx-sec"><h2>Client decisions (CH)</h2><ul class="idx-list">${[
   chIdxLi('Checkout — GBP amount with the Stripe local-currency line', { act: 'jump', m: 'chCheckout' }, 'CH-02 — every price is in GBP; Stripe may show it in local currency.'),
-  chIdxLi('Profile — Country of residence (read-only)', { act: 'jump', v: 'A', r: 'profile' }, 'CH-01 — the country is set at registration and never changes.')].join('')}</ul></section>`;
+  chIdxLi('Profile — Country of residence (read-only)', { act: 'jump', v: 'A', r: 'profile' }, 'CH-01 — the country is set at registration and never changes.'),
+  chIdxLi('Registration — country list and "Confirm your country"', { act: 'regStart' }, 'CH-01 — UK and UAE first; the chosen country is confirmed before the account is created.')].join('')}</ul></section>`;
 const _aIdxCh = SCREENS['a-index'];
 SCREENS['a-index'] = p => _aIdxCh(p) + `<section class="card idx-sec"><h2>Client decisions (CH)</h2><ul class="idx-list">${[
   chIdxLi('System Configuration — Academy contact details', { act: 'aJump', t: 'a-config' }, 'CH-31 — the phone, email and hours shown wherever learners, agencies and workplaces are told to contact the Academy.'),
