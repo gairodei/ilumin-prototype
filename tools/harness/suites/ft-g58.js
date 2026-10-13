@@ -45,7 +45,7 @@
     ok('audit: released by Coordinator', ADMIN.audit.some(x => x.action === 'Feedback released to learner'));
   });
   T('G6.3 dashboards + Super Admin release', () => {
-    S.tas.v = 'A'; tasEnter(); S.signedIn = true; const s = tasSubs(true).find(x => x.live && x.toMark && markable(tasAsg(x)).length); if (!s) { ok('second live submission', false); return; }
+    S.tas.v = 'S'; tasEnter(); S.signedIn = true; const s = tasSubs(true).find(x => x.live && x.toMark && markable(tasAsg(x)).length); if (!s) { ok('second live submission (marked by its assignment assessor, CH-17)', false); return; }
     const d = dft(s.key); markable(tasAsg(s)).forEach(q => d.items[q.id] = { exit: 'pass', rag: 'G', fb: 'Good.', met: 'Met', verified: true, vat: now().toISOString() }); ACT.mkRelease({ dataset: { k: s.key } }); prim();
     acaEnter('KA'); S.signedIn = true; go('k-dashboard'); ok('Academic Admin dashboard: Awaiting release (read-only)', /Awaiting release/.test(main()) && !document.querySelector('[data-act="relSuper"]'));
     SA(); go('a-dashboard'); ok('Super Admin dashboard: Awaiting release with override', /Awaiting release/.test(main()) && !!document.querySelector('[data-act="relSuper"]'));

@@ -24,7 +24,7 @@ function cooPatchAdmin() {
   set('L3AC-NOV26', 'Dr Helen Carter', [['Dr Helen Carter', D(-30), null]]);
   set('L2DC-JAN27', 'Dr Helen Carter', [['Dr Helen Carter', D(-10), null]]);
   set('L2DC-MAR26', 'Michael Osei', [['Dr Helen Carter', D(-214), D(-150)], ['Michael Osei', D(-150), null]]);
-  ['L3AC-NOV26-LEI', 'L2DC-SEP25', 'L5LM-JAN25', 'L3AC-DEC26-AUH'].forEach(c => set(c, 'Laura Kemp', [['Laura Kemp', D(-400), null]]));
+  ['L3AC-NOV26-LEI', 'L2DC-SEP25', 'L5LM-JAN25', 'L3AC-DEC26-AUH', 'L3AC-OCT26-ONL'].forEach(c => set(c, 'Laura Kemp', [['Laura Kemp', D(-400), null]]));
   buildCohorts();
 }
 const _buildAdmin = buildAdmin;
@@ -134,7 +134,7 @@ function cohLearner(e, b) {
 }
 function myLearners(all) { return (all ? myBatches() : scopeBatches()).flatMap(b => (b.coh || []).map(e => cohLearner(e, b)).concat((b.roster || []).map(r => ({ lid: r[1], name: r[0], batch: b, status: 'Active', agency: r[2] === 'Self-funded' ? null : r[2], progress: 0, five: { 'Not Started': 24 }, last: now().toISOString(), att: null, flags: ['On track'], outstanding: 0, coh: { subs: {}, pd: [], seed: 1, lid: r[1] }, added: true })))); }
 const BASE_ASGS = () => STORE.worlds.C.assignments;
-const MARKER = b => (b.assessors || ['Sarah Okonkwo'])[0];
+const MARKER = b => (b.alloc && b.alloc.asg) || (b.assessors || ['Sarah Okonkwo'])[0]; // CH-17: the batch's assignment assessor
 function mySubmissions(all) {
   const out = [];
   myLearners(all).forEach(L => {
@@ -598,7 +598,7 @@ function obsSection(bs) {
   const rows = [];
   bs.forEach(b => (b.coh || []).forEach((e, k) => {
     if (e.v) { const w = STORE.worlds[e.v]; w.observations.forEach(o => rows.push({ id: o.id + e.v, learner: VNAME(e.v), lid: w.me.id, assessor: o.assessor, at: o.newAt || o.at, loc: o.loc, locType: o.locType, scope: o.scope, status: o.status, perm: w.workplace.perm === 'Permission Pending' ? 'Pending' : w.workplace.perm, b })); }
-    else if (['In Progress', 'Completed'].includes(b.status) && k % 2 === 0) { const L = ADMIN.learners.find(x => x.id === e.lid); const st = ['Proposed', 'Confirmed', 'Completed', 'Cancelled', 'Rescheduled'][e.seed % 5]; rows.push({ id: e.lid + b.code, learner: L.name, lid: L.id, assessor: b.assessors[0], at: D(-20 + e.seed % 30, '09:00'), loc: ['Meadowview Care Home', 'Rosewood Lodge', 'Oak Tree Care'][e.seed % 3], scope: 'U301 2.1–2.3 · IA-1–IA-4', status: st, perm: ['Granted', 'Pending', 'Declined', 'Expired', 'Escalated'][e.seed % 5], b }); }
+    else if (['In Progress', 'Completed'].includes(b.status) && k % 2 === 0) { const L = ADMIN.learners.find(x => x.id === e.lid); const st = ['Proposed', 'Confirmed', 'Completed', 'Cancelled', 'Rescheduled'][e.seed % 5]; rows.push({ id: e.lid + b.code, learner: L.name, lid: L.id, assessor: (b.alloc && b.alloc.obs) || b.assessors[0], at: D(-20 + e.seed % 30, '09:00'), loc: ['Meadowview Care Home', 'Rosewood Lodge', 'Oak Tree Care'][e.seed % 3], scope: 'U301 2.1–2.3 · IA-1–IA-4', status: st, perm: ['Granted', 'Pending', 'Declined', 'Expired', 'Escalated'][e.seed % 5], b }); }
   }));
   const blocking = rows.filter(r => ['Pending', 'Declined', 'Expired', 'Escalated'].includes(r.perm));
   return dt({ id: 'cobs-' + bs.map(b => b.code).join(''), name: 'Observations', rows, filters: [{ k: 's', l: 'Status', get: r => r.status, opts: ['Proposed', 'Confirmed', 'Completed', 'Cancelled', 'Rescheduled'] }, { k: 'p', l: 'Permission', get: r => r.perm, opts: ['Pending', 'Granted', 'Declined', 'Expired', 'Escalated'] }], cols: [{ k: 'learner', l: 'Learner' }, { k: 'assessor', l: 'Assessor' }, { k: 'at', l: 'Date', h: r => fdt(r.at), s: r => r.at }, { k: 'loc', l: 'Location', h: r => `<span class="small">${r.locType === 'office' ? chip('Academy office', 'blue') + ' ' + c2s('Academy office address') : chip('Workplace', 'outline') + ' ' + esc(r.loc)}</span>`, v: r => (r.locType === 'office' ? 'Academy office ' : 'Workplace ') + r.loc }, { k: 'scope', l: 'Scope', h: r => `<span class="small">${esc(r.scope)}</span>` }, { k: 'status', l: 'Status', h: r => chip(r.status) }, { k: 'perm', l: 'Workplace permission', h: r => chip(r.perm, { Granted: 'green', Pending: 'amber', Declined: 'red', Expired: 'grey', Escalated: 'red' }[r.perm]) }], empty: 'No observations scheduled' })

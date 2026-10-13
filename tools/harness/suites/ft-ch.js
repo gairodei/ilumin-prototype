@@ -209,22 +209,22 @@
     ok('Decisions Log: sources S1–S6 listed', !!ch && ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].every(s => ch.textContent.includes(s)));
     ok('Decisions Log: CH-01, 02, 03, 05, 31 Applied (Batch 1), 13 Oct 2026', ['CH-01', 'CH-02', 'CH-03', 'CH-05', 'CH-31'].every(id => /Applied \(Batch 1\)13 Oct 2026/.test(row(id))));
     ok('Decisions Log: sources as in the change list', /S3→S4/.test(row('CH-01')) && /S3→S4\/S5/.test(row('CH-02')) && /S1→S2→S4/.test(row('CH-18')) && /S1\/S6/.test(row('CH-24')));
-    ok('Decisions Log: Batch 2 applied, CH-11 partly, later batches scheduled', ['CH-07', 'CH-08', 'CH-09', 'CH-10'].every(id => /Applied \(Batch 2\)13 Oct 2026/.test(row(id))) && /Applied \(Batch 2\/3\)13 Oct 2026/.test(row('CH-11')) && /Scheduled \(Batch 6\)/.test(row('CH-06')) && ['CH-12', 'CH-13', 'CH-14'].every(id => /Applied \(Batch 3\)13 Oct 2026/.test(row(id))) && /Scheduled \(Batch 5\)/.test(row('CH-17')));
+    ok('Decisions Log: Batch 2 applied, CH-11 partly, later batches scheduled', ['CH-07', 'CH-08', 'CH-09', 'CH-10'].every(id => /Applied \(Batch 2\)13 Oct 2026/.test(row(id))) && /Applied \(Batch 2\/3\)13 Oct 2026/.test(row('CH-11')) && /Scheduled \(Batch 6\)/.test(row('CH-06')) && ['CH-12', 'CH-13', 'CH-14'].every(id => /Applied \(Batch 3\)13 Oct 2026/.test(row(id))) && /Applied \(Batch 5\)13 Oct 2026/.test(row('CH-17')));
     ok('Decisions Log: earlier and confirmed items', /Confirmed: already built, no change/.test(row('CH-04')) && /Applied earlier \(C7, b8bce5b\)/.test(row('CH-24')) && /Confirmed: no change/.test(row('CH-30')));
     const pc = secs.find(s => s.querySelector('h2') && s.querySelector('h2').textContent === 'Pending client'), prow = pc ? [...pc.querySelectorAll('tbody tr')].map(r => r.textContent) : [];
     ok('Decisions Log: P-27 … P-30 Pending client', prow.length === 4 && ['P-27', 'P-28', 'P-29', 'P-30'].every((p, i) => prow[i].startsWith(p) && /Pending client/.test(prow[i])) && /Observation fee/.test(prow[0]) && /Mistyped country/.test(prow[1]) && /Data Correction/.test(prow[1]) && /Intake choice at sign-up/.test(prow[3]));
     const fu = secs.find(s => /Follow-up decisions \(P-05 – P-26\)/.test(s.textContent)), st = id => ([...fu.querySelectorAll('tbody tr')].find(tr => tr.firstChild.textContent === id) || {}).textContent || '';
     ok('Decisions Log: F1 Superseded (CH-01); F2, F3b, F8 Resolved; F3a Superseded', /Superseded \(CH-01\)/.test(st('F1')) && /Resolved \(CH-02\)/.test(st('F2')) && /Superseded \(CH-02\)/.test(st('F3a')) && /Resolved \(CH-03\)/.test(st('F3b')) && /Resolved \(CH-05\)/.test(st('F8')));
-    ok('Decisions Log: 20 scenarios; #16 is the new sign-up', /All 20 run end to end in the prototype\./.test(main()) && CDL_SCEN.filter(r => r[0] === '16').length === 1 && CDL_SCEN.find(r => r[0] === '16')[1] === 'New sign-up: documents → offer letter → payment → start' && !CDL_SCEN.some(r => r[1] === 'Learner moves country'));
+    ok('Decisions Log: 21 scenarios; #16 is the new sign-up', /All 21 run end to end in the prototype\./.test(main()) && CDL_SCEN.filter(r => r[0] === '16').length === 1 && CDL_SCEN.find(r => r[0] === '16')[1] === 'New sign-up: documents → offer letter → payment → start' && !CDL_SCEN.some(r => r[1] === 'Learner moves country'));
     go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 1/.test(s.textContent));
     ok('UX Changelog: Batch 1 entry lists its CH IDs', !!ux && ['CH-01:', 'CH-02:', 'CH-03:', 'CH-05:', 'CH-31:'].every(x => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(x))));
-    go('demo-scenarios'); ok('Demo Scenarios: "Twenty", 20 sections, #16 is the new sign-up', /Twenty end-to-end walkthroughs/.test(main()) && app().querySelectorAll('main section[id^="sc-"]').length === 20 && /New sign-up/.test((app().querySelector('#sc-16') || {}).textContent || ''));
-    renderDemo(); AFTER.forEach(f => f()); const b = document.querySelector('#demo-root [data-act="scOpen"]'); ok('Demo panel: "Open the 20 Demo Scenarios"', !b || b.textContent === 'Open the 20 Demo Scenarios', b && b.textContent);
+    go('demo-scenarios'); ok('Demo Scenarios: "Twenty-one", 21 sections, #16 is the new sign-up', /Twenty-one end-to-end walkthroughs/.test(main()) && app().querySelectorAll('main section[id^="sc-"]').length === 21 && /New sign-up/.test((app().querySelector('#sc-16') || {}).textContent || ''));
+    renderDemo(); AFTER.forEach(f => f()); const b = document.querySelector('#demo-root [data-act="scOpen"]'); ok('Demo panel: "Open the 21 Demo Scenarios"', !b || b.textContent === 'Open the 21 Demo Scenarios', b && b.textContent);
     learner('A'); go('index'); const ix = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
-    ok('Learner index: CH entries (incl. registration confirmation, 1b), each with a purpose line', !!ix && ix.querySelectorAll('li').length === 17 && !!ix.querySelector('[data-act="regStart"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 20 walkthroughs/.test(main()));
+    ok('Learner index: CH entries (incl. registration confirmation, 1b), each with a purpose line', !!ix && ix.querySelectorAll('li').length === 17 && !!ix.querySelector('[data-act="regStart"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 21 walkthroughs/.test(main()));
     ix.querySelector('[data-m="chCheckout"]').click(); await wait(150); ok('Learner index: checkout entry opens the checkout with the Stripe line', !!MODAL && !!mroot().querySelector('.ch-stripe')); closeModal();
     SA(); go('a-index'); const ax = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
-    ok('Admin index: Batch 1–4 entries with purposes', !!ax && ax.querySelectorAll('li').length === 12 && ['a-config', 'a-learner.IA-L-31900', 'a-dataprotection..residency', 'a-programmes.NV-L3.letter', 'a-admissions.APP-C', 'a-learner.IA-L-31188.admission'].every(t => ax.querySelector(`[data-t="${t}"]`)) && [...ax.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && !/Priya Nair \(moved country/.test(main()));
+    ok('Admin index: Batch 1–5 entries with purposes', !!ax && ax.querySelectorAll('li').length === 14 && ['a-config', 'a-learner.IA-L-31900', 'a-dataprotection..residency', 'a-programmes.NV-L3.letter', 'a-admissions.APP-C', 'a-learner.IA-L-31188.admission'].every(t => ax.querySelector(`[data-t="${t}"]`)) && [...ax.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && !/Priya Nair \(moved country/.test(main()));
   });
 
   /* ================= Batch 2 ================= */
@@ -499,9 +499,9 @@
     ok('CH-18 assignment page: "Answer key (guidance)" next to "Download criteria (PDF)"', !!kb && /Answer key \(guidance\)/.test(kb.textContent) && kb.previousElementSibling && kb.previousElementSibling.dataset.act === 'csCritPdf');
     kb.click(); await wait(40); ok('CH-18 downloads the module\'s answer key', /AC M12 Ways of Working in Adult Care — Knowledge Answer Key\.pdf downloaded/.test(document.querySelector('#toasts').textContent));
     ok('CH-18 submitting unchanged: per-criterion answer boxes, no upload template, no references box', !/upload[^.]*template|referenc/i.test([...app().querySelectorAll('main label, main legend, main h2, main h3')].map(l => l.textContent).join(' ')) && app().querySelectorAll('main .q').length === asgById('a2').qs.length);
-    ok('CH-15 assignment header shows the module and its code', /U302 · Module 1 — Person-centred values \(T\/652\/0001\)/.test(main()));
+    ok('CH-15 assignment header shows the module and its code', /U302 · Module 1 — AC M12 Ways of working in adult care \(T\/652\/0001\)/.test(main()));
     go('assignment', { id: 'a6' }); ok('CH-18 no answer key button when the module has none', !app().querySelector('[data-act="chAnsDl"]'));
-    go('progress'); ok('CH-15 progress tree: module codes', /Person-centred values \(T\/652\/0001\)/.test(main()) && /Safe working \(R\/652\/0701\)/.test(main()));
+    go('progress'); ok('CH-15 progress tree: module codes', /AC M12 Ways of working in adult care \(T\/652\/0001\)/.test(main()) && /Safe working \(R\/652\/0701\)/.test(main()));
     role('acaA'); go('a-programmes', { id: 'NV-L3', tab: 'tree' });
     ok('CH-15 structure builder: editable code per module; CH-18 answer key per module', app().querySelectorAll('[data-onchange="chModCode"]').length === 9 && app().querySelectorAll('[data-act="chAnsUp"]').length === 9 && /AC M12 Ways of Working/.test(main()));
     const inp = app().querySelector('[data-onchange="chModCode"][data-k="U307 M1"]'); inp.value = 'bad'; INP.chModCode(inp); ok('CH-15 code format checked', STORE.worlds.C.tree.find(u => u.code === 'U307').mods[0].ab === 'R/652/0701');
@@ -519,6 +519,82 @@
     ok('UX Changelog: Batch 4 entry lists its CH IDs', !!ux && ['CH-16:', 'CH-26:', 'CH-28:', 'CH-15:', 'CH-18:'].every(x => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(x))));
     const s20 = SC_LIST().find(x => x[0] === '20'); ok('Scenario #20 "Module quizzes"', !!s20 && s20[1] === 'Module quizzes' && s20[3].length === 6 && /exhausted/.test(s20[3][2].text) && /certificate/.test(s20[3][5].text));
     SA(); go('a-index'); ok('Admin index: Modules tab, structure builder codes and answer keys', !!app().querySelector('[data-t="a-courses.SC-01.modules"]') && !!app().querySelector('[data-t="a-programmes.NV-L3.tree"]'));
+  });
+
+  /* ================= Batch 5 ================= */
+  const tas = v => { S.tas.v = v; tasEnter(); S.signedIn = true; };
+  const coord = (v = 'B') => { S.coo.v = v; cooEnter(); S.signedIn = true; }; // B = Michael Osei, Croydon Cohort 4's Coordinator
+  const press = () => { const a = MODAL && MODAL.actions.find(x => x.cls && /primary|danger/.test(x.cls)); const r = a && a.fn ? a.fn() : undefined; if (r !== false && MODAL) closeModal(); return r; };
+  const MAR = () => ADMIN.batches.find(b => b.code === 'L2DC-MAR26'), JAN = () => ADMIN.batches.find(b => b.code === 'L3AC-JAN26');
+  const marLids = () => chCohLids(MAR()), janLids = () => chCohLids(JAN());
+
+  /* ---------- CH-17 mock data and the Assessors panel ---------- */
+  await T('CH-17 allocations and the Assessors panel', async () => {
+    fresh(); const m = chAllocOf(MAR()), j = chAllocOf(JAN());
+    ok('CH-17 Croydon Cohort 4: three different assessors', m.asg === 'James Pryce' && m.pd === 'Sarah Okonkwo' && m.obs === 'Michael Osei');
+    ok('CH-17 Leicester Cohort 7: one person holds all three roles', j.asg === 'Sarah Okonkwo' && j.pd === 'Sarah Okonkwo' && j.obs === 'Sarah Okonkwo');
+    ok('CH-17 overrides: Olivia Shaw PD → Michael Osei; Ben Carter observations → James Pryce', chEff('IA-L-33107', 'pd') === 'Michael Osei' && chEff('IA-L-30755', 'obs') === 'James Pryce' && chEff(STORE.worlds.D.me.id, 'pd') === 'Sarah Okonkwo' && chEff(STORE.worlds.D.me.id, 'obs') === 'Michael Osei');
+    ok('CH-17 batch assessors = everyone allocated', ['James Pryce', 'Sarah Okonkwo', 'Michael Osei'].every(n => MAR().assessors.includes(n)));
+    learner('D'); go('dashboard'); ok('CH-17 learner sees three assessors under Your people', ['Assessor (assignments)', 'Assessor (PD)', 'Assessor (observations)'].every(r => W.nvq.people.some(p => p[0] === r)) && W.nvq.people.find(p => p[0] === 'Assessor (observations)')[1] === 'Michael Osei');
+    coord(); go('c-batches', { id: 'L2DC-MAR26' }); const pan = app().querySelector('.ch-assess');
+    ok('CH-17 Coordinator batch detail: Assessors panel with three dropdowns', !!pan && ['asg', 'pd', 'obs'].every(k => pan.querySelector('#ch-as-' + k)) && /Assignment assessor/.test(pan.textContent) && /Learner overrides/.test(pan.textContent));
+    $('#ch-as-pd').value = 'Michael Osei'; const tn0 = STORE.tas.notifs.length, cn0 = STORE.coo.notifs.length; ACT.chAssessSave({ dataset: { b: 'L2DC-MAR26' } }); ok('CH-17 change needs a reason', press() === false); $('#rsn').value = 'Sarah on leave'; press();
+    ok('CH-17 saved, audited, assessors and Coordinator notified', chAllocOf(MAR()).pd === 'Michael Osei' && ADMIN.audit[0].action === 'PD assessor changed' && ADMIN.audit[0].actor === CME().name && STORE.tas.notifs.length >= tn0 + 2 && STORE.coo.notifs.length > cn0);
+    ok('CH-17 learner overrides stay in force', chEff('IA-L-33107', 'pd') === 'Michael Osei' && chEff('IA-L-30755', 'obs') === 'James Pryce');
+    acaEnter('KA'); S.signedIn = true; go('a-batches', { id: 'L3AC-JAN26', tab: 'staff' }); ok('CH-17 Academic Admin edits any batch (Staff tab)', !!app().querySelector('.ch-assess #ch-as-obs'));
+    role('sysA'); go('a-batches', { id: 'L3AC-JAN26', tab: 'staff' }); ok('CH-17 System Admin: read-only', !!app().querySelector('.ch-assess') && !app().querySelector('.ch-assess select'));
+    const a0 = ADMIN.audit.length; ACT.chAssessSave({ dataset: { b: 'L3AC-JAN26' } }); ok('CH-17 a direct save by a role that can\'t is refused and logged', !MODAL && ADMIN.audit.length === a0 + 1 && /^Blocked: change assessors/.test(ADMIN.audit[0].action));
+    coord('B'); ACT.cooStaff({ dataset: { id: 'L2DC-MAR26' } }); ok('CH-17 Edit staff keeps teachers only', !!MODAL && !$('#bs-a') && !!$('#bs-t')); closeModal();
+  });
+
+  /* ---------- CH-17 who can act ---------- */
+  await T('CH-17 only the allocated assessor acts', async () => {
+    fresh();
+    tas('S'); const js = tasSubs(true); ok('CH-17 James (assignment assessor, Croydon) sees only Croydon submissions, resubmissions included', js.length > 0 && js.every(r => marLids().includes(r.L.lid)) && js.some(r => r.resub || r.status === 'Submitted'));
+    tas('A'); const ss = tasSubs(true); ok('CH-17 Sarah (not Croydon\'s assignment assessor) doesn\'t see Croydon submissions', ss.length > 0 && !ss.some(r => r.L.batch.code === 'L2DC-MAR26'));
+    const key = js.find(r => r.status === 'Submitted').key, s0 = ADMIN.security.length; go('t-mark', { id: key });
+    ok('CH-17 direct URL to another assessor\'s submission is refused and logged', /You don't have access to this record/.test(main()) && ADMIN.security.length === s0 + 1 && ADMIN.audit[0].action === 'Blocked: not the assignment assessor');
+    tas('S'); go('t-mark', { id: key }); ok('CH-17 the assignment assessor can open it', !/You don't have access/.test(main()));
+    tas('M'); ok('CH-17 Michael (Croydon PD default is Sarah) has only his PD override (Olivia Shaw)', tasPdList().map(p => p.lid).join() === 'IA-L-33107' || tasPdList().every(p => chEff(p.lid, 'pd') === 'Michael Osei'));
+    const g = STORE.worlds.D.me.id, a0 = ADMIN.audit.length; ACT.pdPropose({ dataset: { l: g } });
+    ok('CH-17 PD: a non-allocated assessor\'s direct call is refused and logged', !MODAL && ADMIN.audit.length === a0 + 1 && ADMIN.audit[0].action === 'Blocked: not the PD assessor');
+    ok('CH-17 observations: Michael (Croydon observation assessor) has TO-9 and Grace\'s', tasObs().some(o => o.id === 'TO-9') && tasObs().some(o => o.lid === g));
+    go('t-obsrec', { id: 'TO-9' }); ok('CH-17 the observation assessor can record it', !/You don't have access/.test(main()));
+    tas('A'); ok('CH-17 Sarah: Grace\'s PD (batch default) but not her observations or TO-9; not Olivia\'s PD (override)', !tasObs().some(o => o.lid === g) && !tasObs().some(o => o.id === 'TO-9') && tasPdList().some(p => p.lid === g) && !tasPdList().some(p => p.lid === 'IA-L-33107'));
+    const s1 = ADMIN.security.length; go('t-obsrec', { id: 'TO-9' }); ok('CH-17 observation: direct URL by another assessor refused and logged', /You don't have access/.test(main()) && ADMIN.security.length === s1 + 1 && ADMIN.audit[0].action === 'Blocked: not the observation assessor');
+    const a1 = ADMIN.audit.length; ACT.orSign({ dataset: { id: 'TO-9' } }); ok('CH-17 sign-off by another assessor refused and logged', !MODAL && ADMIN.audit.length === a1 + 1);
+    ACT.obPropose({ dataset: {} }); const opts = [...$('#op-l').options].map(o => o.value); ok('CH-17 propose: only learners whose observation assessor I am', opts.length > 0 && opts.every(l => chEff(l, 'obs') === 'Sarah Okonkwo') && !opts.includes('IA-L-33100')); closeModal();
+  });
+
+  /* ---------- CH-17 per-learner override, attribution, IQA ---------- */
+  await T('CH-17 override, attribution and IQA conflict', async () => {
+    fresh(); coord(); go('c-learner', { id: 'IA-L-33100' }); const card = app().querySelector('.ch-ovcard');
+    ok('CH-17 learner record: assessors for this learner; assignment assessor not changeable', !!card && /James Pryce/.test(card.textContent) && /can't be changed for one learner/.test(card.textContent) && !card.querySelector('[data-act="chOvSet"][data-k="asg"]') && !!card.querySelector('[data-act="chOvSet"][data-k="obs"]'));
+    ACT.chOvSet({ dataset: { l: 'IA-L-33100', k: 'asg' } }); ok('CH-17 assignment assessor override refused', !MODAL && /^Blocked: assessor override/.test(ADMIN.audit[0].action));
+    const tn0 = STORE.tas.notifs.length; ACT.chOvSet({ dataset: { l: 'IA-L-33100', k: 'obs' } }); ok('CH-17 override needs a reason', press() === false); $('#ch-ov-n').value = 'Sarah Okonkwo'; $('#rsn').value = 'Michael is on leave that week'; press();
+    ok('CH-17 observation override saved: chip, audit, assessors notified', chEff('IA-L-33100', 'obs') === 'Sarah Okonkwo' && /override/.test(app().querySelector('.ch-ovcard').textContent) && !!app().querySelector('[data-act="chOvReset"][data-k="obs"]') && ADMIN.audit[0].action === 'Observation assessor override' && STORE.tas.notifs.length >= tn0 + 2);
+    tas('M'); go('t-obsrec', { id: 'TO-9' }); ok('CH-17 after the override only the new assessor records: Michael refused', /You don't have access/.test(main()));
+    tas('A'); go('t-obsrec', { id: 'TO-9' }); ok('CH-17 Sarah can record it', !/You don't have access/.test(main()) && tasObs().some(o => o.id === 'TO-9'));
+    coord(); go('c-learner', { id: 'IA-L-33100' }); ACT.chOvReset({ dataset: { l: 'IA-L-33100', k: 'obs' } }); $('#rsn').value = 'Michael is back'; press(); ok('CH-17 Reset to batch default', chEff('IA-L-33100', 'obs') === 'Michael Osei' && !chOvOf('IA-L-33100', 'obs'));
+    acaEnter('KA'); S.signedIn = true; go('a-learner', { id: 'IA-L-33107' }); ok('CH-17 Academic Admin → learner: override shown and changeable', /Assessors for this learner/.test(main()) && /Michael Osei/.test(main()) && !!app().querySelector('[data-act="chOvReset"][data-k="pd"]'));
+    // attribution: a completed submission keeps its marker when the allocation changes
+    tas('S'); const done = tasSubs(true).find(r => r.status !== 'Submitted' && !r.L.formerBy), before = done && done.markerName;
+    chAllocOf(MAR()).asg = 'Michael Osei'; chSyncAssessors(MAR()); tas('M'); const after = (tasSubs(true).find(r => r.key === (done || {}).key) || {}).markerName;
+    ok('CH-17 attribution: completed records keep the name they were done under', !!done && before === after && after !== 'Michael Osei', before + ' → ' + after);
+    chAllocOf(MAR()).asg = 'James Pryce'; chSyncAssessors(MAR());
+    ok('CH-17 IQA conflict: any of the three allocations', /^You are the observation assessor and the PD assessor for one learner on this batch$/.test(iqaConflict({ batch: 'L2DC-MAR26', assessor: 'X' }, 'Michael Osei')) && /^You are the assignment assessor on this batch$/.test(iqaConflict({ batch: 'L2DC-MAR26', assessor: 'X' }, 'James Pryce')) && /PD assessor on this batch/.test(iqaConflict({ batch: 'L2DC-MAR26', assessor: 'X' }, 'Sarah Okonkwo')) && !iqaConflict({ batch: 'L2DC-MAR26', assessor: 'X' }, 'Kevin Doyle'));
+    ok('CH-17 IQA conflict: a learner override counts too', /PD assessor for one learner/.test(chRoleOn(MAR(), 'Michael Osei')) && /observation assessor for one learner/.test(chRoleOn(JAN(), 'James Pryce')));
+    ok('CH-17 IQA conflict: teaching the batch still counts', /Teacher on this batch/.test(iqaConflict({ batch: 'L2DC-MAR26', assessor: 'X' }, MAR().teachers[0])));
+  });
+
+  /* ---------- Records (Batch 5) ---------- */
+  await T('CH records (Batch 5)', async () => {
+    fresh(); const s21 = SC_LIST().find(x => x[0] === '21');
+    ok('Scenario #21 "Separate assessors"', !!s21 && s21[1] === 'Separate assessors' && s21[3].length === 6 && /three assessors/.test(s21[3][0].text) && /override|changes one learner/.test(s21[3][4].text) && /refused/.test(s21[3][5].text));
+    ACT.scOpen(); go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 5/.test(s.textContent));
+    ok('UX Changelog: Batch 5 entry', !!ux && [...ux.querySelectorAll('li')].filter(li => li.textContent.startsWith('CH-17:')).length >= 4);
+    coord('A'); go('c-index'); ok('Coordinator index: Assessors panel and learner override entries', !!app().querySelector('[data-t="c-batches.L3AC-JAN26"]') && !!app().querySelector('[data-t="c-learner.IA-L-30755"]'));
+    go('c-learner', { id: 'IA-L-30755' }); ok('Coordinator A: Ben Carter\'s observation override with Reset', /James Pryce/.test(main()) && !!app().querySelector('[data-act="chOvReset"][data-k="obs"]'));
   });
 
   fresh();

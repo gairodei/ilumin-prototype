@@ -36,7 +36,7 @@ function shortContent(topic) {
   }[topic] || [['doc', 'Course handbook', '10 pages', 'Completed', 1], ['video', 'Introduction', '10:00', 'Completed', 0, 100, ''], ['scorm', 'Interactive module', '20 min', 'Completed', 0, 0, 0, 90]];
   return T.map((r, i) => ({ id: 'c' + (i + 1), kind: r[0], title: r[1], dur: r[2], state: r[3], dl: !!r[4], watch: r[5] || 0, resume: r[6] || '0:00', score: r[7] || 0 }));
 }
-// CH-15: an NVQ module's label with its awarding-body code, e.g. "Person-centred values (T/652/0001)"
+// CH-15: an NVQ module's label with its awarding-body code, e.g. "AC M12 Ways of working in adult care (T/652/0001)"
 const modLabel = m => m ? `${m.title}${m.ab ? ' (' + m.ab + ')' : ''}` : '';
 // The unit / module an assignment or resource group names ("U302 · Module 1", "U306 Safeguarding · Module 1")
 const nvqModOf = (tree, s) => { const r = /^(U\d+)\D*Module (\d+)/.exec(s || ''); if (!r) return null; const u = (tree || []).find(x => x.code === r[1]); const m = u && u.mods[+r[2] - 1]; return m ? { u, m, key: u.code + ' ' + m.code } : null; };
@@ -131,7 +131,7 @@ function makeWorld(v) {
             c('301 3.1', 'Explain the meaning of the term confidentiality', 'Achieved', 'Assignment 1 · Q3', -150, 'assignment.a1'),
             c('301 3.2', 'Describe ways to maintain confidentiality in day-to-day communication', 'Achieved', 'Assignment 1 · Q3', -150, 'assignment.a1')] }] }] },
       { code: 'U302', title: 'Promote person-centred approaches in care settings', mods: [
-        { code: 'M1', title: 'Person-centred values', ab: 'T/652/0001', los: [
+        { code: 'M1', title: 'AC M12 Ways of working in adult care', ab: 'T/652/0001', los: [
           { code: 'LO1', title: 'Understand person-centred approaches for care and support', type: 'Knowledge', crit: [
             c('302 1.1', 'Describe how person-centred values should influence all aspects of care work', 'Achieved', 'Assignment 2 · Q1', -30, 'assignment.a2'),
             c('302 1.2', 'Explain the importance of finding out the history, preferences, wishes and needs of the individual', 'Action Required', 'Assignment 2 · Q3', null, 'assignment.a2'),
