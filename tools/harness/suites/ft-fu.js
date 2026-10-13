@@ -104,12 +104,12 @@
     const st = id => ([...fu.querySelectorAll('tbody tr')].find(tr => tr.firstChild.textContent === id) || {}).textContent || '';
     ok('CH: F1, F3a Superseded; F2, F3b, F8 Resolved; the rest Applied', ['F1', 'F3a'].every(x => /Superseded \(CH-0[12]\)/.test(st(x))) && ['F2', 'F3b', 'F8'].every(x => /Resolved \(CH-0[235]\)/.test(st(x))) && ['F4', 'F5', 'F6', 'F7', 'F9', 'F10', 'F11', 'F12'].every(x => /Applied/.test(st(x))));
     ok('Approval Routes document: Returned by client', /Approval Routes document\W{0,3}Returned by client/.test(t));
-    ok('CH-01 / CH-07: #16 is now "New sign-up" ("Learner moves country" gone); #17, #18 listed', !CDL_SCEN.some(r => r[1] === 'Learner moves country') && /New sign-up: documents → offer letter → payment → start/.test(t) && /Coordinator vs Academic Admin edit/.test(t) && /Client sheet items/.test(t) && /All 23 run end to end/.test(t));
+    ok('CH-01 / CH-07: #16 is now "New sign-up" ("Learner moves country" gone); #17, #18 listed', !CDL_SCEN.some(r => r[1] === 'Learner moves country') && /New sign-up: documents → offer letter → payment → start/.test(t) && /Coordinator vs Academic Admin edit/.test(t) && /Client sheet items/.test(t) && /All 24 run end to end/.test(t));
     go('ux-changelog'); ok('UX Changelog: one entry per F item', ['F1', 'F2', 'F3', 'F4', 'F5', 'F6, F7, F9', 'F8', 'F10', 'F11', 'F12'].every(x => new RegExp(x.replace(/,/g, ',') + ':').test(main())));
     go('tbd-register'); ok('TBD register: F4 and F11 removals listed', /F4/.test(main()) && /F11/.test(main()));
     SA(); go('a-index'); ok('screen index: template attachments', /workplace templates → Attachments/.test(main()));
     S.coo.v = 'A'; cooEnter(); S.signedIn = true; go('c-index'); ok('screen index: Coordinator Edit staff', /Edit staff/.test(main()));
-    ACT.scOpen(); go('demo-scenarios'); ok('CH-07 – CH-41: 23 scenarios (#16 is the new sign-up)', document.querySelectorAll('main section[id^="sc-"]').length === 23 && /New sign-up/.test((document.querySelector('#sc-16') || {}).textContent || ''));
+    ACT.scOpen(); go('demo-scenarios'); ok('CH-07 – CH-42: 24 scenarios (#16 is the new sign-up)', document.querySelectorAll('main section[id^="sc-"]').length === 24 && /New sign-up/.test((document.querySelector('#sc-16') || {}).textContent || ''));
   });
   const out = document.createElement('pre'); out.id = 'ft-out'; out.textContent = R.join('\n') + '\n' + R.filter(x => x.startsWith('PASS')).length + '/' + R.length; document.body.appendChild(out);
 })();

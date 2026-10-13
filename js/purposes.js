@@ -105,7 +105,7 @@ const ROUTE_PURPOSE = {
   'k-obslib': 'The Academy\'s own observation criteria, kept apart from NVQ criteria.',
   'k-calendar': 'All events across courses, batches and staff — view only.',
   'k-notifications': 'Academic Admin alerts, by category.',
-  'k-transfer': 'Learner transfers aren\'t available to this role.',
+  'k-transfer': 'No batch changes after the batch has started.', // CH-42
   'k-nothing-here': 'The page shown for an address that doesn\'t exist.',
   // Agency
   'g-dashboard': 'Seats, learners and bundles at a glance.',
@@ -503,7 +503,7 @@ const IDX_P = {
     "Approvals Queue — item panels|a-queue.AQ-1005#1": "Your own correction, for someone else to approve.",
     "Edge states (§7)|a-finance#1": "Typing the address of a screen this role can't use.",
     "Edge states (§7)|a-roles#1": "Typing the address of a screen this role can't use.",
-    "Edge states (§7)|k-transfer#1": "Learner transfers aren't available to this role.",
+    "Edge states (§7)|k-transfer#1": "No batch changes after the batch has started.", // CH-42
     "Edge states (§7)|a-batches.L2DC-FEB27#1": "A batch without a Coordinator, flagged.",
     "Edge states (§7)|a-programmes.NV-L3D#1": "A draft programme that can't be published yet, and why.",
     "Edge states (§7)|a-programmes.NV-L3#1": "Changing a learning outcome that already has evidence.",

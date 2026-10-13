@@ -1,6 +1,6 @@
 // Client decisions CH-01 … CH-31 — one block per batch.
 // Batch 1: CH-01 country fixed, CH-02 GBP only, CH-03 data region, CH-05 VAT invoices, CH-31 contact details,
-// the placeholder register (4 topics), CH-24 unchanged, and the CH records. … Batch 6: CH-06 VAT on agency bundles. Batch 7a: CH-32 – CH-36. Batch 7b: CH-37 – CH-41, CH-43.
+// the placeholder register (4 topics), CH-24 unchanged, and the CH records. … Batch 6: CH-06 VAT on agency bundles. Batch 7a: CH-32 – CH-36. Batch 7b: CH-37 – CH-41, CH-43. Batch 7c: CH-42, P-32, P-33.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -217,16 +217,16 @@
     ok('Decisions Log: still pending — P-31 and P-34 only', ['P-31', 'P-34'].every(p => /Pending client/.test(pst(p))) && prow.filter(x => /Pending client/.test(x)).length === 2 && /Still pending: P-31, P-34\./.test(pc.textContent));
     const fu = secs.find(s => /Follow-up decisions \(P-05 – P-26\)/.test(s.textContent)), st = id => ([...fu.querySelectorAll('tbody tr')].find(tr => tr.firstChild.textContent === id) || {}).textContent || '';
     ok('Decisions Log: F1 Superseded (CH-01); F2, F3b, F8 Resolved; F3a Superseded', /Superseded \(CH-01\)/.test(st('F1')) && /Resolved \(CH-02\)/.test(st('F2')) && /Superseded \(CH-02\)/.test(st('F3a')) && /Resolved \(CH-03\)/.test(st('F3b')) && /Resolved \(CH-05\)/.test(st('F8')));
-    ok('Decisions Log: 23 scenarios; #16 is the new sign-up', /All 23 run end to end in the prototype\./.test(main()) && CDL_SCEN.filter(r => r[0] === '16').length === 1 && CDL_SCEN.find(r => r[0] === '16')[1] === 'New sign-up: documents → offer letter → payment → start' && !CDL_SCEN.some(r => r[1] === 'Learner moves country'));
+    ok('Decisions Log: 24 scenarios; #16 is the new sign-up', /All 24 run end to end in the prototype\./.test(main()) && CDL_SCEN.filter(r => r[0] === '16').length === 1 && CDL_SCEN.find(r => r[0] === '16')[1] === 'New sign-up: documents → offer letter → payment → start' && !CDL_SCEN.some(r => r[1] === 'Learner moves country'));
     go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 1/.test(s.textContent));
     ok('UX Changelog: Batch 1 entry lists its CH IDs', !!ux && ['CH-01:', 'CH-02:', 'CH-03:', 'CH-05:', 'CH-31:'].every(x => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(x))));
-    go('demo-scenarios'); ok('Demo Scenarios: "Twenty-three", 23 sections, #16 is the new sign-up', /Twenty-three end-to-end walkthroughs/.test(main()) && app().querySelectorAll('main section[id^="sc-"]').length === 23 && /New sign-up/.test((app().querySelector('#sc-16') || {}).textContent || ''));
-    renderDemo(); AFTER.forEach(f => f()); const b = document.querySelector('#demo-root [data-act="scOpen"]'); ok('Demo panel: "Open the 23 Demo Scenarios"', !b || b.textContent === 'Open the 23 Demo Scenarios', b && b.textContent);
+    go('demo-scenarios'); ok('Demo Scenarios: "Twenty-four", 24 sections, #16 is the new sign-up', /Twenty-four end-to-end walkthroughs/.test(main()) && app().querySelectorAll('main section[id^="sc-"]').length === 24 && /New sign-up/.test((app().querySelector('#sc-16') || {}).textContent || ''));
+    renderDemo(); AFTER.forEach(f => f()); const b = document.querySelector('#demo-root [data-act="scOpen"]'); ok('Demo panel: "Open the 24 Demo Scenarios"', !b || b.textContent === 'Open the 24 Demo Scenarios', b && b.textContent);
     learner('A'); go('index'); const ix = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
-    ok('Learner index: CH entries (incl. registration confirmation, 1b), each with a purpose line', !!ix && ix.querySelectorAll('li').length === 20 && !!ix.querySelector('[data-act="regStart"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 23 walkthroughs/.test(main()));
+    ok('Learner index: CH entries (incl. registration confirmation, 1b), each with a purpose line', !!ix && ix.querySelectorAll('li').length === 21 && !!ix.querySelector('[data-act="regStart"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 24 walkthroughs/.test(main()));
     ix.querySelector('[data-m="chCheckout"]').click(); await wait(150); ok('Learner index: checkout entry opens the checkout with the Stripe line', !!MODAL && !!mroot().querySelector('.ch-stripe')); closeModal();
     SA(); go('a-index'); const ax = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
-    ok('Admin index: Batch 1–7b entries with purposes', !!ax && ax.querySelectorAll('li').length === 24 && ['a-config', 'a-learner.IA-L-31900', 'a-dataprotection..residency', 'a-programmes.NV-L3.letter', 'a-admissions.APP-C', 'a-learner.IA-L-31188.admission'].every(t => ax.querySelector(`[data-t="${t}"]`)) && [...ax.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && !/Priya Nair \(moved country/.test(main()));
+    ok('Admin index: Batch 1–7c entries with purposes', !!ax && ax.querySelectorAll('li').length === 26 && ['a-config', 'a-learner.IA-L-31900', 'a-dataprotection..residency', 'a-programmes.NV-L3.letter', 'a-admissions.APP-C', 'a-learner.IA-L-31188.admission'].every(t => ax.querySelector(`[data-t="${t}"]`)) && [...ax.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && !/Priya Nair \(moved country/.test(main()));
   });
 
   /* ================= Batch 2 ================= */
@@ -245,9 +245,8 @@
     ACT.sampleUpload({ dataset: { id: 'd6' } }); await wait(2000);
     ok('CH-07 every mandatory document uploaded → Continue enabled', !btnAct('suNext').disabled && /6 of 6 mandatory documents uploaded/.test(main()));
     ACT.suBack(); ok('CH-07 Back to step 1', stepCur() === 'Personal details');
-    const codes = [...app().querySelectorAll('input[name="su-batch"]')].map(i => i.value);
-    ok('P-30 intake choice: only intakes with a place', codes.includes('L3AC-DEC26-AUH') && codes.includes('L3AC-NOV26-LEI') && codes.includes('L3AC-OCT26-ONL') && !codes.includes('L3AC-NOV26') && codes.every(c => chHasPlace(chBatch(c))), codes.join());
-    ok('P-30 intake shows its start date and whether a deposit can hold the seat', new RegExp('in ' + daysTo(chBatch('L3AC-DEC26-AUH').start) + ' days').test(main()) && /A deposit can hold your seat/.test(main()) && /Starts in under 28 days/.test(main()), [daysTo(chBatch('L3AC-DEC26-AUH').start), (main().match(/in d+ days/g) || []).join()].join(' '));
+    ok('CH-42 no intake choice: the nearest batch is assigned (online or UAE, not Leicester)', !app().querySelector('input[name="su-batch"]') && /Your batch: Abu Dhabi Cohort 1, starts/.test(main()) && !/Leicester/.test(app().querySelector('.ch-batch').textContent));
+    ok('CH-42 "Need a different start date? Contact the Academy." with the contact details', /Need a different start date\? Contact the Academy/.test(main()) && /020 3983 0282/.test(main()) && /a deposit can hold your seat/.test(main()));
     ACT.suNext(); ok('CH-07 step 1 saved → step 2', stepCur() === 'Documents' && W.signup.batch === 'L3AC-DEC26-AUH');
     ACT.suNext(); ok('CH-07 → step 3 Offer letter', stepCur() === 'Offer letter');
   });
@@ -311,8 +310,8 @@
     go('payments'); ok('CH-11 Payments shows the awaiting status', /Awaiting confirmation by Finance/.test(main()));
     ok('CH-11 bank sign-up recorded for Finance (Batch 3)', (STORE.chBank || []).some(x => x.lid === 'IA-L-31188' && x.status === 'Awaiting confirmation'));
     fresh(); ACT.chStep({ dataset: { s: '4' } }); ACT.chIntakeFills(); go('admission');
-    ok('CH-07 chosen intake fills before payment → asked to choose another', /is now full/.test(main()) && !!app().querySelector('[data-act="suGo"][data-s="1"]') && !app().querySelector('[data-act="suPay"]'));
-    app().querySelector('[data-act="suGo"][data-s="1"]').click(); await wait(30); ok('CH-07 back to step 1 to choose another intake; documents and signature kept', stepCur() === 'Personal details' && !!W.signup.sig && !chMandMissing(W).length);
+    ok('CH-42 batch fills before payment → next nearest assigned, learner told (was: choose another)', W.signup.batch === 'L3AC-FEB27-AUH' && /Your batch has changed/.test(main()) && /Abu Dhabi Cohort 2/.test(main()) && !!app().querySelector('[data-act="suPay"]') && W.notifs.some(n => /Your batch has changed/.test(n.title)));
+    ok('CH-42 documents and signature kept', stepCur() === 'Payment' && !!W.signup.sig && !chMandMissing(W).length);
   });
 
   /* ---------- F4 agency-sponsored ---------- */
@@ -342,7 +341,7 @@
   /* ---------- CH-07 approval confirms the intake; placement and waitlist removed ---------- */
   await T('CH-07 approval confirms the intake; no placement or waitlist', async () => {
     fresh(); chQuickSignup(STORE.worlds.B); SA(); ACT.appApprove({ dataset: { id: 'APP-B' } });
-    ok('CH-07 approve dialog shows the intake chosen at sign-up; no placement select', !!MODAL && !$('#ab') && /Abu Dhabi Cohort 1 — L3AC-DEC26-AUH/.test(MODAL.body) && /chosen at sign-up/.test(MODAL.body)); closeModal();
+    ok('CH-07 approve dialog shows the intake chosen at sign-up; no placement select', !!MODAL && !$('#ab') && /Abu Dhabi Cohort 1 — L3AC-DEC26-AUH/.test(MODAL.body) && /assigned at sign-up/.test(MODAL.body) /* CH-42: was "chosen at sign-up" */); closeModal();
     ok('CH-07 waitlist edge, Accept next intake and Place removed', !EDGES.some(e => e[0] === 'waitlist') && !ACT.acceptIntake && !ACT.stayWaitlist && !ACT.kPlace && !ACT.payDeposit);
     role('acaA'); go('k-dashboard'); ok('CH-07 Academic Admin dashboard: no "awaiting batch placement"', !/awaiting batch placement/i.test(main()));
     S.edge = 'underreview'; learner('B'); go('admission'); ok('Demo state "under review" comes after a completed sign-up', W.signup.done && W.admission.status === 'Under Review' && /Signed up/.test(main()) && !app().querySelector('.ch-su')); S.edge = 'none';
@@ -429,7 +428,7 @@
     ok('Scenario #19 "Rejected after payment": pays → rejected → notified → paused → refund decision', !!s19 && s19[1] === 'Rejected after payment' && s19[3].length === 5 && /rejects/.test(s19[3][1].text) && /pauses/.test(s19[3][3].text) && /refund/.test(s19[3][4].text));
     ACT.scOpen(); go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 3/.test(s.textContent));
     ok('UX Changelog: Batch 3 entry lists its CH IDs', !!ux && ['CH-11:', 'CH-12:', 'CH-13:', 'CH-14:'].every(x => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(x))));
-    go('cd-log'); ok('Decisions Log: CH-10 assumption note', /Assumption: If the deposit balance isn't paid within the 28-day hold, the seat is released and programme content locks \(prototype assumption, pending client confirmation\)\./.test(main()));
+    go('cd-log'); ok('Decisions Log: CH-10 note (P-32: content doesn\'t lock; read-only; sign up again)', /Seat released \(deposit paid, balance unpaid after the 28-day hold\): the learner leaves the batch and the seat is freed; the deposit is kept; materials and past work stay read-only/.test(main()) && !/programme content locks/.test(main()));
     SA(); go('a-index'); ok('Admin index: Pause access, bank transfers and rejected-after-payment entries', ['a-learner.IA-L-18022.enrolments', 'f-learner.IA-L-31900', 'f-exceptions..bank'].every(t => app().querySelector(`[data-t="${t}"]`)) && !!app().querySelector('[data-act="chSc19Start"]'));
   });
 
@@ -533,16 +532,16 @@
   /* ---------- CH-17 mock data and the Assessors panel ---------- */
   await T('CH-17 allocations and the Assessors panel', async () => {
     fresh(); const m = chAllocOf(MAR()), j = chAllocOf(JAN());
-    ok('CH-17 Croydon Cohort 4: three different assessors', m.asg === 'James Pryce' && m.pd === 'Sarah Okonkwo' && m.obs === 'Michael Osei');
+    ok('CH-17 Croydon Cohort 4: James Pryce (assignments, observations), Sarah Okonkwo (PD) — not its Coordinator (P-33)', m.asg === 'James Pryce' && m.pd === 'Sarah Okonkwo' && m.obs === 'James Pryce');
     ok('CH-17 Leicester Cohort 7: one person holds all three roles', j.asg === 'Sarah Okonkwo' && j.pd === 'Sarah Okonkwo' && j.obs === 'Sarah Okonkwo');
-    ok('CH-17 overrides: Olivia Shaw PD → Michael Osei; Ben Carter observations → James Pryce', chEff('IA-L-33107', 'pd') === 'Michael Osei' && chEff('IA-L-30755', 'obs') === 'James Pryce' && chEff(STORE.worlds.D.me.id, 'pd') === 'Sarah Okonkwo' && chEff(STORE.worlds.D.me.id, 'obs') === 'Michael Osei');
-    ok('CH-17 batch assessors = everyone allocated', ['James Pryce', 'Sarah Okonkwo', 'Michael Osei'].every(n => MAR().assessors.includes(n)));
-    learner('D'); go('dashboard'); ok('CH-17 learner sees three assessors under Your people', ['Assessor (assignments)', 'Assessor (PD)', 'Assessor (observations)'].every(r => W.nvq.people.some(p => p[0] === r)) && W.nvq.people.find(p => p[0] === 'Assessor (observations)')[1] === 'Michael Osei');
+    ok('CH-17 overrides: Olivia Shaw PD → James Pryce (P-33: was Michael Osei); Ben Carter observations → James Pryce', chEff('IA-L-33107', 'pd') === 'James Pryce' && chEff('IA-L-30755', 'obs') === 'James Pryce' && chEff(STORE.worlds.D.me.id, 'pd') === 'Sarah Okonkwo' && chEff(STORE.worlds.D.me.id, 'obs') === 'James Pryce');
+    ok('CH-17 batch assessors = everyone allocated; not the Coordinator (P-33)', ['James Pryce', 'Sarah Okonkwo'].every(n => MAR().assessors.includes(n)) && !MAR().assessors.includes('Michael Osei'));
+    learner('D'); go('dashboard'); ok('CH-17 learner sees three assessors under Your people', ['Assessor (assignments)', 'Assessor (PD)', 'Assessor (observations)'].every(r => W.nvq.people.some(p => p[0] === r)) && W.nvq.people.find(p => p[0] === 'Assessor (observations)')[1] === 'James Pryce'); /* P-33 */
     coord(); go('c-batches', { id: 'L2DC-MAR26' }); const pan = app().querySelector('.ch-assess');
     ok('CH-17 Coordinator batch detail: Assessors panel with three dropdowns', !!pan && ['asg', 'pd', 'obs'].every(k => pan.querySelector('#ch-as-' + k)) && /Assignment assessor/.test(pan.textContent) && /Learner overrides/.test(pan.textContent));
-    $('#ch-as-pd').value = 'Michael Osei'; const tn0 = STORE.tas.notifs.length, cn0 = STORE.coo.notifs.length; ACT.chAssessSave({ dataset: { b: 'L2DC-MAR26' } }); ok('CH-17 change needs a reason', press() === false); $('#rsn').value = 'Sarah on leave'; press();
-    ok('CH-17 saved, audited, assessors and Coordinator notified', chAllocOf(MAR()).pd === 'Michael Osei' && ADMIN.audit[0].action === 'PD assessor changed' && ADMIN.audit[0].actor === CME().name && STORE.tas.notifs.length >= tn0 + 2 && STORE.coo.notifs.length > cn0);
-    ok('CH-17 learner overrides stay in force', chEff('IA-L-33107', 'pd') === 'Michael Osei' && chEff('IA-L-30755', 'obs') === 'James Pryce');
+    $('#ch-as-pd').value = 'James Pryce'; /* P-33: the Coordinator isn't offered */ const tn0 = STORE.tas.notifs.length, cn0 = STORE.coo.notifs.length; ACT.chAssessSave({ dataset: { b: 'L2DC-MAR26' } }); ok('CH-17 change needs a reason', press() === false); $('#rsn').value = 'Sarah on leave'; press();
+    ok('CH-17 saved, audited, assessors and Coordinator notified', chAllocOf(MAR()).pd === 'James Pryce' && ADMIN.audit[0].action === 'PD assessor changed' && ADMIN.audit[0].actor === CME().name && STORE.tas.notifs.length >= tn0 + 2 && STORE.coo.notifs.length > cn0);
+    ok('CH-17 learner overrides stay in force', chEff('IA-L-33107', 'pd') === 'James Pryce' && chEff('IA-L-30755', 'obs') === 'James Pryce');
     acaEnter('KA'); S.signedIn = true; go('a-batches', { id: 'L3AC-JAN26', tab: 'staff' }); ok('CH-17 Academic Admin edits any batch (Staff tab)', !!app().querySelector('.ch-assess #ch-as-obs'));
     role('sysA'); go('a-batches', { id: 'L3AC-JAN26', tab: 'staff' }); ok('CH-17 System Admin: read-only', !!app().querySelector('.ch-assess') && !app().querySelector('.ch-assess select'));
     const a0 = ADMIN.audit.length; ACT.chAssessSave({ dataset: { b: 'L3AC-JAN26' } }); ok('CH-17 a direct save by a role that can\'t is refused and logged', !MODAL && ADMIN.audit.length === a0 + 1 && /^Blocked: change assessors/.test(ADMIN.audit[0].action));
@@ -557,10 +556,10 @@
     const key = js.find(r => r.status === 'Submitted').key, s0 = ADMIN.security.length; go('t-mark', { id: key });
     ok('CH-17 direct URL to another assessor\'s submission is refused and logged', /You don't have access to this record/.test(main()) && ADMIN.security.length === s0 + 1 && ADMIN.audit[0].action === 'Blocked: not the assignment assessor');
     tas('S'); go('t-mark', { id: key }); ok('CH-17 the assignment assessor can open it', !/You don't have access/.test(main()));
-    tas('M'); ok('CH-17 Michael (Croydon PD default is Sarah) has only his PD override (Olivia Shaw)', tasPdList().map(p => p.lid).join() === 'IA-L-33107' || tasPdList().every(p => chEff(p.lid, 'pd') === 'Michael Osei'));
+    tas('M'); ok('CH-17 Michael (Croydon\'s Coordinator) has no Croydon PD or observations (P-33)', !tasPdList().some(p => marLids().includes(p.lid) || p.lid === 'IA-L-33107') && !tasObs().some(o => o.id === 'TO-9' || marLids().includes(o.lid)));
     const g = STORE.worlds.D.me.id, a0 = ADMIN.audit.length; ACT.pdPropose({ dataset: { l: g } });
     ok('CH-17 PD: a non-allocated assessor\'s direct call is refused and logged', !MODAL && ADMIN.audit.length === a0 + 1 && ADMIN.audit[0].action === 'Blocked: not the PD assessor');
-    ok('CH-17 observations: Michael (Croydon observation assessor) has TO-9 and Grace\'s', tasObs().some(o => o.id === 'TO-9') && tasObs().some(o => o.lid === g));
+    tas('S'); ok('CH-17 observations: James (Croydon observation assessor, P-33) has TO-9 and Grace\'s', tasObs().some(o => o.id === 'TO-9') && tasObs().some(o => o.lid === g));
     go('t-obsrec', { id: 'TO-9' }); ok('CH-17 the observation assessor can record it', !/You don't have access/.test(main()));
     tas('A'); ok('CH-17 Sarah: Grace\'s PD (batch default) but not her observations or TO-9; not Olivia\'s PD (override)', !tasObs().some(o => o.lid === g) && !tasObs().some(o => o.id === 'TO-9') && tasPdList().some(p => p.lid === g) && !tasPdList().some(p => p.lid === 'IA-L-33107'));
     const s1 = ADMIN.security.length; go('t-obsrec', { id: 'TO-9' }); ok('CH-17 observation: direct URL by another assessor refused and logged', /You don't have access/.test(main()) && ADMIN.security.length === s1 + 1 && ADMIN.audit[0].action === 'Blocked: not the observation assessor');
@@ -573,19 +572,19 @@
     fresh(); coord(); go('c-learner', { id: 'IA-L-33100' }); const card = app().querySelector('.ch-ovcard');
     ok('CH-17 learner record: assessors for this learner; assignment assessor not changeable', !!card && /James Pryce/.test(card.textContent) && /can't be changed for one learner/.test(card.textContent) && !card.querySelector('[data-act="chOvSet"][data-k="asg"]') && !!card.querySelector('[data-act="chOvSet"][data-k="obs"]'));
     ACT.chOvSet({ dataset: { l: 'IA-L-33100', k: 'asg' } }); ok('CH-17 assignment assessor override refused', !MODAL && /^Blocked: assessor override/.test(ADMIN.audit[0].action));
-    const tn0 = STORE.tas.notifs.length; ACT.chOvSet({ dataset: { l: 'IA-L-33100', k: 'obs' } }); ok('CH-17 override needs a reason', press() === false); $('#ch-ov-n').value = 'Sarah Okonkwo'; $('#rsn').value = 'Michael is on leave that week'; press();
+    const tn0 = STORE.tas.notifs.length; ACT.chOvSet({ dataset: { l: 'IA-L-33100', k: 'obs' } }); ok('CH-17 override needs a reason', press() === false); $('#ch-ov-n').value = 'Sarah Okonkwo'; $('#rsn').value = 'James is on leave that week'; press();
     ok('CH-17 observation override saved: chip, audit, assessors notified', chEff('IA-L-33100', 'obs') === 'Sarah Okonkwo' && /override/.test(app().querySelector('.ch-ovcard').textContent) && !!app().querySelector('[data-act="chOvReset"][data-k="obs"]') && ADMIN.audit[0].action === 'Observation assessor override' && STORE.tas.notifs.length >= tn0 + 2);
-    tas('M'); go('t-obsrec', { id: 'TO-9' }); ok('CH-17 after the override only the new assessor records: Michael refused', /You don't have access/.test(main()));
+    tas('S'); go('t-obsrec', { id: 'TO-9' }); ok('CH-17 after the override only the new assessor records: James refused (P-33: was Michael)', /You don't have access/.test(main()));
     tas('A'); go('t-obsrec', { id: 'TO-9' }); ok('CH-17 Sarah can record it', !/You don't have access/.test(main()) && tasObs().some(o => o.id === 'TO-9'));
-    coord(); go('c-learner', { id: 'IA-L-33100' }); ACT.chOvReset({ dataset: { l: 'IA-L-33100', k: 'obs' } }); $('#rsn').value = 'Michael is back'; press(); ok('CH-17 Reset to batch default', chEff('IA-L-33100', 'obs') === 'Michael Osei' && !chOvOf('IA-L-33100', 'obs'));
-    acaEnter('KA'); S.signedIn = true; go('a-learner', { id: 'IA-L-33107' }); ok('CH-17 Academic Admin → learner: override shown and changeable', /Assessors for this learner/.test(main()) && /Michael Osei/.test(main()) && !!app().querySelector('[data-act="chOvReset"][data-k="pd"]'));
+    coord(); go('c-learner', { id: 'IA-L-33100' }); ACT.chOvReset({ dataset: { l: 'IA-L-33100', k: 'obs' } }); $('#rsn').value = 'James is back'; press(); ok('CH-17 Reset to batch default', chEff('IA-L-33100', 'obs') === 'James Pryce' && !chOvOf('IA-L-33100', 'obs'));
+    acaEnter('KA'); S.signedIn = true; go('a-learner', { id: 'IA-L-33107' }); ok('CH-17 Academic Admin → learner: override shown and changeable', /Assessors for this learner/.test(main()) && /James Pryce/.test(main()) && !!app().querySelector('[data-act="chOvReset"][data-k="pd"]'));
     // attribution: a completed submission keeps its marker when the allocation changes
-    tas('S'); const done = tasSubs(true).find(r => r.status !== 'Submitted' && !r.L.formerBy), before = done && done.markerName;
-    chAllocOf(MAR()).asg = 'Michael Osei'; chSyncAssessors(MAR()); tas('M'); const after = (tasSubs(true).find(r => r.key === (done || {}).key) || {}).markerName;
-    ok('CH-17 attribution: completed records keep the name they were done under', !!done && before === after && after !== 'Michael Osei', before + ' → ' + after);
+    tas('S'); const done = tasSubs(true).find(r => r.status !== 'Submitted' && !r.L.formerBy && r.markerName === 'James Pryce'), before = done && done.markerName;
+    chAllocOf(MAR()).asg = 'Sarah Okonkwo'; chSyncAssessors(MAR()); tas('A'); const after = (tasSubs(true).find(r => r.key === (done || {}).key) || {}).markerName; /* P-33: the new assessor isn't the Coordinator */
+    ok('CH-17 attribution: completed records keep the name they were done under', !!done && before === after && after !== 'Sarah Okonkwo', before + ' → ' + after);
     chAllocOf(MAR()).asg = 'James Pryce'; chSyncAssessors(MAR());
-    ok('CH-17 IQA conflict: any of the three allocations', /^You are the observation assessor and the PD assessor for one learner on this batch$/.test(iqaConflict({ batch: 'L2DC-MAR26', assessor: 'X' }, 'Michael Osei')) && /^You are the assignment assessor on this batch$/.test(iqaConflict({ batch: 'L2DC-MAR26', assessor: 'X' }, 'James Pryce')) && /PD assessor on this batch/.test(iqaConflict({ batch: 'L2DC-MAR26', assessor: 'X' }, 'Sarah Okonkwo')) && !iqaConflict({ batch: 'L2DC-MAR26', assessor: 'X' }, 'Kevin Doyle'));
-    ok('CH-17 IQA conflict: a learner override counts too', /PD assessor for one learner/.test(chRoleOn(MAR(), 'Michael Osei')) && /observation assessor for one learner/.test(chRoleOn(JAN(), 'James Pryce')));
+    ok('CH-17 IQA conflict: any of the three allocations (P-33 mock)', /^You are the assignment assessor and the observation assessor and the PD assessor for one learner on this batch$/.test(iqaConflict({ batch: 'L2DC-MAR26', assessor: 'X' }, 'James Pryce')) && /PD assessor on this batch/.test(iqaConflict({ batch: 'L2DC-MAR26', assessor: 'X' }, 'Sarah Okonkwo')) && !iqaConflict({ batch: 'L2DC-MAR26', assessor: 'X' }, 'Kevin Doyle'));
+    ok('CH-17 IQA conflict: a learner override counts too', /PD assessor for one learner/.test(chRoleOn(MAR(), 'James Pryce')) && /observation assessor for one learner/.test(chRoleOn(JAN(), 'James Pryce')));
     ok('CH-17 IQA conflict: teaching the batch still counts', /Teacher on this batch/.test(iqaConflict({ batch: 'L2DC-MAR26', assessor: 'X' }, MAR().teachers[0])));
   });
 
@@ -834,7 +833,7 @@
     fresh(); ACT.scOpen(); go('cd-log');
     const r = id => { const tr = [...app().querySelectorAll('main tr')].find(x => x.textContent.trim().startsWith(id)); return tr ? tr.textContent : ''; };
     ok('Decisions Log: CH-32 – CH-36 Applied (Batch 7a), source S7', ['CH-32', 'CH-33', 'CH-34', 'CH-35', 'CH-36'].every(id => /Applied \(Batch 7a\)/.test(r(id)) && /13 Oct 2026/.test(r(id)) && /S7/.test(r(id))));
-    ok('Decisions Log: CH-42 scheduled (7c); CH-43 from S8', /Scheduled \(Batch 7c\)/.test(r('CH-42')) && /S8/.test(r('CH-43')));
+    ok('Decisions Log: CH-43 from S8', /S8/.test(r('CH-43')));
     go('tbd-register'); ok('TBD register: T04, T06, T07, T08 resolved by CH-35, CH-32, CH-33, CH-34', ['T04', 'T06', 'T07', 'T08'].every(x => main().includes(x)) && ['CH-32', 'CH-33', 'CH-34', 'CH-35'].every(x => main().includes(x)) && /Remaining: P-31 and P-34/.test(main()));
     go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 7a/.test(s.textContent));
     ok('UX Changelog: Batch 7a entry', !!ux && ['CH-32:', 'CH-33:', 'CH-34:', 'CH-35:', 'CH-36:'].every(k => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(k))));
@@ -967,6 +966,91 @@
     go('a-index'); ok('Admin index: 7b entries', ['a-queue.AQ-9201', 'a-queue.AQ-9101', 'a-learner.IA-L-30718.payments', 'a-programmes.NV-L3D.support'].every(t => !!app().querySelector('[data-t="' + t + '"]')));
     coA(); go('c-index'); ok('Coordinator index: 7b entries', !!app().querySelector('[data-t="c-learner.' + cid() + '"]') && !!app().querySelector('[data-t="c-dashboard"]'));
     FA(); go('f-index'); ok('Finance index: 7b entries', ['a-queue.AQ-9101', 'f-overdue', 'f-plans'].every(t => !!app().querySelector('[data-t="' + t + '"]')));
+  });
+
+  /* ================= Batch 7c ================= */
+  // CH-42 nearest batch and admin batch changes, P-32 released seat, P-33 Coordinator ≠ assessor
+  const L3T = 'Level 3 Diploma in Adult Care (England)', B7 = c => chBatch(c);
+  const signedB = () => { ACT.chStep({ dataset: { s: '5' } }); return STORE.worlds.B; };
+
+  await T('CH-42 nearest batch rule and started', async () => {
+    fresh();
+    ok('CH-42 UAE learner: nearest online or UAE batch with a place (Abu Dhabi Cohort 1; online batches full; not Leicester)', chNearest(L3T, 'United Arab Emirates').code === 'L3AC-DEC26-AUH');
+    ok('CH-42 UK learner: Leicester Cohort 8 (earliest UK/online with a place)', chNearest(L3T, 'United Kingdom').code === 'L3AC-NOV26-LEI');
+    ok('CH-42 other country: online only; none with a place → none (Contact the Academy)', chNearest(L3T, 'India') === null);
+    B7('L3AC-OCT26-ONL').enrolled--; ok('CH-42 an online batch with a place is nearest for everyone', chNearest(L3T, 'India').code === 'L3AC-OCT26-ONL' && chNearest(L3T, 'United Arab Emirates').code === 'L3AC-OCT26-ONL'); B7('L3AC-OCT26-ONL').enrolled++;
+    ok('CH-42 "started": In Progress / Completed, or start date passed', chStarted(B7('L3AC-JAN26')) && chStarted({ status: 'Open', start: D(0, '00:00') }) && !chStarted(B7('L3AC-DEC26-AUH')));
+    learner('B'); W.me.country = 'India'; go('admission'); ACT.suBack();
+    ok('CH-42 no batch with a place → "Contact the Academy" with the contact details', /No batch has a place right now/.test(main()) && /020 3983 0282/.test(main()));
+    ACT.suNext(); ok('CH-42 can\'t continue without a batch', stepCur() === 'Personal details');
+    fresh(); ACT.chScInstalment(); ok('CH-42 the nearest batch starts in under 28 days → instalments only', W.signup.batch === 'L3AC-OCT26-ONL' && !$('input[name="su-opt"][value="deposit"]'));
+  });
+
+  await T('CH-42 Assign / change batch before the start', async () => {
+    fresh(); const w = signedB(), au = B7('L3AC-DEC26-AUH'), fe = B7('L3AC-FEB27-AUH'), e0 = [au.enrolled, fe.enrolled], dep = JSON.stringify(w.admission.deposit), plan = JSON.stringify(w.plans.find(p => p.e === 'nvq')), sig = JSON.stringify(w.signup.sig);
+    acaEnter('KA'); S.signedIn = true; go('a-learner', { id: w.me.id, tab: 'enrolments' });
+    ok('CH-42 Academic Admin: Learner 360 → Enrolments: "Assign / change batch"', !!app().querySelector('[data-act="chMoveBatch"][data-id="' + w.me.id + '"]'));
+    ACT.chMoveBatch({ dataset: { id: w.me.id } }); const opts = [...document.querySelectorAll('#ch-mv-b option')].map(o => o.value);
+    ok('CH-42 only not-started batches of the same course with a place', opts.length > 0 && opts.every(c => B7(c).course === L3T && !chStarted(B7(c)) && chHasPlace(B7(c)) && c !== 'L3AC-DEC26-AUH') && !opts.includes('L3AC-JAN26'), opts.join());
+    closeModal(); role('bizA'); go('b-batchassign');
+    ok('CH-42 Business Admin: "Batch assignment" — learner, course and batch only', S.route === 'b-batchassign' && /Batch assignment/.test(main()) && ['Learner', 'Course', 'Batch', 'Status'].every(x => [...app().querySelectorAll('main thead th')].some(t => t.textContent.trim() === x)) && ![...app().querySelectorAll('main thead th')].some(t => /Payment|Fee|Progress|Grade|Amount/.test(t.textContent)) && !/£|Payments|Assignment \d|Submission/.test(app().querySelector('main table').textContent));
+    ACT.chMoveBatch({ dataset: { id: w.me.id } }); document.querySelector('#ch-mv-b').value = 'L3AC-FEB27-AUH'; press(); ok('CH-42 reason required', !!MODAL && /Enter a reason/.test(mroot().textContent));
+    document.querySelector('#rsn').value = 'Family commitments in December.'; press();
+    ok('CH-42 moved: counts, batch fields; deposit, plan and offer letter unchanged', w.signup.batch === 'L3AC-FEB27-AUH' && /Abu Dhabi Cohort 2/.test(w.nvq.batch) && au.enrolled === e0[0] - 1 && fe.enrolled === e0[1] + 1 && JSON.stringify(w.admission.deposit) === dep && JSON.stringify(w.plans.find(p => p.e === 'nvq')) === plan && JSON.stringify(w.signup.sig) === sig);
+    ok('CH-42 audited; learner and both Coordinators notified', ADMIN.audit.some(a => a.action === 'Batch changed (before start)' && a.reason === 'Family commitments in December.') && w.notifs.some(n => /Your batch has changed/.test(n.title)) && STORE.coo.notifs.filter(n => /Learner batch changed/.test(n.t)).length >= 2);
+    const c = STORE.worlds.C.me.id; go('b-batchassign'); const row = [...app().querySelectorAll('main tbody tr')].find(tr => tr.textContent.includes(c));
+    ok('CH-42 batch started → action hidden', !!row && !row.querySelector('[data-act="chMoveBatch"]') && /Started/.test(row.textContent));
+    const a0 = ADMIN.audit.length; ACT.chMoveBatch({ dataset: { id: c } });
+    ok('CH-42 direct call after the start refused and logged', !MODAL && ADMIN.audit.length === a0 + 1 && ADMIN.audit[0].action === 'Blocked: batch change' && ADMIN.audit[0].reason === "Learners can't be moved after their batch has started.");
+    learner('C'); ACT.chMoveBatch({ dataset: { id: c } }); ok('CH-42 a learner can\'t change a batch', !MODAL);
+    acaEnter('KA'); S.signedIn = true; go('a-batches'); ok('CH-42 rule wording: "No batch changes after the batch has started"', /No batch changes after the batch has started/.test(main()) && !/never transferred between batches/.test(main()));
+    go('a-transfer'); ok('CH-42 blocked URL page reworded', /No batch changes after the batch has started/.test(main()) && !/Learner transfer is not permitted/.test(main()));
+  });
+
+  await T('P-32 released seat: out of the batch, deposit kept, read-only, sign up again', async () => {
+    fresh(); const au = B7('L3AC-DEC26-AUH'), n0 = au.enrolled;
+    learner('B'); S.edge = 'seatReleased'; setVariant('B'); go('dashboard'); const w = W;
+    ok('P-32 1: removed from the batch; seat available; enrolled count back down', !w.signup.batch && w.signup.releasedFrom === 'L3AC-DEC26-AUH' && au.enrolled === n0 && !chCohLids(au).includes(w.me.id));
+    ok('P-32 2: deposit kept', w.admission.deposit.paid && w.admission.deposit.kept && w.admission.deposit.released);
+    ok('P-32 3: banner and Sign up again', /Your seat was released because the balance wasn't paid\. You can still view your materials\. To continue, sign up again\./.test(html()) && !!app().querySelector('[data-act="chSignAgain"]'));
+    go('assignments'); ok('P-32 3: materials and past work stay viewable (no lock page)', !app().querySelector('main .lockpage'));
+    const a0 = ADMIN.audit.length; ACT.reviewSubmit({ dataset: { id: (w.assignments[0] || {}).id } }); ACT.chOrRequest(); ACT.pdConfirm();
+    ok('P-32 3: no submissions, PD or office requests (refused and logged)', !MODAL && ADMIN.audit.filter(a => a.action === 'Blocked: seat released').length >= 3);
+    tas('A'); ok('P-32 3: no marking for the released learner', !tasSubs(true).some(s => s.L.lid === w.me.id));
+    ok('P-32 5: learner, Coordinator and Finance notified', w.notifs.some(n => /Your seat was released/.test(n.title)) && STORE.coo.notifs.some(n => n.t === 'Seat released' && n.to === au.coord) && STORE.fin.notifs.some(n => /Seat released — deposit kept/.test(n.t)));
+    learner('B'); S.edge = 'seatReleased'; setVariant('B'); ACT.chSignAgain(); S.edge = 'none';
+    ok('P-32 4: sign up again — normal flow, step 1 with the nearest batch and instalments only', S.route === 'admission' && stepCur() === 'Personal details' && /Your batch:/.test(main()) && /instalments only/.test(main()));
+    ACT.suNext(); ok('P-32 4: documents and signed offer letter reused — straight to Payment', stepCur() === 'Payment' && !!W.signup.sig);
+    ok('P-32 4: no deposit option for that course', !$('input[name="su-opt"][value="deposit"]') && /Instalments only/.test(main()));
+    const b2 = B7(W.signup.batch), e2 = b2.enrolled; setUi('suMethod', 'bank'); ACT.suPay();
+    ok('P-32 4: signed up again with instalments; seat taken; banner gone', W.signup.done && W.signup.pay.opt === 'instalment' && b2.enrolled === e2 + 1 && !W.admission.deposit.released && W.admission.deposit.kept && !document.querySelector('[data-act="chSignAgain"]'));
+  });
+
+  await T('P-33 Coordinator can\'t be an assessor on their own batch', async () => {
+    fresh(); coord('B'); go('c-batches', { id: 'L2DC-MAR26' }); const pan = app().querySelector('.ch-assess');
+    ok('P-33 Assessors panel: the Coordinator is not offered', !!pan && ['asg', 'pd', 'obs'].every(k => ![...pan.querySelectorAll('#ch-as-' + k + ' option')].some(o => o.textContent === 'Michael Osei')) && /can't be its assignment, PD or observation assessor/.test(pan.textContent));
+    const sel = document.querySelector('#ch-as-obs'); sel.insertAdjacentHTML('beforeend', '<option>Michael Osei</option>'); sel.value = 'Michael Osei'; const a0 = ADMIN.audit.length; ACT.chAssessSave({ dataset: { b: 'L2DC-MAR26' } });
+    ok('P-33 a forced save is refused and logged', !MODAL && chAllocOf(MAR()).obs === 'James Pryce' && ADMIN.audit.length === a0 + 1 && ADMIN.audit[0].action === 'Blocked: Coordinator as assessor');
+    go('c-learner', { id: 'IA-L-33100' }); ACT.chOvSet({ dataset: { l: 'IA-L-33100', k: 'pd' } });
+    ok('P-33 override: the Coordinator is not offered', ![...document.querySelectorAll('#ch-ov-n option')].some(o => o.textContent === 'Michael Osei'));
+    document.querySelector('#ch-ov-n').insertAdjacentHTML('beforeend', '<option>Michael Osei</option>'); document.querySelector('#ch-ov-n').value = 'Michael Osei'; document.querySelector('#rsn').value = 'x'; prim();
+    ok('P-33 forced override refused and logged', !chOvOf('IA-L-33100', 'pd') && ADMIN.audit[0].action === 'Blocked: Coordinator as assessor'); closeModal();
+    ok('P-33 mock: no batch has its Coordinator as an assessor or override', ADMIN.batches.every(b => !b.coord || !CH_AROLES.some(([k]) => chAllocOf(b)[k] === b.coord)) && Object.entries(STORE.chAssessOv).every(([lid, o]) => { const b = chBatchOfLid(lid); return !b || !Object.values(o).some(x => x.name === b.coord); }));
+    const s21 = SC_LIST().find(x => x[0] === '21'); ok('P-33 Scenario #21 text: James Pryce observes, not Michael Osei', /James Pryce \(assignments and observations\)/.test(s21[3][0].text) && /James, the observation assessor/.test(s21[3][3].text));
+  });
+
+  /* ---------- Records (Batch 7c) ---------- */
+  await T('CH records (Batch 7c)', async () => {
+    fresh(); ACT.scOpen(); go('cd-log');
+    const r = id => { const tr = [...app().querySelectorAll('main tr')].find(x => x.textContent.trim().startsWith(id)); return tr ? tr.textContent : ''; };
+    ok('Decisions Log: CH-42 Applied (Batch 7c)', /Applied \(Batch 7c\)/.test(r('CH-42')) && /13 Oct 2026/.test(r('CH-42')));
+    const s16 = SC_LIST().find(x => x[0] === '16'), s24 = SC_LIST().find(x => x[0] === '24');
+    ok('Scenario #16: batch assigned automatically', /is assigned the nearest batch with a place — Abu Dhabi Cohort 1/.test(s16[3][0].text) && !s16[3].some(x => /chose Abu Dhabi/.test(x.text)));
+    ok('Scenario #24 "Batch reassignment before start": move, refusal, seat released, sign up again', !!s24 && s24[1] === 'Batch reassignment before start' && s24[3].length === 5 && /deposit and seat hold move/.test(s24[3][1].text) && /refused and logged/.test(s24[3][2].text) && /Seat released/.test(s24[3][3].text) && /only instalments/.test(s24[3][4].text));
+    go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 7c/.test(s.textContent));
+    ok('UX Changelog: Batch 7c entry', !!ux && ['CH-42:', 'P-32', 'P-33:'].every(k => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(k))));
+    SA(); go('a-index'); ok('Admin index: 7c entries', !!app().querySelector('[data-t="a-learner.IA-L-31188.enrolments"]') && !!app().querySelector('[data-t="a-batches.L2DC-MAR26.staff"]'));
+    role('bizA'); go('b-index'); ok('Business index: Batch assignment', !!app().querySelector('[data-t="b-batchassign"]'));
   });
 
   fresh();

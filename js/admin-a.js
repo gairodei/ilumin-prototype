@@ -473,8 +473,8 @@ ACT.docDec = el => {
 };
 ACT.appApprove = el => {
   const a = allApplications().find(x => x.id === el.dataset.id);
-  const intake = a.v ? STORE.worlds[a.v].admission.batch : (a.intake || 'the intake chosen at sign-up');
-  reasonDlg({ title: 'Approve admission — ' + esc(a.name), ok: 'Approve admission', label: 'Note (required)', extra: `<dl class="kv"><dt>Intake</dt><dd>${esc(intake)} <span class="xs muted">(chosen at sign-up — approval confirms it)</span></dd></dl>`,
+  const intake = a.v ? STORE.worlds[a.v].admission.batch : (a.intake || 'the batch assigned at sign-up' /* CH-42 */);
+  reasonDlg({ title: 'Approve admission — ' + esc(a.name), ok: 'Approve admission', label: 'Note (required)', extra: `<dl class="kv"><dt>Intake</dt><dd>${esc(intake)} <span class="xs muted">(assigned at sign-up — approval confirms it)</span></dd></dl>`,
     onOk: r => { if (a.v) admissionApprove(a.v, r); else { const s = ADMIN.apps.find(x => x.id === a.id); s.status = 'Approved'; s.escalated = false; logA('Admissions', a.id, 'Admission approved', 'Under Review', 'Approved', r); } render(); toast('Admission approved.' + (a.v ? ' The learner\'s tracker has updated.' : '')); } });
 };
 ACT.appReject = el => { const a = allApplications().find(x => x.id === el.dataset.id); reasonDlg({ title: 'Reject application — ' + esc(a.name), ok: 'Reject application', danger: true, label: 'Reason (shown to the applicant)', onOk: r => { if (a.v) { const ad = STORE.worlds[a.v].admission; ad.status = 'Rejected'; ad.rejectReason = r; ad.history.push(['Rejected', now().toISOString()]); notifyLearner(a.v, 'Admission', 'Admission status changed', 'Your application was not approved.', 'admission'); chRejectedAfterPay(a.v, r); /* CH-12 / CH-13: access stays; Finance decides on any refund */ } else ADMIN.apps.find(x => x.id === a.id).status = 'Rejected'; logA('Admissions', a.id, 'Application rejected', a.status, 'Rejected', r); render(); toast('Application rejected.'); } }); };

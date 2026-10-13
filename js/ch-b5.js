@@ -41,15 +41,15 @@ const chAssessorNames = () => [...new Set((typeof activeStaff === 'function' ? a
 function chAssessSeed() {
   const S_ = chAllocs(), set = (code, asg, pd, obs) => { if (!S_[code]) S_[code] = { asg, pd, obs }; };
   set('L3AC-JAN26', 'Sarah Okonkwo', 'Sarah Okonkwo', 'Sarah Okonkwo'); // one person holds all three roles
-  set('L2DC-MAR26', 'James Pryce', 'Sarah Okonkwo', 'Michael Osei'); // three different assessors
+  set('L2DC-MAR26', 'James Pryce', 'Sarah Okonkwo', 'James Pryce'); // P-33: not Michael Osei, the batch's Coordinator
   const O = chOvs(), at = D(-12, '10:00');
-  if (!O['IA-L-33107']) O['IA-L-33107'] = { pd: { name: 'Michael Osei', reason: 'Continuity: Michael ran her PD at her previous employer.', by: 'Michael Osei', at } }; // Olivia Shaw (Croydon Cohort 4) — PD override
+  if (!O['IA-L-33107']) O['IA-L-33107'] = { pd: { name: 'James Pryce', reason: 'Continuity: James ran her PD at her previous employer.', by: 'Michael Osei', at } }; // Olivia Shaw (Croydon Cohort 4) — PD override (P-33: not the Coordinator)
   if (!O['IA-L-30755']) O['IA-L-30755'] = { obs: { name: 'James Pryce', reason: 'James is the Academy\'s assessor nearest to Ben\'s workplace.', by: 'Dr Helen Carter', at } }; // Ben Carter (Leicester Cohort 7) — observation override
   ADMIN.batches.forEach(b => { chAllocOf(b); chSyncAssessors(b); });
   STORE.chAsgSeed = STORE.chAsgSeed || Object.fromEntries(ADMIN.batches.map(b => [b.code, chAllocOf(b).asg]));
   // an upcoming observation in Croydon Cohort 4, with that batch's observation assessor (Scenario #21)
   const lid = 'IA-L-33100', L = allLearners().find(l => l.id === lid);
-  if (STORE.tas && STORE.tas.obs && L && !STORE.tas.obs.some(o => o.id === 'TO-9')) STORE.tas.obs.push({ id: 'TO-9', lid, learner: L.name, home: 'Addington Court Nursing Home', addr: '118 Addington Road, Croydon CR0 2BX', at: D(4, '10:00'), scope: '301 2.1, 301 2.2', nvqN: 2, iaN: 4, status: 'Confirmed', resp: 'Workplace contact', perm: 'Granted', assessor: 'Michael Osei' });
+  if (STORE.tas && STORE.tas.obs && L && !STORE.tas.obs.some(o => o.id === 'TO-9')) STORE.tas.obs.push({ id: 'TO-9', lid, learner: L.name, home: 'Addington Court Nursing Home', addr: '118 Addington Road, Croydon CR0 2BX', at: D(4, '10:00'), scope: '301 2.1, 301 2.2', nvqN: 2, iaN: 4, status: 'Confirmed', resp: 'Workplace contact', perm: 'Granted', assessor: 'James Pryce' }); /* P-33 */
   // learners see who their assessors are; upcoming observations name the observation assessor (completed ones keep theirs)
   ['C', 'D'].forEach(v => { const w = STORE.worlds[v]; if (!w || !w.nvq) return; const b = chBatchOfLid(w.me.id); if (!b) return;
     w.nvq.people = w.nvq.people.filter(([r]) => !/^Assessor/.test(r)).concat(CH_AROLES.map(([k, l]) => [l.replace(' assessor', '') === 'Assignment' ? 'Assessor (assignments)' : k === 'pd' ? 'Assessor (PD)' : 'Assessor (observations)', chEff(w.me.id, k, b)]));

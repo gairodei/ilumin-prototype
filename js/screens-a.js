@@ -421,5 +421,5 @@ ACT.buyCourse = el => {
 ACT.applyNvq = el => {
   const c = CATALOGUE.find(x => x.id === el.dataset.id);
   if (W.admission) { toast('You already have a sign-up in progress. Continue it from Admission & Documents.', 'info'); go('admission'); return; }
-  confirmDlg({ title: 'Sign up for ' + esc(c.title) + '?', ok: 'Start sign-up', body: `<p>Signing up takes five steps: your details and intake, your documents, your offer letter, your payment, then you start.</p><p class="small muted">You start learning as soon as you've paid. The Academy reviews your application while you learn, usually within 7 days.</p>`, onOk: () => { toast('Sign-up started. In this prototype, variant B shows the applicant journey.', 'info'); S.edge = 'none'; setVariant('B'); go('admission'); } });
+  confirmDlg({ title: 'Sign up for ' + esc(c.title) + '?', ok: 'Start sign-up', body: `<p>Signing up takes five steps: your details (we assign your batch), your documents, your offer letter, your payment, then you start.</p><p class="small muted">You start learning as soon as you've paid. The Academy reviews your application while you learn, usually within 7 days.</p>`, onOk: () => { toast('Sign-up started. In this prototype, variant B shows the applicant journey.', 'info'); S.edge = 'none'; setVariant('B'); go('admission'); } });
 };

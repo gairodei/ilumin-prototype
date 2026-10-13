@@ -55,7 +55,7 @@
     if (po) ok('paused banner uses the real overdue row', ban && ban.textContent.includes(po.label || 'Instalment ' + po.n));
     S.edge = 'none';
     const sub = W.assignments.find(a => a.status === 'Submitted'); if (sub) { go('assignment', { id: sub.id }); ok('no "Under Review" step (not an assignment status)', !/Under Review/.test(main())); }
-    learner('B'); setEdge('seatReleased'); go('admission'); ok('"Seat released" offers a next step', /Message the Academy/.test(main())); setEdge('none');
+    learner('B'); setEdge('seatReleased'); go('admission'); ok('"Seat released" offers a next step: Sign up again (P-32: was Message the Academy)', !!document.querySelector('[data-act="chSignAgain"]')); setEdge('none');
   });
 
   T('Agency decline attribution', () => {

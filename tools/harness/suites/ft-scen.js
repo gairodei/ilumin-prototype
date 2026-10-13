@@ -35,7 +35,7 @@
     step(2, 2); go('a-admissions', { id: 'APP-B' }); const ap = allApplications().find(x => x.id === 'APP-B');
     ap.docs.filter(x => x.status === 'Submitted').forEach(x => ACT.docDec({ dataset: { a: 'APP-B', d: x.id, s: 'Approved' } }));
     ok('#2.2 documents approved', STORE.worlds.B.docs.filter(x => x.mand).every(x => x.status === 'Approved'), STORE.worlds.B.docs.map(x => x.id + ':' + x.status).join());
-    ACT.appApprove({ dataset: { id: 'APP-B' } }); rsn('All checks complete'); prim(); ok('#2.2 admission approved — the intake chosen at sign-up is confirmed', STORE.worlds.B.admission.status === 'Approved' && STORE.worlds.B.admission.batch === 'Abu Dhabi Cohort 1 — L3AC-DEC26-AUH', STORE.worlds.B.admission.status);
+    ACT.appApprove({ dataset: { id: 'APP-B' } }); rsn('All checks complete'); prim(); ok('#2.2 admission approved — the batch assigned at sign-up is confirmed (CH-42)', STORE.worlds.B.admission.status === 'Approved' && STORE.worlds.B.admission.batch === 'Abu Dhabi Cohort 1 — L3AC-DEC26-AUH', STORE.worlds.B.admission.status);
     step(2, 3); const bal = W.plans.find(p => p.e === 'nvq').rows[0]; ACT.payInst({ dataset: { e: 'nvq', n: '1' } }); prim(); await wait(3000); closeModal(); ok('#2.3 balance paid within the 28-day seat hold', bal.status === 'Paid' && bal.paid === bal.amount, bal.status);
   });
 
