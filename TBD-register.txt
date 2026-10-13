@@ -1,16 +1,18 @@
-Illumin Academy prototype — TBD register (4 topics remaining after the TBD cleanup and the client change list CH-01 … CH-31)
-Exported 13 Oct 2026. Counted by topic, not by instance: 0 Pending client · 4 Client to supply (P-29 in the Client Decisions Log).
+Illumin Academy prototype — TBD register (2 topics remaining after the TBD cleanup and the client change list CH-01 … CH-43)
+Exported 13 Oct 2026. Counted by topic, not by instance: 2 Pending client · 0 Client to supply.
 Format: ID | role/view | screen/route | element | exact TBD text — ID is the original register ID(s); each topic is listed once with every place it appears.
 
-T04 (034) | Agency | Agency → Purchases → approved bank-transfer purchase | Client-to-supply placeholder | Client to supply: bank payment instructions
-T06 (153, 163) | Public verification, Workplace contact | Verification page privacy notice; workplace privacy notice; workplace email footer | Client-to-supply placeholder | Client to supply: privacy notice URL
-T07 (154) | Learner | Learner certificates → Copy verification link | Client-to-supply placeholder | Client to supply: verification domain
-T08 (G6.6) | Teacher / Assessor, Super Admin, Academic Admin, Academic Coordinator, Learner | Assessor propose observation (office), assessor and admin observation lists, Coordinator observations, learner Observations, learner contact page | Client-to-supply placeholder | Client to supply: Academy office address
+P-31 | Super Admin, Academic Admin | Programme settings → Support type (from Batch 7b) | Pending client tag | Pending client: Fully assisted vs self-paced: what defines each, and is it set per course or per batch (P-31)
+P-34 | Super Admin, Academic Admin | Admin → Courses → short course → Modules | Pending client tag | Pending client: short-course module lists (P-34)
 
 Resolved by the client change list (13 Oct 2026):
 T01 (012, 055) | Pending client: how agencies receive VAT invoices for bank-transfer purchases | CH-05 — VAT invoices are sent by the Academy by email (note on agency bank-transfer purchases)
 T02 (013) | Pending client: storage region for learners outside the UK/UAE, and two-region hosting cost | CH-03 — UK → UK, UAE → UAE, any other country → UK
 T03 (019, 121) | Pending client: exchange-rate source, update frequency, rounding, and price lock at enrolment | CH-02 — every price is in GBP; no exchange rates
 T05 (039, 045, 152 + untagged) | Client to supply: Academy contact email and phone | CH-31 — System Configuration → "Academy contact details": 020 3983 0282 · info@welfarehs.co.uk · Mon–Sun 9:30 AM – 6 PM
+T04 (034) | Client to supply: bank payment instructions | CH-35 — System Configuration → "Bank details for transfers" (Lloyds Bank · 30-90-89 · 80060562 · Welfare Health and Safety Academy; confirmed by the client, P-35), shown with a reference on the sign-up bank step, learner "Pay by bank transfer" and agency bank-transfer purchases
+T06 (153, 163) | Client to supply: privacy notice URL | CH-32 — System Configuration → "Privacy notice": https://welfarehs.co.uk/privacy-policy
+T07 (154) | Client to supply: verification domain | CH-33 — System Configuration → "LMS domain" (lms.welfarehs.co.uk); links and QR codes use https://<LMS domain>/verify/<token>
+T08 (G6.6) | Client to supply: Academy office address | CH-34 — System Configuration → "Office locations": Luton office — 60 Park Street, Luton, LU1 3ET
 
 All other IDs of the previous register (TBD-001 to TBD-166) are resolved: KEEP (behaviour as built), CHANGE or REMOVE — see the UX Changelog, "TBD cleanup".

@@ -263,7 +263,7 @@ function wpcControls() {
 ACT.wpcGo = el => { const [r, id, tab] = el.dataset.t.split('.'); S.wpcOutcome = null; STORE.wpc.err = null; go(r, { id: id || undefined, tab: tab || undefined }); };
 ACT.wpcStep = el => { STORE.wpc.err = null; go(S.route, { id: el.dataset.t, tab: el.dataset.s || undefined }); };
 ACT.wpcRetry = () => render();
-ACT.wpcPrivacy = () => openModal({ title: 'Privacy notice', body: `<p class="small">Illumin Academy records your decision (your name, job title, the date and time, and your IP address) so that there is evidence of permission on the learner's file. We keep it for as long as the learner's records are kept. We never ask for information about your residents or service users.</p><p class="small">Full privacy notice: ${c2s('privacy notice URL')}</p>`, actions: [{ label: 'Close', cls: 'btn-primary' }] });
+ACT.wpcPrivacy = () => openModal({ title: 'Privacy notice', body: `<p class="small">Illumin Academy records your decision (your name, job title, the date and time, and your IP address) so that there is evidence of permission on the learner's file. We keep it for as long as the learner's records are kept. We never ask for information about your residents or service users.</p><p class="small">Full privacy notice: ${chPrivacyLink() /* CH-32 */}</p>`, actions: [{ label: 'Close', cls: 'btn-primary' }] });
 ACT.wpcA11y = () => openModal({ title: 'Accessibility statement', body: `<p class="small">These pages are designed to meet WCAG 2.2 AA. They work on small screens, with keyboard only and with screen readers. If something doesn't work for you, contact us (${academyContact()}).</p>`, actions: [{ label: 'Close', cls: 'btn-primary' }] });
 ACT.wpcIcs = () => toast('Calendar file downloaded (simulated).', 'info');
 INP.wpcDraft = el => {
@@ -377,7 +377,7 @@ function wEmailBody(e) {
   return `<div class="mail"><div class="mail-h"><div class="small"><strong>From:</strong> Illumin Academy</div><div class="small"><strong>To:</strong> ${esc(e.to.name)} &lt;${esc(e.to.email)}&gt;</div><div class="small muted">${wfmt(e.sent, tz)}</div><h2>${esc(subj)}</h2></div>
     <div class="mail-b"><p>Dear ${esc(e.to.name)} (${esc(e.to.title)}),</p>${body}
     ${btn ? `<p><button class="btn btn-primary wpc-btn" data-act="wpcGo" data-t="${route}.${e.token}">${btn}</button></p><p class="xs muted">Secure link: <span class="mono">https://portal.illumin-academy.example/w/${route.slice(2)}/${e.token}</span>${['permRequest', 'permReminder', 'obsProposed', 'obsRevised'].includes(e.kind) ? ` · expires ${wfmt(l.expires, tz)}` : ''}</p>` : ''}
-    <hr><p class="xs muted">Illumin Academy · ${academyContact()}<br>We use your details only to manage this request. Privacy notice: ${c2s('privacy notice URL')}<br>If you weren't expecting this, contact us.</p></div></div>`;
+    <hr><p class="xs muted">Illumin Academy · ${academyContact()}<br>We use your details only to manage this request. Privacy notice: ${chPrivacyLink() /* CH-32 */}<br>If you weren't expecting this, contact us.</p></div></div>`;
 }
 function wInbox(p) {
   const sel = p.id && STORE.wpc.emails.find(e => e.id === p.id), f = ui('wpcF', 'All'), q = (ui('wpcQ', '') || '').toLowerCase();

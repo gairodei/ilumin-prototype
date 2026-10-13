@@ -21,7 +21,7 @@ function verNorm(raw) {
   const m = s.match(/^WEL(\d{4})(\d{5})([A-Z]?)$/);
   return m ? `WEL-${m[1]}-${m[2]}${m[3]}` : null;
 }
-const verUrl = no => location.href.split('#')[0] + '#v-verify.' + no;
+const verUrl = no => chVerifyUrl(no); // CH-33: https://<LMS domain>/verify/<token> ("Open the page" opens the prototype page)
 
 // Every certificate number the public page can answer for, including replaced numbers.
 function verIndex() {
@@ -151,7 +151,7 @@ ACT.vCamOff = () => { S.ver.cam = null; render(); };
 ACT.vScan = () => { const no = STORE.ver.qrNo || verDefaultQr(); S.ver = { fresh: true }; go('v-verify', { id: no, tab: 'q' }); };
 ACT.vOpen = el => verOpen(el.dataset.no, el.dataset.via);
 ACT.vBack = () => { const t = S.vBack; S.vBack = null; S.ver = {}; setRoute(t); try { history.pushState(null, '', '#' + t); } catch (e) { /* sandboxed */ } render(); };
-ACT.vPrivacy = () => openModal({ title: 'Privacy notice', body: `<p class="small">This page shows only what is needed to confirm a certificate: the holder's full name, the course, the issue date and its status. Each check is logged (certificate number, time and IP address) to protect against misuse. We never show the holder's contact details, date of birth or other records.</p><p class="small">Full privacy notice: ${c2s('privacy notice URL')}</p>`, actions: [{ label: 'Close', cls: 'btn-primary' }] });
+ACT.vPrivacy = () => openModal({ title: 'Privacy notice', body: `<p class="small">This page shows only what is needed to confirm a certificate: the holder's full name, the course, the issue date and its status. Each check is logged (certificate number, time and IP address) to protect against misuse. We never show the holder's contact details, date of birth or other records.</p><p class="small">Full privacy notice: ${chPrivacyLink() /* CH-32 */}</p>`, actions: [{ label: 'Close', cls: 'btn-primary' }] });
 
 /* ---------- Wiring: existing "Copy verification link" + certificate QR codes ---------- */
 function verCopy(no) {
@@ -162,7 +162,7 @@ function verCopy(no) {
 const verQrBtn = (no, html) => `<button type="button" class="ver-qr" data-act="vOpen" data-no="${no}" data-via="q" title="Scan to verify" aria-label="Verification QR code for ${no} — open the verification page">${html}</button>`;
 ACT.copyVerify = el => {
   const c = W.certs.find(x => x.id === el.dataset.id), url = verUrl(c.no);
-  openModal({ title: 'Copy verification link', body: `<p>Anyone with this link can check that your certificate is real. So can anyone who scans the QR code on it. It shows your full name, the course, the issue date and the certificate status.</p><div class="field"><label for="vlink">Verification link</label><input class="input mono" id="vlink" readonly value="${esc(url)}"></div><p class="xs muted">Live address: ${c2s('verification domain')}</p>`,
+  openModal({ title: 'Copy verification link', body: `<p>Anyone with this link can check that your certificate is real. So can anyone who scans the QR code on it. It shows your full name, the course, the issue date and the certificate status.</p><div class="field"><label for="vlink">Verification link</label><input class="input mono" id="vlink" readonly value="${esc(url)}"></div><p class="xs muted">${chVerifyNote() /* CH-33 */}</p>`,
     actions: [{ label: 'Close' }, { label: 'Open the page', cls: 'btn', fn: () => verOpen(c.no) }, { label: `${ic('copy', 15)} Copy link`, cls: 'btn-primary', fn: () => { verCopy(c.no); } }] });
 };
 ACT.aCopyVerify = el => verCopy(el.dataset.n);

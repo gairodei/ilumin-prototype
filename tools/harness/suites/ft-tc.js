@@ -87,12 +87,12 @@
     go('w-inbox', { id: STORE.wpc.emails[0].id }); ok('166 no SMS version', !/SMS version|sms-phone/.test(html()));
   });
   await T('remaining tags + contact details', () => {
-    ok('4 topics: 0 Pending client, 4 Client to supply (CH-02, CH-03, CH-05, CH-31 resolved T01, T02, T03, T05)', TBD_TOPICS.length === 4 && TBD_TOPICS.every(t => t[0] === 'Client to supply'));
+    ok('2 topics: 2 Pending client, 0 Client to supply (CH-36: every Client to supply topic resolved; P-31, P-34)', TBD_TOPICS.length === 2 && TBD_TOPICS.every(t => t[0] === 'Pending client'));
     const pages = [['learner:C', 'help'], ['learner:C', 'checkout'], ['agyA', 'g-help'], ['agyA', 'g-messages'], ['ver', ''], ['learner:A', 'certificates'], ['learner:C', 'observations']];
     const seen = new Set(); learner('C'); go('help'); tbdTexts().forEach(t => seen.add(t)); agyEnter('AG-03', true); go('g-messages'); tbdTexts().forEach(t => seen.add(t)); go('g-help'); tbdTexts().forEach(t => seen.add(t));
     ok('every tag on these pages is a remaining topic', [...seen].every(t => TBD_TOPICS.some(x => t === x[0] + ': ' + x[1])), [...seen].join(' | '));
     ok('no fake contact details rendered', !/illumin\.academy|116 496|555 0142/.test(document.getElementById('app').innerHTML));
-    ACT.scOpen(); go('tbd-register'); ok('TBD register lists 4 topics (CH)', /Remaining — 4 topics/.test(main()) && /0 Pending client · 4 Client to supply/.test(main()));
+    ACT.scOpen(); go('tbd-register'); ok('TBD register lists 2 topics (CH-36)', /Remaining — 2 topics/.test(main()) && /2 Pending client · 0 Client to supply/.test(main()));
     go('cd-log'); ok('Decisions Log row', /TBD cleanup — 154 of 166 tags resolved by agreed defaults/.test(document.getElementById('app').textContent));
     go('ux-changelog'); ok('UX Changelog entry', /CHANGE 011:/.test(main()) && /REMOVE 166:/.test(main()));
   });

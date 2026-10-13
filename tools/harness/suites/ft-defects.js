@@ -87,7 +87,7 @@
     const w = STORE.worlds.C; w.observations.unshift({ id: 'o99', at: D(0, '10:00'), loc: 'Academy office', locType: 'office', assessor: 'James Pryce', scope: 'U302 2.1', status: 'Confirmed' });
     tasAs('A'); go('t-obsrec', { id: 'C-o99' });
     ok('D6 no Academy criteria on an office record', !/Illumin Academy criteria/.test(main()) && !document.querySelector('main [data-s="ia"]'));
-    ok('D6 office-address placeholder in the record header', /Client to supply: Academy office address/.test(main()));
+    ok('D6 office address in the record header (CH-34: Luton office)', /Luton office — 60 Park Street, Luton, LU1 3ET/.test(main()) && !/Client to supply/.test(main()));
     ACT.orT({ dataset: { s: 'nvq', c: '302 2.1', k: 'o', v: '1' } }); ACT.orT({ dataset: { s: 'nvq', c: '302 2.1', k: 'c', v: '0' } });
     ACT.orSign({ dataset: { id: 'C-o99' } }); prim();
     const o = w.observations.find(x => x.id === 'o99');

@@ -617,7 +617,7 @@ ACT.drawer = () => { S.drawer = !S.drawer; render(); };
 ACT.skip = () => { const m = $('#main'); m && m.focus(); };
 ACT.modalClose = () => closeModal();
 ACT.modalScrim = () => { if (MODAL && MODAL.dismissable) closeModal(); };
-ACT.policy = el => openModal({ title: el.dataset.p, body: `<p>${el.dataset.p === 'Contact' ? 'Illumin Academy · ' + c2s('Academy office address') + ' · ' + academyContact() : `The full ${el.dataset.p.toLowerCase()} opens here. This prototype shows a placeholder.`}</p><p class="small muted">Version 3.2 · published 1 Aug 2026</p>`, actions: [{ label: 'Close', cls: 'btn-primary' }] });
+ACT.policy = el => openModal({ title: el.dataset.p, body: `<p>${el.dataset.p === 'Contact' ? 'Illumin Academy · ' + chOfficeTxt() /* CH-34 */ + ' · ' + academyContact() : `The full ${el.dataset.p.toLowerCase()} opens here. This prototype shows a placeholder.`}</p><p class="small muted">Version 3.2 · published 1 Aug 2026</p>`, actions: [{ label: 'Close', cls: 'btn-primary' }] });
 
 /* ---------- Event delegation ---------- */
 document.addEventListener('click', e => {

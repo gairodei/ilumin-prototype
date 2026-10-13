@@ -1,6 +1,6 @@
 // Client decisions CH-01 … CH-31 — one block per batch.
 // Batch 1: CH-01 country fixed, CH-02 GBP only, CH-03 data region, CH-05 VAT invoices, CH-31 contact details,
-// the placeholder register (4 topics), CH-24 unchanged, and the CH records. … Batch 6: CH-06 VAT on agency bundles.
+// the placeholder register (4 topics), CH-24 unchanged, and the CH records. … Batch 6: CH-06 VAT on agency bundles. Batch 7a: CH-32 – CH-36.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -178,16 +178,16 @@
   });
 
   /* ---------- Placeholder register ---------- */
-  await T('CH register: 4 topics remain', () => {
+  await T('CH register: 1 topic remains (CH-36)', () => {
     fresh();
-    ok('Register: 4 topics, all "Client to supply"', TBD_TOPICS.length === 4 && TBD_TOPICS.every(t => t[0] === 'Client to supply'));
-    ok('Register: T04, T06, T07, T08 remain', ['bank payment instructions', 'privacy notice URL', 'verification domain', 'Academy office address'].every(x => TBD_TOPICS.some(t => t[1] === x)));
+    ok('Register: 2 topics, P-31 and P-34 Pending client (CH-36)', TBD_TOPICS.length === 2 && TBD_TOPICS.every(t => t[0] === 'Pending client') && /P-31/.test(TBD_TOPICS[0][1]) && /P-34/.test(TBD_TOPICS[1][1]));
+    ok('Register: T04, T06, T07, T08 resolved (CH-32 – CH-35)', !['bank payment instructions', 'privacy notice URL', 'verification domain', 'Academy office address'].some(x => TBD_TOPICS.some(t => t[1] === x)));
     ok('Register: T01, T02, T03, T05 gone', !TBD_TOPICS.some(t => /VAT invoices|storage region|exchange-rate|contact email/.test(t[1])));
     ACT.scOpen(); go('tbd-register'); const t = main();
-    ok('TBD register page: 4 topics, 0 Pending client', /Remaining — 4 topics/.test(t) && /0 Pending client · 4 Client to supply/.test(t));
+    ok('TBD register page: 2 topics, 2 Pending client (CH-36)', /Remaining — 2 topics/.test(t) && /2 Pending client · 0 Client to supply/.test(t));
     ok('TBD register page: resolved by the client change list', /Resolved by the client change list/.test(t) && ['T01', 'T02', 'T03', 'T05'].every(x => t.includes(x)) && ['CH-05', 'CH-03', 'CH-02', 'CH-31'].every(x => t.includes(x)));
     learner('C'); go('index'); const items = [...app().querySelectorAll('#main section.card:not(.idx-sec) .idx-list li')];
-    ok('Learner index: 4 items pending client confirmation', items.length === 4, items.length);
+    ok('Learner index: 2 items pending client confirmation (CH-36)', items.length === 2, items.length);
     const seen = new Set(); [['C', 'help'], ['A', 'browse'], ['B', 'payments']].forEach(([v, r]) => { learner(v); go(r); app().querySelectorAll('.tbd').forEach(x => seen.add(x.textContent.trim())); });
     SA(); ['a-learners', 'a-courses', 'a-dataprotection'].forEach(r => { go(r); app().querySelectorAll('.tbd').forEach(x => seen.add(x.textContent.trim())); });
     ok('No "Pending client" tag left on sampled screens', ![...seen].some(x => /^Pending client/.test(x)), [...seen].join(' | '));
@@ -203,16 +203,18 @@
   await T('CH records (Batch 1)', async () => {
     fresh(); ACT.scOpen(); go('cd-log'); const secs = [...app().querySelectorAll('main section.card')];
     ok('Decisions Log: final decisions list still first', /Final decisions list \(binding\)/.test(secs[0].textContent));
-    const ch = secs.find(s => /Client decisions — change list \(CH-01 … CH-31\)/.test(s.textContent)), rows = ch ? [...ch.querySelectorAll('tbody tr')] : [];
+    const ch = secs.find(s => /Client decisions — change list \(CH-01 … CH-43\)/.test(s.textContent)) /* CH-32 – CH-43 extend the list */, rows = ch ? [...ch.querySelectorAll('tbody tr')] : [];
     const row = id => (rows.find(r => r.firstChild.textContent === id) || {}).textContent || '';
-    ok('Decisions Log: a row for every CH ID', rows.length === 31 && rows.every((r, i) => r.firstChild.textContent === 'CH-' + String(i + 1).padStart(2, '0')), rows.length);
+    ok('Decisions Log: a row for every CH ID (CH-01 … CH-43)', rows.length === 43 && rows.every((r, i) => r.firstChild.textContent === 'CH-' + String(i + 1).padStart(2, '0')), rows.length);
     ok('Decisions Log: sources S1–S6 listed', !!ch && ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].every(s => ch.textContent.includes(s)));
     ok('Decisions Log: CH-01, 02, 03, 05, 31 Applied (Batch 1), 13 Oct 2026', ['CH-01', 'CH-02', 'CH-03', 'CH-05', 'CH-31'].every(id => /Applied \(Batch 1\)13 Oct 2026/.test(row(id))));
     ok('Decisions Log: sources as in the change list', /S3→S4/.test(row('CH-01')) && /S3→S4\/S5/.test(row('CH-02')) && /S1→S2→S4/.test(row('CH-18')) && /S1\/S6/.test(row('CH-24')));
     ok('Decisions Log: Batch 2 applied, CH-11 partly, later batches scheduled', ['CH-07', 'CH-08', 'CH-09', 'CH-10'].every(id => /Applied \(Batch 2\)13 Oct 2026/.test(row(id))) && /Applied \(Batch 2\/3\)13 Oct 2026/.test(row('CH-11')) && /Applied \(Batch 6\)13 Oct 2026/.test(row('CH-06')) && ['CH-12', 'CH-13', 'CH-14'].every(id => /Applied \(Batch 3\)13 Oct 2026/.test(row(id))) && /Applied \(Batch 5\)13 Oct 2026/.test(row('CH-17')));
     ok('Decisions Log: earlier and confirmed items', /Confirmed: already built, no change/.test(row('CH-04')) && /Applied earlier \(C7, b8bce5b\)/.test(row('CH-24')) && /Confirmed: no change/.test(row('CH-30')));
-    const pc = secs.find(s => s.querySelector('h2') && s.querySelector('h2').textContent === 'Pending client'), prow = pc ? [...pc.querySelectorAll('tbody tr')].map(r => r.textContent) : [];
-    ok('Decisions Log: P-27 … P-30 Pending client', prow.length === 4 && ['P-27', 'P-28', 'P-29', 'P-30'].every((p, i) => prow[i].startsWith(p) && /Pending client/.test(prow[i])) && /Observation fee/.test(prow[0]) && /Mistyped country/.test(prow[1]) && /Data Correction/.test(prow[1]) && /Intake choice at sign-up/.test(prow[3]));
+    const pc = secs.find(s => s.querySelector('h2') && s.querySelector('h2').textContent === 'Open client items'), prow = pc ? [...pc.querySelectorAll('tbody tr')].map(r => r.textContent) : [];
+    const pst = id => prow.find(x => x.startsWith(id)) || '';
+    ok('Decisions Log: open client items P-27 … P-35 with their status', prow.length === 9 && /Resolved by CH-38 \(built in 7b\)/.test(pst('P-27')) && /Resolved \(Data Correction fallback\)/.test(pst('P-28')) && /Resolved by CH-42 \(built in 7c\)/.test(pst('P-30')) && /Resolved/.test(pst('P-32')) && /does not lock/.test(pst('P-32')) && /Resolved/.test(pst('P-33')) && /can't be its assignment, PD or observation assessor/.test(pst('P-33')) && /Resolved/.test(pst('P-35')));
+    ok('Decisions Log: still pending — P-31 and P-34 only', ['P-31', 'P-34'].every(p => /Pending client/.test(pst(p))) && prow.filter(x => /Pending client/.test(x)).length === 2 && /Still pending: P-31, P-34\./.test(pc.textContent));
     const fu = secs.find(s => /Follow-up decisions \(P-05 – P-26\)/.test(s.textContent)), st = id => ([...fu.querySelectorAll('tbody tr')].find(tr => tr.firstChild.textContent === id) || {}).textContent || '';
     ok('Decisions Log: F1 Superseded (CH-01); F2, F3b, F8 Resolved; F3a Superseded', /Superseded \(CH-01\)/.test(st('F1')) && /Resolved \(CH-02\)/.test(st('F2')) && /Superseded \(CH-02\)/.test(st('F3a')) && /Resolved \(CH-03\)/.test(st('F3b')) && /Resolved \(CH-05\)/.test(st('F8')));
     ok('Decisions Log: 22 scenarios; #16 is the new sign-up', /All 22 run end to end in the prototype\./.test(main()) && CDL_SCEN.filter(r => r[0] === '16').length === 1 && CDL_SCEN.find(r => r[0] === '16')[1] === 'New sign-up: documents → offer letter → payment → start' && !CDL_SCEN.some(r => r[1] === 'Learner moves country'));
@@ -221,10 +223,10 @@
     go('demo-scenarios'); ok('Demo Scenarios: "Twenty-two", 22 sections, #16 is the new sign-up', /Twenty-two end-to-end walkthroughs/.test(main()) && app().querySelectorAll('main section[id^="sc-"]').length === 22 && /New sign-up/.test((app().querySelector('#sc-16') || {}).textContent || ''));
     renderDemo(); AFTER.forEach(f => f()); const b = document.querySelector('#demo-root [data-act="scOpen"]'); ok('Demo panel: "Open the 22 Demo Scenarios"', !b || b.textContent === 'Open the 22 Demo Scenarios', b && b.textContent);
     learner('A'); go('index'); const ix = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
-    ok('Learner index: CH entries (incl. registration confirmation, 1b), each with a purpose line', !!ix && ix.querySelectorAll('li').length === 17 && !!ix.querySelector('[data-act="regStart"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 22 walkthroughs/.test(main()));
+    ok('Learner index: CH entries (incl. registration confirmation, 1b), each with a purpose line', !!ix && ix.querySelectorAll('li').length === 18 && !!ix.querySelector('[data-act="regStart"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 22 walkthroughs/.test(main()));
     ix.querySelector('[data-m="chCheckout"]').click(); await wait(150); ok('Learner index: checkout entry opens the checkout with the Stripe line', !!MODAL && !!mroot().querySelector('.ch-stripe')); closeModal();
     SA(); go('a-index'); const ax = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
-    ok('Admin index: Batch 1–6 entries with purposes', !!ax && ax.querySelectorAll('li').length === 17 && ['a-config', 'a-learner.IA-L-31900', 'a-dataprotection..residency', 'a-programmes.NV-L3.letter', 'a-admissions.APP-C', 'a-learner.IA-L-31188.admission'].every(t => ax.querySelector(`[data-t="${t}"]`)) && [...ax.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && !/Priya Nair \(moved country/.test(main()));
+    ok('Admin index: Batch 1–7a entries with purposes', !!ax && ax.querySelectorAll('li').length === 20 && ['a-config', 'a-learner.IA-L-31900', 'a-dataprotection..residency', 'a-programmes.NV-L3.letter', 'a-admissions.APP-C', 'a-learner.IA-L-31188.admission'].every(t => ax.querySelector(`[data-t="${t}"]`)) && [...ax.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && !/Priya Nair \(moved country/.test(main()));
   });
 
   /* ================= Batch 2 ================= */
@@ -273,7 +275,7 @@
   await T('CH-10 payment — deposit case, card', async () => {
     ok('CH-10 deposit offered (intake 28+ days away) and instalments; no pay in full', !!$('input[name="su-opt"][value="deposit"]') && !!$('input[name="su-opt"][value="instalment"]') && !/pay in full|full amount/i.test(main()));
     ok('CH-10 methods: card and bank transfer', !!$('input[name="su-m"][value="card"]') && !!$('input[name="su-m"][value="bank"]'));
-    setUi('suMethod', 'bank'); render(); ok('CH-10 bank transfer: instructions placeholder (T04), reference, "Awaiting confirmation by Finance"', /Client to supply: bank payment instructions/.test(main()) && /IA-31188-DEP/.test(main()) && /Awaiting confirmation by Finance/.test(main()));
+    setUi('suMethod', 'bank'); render(); ok('CH-10 bank transfer: bank details (CH-35), reference, "Awaiting confirmation by Finance"', /Lloyds Bank · Sort code 30-90-89 · Account number 80060562/.test(main()) && !/Client to supply/.test(main()) && /IA-31188-DEP/.test(main()) && /Awaiting confirmation by Finance/.test(main()));
     setUi('suMethod', 'card'); render(); const b = chBatch('L3AC-DEC26-AUH'), e0 = b.enrolled;
     ACT.suPay(); ok('CH-02 card checkout shows the Stripe line', !!mroot().querySelector('.ch-stripe') && /£300\.00/.test(mroot().textContent));
     prim(); await wait(2500); closeModal();
@@ -612,7 +614,7 @@
     ok('CH-06 mock queue items: AQ-7300 Approved by Finance, AQ-7301 Pending with Finance Admin', Q6('AQ-7300').status === 'Approved' && Q6('AQ-7300').decidedBy === FIN_A && Q6('AQ-7301').status === 'Pending' && Q6('AQ-7301').first === FIN_A && Q6('AQ-7301').raisedBy === BIZ_A);
     ok('CH-06 type in every list (Super Admin, Finance, Business)', QTYPES.includes('Bundle VAT setting') && FIN_TYPES.includes('Bundle VAT setting') && BIZ_TYPES.includes('Bundle VAT setting') && qLbl('Bundle VAT setting') === 'Bundle VAT');
     SA(); go('a-queue'); ACT.qRouting(); const rows = [...document.querySelectorAll('#modal-root tbody tr')].map(tr => [...tr.children].map(td => td.textContent.trim()).join(' | '));
-    ok('CH-06 "Who approves what": 15 rows incl. Bundle VAT setting', rows.length === 15 && rows.includes('Bundle VAT setting | Business Admin | Finance Admin | Super Admin'), rows.length);
+    ok('CH-06 "Who approves what": incl. Bundle VAT setting (17 rows from CH-34, CH-35)', rows.length === 17 && rows.includes('Bundle VAT setting | Business Admin | Finance Admin | Super Admin'), rows.length);
     closeModal();
   });
 
@@ -723,6 +725,122 @@
     role('bizA'); go('b-index'); ok('Business index: CH-06 entries', !!app().querySelector('[data-t="a-bundles.CAT-3.catalogue"]') && !!app().querySelector('[data-t="a-queue.AQ-7301"]'));
     role('finA'); go('f-index'); ok('Finance index: CH-06 entries', !!app().querySelector('[data-t="a-queue.AQ-7301"]') && !!app().querySelector('[data-t="f-ledger"]'));
     role('agyA'); go('g-index'); ok('Agency index: CH-06 entries', !!app().querySelector('[data-r="g-buy"]') && /net \+ VAT = total/.test(main()));
+  });
+
+  /* ================= Batch 7a ================= */
+  // CH-32 privacy notice, CH-33 verification address, CH-34 office locations, CH-35 bank details, CH-36 register
+  const sys = () => role('sysA');
+  const qOf = (type, f = () => true) => ADMIN.queue.find(i => i.type === type && f(i));
+  const fill7 = o => Object.entries(o).forEach(([k, v]) => { const e = document.querySelector(k); e.value = v; });
+  const NOTAG = () => !/Client to supply/.test(html());
+
+  await T('CH-32 / CH-33 settings, privacy notice and verification link', async () => {
+    fresh(); SA(); go('a-config'); const t = main();
+    ok('CH-32 setting "Privacy notice" = https://welfarehs.co.uk/privacy-policy', /Privacy notice\s*https:\/\/welfarehs\.co\.uk\/privacy-policy/.test(t));
+    ok('CH-33 setting "LMS domain" = lms.welfarehs.co.uk with the deployment note', /LMS domain\s*lms\.welfarehs\.co\.uk/.test(t) && /Set at deployment; the client's IT team points this subdomain to the LMS\./.test(t));
+    ok('CH-35 setting "Bank details for transfers" (confirmed, P-35: no Proposed default tag)', /Bank details for transfers\s*Lloyds Bank · Sort code 30-90-89 · Account number 80060562 · Account name Welfare Health and Safety Academy/.test(t) && !/Proposed default/.test(html()));
+    ACT.vPrivacy(); ok('CH-32 verification page privacy notice links the URL', MODAL.body.includes('href="https://welfarehs.co.uk/privacy-policy"') && !/Client to supply/.test(MODAL.body)); closeModal();
+    ACT.wpcPrivacy(); ok('CH-32 workplace privacy notice links the URL', MODAL.body.includes('href="https://welfarehs.co.uk/privacy-policy"')); closeModal();
+    const u = verUrl('WHS-2026-00123');
+    ok('CH-33 verification link: https://lms.welfarehs.co.uk/verify/<token>', /^https:\/\/lms\.welfarehs\.co\.uk\/verify\/[a-z0-9]{12}$/.test(u) && u === verUrl('WHS-2026-00123') && u !== verUrl('WHS-2026-00124'), u);
+    learner('A'); go('certificates'); const b = app().querySelector('[data-act="copyVerify"]'); ACT.copyVerify(b);
+    ok('CH-33 "Copy verification link" shows the LMS link, no placeholder', /https:\/\/lms\.welfarehs\.co\.uk\/verify\//.test(document.querySelector('#vlink').value) && !/Client to supply/.test(MODAL.body)); closeModal();
+    SA(); go('a-config'); const c = ADMIN.config.find(x => x.name === 'LMS domain'); ACT.cfgEdit({ dataset: { id: c.id } }); document.querySelector('#cv').value = 'learn.welfarehs.co.uk'; document.querySelector('#rsn').value = 'Deployment'; press();
+    ok('CH-33 the link follows the setting', /^https:\/\/learn\.welfarehs\.co\.uk\/verify\//.test(verUrl('X')));
+    ACT.policy({ dataset: { p: 'Contact' } }); ok('CH-34 contact modal: Luton office address', /Luton office — 60 Park Street, Luton, LU1 3ET/.test(MODAL.body) && !/Client to supply/.test(MODAL.body)); closeModal();
+  });
+
+  await T('CH-34 office locations: approval, booking dropdown, history kept', async () => {
+    fresh(); SA(); go('a-config');
+    ok('CH-34 Office locations: Luton office Active; Milton Keynes pending (AQ-9001)', /Office locations/.test(main()) && /Luton office\s*60 Park Street, Luton\s*LU1 3ET\s*Active/.test(main()) && /Milton Keynes office[\s\S]*Pending approval/.test(main()));
+    sys(); go('a-config'); ACT.chOffAdd(); fill7({ '#ol-n': 'Bedford office', '#ol-a': '5 Mill Street, Bedford', '#ol-p': 'mk40 3ew', '#rsn': 'New site.' }); press();
+    const i = qOf('Office location change', x => x.data.after && x.data.after.name === 'Bedford office');
+    ok('CH-34 System Admin adds → "Office location change" for the Super Admin; not active yet', !!i && i.status === 'Pending' && i.first === 'Super Administrator' && i.raisedBy === ADMIN.me.name && i.data.after.postcode === 'MK40 3EW' && !chOffices().some(o => o.name === 'Bedford office'));
+    ok('CH-34 audited', ADMIN.audit.some(a => a.module === 'System Configuration' && a.action === 'Add requested' && /Bedford office/.test(a.entity)));
+    ACT.qDo({ dataset: { id: i.id, a: 'approve' } }); closeModal(); applyDecision(i, 'approve', 'self', {});
+    ok('CH-34 the System Admin can\'t approve it', i.status === 'Pending' && !chOffices().some(o => o.name === 'Bedford office'));
+    i.raised = D(-8); allQueue(); ok('CH-34 after 7 days: reminder, not escalation', i.status === 'Pending' && i.reminder && !i.escalated);
+    SA(); applyDecision(i, 'approve', 'Agreed.', {}); ok('CH-34 Super Admin approves → Bedford office Active', i.status === 'Approved' && chOffices().find(o => o.name === 'Bedford office').status === 'Active');
+    S.tas.v = 'A'; tasEnter(); S.signedIn = true; go('t-obs');
+    const book = () => { ACT.obPropose({ dataset: {} }); const off = document.querySelector('input[name="op-lt"][value="office"]'); off.checked = true; INP.obLt(off); };
+    book(); const lid = document.querySelector('#op-l').value, L = tasLearners(true).find(l => l.lid === lid), list = () => L.v ? STORE.worlds[L.v].observations : STORE.tas.obs, n = list().length;
+    ok('CH-34 booking: dropdown of active locations', [...document.querySelectorAll('#op-office option')].map(o => o.textContent).join('|') === 'Luton office — 60 Park Street, Luton, LU1 3ET|Bedford office — 5 Mill Street, Bedford, MK40 3EW');
+    prim(); const rec = list()[0];
+    ok('CH-34 booked office observation stores its location', list().length === n + 1 && rec.locType === 'office' && rec.office && rec.office.name === 'Luton office');
+    SA(); go('a-config'); ACT.chOffRetire({ dataset: { id: 'OL-1' } }); document.querySelector('#rsn').value = 'Lease ended.'; press();
+    const ri = qOf('Office location change', x => x.data.kind === 'retire');
+    ok('CH-34 Super Admin\'s own retire applies immediately', chOffices().find(o => o.id === 'OL-1').status === 'Retired' && ri && ri.saImmediate && ri.status === 'Approved');
+    ok('CH-34 past observation keeps Luton office after it is retired', rec.office.name === 'Luton office' && chOfficeLine(chOfficeOf(rec)) === 'Luton office — 60 Park Street, Luton, LU1 3ET');
+    if (L.v) { learner(L.v); go('observations'); ok('CH-34 learner Observations: the booked location, no placeholder', /Luton office — 60 Park Street/.test(main()) && NOTAG()); }
+    S.tas.v = 'A'; tasEnter(); S.signedIn = true; go('t-obs'); book();
+    ok('CH-34 booking after retiring: only active locations', [...document.querySelectorAll('#op-office option')].map(o => o.textContent).join('|') === 'Bedford office — 5 Mill Street, Bedford, MK40 3EW'); closeModal();
+    go('t-obs'); ok('CH-34 assessor list: office locations shown, no placeholder', /Luton office|Bedford office/.test(main()) && NOTAG());
+  });
+
+  await T('CH-35 bank details: change approval, Finance told, shown everywhere', async () => {
+    fresh(); SA(); const p = qOf('Bank details change');
+    ok('CH-35 mock: AQ-9002 bank change pending for the Super Admin', p && p.id === 'AQ-9002' && p.status === 'Pending' && p.first === 'Super Administrator');
+    sys(); go('a-config'); const c = ADMIN.config.find(x => x.name === 'Bank details for transfers'); ACT.cfgEdit({ dataset: { id: c.id } });
+    ok('CH-35 a second change is refused while one is pending', !MODAL || !document.querySelector('#bk-a')); closeModal();
+    SA(); applyDecision(p, 'reject', 'Wrong account.', {}); ok('CH-35 Super Admin rejects → details unchanged; Finance told', p.status === 'Rejected' && chBankDet().acc === '80060562' && STORE.fin.notifs.some(nn => /Bank details change rejected/.test(nn.t)));
+    sys(); go('a-config'); ACT.cfgEdit({ dataset: { id: c.id } }); fill7({ '#bk-a': '1234', '#rsn': 'New account' }); press();
+    ok('CH-35 validation: 8-digit account number', !!MODAL && /Enter 8 digits/.test(mroot().textContent));
+    fill7({ '#bk-a': '80060599' }); press(); const q = qOf('Bank details change', x => x.status === 'Pending');
+    ok('CH-35 System Admin raises "Bank details change" → Super Admin; Finance notified of the request', !!q && q.data.after.acc === '80060599' && chBankDet().acc === '80060562' && STORE.fin.notifs.some(nn => /Bank details change requested/.test(nn.t) && nn.b.includes(q.id)));
+    applyDecision(q, 'approve', 'self', {}); ok('CH-35 the System Admin can\'t approve their own change', q.status === 'Pending');
+    SA(); go('a-queue', { id: q.id }); ok('CH-35 queue panel: before and after', /Bank details change/.test(main()) && /80060599/.test(main()));
+    applyDecision(q, 'approve', 'Confirmed with the bank.', {});
+    ok('CH-35 approved → new details used; Finance told of the outcome; audited', chBankDet().acc === '80060599' && /80060599/.test(c.value) && STORE.fin.notifs.some(nn => /Bank details change approved/.test(nn.t)) && ADMIN.audit.some(a => a.action === 'Bank details change approved'));
+    learner('C'); go('payments'); const b = app().querySelector('[data-act="chPayBank"]');
+    ok('CH-35 learner Payments: "Bank transfer" next to Pay now', !!b);
+    ACT.chPayBank(b); ok('CH-35 Pay by bank transfer: bank details and a reference', /Lloyds Bank · Sort code 30-90-89 · Account number 80060599/.test(mroot().textContent) && /Reference IA-/.test(mroot().textContent));
+    prim(); const x = STORE.chBank.find(y => y.wv === 'C' && y.status === 'Awaiting confirmation');
+    ok('CH-35 transfer recorded as Awaiting confirmation; Pay now hidden for that instalment', !!x && W.plans.find(pl => pl.e === x.e).rows.find(r => r.n === x.n).confirming && /Bank transfer awaiting confirmation/.test(main()));
+    FA(); const tg = payTargets().find(t => t.chb === x); ok('CH-35 Finance: the transfer is a payment target', !!tg && /instalment/.test(tg.label));
+    recordPayment(tg, x.amount, 'BACS-77001', 'Bank transfer', 'Received');
+    const row = STORE.worlds.C.plans.find(pl => pl.e === x.e).rows.find(r => r.n === x.n);
+    ok('CH-35 recorded → instalment paid, learner notified, ledger once', x.status === 'Confirmed' && row.status === 'Paid' && !row.confirming && allTx().filter(t => t.ref === 'BACS-77001').length === 1 && STORE.worlds.C.notifs.some(nn => /Bank transfer received/.test(nn.title)));
+    role('agyA'); const ap = agyPurchases().find(y => y.status === 'Approved – awaiting payment') || (role('agyB'), agyPurchases().find(y => y.status === 'Approved – awaiting payment'));
+    if (ap) { go('g-purchase', { id: ap.ref }); ok('CH-35 agency bank-transfer purchase: bank details with the reference', /Lloyds Bank/.test(main()) && main().includes('Reference ' + ap.ref) && NOTAG()); } else ok('CH-35 agency bank-transfer purchase: bank details (no approved purchase in mock)', /Lloyds Bank/.test(chBankHtml('X')));
+  });
+
+
+  await T('P-28 country corrected only through Data Correction', async () => {
+    fresh(); const lid = STORE.worlds.A.me.id, was = STORE.worlds.A.me.country, to = regionOf(was) === 'UAE' ? 'United Kingdom' : 'United Arab Emirates';
+    role('sysA'); go('a-learner', { id: lid, tab: 'profile' }); ACT.raiseDC({ dataset: { id: lid } });
+    const f = document.querySelector('#dc-f'); ok('P-28 Data Correction offers "Country of residence"', [...f.options].some(o => o.value === 'Country of residence'));
+    f.value = 'Country of residence'; INP.chDcField(f);
+    ok('P-28 raising shows the region note and a country list', /If the region changes between UK and UAE, an admin moves the learner's data \(audited, one-off\)\./.test(mroot().textContent) && /Only for a genuine mistake at registration/.test(mroot().textContent) && document.querySelector('#dc-p').tagName === 'SELECT');
+    document.querySelector('#dc-p').value = to; document.querySelector('#dc-r').value = 'Chose the wrong country at registration — passport and visa show UAE residence.'; prim();
+    const i = ADMIN.queue.find(x => x.type === 'Data correction' && x.data && x.data.field === 'Country of residence');
+    ok('P-28 a Data Correction item: current → proposed, region move flagged, final Super Admin', !!i && i.data.current === was && i.data.proposed === to && i.data.regionMove === true && i.finalSuper && i.status === 'Pending');
+    ok('P-28 nothing changes before final approval', STORE.worlds.A.me.country === was);
+    SA(); go('a-queue', { id: i.id }); ok('P-28 queue item: country correction note', /Country correction/.test(main()) && /an admin moves the learner's data \(audited, one-off\)/.test(main()));
+    applyDecision(i, 'approveFinal', 'Evidence checked.', {});
+    ok('P-28 Super Admin final → country corrected, audited, region move logged once', STORE.worlds.A.me.country === to && ADMIN.audit.some(a => a.action === 'Data correction (final)' && a.after === to) && ADMIN.audit.filter(a => a.action === 'Data region move (one-off)' && a.entity === lid).length === 1);
+    learner('A'); go('profile'); const row = [...app().querySelectorAll('main .li')].find(li => /Country of residence/.test(li.textContent));
+    ok('P-28 never a profile request: Country stays read-only for the learner', !!row && !row.querySelector('[data-act="reqChange"]') && Object.values(STORE.worlds).every(w => !(w.requests || []).some(r => /Country/.test(r.target))));
+  });
+
+  await T('P-34 short-course module lists tagged Pending client', async () => {
+    fresh(); SA(); const c = ADMIN.courses.find(x => x.status === 'Published'); go('a-courses', { id: c.id, tab: 'modules' });
+    ok('P-34 Courses → Modules: "Pending client: short-course module lists (P-34)"', [...app().querySelectorAll('.tbd')].some(x => x.textContent === 'Pending client: short-course module lists (P-34)'));
+  });
+
+  /* ---------- Records (Batch 7a) ---------- */
+  await T('CH records (Batch 7a)', async () => {
+    fresh(); ACT.scOpen(); go('cd-log');
+    const r = id => { const tr = [...app().querySelectorAll('main tr')].find(x => x.textContent.trim().startsWith(id)); return tr ? tr.textContent : ''; };
+    ok('Decisions Log: CH-32 – CH-36 Applied (Batch 7a), source S7', ['CH-32', 'CH-33', 'CH-34', 'CH-35', 'CH-36'].every(id => /Applied \(Batch 7a\)/.test(r(id)) && /13 Oct 2026/.test(r(id)) && /S7/.test(r(id))));
+    ok('Decisions Log: CH-37 – CH-43 scheduled (7b / 7c)', /Scheduled \(Batch 7b\)/.test(r('CH-37')) && /Scheduled \(Batch 7c\)/.test(r('CH-42')) && /S8/.test(r('CH-43')));
+    go('tbd-register'); ok('TBD register: T04, T06, T07, T08 resolved by CH-35, CH-32, CH-33, CH-34', ['T04', 'T06', 'T07', 'T08'].every(x => main().includes(x)) && ['CH-32', 'CH-33', 'CH-34', 'CH-35'].every(x => main().includes(x)) && /Remaining: P-31 and P-34/.test(main()));
+    go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 7a/.test(s.textContent));
+    ok('UX Changelog: Batch 7a entry', !!ux && ['CH-32:', 'CH-33:', 'CH-34:', 'CH-35:', 'CH-36:'].every(k => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(k))));
+    SA(); go('a-index'); ok('Admin index: CH-32 – CH-35 entries', !!app().querySelector('[data-t="a-config"]') && !!app().querySelector('[data-t="a-queue.AQ-9001"]') && !!app().querySelector('[data-t="a-queue.AQ-9002"]') && /replace the client placeholders/.test(main()));
+    ok('Who approves what: Office location change and Bank details change rows', (ACT.qRouting(), ['Office location change | System Admin | Super Admin | Reminder', 'Bank details change | System Admin | Super Admin | Reminder'].every(x => [...document.querySelectorAll('#modal-root tbody tr')].map(tr => [...tr.children].map(td => td.textContent.trim()).join(' | ')).includes(x)))); closeModal();
+    const pages = [['learner', 'C', 'observations'], ['learner', 'C', 'payments'], ['learner', 'A', 'certificates'], ['admin', null, 'a-observations'], ['admin', null, 'a-config']];
+    const bad = pages.filter(([k, v, rt]) => { if (k === 'learner') learner(v); else SA(); go(rt); return /Client to supply/.test(html()); });
+    ok('No "Client to supply" tag left on sampled screens (CH-36)', !bad.length, bad.map(b => b[2]).join());
   });
 
   fresh();

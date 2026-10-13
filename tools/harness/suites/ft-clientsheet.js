@@ -239,7 +239,7 @@
     go('payments'); ok('6: Overdue now + Pay now still on Payments', /Overdue now/.test(main()) && !!app().querySelector('[data-act="payInst"]'));
     ok('13 built for short courses only (CH-16): NVQ modules have no quizzes', W.resources.every(g => g.items.every(i => !/quiz/i.test(i.title))) && !W.assignments.some(a => /quiz/i.test(a.title)));
     ok('Fixed status colours unchanged', TONE['Discontinued'] === 'red' && TONE['Expiring soon'] === 'amber' && TONE['Valid'] === 'green' && TONE['Revoked'] === 'red' && TONE['Overdue'] === 'red');
-    ok('4 placeholder topics (CH: T01, T02, T03, T05 resolved)', TBD_TOPICS.length === 4);
+    ok('2 placeholder topics (CH-36: T04, T06, T07, T08 resolved; P-31 and P-34 added)', TBD_TOPICS.length === 2);
   });
 
   /* ---------- Demo Scenario #18 ---------- */

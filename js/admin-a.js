@@ -102,7 +102,9 @@ ACT.qRouting = () => openModal({ title: 'Who approves what', size: 'xl', body: `
   ['Bundle VAT setting', 'Business Admin', 'Finance Admin', 'Super Admin'], /* CH-06 */
   ['Agency link (course already enrolled)', 'Agency', 'Learner email consent, then Business Admin', 'Super Admin'],
   ['Agency invoice purchase', 'Agency', 'Finance Admin', 'Super Admin'],
-  ['Discount rate change', 'Anyone given permission', 'Super Admin', 'Reminder']].map(r => `<tr>${r.map(c => `<td class="small">${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div><h3>Rules for every item</h3><ol class="small"><li>Nobody approves their own item, except the Super Admin.</li><li>The Super Admin can override anything.</li><li>Every action is logged.</li><li>Each person sees only their own items.</li></ol><p class="xs muted">"Super Admin" in the last column means the item escalates to the Super Admin after 7 days without a decision. "Reminder" means the current approver gets a reminder instead. Super Admin's own items take effect immediately (reason, audit entry, FYI notification).</p>`, actions: [{ label: 'Close', cls: 'btn-primary' }] });
+  ['Discount rate change', 'Anyone given permission', 'Super Admin', 'Reminder'],
+  ['Office location change', 'System Admin', 'Super Admin', 'Reminder'], /* CH-34 */
+  ['Bank details change', 'System Admin', 'Super Admin', 'Reminder']] /* CH-35 */.map(r => `<tr>${r.map(c => `<td class="small">${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div><h3>Rules for every item</h3><ol class="small"><li>Nobody approves their own item, except the Super Admin.</li><li>The Super Admin can override anything.</li><li>Every action is logged.</li><li>Each person sees only their own items.</li></ol><p class="xs muted">"Super Admin" in the last column means the item escalates to the Super Admin after 7 days without a decision. "Reminder" means the current approver gets a reminder instead. Super Admin's own items take effect immediately (reason, audit entry, FYI notification).</p>`, actions: [{ label: 'Close', cls: 'btn-primary' }] });
 
 function qItem(id) { return allQueue().find(i => i.id === id); }
 function queueDetail(id) {
