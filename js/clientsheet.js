@@ -235,20 +235,39 @@ SCREENS.payments = p => {
 };
 
 /* ---------- C7 / C11 / C12: dashboard cards ---------- */
-// C7 — NVQ learners: "Needs attention" (never "At risk" on learner screens)
+// C7 — NVQ learners: the reasons sit in "Action needed" (each once); a status badge by the greeting says
+// "Needs attention" (amber) when any reason applies, otherwise "On track" (green). Never "At risk" on learner screens.
 const csProjected = () => (W.nvq && W.nvq.projected) || D(84);
-function csAttention() {
+const csIsNvq = () => !!(W && W.flags && W.flags.nvq && W.flags.admitted);
+const csOverdueAsg = () => W.assignments.filter(a => a.closed || (new Date(a.due) < now() && a.status === 'Not Started'));
+const csBehind = () => !!(W.nvq && W.nvq.end && new Date(csProjected()) > new Date(W.nvq.end));
+// Every C7 reason that applies (drives the badge)
+function csReasons() {
+  if (!csIsNvq()) return [];
   const out = [];
-  const od = W.assignments.filter(a => a.closed || (new Date(a.due) < now() && a.status === 'Not Started')).length;
-  if (od) out.push({ t: `${plural(od, 'assignment')} overdue`, go: 'assignments' });
-  W.assignments.filter(a => a.status === 'Resubmission Required' && a.resubDue && daysTo(a.resubDue) >= 0 && daysTo(a.resubDue) <= 3).forEach(a => out.push({ t: `Resubmission due in ${plural(daysTo(a.resubDue), 'day')}`, sub: a.title, go: 'assignment', id: a.id }));
-  if (W.payOverdue || (W.plans || []).some(pl => pl.rows.some(r => r.status === 'Overdue'))) out.push({ t: 'Payment overdue', go: 'payments' });
-  if (W.nvq && W.nvq.end && new Date(csProjected()) > new Date(W.nvq.end)) out.push({ t: 'Behind schedule for your end date', sub: `Projected ${fd(csProjected())} · ends ${fd(W.nvq.end)}`, go: 'progress' });
-  csExpiring().forEach(c => out.push({ t: `Certificate expires in ${plural(daysTo(c.expires), 'day')}`, sub: c.course, go: 'certificates' }));
-  if (!out.length) return '';
-  return `<section class="card cs-attn" aria-labelledby="cs-attn-h"><div class="row-b"><h2 id="cs-attn-h" class="row">${ic('alert')}Needs attention</h2><span class="small strong">${plural(out.length, 'item')}</span></div>
-    <ul class="list">${out.map(r => `<li class="li"><div class="li-b"><button class="linklike strong" data-go="${r.go}" ${r.id ? `data-id="${r.id}"` : ''}>${esc(r.t)}</button>${r.sub ? `<span class="small muted">${esc(r.sub)}</span>` : ''}</div></li>`).join('')}</ul></section>`;
+  if (csOverdueAsg().length) out.push('assignments');
+  if (W.assignments.some(a => a.status === 'Resubmission Required' && a.resubDue && daysTo(a.resubDue) >= 0 && daysTo(a.resubDue) <= 3)) out.push('resubmission');
+  if (W.payOverdue || (W.plans || []).some(pl => pl.rows.some(r => r.status === 'Overdue'))) out.push('payment');
+  if (csBehind()) out.push('schedule');
+  if (csExpiring().length) out.push('certificate');
+  return out;
 }
+// Action needed already lists every resubmission ("Resubmission required: …") and every overdue instalment
+// ("Pay instalment N — overdue …"); only the three reasons it doesn't cover are added, once each.
+const _actionItemsC7 = actionItems;
+actionItems = function () {
+  const out = _actionItemsC7.apply(this, arguments); if (!csIsNvq()) return out;
+  const od = csOverdueAsg();
+  if (od.length) out.push({ sev: 'red', t: `${plural(od.length, 'assignment')} overdue`, d: esc(od.map(a => a.title).join(', ')) + ' — deadline passed', btn: 'View', go: 'assignments', cs: 'assignments' });
+  if (csBehind()) out.push({ sev: 'amber', t: 'Behind schedule for your end date', d: `Projected completion ${fd(csProjected())} · programme ends ${fd(W.nvq.end)}`, btn: 'View progress', go: 'progress', cs: 'schedule' });
+  csExpiring().forEach(c => out.push({ sev: 'amber', t: `Certificate expires in ${plural(daysTo(c.expires), 'day')}`, d: `${esc(c.course)} · valid until ${fd(c.expires)}`, btn: 'View', go: 'certificates', cs: 'certificate' }));
+  return out;
+};
+function csStatusBadge() {
+  const on = csReasons().length > 0, l = on ? 'Needs attention' : 'On track';
+  return `<button class="cs-status chip t-${on ? 'amber' : 'green'}" data-act="csToActions" data-s="${on ? 'attn' : 'ok'}" aria-label="${l} — go to Action needed"><span class="chip-i" aria-hidden="true">${on ? '!' : '✓'}</span>${l}</button>`;
+}
+ACT.csToActions = () => { const p = $('#app .action-panel'); if (p) { p.scrollIntoView({ block: 'start' }); const h = p.querySelector('#ap-h'); if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); } } else toast('Nothing needs action right now.', 'info'); };
 // C11 — short-course learners: Account, Tasks, Courses
 function csShortCards() {
   const en = W.enrolments.filter(e => e.kind === 'short');
@@ -265,8 +284,10 @@ function csShortCards() {
 }
 const _dashCs = SCREENS.dashboard;
 SCREENS.dashboard = p => {
-  const h = _dashCs(p), f = W.flags;
-  const add = f.nvq ? (f.admitted ? csAttention() : '') : csShortCards() + csExpiryCards('dash');
+  let h = _dashCs(p); const f = W.flags;
+  // C7: status badge next to the greeting
+  if (csIsNvq()) h = h.replace(/(<div class="hello">[\s\S]*?)(<h1>[\s\S]*?<\/h1>)/, (m, a, h1) => `${a}<div class="cs-hello-h">${h1}${csStatusBadge()}</div>`);
+  const add = f.nvq ? '' : csShortCards() + csExpiryCards('dash');
   if (!add) return h;
   const i = h.indexOf('<div class="hello">'), j = i < 0 ? -1 : h.indexOf('</div>', i);
   return j < 0 ? add + h : h.slice(0, j + 6) + add + h.slice(j + 6);
@@ -330,7 +351,7 @@ SC_LIST = function () {
   return _scListCs().concat([['18', 'Client sheet items', 'Client suggestion sheet — C1, C2, C7, C10, C15', [
     s('Learner opens an NVQ assignment: evidence requirements under each question and "Download criteria (PDF)" at the top (C1).', 'learner:C', 'assignment.a3'),
     s('Certificates are one list, Valid → Expiring soon → Expired → Revoked, with a yellow "expires in N days" card and Renew (C2).', 'learner:A', 'certificates'),
-    s('NVQ learner dashboard opens with "Needs attention": overdue assignment, overdue payment, certificate expiring (C7).', 'learner:C', 'dashboard'),
+    s('NVQ learner dashboard: "Needs attention" badge by the greeting; Action needed lists the overdue assignment, overdue instalment and expiring certificate once each (C7).', 'learner:C', 'dashboard'),
     s('Short-course learner\'s Payments: Purchase history, newest first; each receipt opens a preview pop-up (C10, C5).', 'learner:A', 'payments'),
     s('Assessor\'s My Students hides the discontinued learner; tick "Show discontinued" to see them greyed out (C15).', 'staff', 't-students')]]]);
 };
@@ -352,7 +373,7 @@ SCREENS.index = p => _idxCs(p).replace('Demo Scenarios — 17 walkthroughs', 'De
   csIdxLi('PD session by phone (learner)', { v: 'D', r: 'progress..pd' }, 'C3 — the assessor calls the registered number; no Zoom link.'),
   csIdxLi('Resources — Open assessment per module', { v: 'C', r: 'resources' }, 'C4 — jump from a module\'s materials to its assignment.'),
   csIdxLi('Receipt preview pop-up', { m: 'csReceipt' }, 'C5 — receipt details with Download; full-screen sheet on phones.'),
-  csIdxLi('Dashboard — Needs attention card (NVQ)', { v: 'C', r: 'dashboard' }, 'C7 — overdue work, overdue payment, schedule and expiring certificates, each linked.'),
+  csIdxLi('Dashboard — Needs attention / On track badge (NVQ)', { v: 'C', r: 'dashboard' }, 'C7 — status by the greeting; its reasons are in Action needed, each once.'),
   csIdxLi('Document preview pop-up (applicant)', { m: 'csDoc' }, 'C8 — PDF and image previews; other files show name, size, date and Download.'),
   csIdxLi('Payments — Purchase history (short course)', { v: 'A', r: 'payments' }, 'C10 — every purchase newest first, with its receipt.'),
   csIdxLi('Dashboard — Account, Tasks, Courses and expiring certificate cards', { v: 'A', r: 'dashboard' }, 'C11, C12 — the short-course learner\'s summary at a glance.'),
@@ -370,7 +391,7 @@ UXC.push(['Client sheet', 'Client suggestion sheet', [
   'C3: "Phone call" is a third PD mode (stored as phone_call). The Assessor can propose it; the learner sees "Phone call — your assessor will call you on your registered number"; no Zoom link is created; calendar events show a phone icon.',
   'C4: Learning Resources — each NVQ module has "Open assessment" (its assignment page); hidden when the module has no assignment; a short list when it has several.',
   'C5: Payments — a receipt opens a preview pop-up (number, date, payer, item, amount and currency, method, status) with Download inside; a full-screen sheet on phones.',
-  'C7: NVQ learner dashboard — a "Needs attention" card listing each reason as a link (assignments overdue, resubmission due in 3 days or fewer, payment overdue, behind schedule for the end date, certificate expiring). Shown only when a reason applies; staff labels unchanged.',
+  'C7: NVQ learner dashboard — a status badge next to the greeting: "Needs attention" (amber) when a reason applies (assignments overdue, resubmission due in 3 days or fewer, payment overdue, behind schedule for the end date, certificate expiring), otherwise "On track" (green); it scrolls to Action needed. The reasons are items in Action needed, each once: "N assignments overdue", "Behind schedule for your end date" and "Certificate expires in N days" were added; resubmissions and overdue instalments were already listed. No separate card. Staff labels unchanged.',
   'C8: Admission & Documents — an uploaded file (and each file in the version history) opens a preview pop-up: PDFs and images render (mock), other types show name, size, upload date and Download. Submitted, Approved, Rejected and Resubmission Required.',
   'C10: Short-course Payments — "Purchase history" (date, course, amount and currency, payment method, status, receipt → C5 pop-up), newest first, shared table on desktop and cards on phones; empty state "No purchases yet" with Browse Courses.',
   'C11: Short-course dashboard — Account (Active / Pending verification), Tasks (quizzes to complete, courses in progress → first task) and Courses (in progress, completed, expired → My Courses) cards.',

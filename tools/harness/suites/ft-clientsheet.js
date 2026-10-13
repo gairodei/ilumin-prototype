@@ -120,28 +120,33 @@
   });
 
   /* ---------- C7 ---------- */
-  await T('C7 Needs attention', async () => {
+  await T('C7 Needs attention badge + Action needed', async () => {
     fresh(); learner('C'); go('dashboard');
-    const card = app().querySelector('.cs-attn'), txt = card ? card.textContent : '';
-    const link = t => app().querySelector('.cs-attn') && [...app().querySelectorAll('.cs-attn button[data-go]')].find(b => b.textContent.trim() === t);
-    ok('C7 card labelled "Needs attention"', !!card && card.querySelector('h2').textContent.trim() === 'Needs attention');
-    ok('C7 at the top (straight after the greeting)', !!card && card.previousElementSibling && card.previousElementSibling.classList.contains('hello'));
-    ok('C7 "1 assignment overdue" → Assignments', !!link('1 assignment overdue') && link('1 assignment overdue').dataset.go === 'assignments', txt);
-    ok('C7 "Payment overdue" → Payments', !!link('Payment overdue') && link('Payment overdue').dataset.go === 'payments');
-    const c1 = W.certs.find(c => c.id === 'c1'); ok('C7 "Certificate expires in N days" → Certificates', !!link(`Certificate expires in ${daysTo(c1.expires)} days`) && link(`Certificate expires in ${daysTo(c1.expires)} days`).dataset.go === 'certificates');
-    ok('C7 a2 resubmission (6 days away) not listed', !/Resubmission due/.test(txt) && !/Behind schedule/.test(txt));
+    const items = () => [...app().querySelectorAll('.action-panel .ap-item')].map(li => ({ t: li.querySelector('.ap-b .strong').textContent.trim(), b: li.querySelector('button') }));
+    const item = t => items().find(x => x.t === t), count = re => items().filter(x => re.test(x.t)).length;
+    const badge = () => app().querySelector('.hello .cs-status');
+    ok('C7 no separate "Needs attention" card', !app().querySelector('.cs-attn') && ![...app().querySelectorAll('h2')].some(h => h.textContent.trim() === 'Needs attention'));
+    ok('C7 badge next to the greeting: "Needs attention" (amber)', !!badge() && badge().textContent.trim().endsWith('Needs attention') && badge().classList.contains('t-amber') && !!badge().closest('.cs-hello-h') && !!badge().closest('.cs-hello-h').querySelector('h1'), badge() && badge().outerHTML.slice(0, 120));
+    ok('C7 "1 assignment overdue" in Action needed → Assignments', !!item('1 assignment overdue') && item('1 assignment overdue').b.dataset.go === 'assignments', items().map(x => x.t).join(' | '));
+    const c1 = W.certs.find(c => c.id === 'c1'), ct = `Certificate expires in ${daysTo(c1.expires)} days`;
+    ok('C7 "Certificate expires in N days" in Action needed → Certificates', !!item(ct) && item(ct).b.dataset.go === 'certificates');
+    ok('C7 payment overdue is the existing "Pay instalment N — overdue" item only', count(/^Pay instalment \d+ — overdue/) === 1 && !item('Payment overdue'));
+    ok('C7 resubmission is the existing "Resubmission required" item only', count(/^Resubmission required: Assignment 2/) === 1 && count(/^Resubmission due/) === 0);
+    const all = items().map(x => x.t);
+    ok('C7 no reason appears twice on the dashboard', all.length === new Set(all).size && count(/assignments? overdue$/) === 1 && count(/^Certificate expires in/) === csExpiring().length && count(/overdue/i) === 2, all.join(' | '));
+    ok('C7 greeting count matches Action needed', new RegExp(plural(all.length, 'action') + ' needed').test(app().querySelector('.hello').textContent), all.length);
     ok('C7 never "At risk" on the learner dashboard', !/At risk/.test(main()));
-    const a2 = W.assignments.find(a => a.id === 'a2'), keep = a2.resubDue; a2.resubDue = D(2); go('dashboard');
-    const rs = [...app().querySelectorAll('.cs-attn button[data-go="assignment"]')].find(b => b.textContent.trim() === `Resubmission due in ${plural(daysTo(a2.resubDue), 'day')}`);
-    ok('C7 "Resubmission due in N days" (3 or fewer) → that assignment (temporary data)', !!rs && rs.dataset.id === 'a2'); a2.resubDue = keep;
+    badge().click(); ok('C7 badge scrolls to Action needed', document.activeElement && document.activeElement.id === 'ap-h');
     W.nvq.projected = D(W.nvq.end ? daysTo(W.nvq.end) + 20 : 200); go('dashboard');
-    ok('C7 "Behind schedule for your end date" → Progress (temporary data)', !!link('Behind schedule for your end date') && link('Behind schedule for your end date').dataset.go === 'progress');
+    ok('C7 "Behind schedule for your end date" → Progress, once (temporary data)', count(/^Behind schedule for your end date$/) === 1 && item('Behind schedule for your end date').b.dataset.go === 'progress');
     go('progress'); ok('C7 Progress agrees: behind schedule', /behind schedule/.test(main())); delete W.nvq.projected;
     go('progress'); ok('C7 Progress unchanged by default: on track', /— on track/.test(main()));
     W.assignments.forEach(a => { a._k = [a.closed, a.due]; a.closed = false; a.due = D(30); }); const po = W.payOverdue, plans = W.plans; W.payOverdue = null; W.plans = []; const cs = W.certs; W.certs = W.certs.filter(c => c.status !== 'Expiring soon');
-    go('dashboard'); ok('C7 nothing shown when no reason applies', !app().querySelector('.cs-attn'));
+    go('dashboard'); ok('C7 no reason → "On track" (green)', !!badge() && badge().textContent.trim().endsWith('On track') && badge().classList.contains('t-green') && count(/assignments? overdue$|^Behind schedule|^Certificate expires/) === 0);
+    const a2 = W.assignments.find(a => a.id === 'a2'), keep = a2.resubDue; a2.resubDue = D(2); go('dashboard');
+    ok('C7 resubmission due in 3 days or fewer → "Needs attention" (temporary data)', badge().textContent.trim().endsWith('Needs attention') && count(/^Resubmission required: Assignment 2/) === 1); a2.resubDue = keep;
     W.assignments.forEach(a => { [a.closed, a.due] = a._k; delete a._k; }); W.payOverdue = po; W.plans = plans; W.certs = cs;
-    learner('A'); go('dashboard'); ok('C7 not on short-course dashboards', !app().querySelector('.cs-attn'));
+    learner('A'); go('dashboard'); ok('C7 short-course dashboards unchanged (no badge, no added items)', !app().querySelector('.cs-status') && count(/assignments? overdue$|^Behind schedule|^Certificate expires/) === 0);
     staff('A'); go('t-students'); ok('C7 staff screens keep "At risk"', /At risk/.test(main()));
   });
 
@@ -242,7 +247,7 @@
     fresh(); const L = SC_LIST(), sc = L[L.length - 1];
     ok('#18 added after the 17 existing scenarios', L.length === 18 && sc[0] === '18' && sc[1] === 'Client sheet items' && L.slice(0, 17).every((x, i) => x[0] === String(i + 1)));
     ACT.scOpen(); ok('#18 on the page; heading says Eighteen', /Eighteen end-to-end walkthroughs/.test(main()) && !!app().querySelector('#sc-18'));
-    const chk = [['assignment', () => !!app().querySelector('[data-act="csCritPdf"]')], ['certificates', () => !!app().querySelector('.cs-exp')], ['dashboard', () => !!app().querySelector('.cs-attn')], ['payments', () => /Purchase history/.test(main())], ['t-students', () => !!app().querySelector('input[data-onchange="csShowDisc"]')]];
+    const chk = [['assignment', () => !!app().querySelector('[data-act="csCritPdf"]')], ['certificates', () => !!app().querySelector('.cs-exp')], ['dashboard', () => !!app().querySelector('.hello .cs-status[data-s="attn"]')], ['payments', () => /Purchase history/.test(main())], ['t-students', () => !!app().querySelector('input[data-onchange="csShowDisc"]')]];
     sc[3].forEach((st, k) => { ACT.scOpen(); ACT.scStep({ dataset: { r: st.r, t: st.t } }); ok(`#18.${k + 1} opens ${st.r} → ${st.t} and shows the item`, S.route === chk[k][0] && chk[k][1](), S.route); });
   });
 

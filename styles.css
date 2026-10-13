@@ -1117,9 +1117,9 @@ kbd { font-family: var(--f-mono); font-size: .8em; border: 1px solid var(--line-
 .cs-kvs { display: flex; flex-wrap: wrap; gap: 14px; }
 .cs-kv { display: grid; gap: 0; }
 .cs-n { font-size: 1.35rem; font-weight: 700; line-height: 1.2; }
-.cs-attn { border-color: var(--amber); }
-.cs-attn .list .li { padding: 8px 0; }
-.cs-attn .linklike { text-align: left; }
+.cs-hello-h { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; }
+.cs-status { border: 0; cursor: pointer; font: inherit; font-size: .8rem; }
+.cs-status:hover { filter: brightness(.96); }
 .cs-remind { display: grid; gap: 8px; justify-items: start; }
 .cs-remind .note { width: 100%; align-items: center; flex-wrap: wrap; }
 .cs-remind .note .li-b { flex: 1 1 200px; min-width: 0; }
