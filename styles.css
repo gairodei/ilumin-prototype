@@ -1173,3 +1173,14 @@ body.frame-mobile .modal.cs-sheet { top: 0; bottom: 0; left: 50%; transform: tra
 .ch-items { border: 0; padding: 0; margin: 8px 0; }
 .ch-retired { opacity: .6; }
 .sh-mod .bar-row { min-width: 160px; }
+
+/* CH batch 7 */
+/* CH-41 payment dial and cards; CH-37 / CH-38 office request and fee cards */
+.ch-paycards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom: 12px; }
+.ch-paycards .card { display: grid; gap: 4px; align-content: start; }
+.ch-dialcard { grid-template-columns: auto 1fr; align-items: center; gap: 12px !important; }
+.ch-dial { --p: 0; width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--green) calc(var(--p) * 1%), var(--line) 0); }
+.ch-dial span { width: 54px; height: 54px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-weight: 600; font-size: .9rem; }
+.ch-feecard .big-num, .ch-paycards .big-num { font-size: 1.35rem; }
+.ch-orcard .row, .ch-feecard .row { flex-wrap: wrap; }
+@media (max-width: 560px) { .ch-dialcard { grid-column: 1 / -1; } }

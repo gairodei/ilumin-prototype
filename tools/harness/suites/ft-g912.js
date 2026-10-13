@@ -81,7 +81,7 @@
     go('w-withdraw', { id: wl.token, tab: 'confirm' }); SUBMIT.wpcWithdraw({ dataset: { t: wl.token } });
     ok('learner tracker Withdrawn', w.workplace.perm === 'Withdrawn'); ok('future workplace observations cancelled', !w.observations.some(o => ['Proposed', 'Confirmed'].includes(o.status) && o.locType !== 'office'), planned + ' cancelled');
     ok('completed observations kept', w.observations.some(o => o.status === 'Completed') || true);
-    ok('learner + assessor notified, Academy office offered', w.notifs.length > ln0 && STORE.tas.notifs.length > tn0 && /Academy office/.test(STORE.tas.notifs[0].b));
+    ok('learner + assessor notified; the Coordinator may advise an Academy office observation (CH-43: no automatic switch)', w.notifs.length > ln0 && STORE.tas.notifs.length > tn0 && /Coordinator is told and may advise an Academy office observation/.test(STORE.tas.notifs[0].b) && /Coordinator may advise an Academy office observation/.test(w.notifs[0].body) && STORE.coo.notifs.some(n => /Workplace permission withdrawn/.test(n.t) && n.go === 'c-learner.' + w.me.id));
     S.tas.v = 'A'; tasEnter(); S.signedIn = true; setUi('obTab', 'all'); go('t-obs'); ok('assessor tracker shows Withdrawn', /Withdrawn/.test(main()) && tasObs().some(o => o.perm === 'Withdrawn')); setUi('obTab', 'upcoming');
     SA(); go('a-observations', { tab: 'permissions' }); ok('admin tracker shows Withdrawn', /Withdrawn/.test(main()));
   });
@@ -106,7 +106,7 @@
   });
   // ---------- G12.6/7 ----------
   T('G12.6/7 Demo Scenarios', () => {
-    ACT.scOpen(); const secs = document.querySelectorAll('main section[id^="sc-"]'); ok('22 scenarios (CH-06: #22 added)', secs.length === 22, secs.length);
+    ACT.scOpen(); const secs = document.querySelectorAll('main section[id^="sc-"]'); ok('23 scenarios (CH-37 – CH-41: #23 added)', secs.length === 23, secs.length);
     ok('#1 has Coordinator release step', /Release queue/.test(document.getElementById('sc-1').textContent)); ok('#6 Super Admin step', /processed immediately/.test(document.getElementById('sc-6').textContent));
     ok('#7 withdrawal → office branch', /withdraws permission/.test(document.getElementById('sc-7').textContent) && /Academy office/.test(document.getElementById('sc-7').textContent));
     ok('#8 raiser is Assessor', /Assessor raises/.test(document.getElementById('sc-8').textContent)); ok('#9 no invoice document', !/invoice/i.test(document.getElementById('sc-9').textContent));

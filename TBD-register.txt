@@ -2,7 +2,7 @@ Illumin Academy prototype — TBD register (2 topics remaining after the TBD cle
 Exported 13 Oct 2026. Counted by topic, not by instance: 2 Pending client · 0 Client to supply.
 Format: ID | role/view | screen/route | element | exact TBD text — ID is the original register ID(s); each topic is listed once with every place it appears.
 
-P-31 | Super Admin, Academic Admin | Programme settings → Support type (from Batch 7b) | Pending client tag | Pending client: Fully assisted vs self-paced: what defines each, and is it set per course or per batch (P-31)
+P-31 | Super Admin, Academic Admin | Admin → NVQ programme → Support type | Pending client tag | Pending client: Fully assisted vs self-paced: what defines each, and is it set per course or per batch (P-31)
 P-34 | Super Admin, Academic Admin | Admin → Courses → short course → Modules | Pending client tag | Pending client: short-course module lists (P-34)
 
 Resolved by the client change list (13 Oct 2026):

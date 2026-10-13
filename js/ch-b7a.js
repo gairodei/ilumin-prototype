@@ -216,7 +216,7 @@ recordPayment = function (t, a, ref, mode, r) {
 };
 
 /* ---------- CH-36 placeholder register ---------- */
-TBD_TOPICS.splice(0, TBD_TOPICS.length, ['Pending client', 'Fully assisted vs self-paced: what defines each, and is it set per course or per batch (P-31)', 'P-31', 'Programme settings → Support type (from Batch 7b)'], ['Pending client', 'short-course module lists (P-34)', 'P-34', 'Admin → Courses → short course → Modules']);
+TBD_TOPICS.splice(0, TBD_TOPICS.length, ['Pending client', 'Fully assisted vs self-paced: what defines each, and is it set per course or per batch (P-31)', 'P-31', 'Admin → NVQ programme → Support type'], ['Pending client', 'short-course module lists (P-34)', 'P-34', 'Admin → Courses → short course → Modules']);
 CH_TBD_RESOLVED.push(
   ['T04', 'Client to supply: bank payment instructions', 'CH-35', 'System Configuration → "Bank details for transfers" (Lloyds Bank), shown with a reference on the sign-up bank step, learner "Pay by bank transfer" and agency bank-transfer purchases.'],
   ['T06', 'Client to supply: privacy notice URL', 'CH-32', 'System Configuration → "Privacy notice": https://welfarehs.co.uk/privacy-policy.'],
@@ -230,7 +230,7 @@ const CH_OPEN = [
   ['P-28', 'Mistyped country', 'Resolved (Data Correction fallback)', 'green', 'A genuinely mistyped country is corrected only through Data Correction (System Admin review → Super Admin final, audited) — never as a profile request. If the region changes between UK and UAE, an admin moves the learner\'s data (audited, one-off).'],
   ['P-29', 'Client content', 'Resolved by CH-32 – CH-35 (Batch 7a)', 'green', 'Privacy notice URL, LMS domain, office locations and bank details are System Configuration settings.'],
   ['P-30', 'Intake choice at sign-up', 'Resolved by CH-42 (built in 7c)', 'blue', 'The system assigns the nearest batch with space; the learner doesn\'t choose.'],
-  ['P-31', 'Fully assisted vs self-paced', 'Pending client', 'amber', 'What defines each, and is it set per course or per batch? The prototype sets it per course (Support type, from Batch 7b); default Fully assisted.'],
+  ['P-31', 'Fully assisted vs self-paced', 'Pending client', 'amber', 'What defines each, and is it set per course or per batch? The prototype sets it per course (Admin → NVQ programme → Support type); default Fully assisted.'],
   ['P-32', 'Released seat and content', 'Resolved (built in 7c)', 'blue', 'Content does not lock when a seat is released; the normal overdue rules still apply.'],
   ['P-33', 'Coordinator assessing their own batch', 'Resolved (built in 7c)', 'blue', 'A batch\'s Academic Coordinator can\'t be its assignment, PD or observation assessor.'],
   ['P-34', 'Short-course module lists', 'Pending client', 'amber', 'The module lists of each short course are prototype examples until the client supplies them (Courses → course → Modules).'],

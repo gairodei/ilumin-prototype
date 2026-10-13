@@ -83,9 +83,14 @@
     ok('#7.4 permission Withdrawn', w.workplace.perm === 'Withdrawn');
     step(7, 5); setUi('obTab', 'all'); render(); ok('#7.5 assessor sees Withdrawn + notified', /Withdrawn/.test(main()) && /Academy office/.test(STORE.tas.notifs[0].b)); setUi('obTab', 'upcoming');
     ok('#7.5 completed observation still valid', o.status === 'Completed');
-    step(7, 6); ACT.obPropose({ dataset: { l: w.me.id } }); $('#op-l').value = w.me.id; $('input[name="op-lt"][value="office"]').checked = true; INP.obLt(); $('#op-d').value = D(15, '10:00').slice(0, 16); prim();
-    const off = w.observations[0]; ok('#7.6 Academy office observation proposed', off.locType === 'office' && off.status === 'Proposed');
-    step(7, 7); ACT.obsAccept({ dataset: { id: off.id } }); prim(); ok('#7.7 learner accepted the office visit', off.status === 'Confirmed', off.status);
+    step(7, 6); ok('#7.6 Coordinator told of the withdrawal (CH-43)', STORE.coo.notifs.some(n => /Workplace permission withdrawn/.test(n.t))); S.coo.v = 'A'; cooEnter(); S.signedIn = true; go('c-learner', { id: w.me.id }); ACT.chOrAdvise({ dataset: { id: w.me.id } }); $('#rsn').value = 'Workplace withdrew permission.'; prim();
+    const rq = STORE.chOffReq.find(r => r.lid === w.me.id); ok('#7.6 Coordinator advises an Academy office observation (CH-43)', !!rq && rq.status === 'Awaiting consent');
+    step(7, 7); ACT.chOrConsent({ dataset: { id: rq.id, a: 'accept' } }); prim(); ok('#7.7 learner agrees → Office observation request (CH-37)', rq.status === 'Pending approval' && !!rq.qid);
+    step(7, 8); S.coo.v = 'A'; cooEnter(); S.signedIn = true; go('c-learner', { id: w.me.id }); ACT.chOrDecide({ dataset: { id: rq.qid, a: 'approve' } }); $('#rsn').value = 'Agreed.'; prim(); ok('#7.8 Coordinator approves', rq.status === 'Approved');
+    step(7, 9); S.tas.v = 'A'; tasEnter(); S.signedIn = true; ACT.obPropose({ dataset: { l: w.me.id } }); $('#op-l').value = w.me.id; INP.obPerm($('#op-l')); $('input[name="op-lt"][value="office"]').checked = true; INP.obLt(); $('#op-d').value = D(15, '10:00').slice(0, 16); prim();
+    const off = w.observations[0]; ok('#7.9 Academy office observation proposed at the Luton office (CH-37)', off.locType === 'office' && off.status === 'Proposed' && off.office && off.office.name === 'Luton office' && rq.status === 'Booked');
+    step(7, 10); ACT.obsAccept({ dataset: { id: off.id } }); prim(); ok('#7.10 learner accepted the office visit', off.status === 'Confirmed', off.status);
+    ok('#7 no extra fee: one observation fee for the course (CH-38 / CH-43)', STORE.chFees.filter(f => f.lid === w.me.id).length === 1);
   });
 
   await S_('#8 Data correction', async () => {
@@ -106,7 +111,7 @@
     step(9, 2); go('a-queue', { id: i.id }); ACT.qDo({ dataset: { id: i.id, a: 'approve' } }); rsn('PO checked'); prim(); ok('#9.2 approved — awaiting payment', i.stage === 'awaiting' || /awaiting/i.test(i.decision || ''), i.status + ' ' + i.stage);
     step(9, 3); ACT.invPay({ dataset: { id: i.id } }); const r = $('#ip-r'); if (r) r.value = 'BACS-77001'; rsn('Received'); prim(); ok('#9.3 payment recorded, seats credited', i.status === 'Paid/Processed', i.status);
     step(9, 4); ok('#9.4 agency sees it paid', agyPurchases().some(x => x.ref === i.id && /Paid/.test(x.status)) && !/Download invoice|Invoice PDF/.test(main()), (agyPurchases().find(x => x.ref === i.id) || {}).status);
-    step(9, 5); ok('#9.5 sponsored NVQ learner: no deposit, no fee schedule', /Your course fees are covered by/.test(main()) && !W.plans.length && !/Pay deposit|Pay now/i.test(main()));
+    step(9, 5); ok('#9.5 sponsored NVQ learner: no deposit, no fee schedule (CH-38: only the observation fee can be paid)', /Your course fees are covered by/.test(main()) && !W.plans.length && !/Pay deposit/i.test(main()) && [...document.querySelectorAll('main button')].filter(b => /Pay now/i.test(b.textContent)).every(b => b.closest('.ch-feecard')));
   });
 
   await S_('#10 Registration', async () => {

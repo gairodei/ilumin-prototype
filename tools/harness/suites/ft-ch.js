@@ -1,6 +1,6 @@
 // Client decisions CH-01 … CH-31 — one block per batch.
 // Batch 1: CH-01 country fixed, CH-02 GBP only, CH-03 data region, CH-05 VAT invoices, CH-31 contact details,
-// the placeholder register (4 topics), CH-24 unchanged, and the CH records. … Batch 6: CH-06 VAT on agency bundles. Batch 7a: CH-32 – CH-36.
+// the placeholder register (4 topics), CH-24 unchanged, and the CH records. … Batch 6: CH-06 VAT on agency bundles. Batch 7a: CH-32 – CH-36. Batch 7b: CH-37 – CH-41, CH-43.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -217,16 +217,16 @@
     ok('Decisions Log: still pending — P-31 and P-34 only', ['P-31', 'P-34'].every(p => /Pending client/.test(pst(p))) && prow.filter(x => /Pending client/.test(x)).length === 2 && /Still pending: P-31, P-34\./.test(pc.textContent));
     const fu = secs.find(s => /Follow-up decisions \(P-05 – P-26\)/.test(s.textContent)), st = id => ([...fu.querySelectorAll('tbody tr')].find(tr => tr.firstChild.textContent === id) || {}).textContent || '';
     ok('Decisions Log: F1 Superseded (CH-01); F2, F3b, F8 Resolved; F3a Superseded', /Superseded \(CH-01\)/.test(st('F1')) && /Resolved \(CH-02\)/.test(st('F2')) && /Superseded \(CH-02\)/.test(st('F3a')) && /Resolved \(CH-03\)/.test(st('F3b')) && /Resolved \(CH-05\)/.test(st('F8')));
-    ok('Decisions Log: 22 scenarios; #16 is the new sign-up', /All 22 run end to end in the prototype\./.test(main()) && CDL_SCEN.filter(r => r[0] === '16').length === 1 && CDL_SCEN.find(r => r[0] === '16')[1] === 'New sign-up: documents → offer letter → payment → start' && !CDL_SCEN.some(r => r[1] === 'Learner moves country'));
+    ok('Decisions Log: 23 scenarios; #16 is the new sign-up', /All 23 run end to end in the prototype\./.test(main()) && CDL_SCEN.filter(r => r[0] === '16').length === 1 && CDL_SCEN.find(r => r[0] === '16')[1] === 'New sign-up: documents → offer letter → payment → start' && !CDL_SCEN.some(r => r[1] === 'Learner moves country'));
     go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 1/.test(s.textContent));
     ok('UX Changelog: Batch 1 entry lists its CH IDs', !!ux && ['CH-01:', 'CH-02:', 'CH-03:', 'CH-05:', 'CH-31:'].every(x => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(x))));
-    go('demo-scenarios'); ok('Demo Scenarios: "Twenty-two", 22 sections, #16 is the new sign-up', /Twenty-two end-to-end walkthroughs/.test(main()) && app().querySelectorAll('main section[id^="sc-"]').length === 22 && /New sign-up/.test((app().querySelector('#sc-16') || {}).textContent || ''));
-    renderDemo(); AFTER.forEach(f => f()); const b = document.querySelector('#demo-root [data-act="scOpen"]'); ok('Demo panel: "Open the 22 Demo Scenarios"', !b || b.textContent === 'Open the 22 Demo Scenarios', b && b.textContent);
+    go('demo-scenarios'); ok('Demo Scenarios: "Twenty-three", 23 sections, #16 is the new sign-up', /Twenty-three end-to-end walkthroughs/.test(main()) && app().querySelectorAll('main section[id^="sc-"]').length === 23 && /New sign-up/.test((app().querySelector('#sc-16') || {}).textContent || ''));
+    renderDemo(); AFTER.forEach(f => f()); const b = document.querySelector('#demo-root [data-act="scOpen"]'); ok('Demo panel: "Open the 23 Demo Scenarios"', !b || b.textContent === 'Open the 23 Demo Scenarios', b && b.textContent);
     learner('A'); go('index'); const ix = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
-    ok('Learner index: CH entries (incl. registration confirmation, 1b), each with a purpose line', !!ix && ix.querySelectorAll('li').length === 18 && !!ix.querySelector('[data-act="regStart"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 22 walkthroughs/.test(main()));
+    ok('Learner index: CH entries (incl. registration confirmation, 1b), each with a purpose line', !!ix && ix.querySelectorAll('li').length === 20 && !!ix.querySelector('[data-act="regStart"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 23 walkthroughs/.test(main()));
     ix.querySelector('[data-m="chCheckout"]').click(); await wait(150); ok('Learner index: checkout entry opens the checkout with the Stripe line', !!MODAL && !!mroot().querySelector('.ch-stripe')); closeModal();
     SA(); go('a-index'); const ax = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
-    ok('Admin index: Batch 1–7a entries with purposes', !!ax && ax.querySelectorAll('li').length === 20 && ['a-config', 'a-learner.IA-L-31900', 'a-dataprotection..residency', 'a-programmes.NV-L3.letter', 'a-admissions.APP-C', 'a-learner.IA-L-31188.admission'].every(t => ax.querySelector(`[data-t="${t}"]`)) && [...ax.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && !/Priya Nair \(moved country/.test(main()));
+    ok('Admin index: Batch 1–7b entries with purposes', !!ax && ax.querySelectorAll('li').length === 24 && ['a-config', 'a-learner.IA-L-31900', 'a-dataprotection..residency', 'a-programmes.NV-L3.letter', 'a-admissions.APP-C', 'a-learner.IA-L-31188.admission'].every(t => ax.querySelector(`[data-t="${t}"]`)) && [...ax.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && !/Priya Nair \(moved country/.test(main()));
   });
 
   /* ================= Batch 2 ================= */
@@ -614,7 +614,7 @@
     ok('CH-06 mock queue items: AQ-7300 Approved by Finance, AQ-7301 Pending with Finance Admin', Q6('AQ-7300').status === 'Approved' && Q6('AQ-7300').decidedBy === FIN_A && Q6('AQ-7301').status === 'Pending' && Q6('AQ-7301').first === FIN_A && Q6('AQ-7301').raisedBy === BIZ_A);
     ok('CH-06 type in every list (Super Admin, Finance, Business)', QTYPES.includes('Bundle VAT setting') && FIN_TYPES.includes('Bundle VAT setting') && BIZ_TYPES.includes('Bundle VAT setting') && qLbl('Bundle VAT setting') === 'Bundle VAT');
     SA(); go('a-queue'); ACT.qRouting(); const rows = [...document.querySelectorAll('#modal-root tbody tr')].map(tr => [...tr.children].map(td => td.textContent.trim()).join(' | '));
-    ok('CH-06 "Who approves what": incl. Bundle VAT setting (17 rows from CH-34, CH-35)', rows.length === 17 && rows.includes('Bundle VAT setting | Business Admin | Finance Admin | Super Admin'), rows.length);
+    ok('CH-06 "Who approves what": incl. Bundle VAT setting (19 rows from CH-34, CH-35, CH-37, CH-39)', rows.length === 19 && rows.includes('Bundle VAT setting | Business Admin | Finance Admin | Super Admin'), rows.length);
     closeModal();
   });
 
@@ -761,6 +761,8 @@
     ok('CH-34 the System Admin can\'t approve it', i.status === 'Pending' && !chOffices().some(o => o.name === 'Bedford office'));
     i.raised = D(-8); allQueue(); ok('CH-34 after 7 days: reminder, not escalation', i.status === 'Pending' && i.reminder && !i.escalated);
     SA(); applyDecision(i, 'approve', 'Agreed.', {}); ok('CH-34 Super Admin approves → Bedford office Active', i.status === 'Approved' && chOffices().find(o => o.name === 'Bedford office').status === 'Active');
+    S.tas.v = 'A'; tasEnter(); S.signedIn = true; ACT.obPropose({ dataset: {} }); const lid0 = document.querySelector('#op-l').value; closeModal();
+    { const r0 = chOrCreate(lid0, 'learner', 'Workplace closed.', 'Learner'); SA(); applyDecision(qItem(r0.qid), 'approve', 'Agreed.', {}); } /* CH-37: an office booking needs an approved request */
     S.tas.v = 'A'; tasEnter(); S.signedIn = true; go('t-obs');
     const book = () => { ACT.obPropose({ dataset: {} }); const off = document.querySelector('input[name="op-lt"][value="office"]'); off.checked = true; INP.obLt(off); };
     book(); const lid = document.querySelector('#op-l').value, L = tasLearners(true).find(l => l.lid === lid), list = () => L.v ? STORE.worlds[L.v].observations : STORE.tas.obs, n = list().length;
@@ -832,7 +834,7 @@
     fresh(); ACT.scOpen(); go('cd-log');
     const r = id => { const tr = [...app().querySelectorAll('main tr')].find(x => x.textContent.trim().startsWith(id)); return tr ? tr.textContent : ''; };
     ok('Decisions Log: CH-32 – CH-36 Applied (Batch 7a), source S7', ['CH-32', 'CH-33', 'CH-34', 'CH-35', 'CH-36'].every(id => /Applied \(Batch 7a\)/.test(r(id)) && /13 Oct 2026/.test(r(id)) && /S7/.test(r(id))));
-    ok('Decisions Log: CH-37 – CH-43 scheduled (7b / 7c)', /Scheduled \(Batch 7b\)/.test(r('CH-37')) && /Scheduled \(Batch 7c\)/.test(r('CH-42')) && /S8/.test(r('CH-43')));
+    ok('Decisions Log: CH-42 scheduled (7c); CH-43 from S8', /Scheduled \(Batch 7c\)/.test(r('CH-42')) && /S8/.test(r('CH-43')));
     go('tbd-register'); ok('TBD register: T04, T06, T07, T08 resolved by CH-35, CH-32, CH-33, CH-34', ['T04', 'T06', 'T07', 'T08'].every(x => main().includes(x)) && ['CH-32', 'CH-33', 'CH-34', 'CH-35'].every(x => main().includes(x)) && /Remaining: P-31 and P-34/.test(main()));
     go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 7a/.test(s.textContent));
     ok('UX Changelog: Batch 7a entry', !!ux && ['CH-32:', 'CH-33:', 'CH-34:', 'CH-35:', 'CH-36:'].every(k => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(k))));
@@ -841,6 +843,130 @@
     const pages = [['learner', 'C', 'observations'], ['learner', 'C', 'payments'], ['learner', 'A', 'certificates'], ['admin', null, 'a-observations'], ['admin', null, 'a-config']];
     const bad = pages.filter(([k, v, rt]) => { if (k === 'learner') learner(v); else SA(); go(rt); return /Client to supply/.test(html()); });
     ok('No "Client to supply" tag left on sampled screens (CH-36)', !bad.length, bad.map(b => b[2]).join());
+  });
+
+  /* ================= Batch 7b ================= */
+  // CH-37 office request/advice/consent/approval, CH-38 fee, CH-39 waiver, CH-40 no refund/transfer, CH-41 cards, CH-43 withdrawal
+  const coA = () => { S.coo.v = 'A'; cooEnter(); S.signedIn = true; };
+  const asSarah = () => { S.tas.v = 'A'; tasEnter(); S.signedIn = true; };
+  const C7 = () => STORE.worlds.C, cid = () => STORE.worlds.C.me.id;
+  const book7 = (lid, days) => { ACT.obPropose({ dataset: { l: lid } }); $('#op-l').value = lid; INP.obPerm($('#op-l')); const off = $('input[name="op-lt"][value="office"]'); off.checked = true; INP.obLt(off); $('#op-d').value = D(days, '10:00').slice(0, 16); return prim(); };
+
+  await T('CH-37 learner request → Coordinator approves → assessor books → learner accepts', async () => {
+    fresh(); learner('C'); go('observations');
+    ok('CH-37 learner Observations: "Request an Academy-office observation"', !!app().querySelector('[data-act="chOrRequest"]'));
+    ACT.chOrRequest(); prim(); ok('CH-37 request needs a reason', !!MODAL && /Say why/.test(mroot().textContent));
+    document.querySelector('#or-r').value = 'My workplace is closed for refurbishment.'; prim();
+    const r = STORE.chOffReq.find(x => x.lid === cid()), i = r && qItem(r.qid);
+    ok('CH-37 creates an "Office observation request" for the batch Coordinator', !!i && i.type === 'Office observation request' && i.status === 'Pending' && i.first === 'Dr Helen Carter' && r.status === 'Pending approval');
+    ok('CH-37 Coordinator notified', STORE.coo.notifs.some(n => /Academy-office observation to decide/.test(n.t) && n.to === 'Dr Helen Carter'));
+    asSarah(); ACT.obPropose({ dataset: { l: cid() } }); $('#op-l').value = cid(); INP.obPerm($('#op-l'));
+    const rad = $('input[name="op-lt"][value="office"]'); ok('CH-37 office not bookable before approval (disabled, with a reason)', rad.disabled && rad.title === 'Needs an approved Academy-office observation request');
+    rad.disabled = false; rad.checked = true; INP.obLt(rad); const n = C7().observations.length; prim();
+    ok('CH-37 a direct booking without approval is refused and logged', C7().observations.length === n && ADMIN.audit.some(a => /Blocked: office observation without an approved request/.test(a.action))); closeModal();
+    ok('CH-37 workplace observations unchanged (Workplace still selectable)', (ACT.obPropose({ dataset: {} }), !$('input[name="op-lt"][value="work"]').disabled)); closeModal();
+    coA(); go('c-dashboard'); ok('CH-37 Coordinator dashboard: request panel with Approve / Reject', /Academy-office observation requests/.test(main()) && !!app().querySelector('[data-act="chOrDecide"][data-a="approve"][data-id="' + i.id + '"]'));
+    go('c-learner', { id: cid() }); ok('CH-37 Coordinator learner record: panel + "Not shown" exception', !!app().querySelector('.ch-orcard [data-act="chOrDecide"]') && /except Academy-office observation requests for your batches/.test(main()));
+    ACT.chOrDecide({ dataset: { id: i.id, a: 'approve' } }); prim(); ok('CH-37 reason required to decide', !!MODAL && /Enter a reason/.test(mroot().textContent));
+    document.querySelector('#rsn').value = 'Agreed — workplace closed.'; prim();
+    ok('CH-37 Coordinator approves → Approved, recorded under the Coordinator', i.status === 'Approved' && r.status === 'Approved' && i.decidedBy === 'Dr Helen Carter' && C7().notifs.some(x => /approved/.test(x.title)));
+    closeModal(); S.coo.v = 'B'; cooEnter(); S.signedIn = true; ACT.chOrDecide({ dataset: { id: i.id, a: 'reject' } }); ok('CH-37 another batch\'s Coordinator is refused (logged)', !MODAL && ADMIN.audit.some(a => a.action === 'Blocked: office observation decision'));
+    asSarah(); book7(cid(), 9); const o = C7().observations[0];
+    ok('CH-37 observation assessor books the office (location dropdown) → request Booked', o.locType === 'office' && o.office && o.office.name === 'Luton office' && r.status === 'Booked' && r.obsId === o.id);
+    ok('CH-38 no fee until the observation is confirmed', !STORE.chFees.some(f => f.lid === cid()));
+    learner('C'); ACT.obsAccept({ dataset: { id: o.id } }); prim(); render();
+    const f = STORE.chFees.find(x => x.lid === cid());
+    ok('CH-38 first confirmed observation raises the fee: £70 fully assisted, due on the observation date', !!f && f.amount === 70 && f.support === 'Fully assisted' && f.due === o.at && f.status === 'Due' && C7().notifs.some(x => /Observation fee due/.test(x.title)));
+    asSarah(); ACT.obPropose({ dataset: { l: cid() } }); $('#op-l').value = cid(); INP.obPerm($('#op-l')); $('#op-d').value = D(20, '10:00').slice(0, 16); prim(); const w2 = C7().observations[0]; learner('C'); ACT.obsAccept({ dataset: { id: w2.id } }); prim(); render();
+    ok('CH-38 a second confirmed observation (workplace) never raises a second fee', STORE.chFees.filter(x => x.lid === cid()).length === 1);
+    asSarah(); go('t-obs'); const ob = tasObs().find(x => x.id === 'C-' + o.id) || tasObs().find(x => x.lid === cid() && x.locType === 'office');
+    ok('CH-40 rescheduling has no effect on the fee', (() => { const before = JSON.stringify(f); o.status = 'Rescheduled'; o.newAt = D(30); render(); return JSON.stringify(f) === before; })());
+  });
+
+  await T('CH-37 Coordinator advice → learner consent; CH-43 withdrawal', async () => {
+    fresh(); coA(); go('c-learner', { id: cid() }); ACT.chOrAdvise({ dataset: { id: cid() } }); document.querySelector('#rsn').value = 'Your workplace can\'t host the observation.'; prim();
+    const r = STORE.chOffReq.find(x => x.lid === cid());
+    ok('CH-37 advice: Awaiting consent, no approval item yet', r && r.status === 'Awaiting consent' && !r.qid && !ADMIN.queue.some(i => i.type === 'Office observation request' && i.data.req === r.id));
+    learner('C'); go('dashboard'); ok('CH-37 learner dashboard: Action needed consent item', /Agree to an Academy-office observation\?/.test(main()));
+    go('observations'); ok('CH-37 Observations: Accept / Decline', !!app().querySelector('[data-act="chOrConsent"][data-a="accept"]') && !!app().querySelector('[data-act="chOrConsent"][data-a="decline"]'));
+    ACT.chOrConsent({ dataset: { id: r.id, a: 'decline' } }); prim();
+    ok('CH-37 decline recorded, Coordinator told, no approval item', r.status === 'Declined' && !r.qid && STORE.coo.notifs.some(n => /declined/.test(n.t)));
+    coA(); go('c-learner', { id: cid() }); ACT.chOrAdvise({ dataset: { id: cid() } }); document.querySelector('#rsn').value = 'Second try.'; prim(); const r2 = STORE.chOffReq.filter(x => x.lid === cid()).slice(-1)[0];
+    learner('C'); ACT.chOrConsent({ dataset: { id: r2.id, a: 'accept' } }); prim();
+    ok('CH-37 accept → "Office observation request" item', r2.status === 'Pending approval' && qItem(r2.qid).type === 'Office observation request');
+    acaEnter('KA'); S.signedIn = true; ok('CH-37 Academic Admin has it awaiting', awaitingMe(qItem(r2.qid)));
+    const q = qItem(r2.qid); q.raised = D(-8); allQueue(); ok('CH-37 after 7 days → escalated to the Super Admin', q.status === 'Escalated');
+    coA(); go('c-learner', { id: cid() }); ok('CH-37 escalated: no Approve/Reject for the Coordinator', !app().querySelector('.ch-orcard [data-act="chOrDecide"]') && /Escalated/.test(main()));
+  });
+
+  await T('CH-38 settings, support type, sponsored learner, Finance', async () => {
+    fresh(); SA(); go('a-config');
+    ok('CH-38 settings £70 / £100', /Observation fee — fully assisted\s*£70\.00/.test(main()) && /Observation fee — self-paced\s*£100\.00/.test(main()));
+    role('sysA'); go('a-config'); ok('CH-38 fee settings locked for the System Admin', !app().querySelector('[data-act="cfgEdit"][data-id="CF-OFA"]'));
+    FA(); go('f-plans'); ok('CH-38 Finance → Payment Plans: fee settings, editable', /Observation fees/.test(main()) && !!app().querySelector('.ch-fees [data-act="cfgEdit"][data-id="CF-OFS"]'));
+    ACT.cfgEdit({ dataset: { id: 'CF-OFA' } }); document.querySelector('#cv').value = '£75.00'; document.querySelector('#rsn').value = 'New price list'; press();
+    ok('CH-38 fee change audited', ADMIN.audit.some(a => a.entity === 'Observation fee — fully assisted' && a.after === '£75.00') && chFeeAmt('Fully assisted') === 75);
+    SA(); go('a-programmes', { id: 'NV-L3D', tab: 'support' });
+    ok('CH-38 programme → Support type tab, tagged Pending client (P-31), NV-L3D Self-paced', /Support type/.test(main()) && [...app().querySelectorAll('.tbd')].some(x => /P-31/.test(x.textContent)) && document.querySelector('input[name="ch-sup"][value="Self-paced"]').checked);
+    ok('CH-38 default Fully assisted; world C\'s programme stays Fully assisted', chSupportOf('NV-L3') === 'Fully assisted' && chSupportOfCourse(STORE.worlds.C.nvq.title) === 'Fully assisted' && chFeeAmt(chSupportOf('NV-L3D')) === 100);
+    learner('D'); go('payments'); const fd_ = STORE.chFees.find(x => x.lid === STORE.worlds.D.me.id);
+    ok('CH-38 sponsored learner pays the fee: fee card with Pay now', !!fd_ && /Your course fees are covered by/.test(main()) && !!app().querySelector('.ch-feecard [data-act="chFeePay"]') && /Non-refundable/.test(main()));
+    ACT.chFeePay({ dataset: { id: fd_.id } }); prim(); await wait(3000); closeModal(); render();
+    ok('CH-38 card payment → Paid; transaction "Observation fee"', fd_.status === 'Paid' && W.tx.some(t => /^Observation fee — /.test(t.desc) && t.amount === fd_.amount));
+    FA(); go('f-ledger'); const lf = DT.fledger.filters.find(f => f.l === 'For');
+    ok('CH-38 ledger "For" filter: Observation fee; no VAT on it', lf.opts.includes('Observation fee') && allTx().filter(t => /^Observation fee/.test(t.course)).every(t => lf.get(t) === 'Observation fee' && t.vatPct == null));
+    const k = STORE.chFees.find(x => x.name === 'Kofi Asante'); k.due = D(-3); go('f-overdue');
+    ok('CH-38 Finance → Overdue: fees after the due date, with reminder', /Observation fees overdue/.test(main()) && /Kofi Asante/.test(main()) && !!app().querySelector('[data-act="chFeeRemind"]'));
+    ok('CH-40 no refund action on a fee (non-refundable)', !app().querySelector('.ch-feecard [data-act*="efund"]') && STORE.chFees.every(x => ['Due', 'Paid', 'Waived'].includes(x.status)));
+  });
+
+  await T('CH-38 bank transfer; CH-41 payment cards', async () => {
+    fresh(); learner('C'); const f = chFeeRaise(cid(), C7().nvq.title, D(5), 'C'); go('payments');
+    ok('CH-41 progress dial + Paid / Pending / Next due cards', !!app().querySelector('.ch-dial') && ['Paid', 'Pending', 'Next due'].every(x => [...app().querySelectorAll('.ch-paycards .card')].some(c => c.textContent.startsWith(x))));
+    const t = chPlanTotals(C7()); ok('CH-41 dial = % of the programme fee paid', app().querySelector('.ch-dial').textContent.trim() === Math.round(t.paid / t.total * 100) + '%');
+    ok('CH-41 Observation fee card: amount, status, Pay now / Bank transfer', /Observation fee/.test(app().querySelector('.ch-feecard').textContent) && !!app().querySelector('[data-act="chFeeBank"]'));
+    ACT.chFeeBank({ dataset: { id: f.id } }); ok('CH-38 bank transfer shows bank details (CH-35) and a reference', /Lloyds Bank/.test(mroot().textContent) && /Reference/.test(mroot().textContent)); prim();
+    const x = STORE.chBank.find(y => y.fee === f.id); ok('CH-38 awaiting confirmation; no second Pay now', !!x && x.status === 'Awaiting confirmation' && !app().querySelector('[data-act="chFeePay"]'));
+    FA(); const tg = payTargets().find(t2 => t2.chb === x); ok('CH-38 Finance can record it', !!tg && /observation fee/.test(tg.label)); recordPayment(tg, x.amount, 'BACS-88001', 'Bank transfer', 'Received');
+    ok('CH-38 recorded → fee Paid; ledger once', f.status === 'Paid' && allTx().filter(t2 => t2.ref === 'BACS-88001').length === 1);
+    learner('A'); go('payments'); ok('CH-41 no fee card without a fee', !app().querySelector('.ch-feecard'));
+  });
+
+  await T('CH-39 waiver: System Admin → Finance review → Super Admin', async () => {
+    fresh(); const k = STORE.chFees.find(x => x.name === 'Kofi Asante'), w = qItem('AQ-9101');
+    ok('CH-39 mock: Kofi Asante\'s waiver at Finance review', w && w.type === 'Observation fee waiver' && w.stage === 'review' && w.first === FIN_A && k.waiver === 'AQ-9101');
+    FA(); ok('CH-39 awaiting the Finance Admin', awaitingMe(w)); go('a-queue', { id: 'AQ-9101' });
+    ok('CH-39 Finance sees "Recommend — forward to Super Admin"', /Recommend — forward to Super Admin/.test(main()));
+    applyDecision(w, 'approve', 'Checked.', {});
+    ok('CH-39 Finance review → forwarded (still Pending, Super Admin final), fee still Due', w.status === 'Pending' && w.stage === 'final' && w.first === 'Super Administrator' && k.status === 'Due');
+    FA(); ok('CH-39 no longer awaiting Finance', !awaitingMe(w));
+    SA(); applyDecision(w, 'approve', 'Final approval.', {}); ok('CH-39 Super Admin final → Waived', w.status === 'Approved' && k.status === 'Waived');
+    const g = STORE.chFees.find(x => x.lid === STORE.worlds.D.me.id); role('sysA'); go('a-learner', { id: g.lid, tab: 'payments' });
+    ok('CH-39 Learner 360 → Payments: fee card with "Waive observation fee" (System Admin)', !!app().querySelector('[data-act="chFeeWaive"][data-id="' + g.id + '"]'));
+    ACT.chFeeWaive({ dataset: { id: g.id } }); document.querySelector('#rsn').value = 'Hardship.'; press();
+    const wi = qItem(g.waiver); ok('CH-39 System Admin raises → Finance review', wi && wi.status === 'Pending' && wi.stage === 'review' && wi.raisedBy === ADMIN.me.name && g.status === 'Due');
+    applyDecision(wi, 'approve', 'self', {}); ok('CH-39 the System Admin can\'t approve their own waiver', wi.status === 'Pending' && wi.stage === 'review');
+    wi.raised = D(-8); allQueue(); ok('CH-39 after 7 days: reminder, not escalation', wi.status === 'Pending' && wi.reminder && !wi.escalated);
+    FA(); ACT.chFeeWaive({ dataset: { id: g.id } }); ok('CH-39 Finance can\'t raise a waiver', !MODAL || !document.querySelector('#rsn'));
+    SA(); const h = chFeeRaise('IA-L-30200', 'Level 3 Diploma in Adult Care (England)', D(4), null, true); h.name = 'Oliver Bennett'; go('a-learner', { id: 'IA-L-30200', tab: 'payments' }); ACT.chFeeWaive({ dataset: { id: h.id } }); document.querySelector('#rsn').value = 'Academy error.'; press();
+    ok('CH-39 Super Admin\'s own waiver applies immediately', h.status === 'Waived' && qItem(h.waiver).saImmediate);
+  });
+
+  /* ---------- Records (Batch 7b) ---------- */
+  await T('CH records (Batch 7b)', async () => {
+    fresh(); ACT.scOpen(); go('cd-log');
+    const r = id => { const tr = [...app().querySelectorAll('main tr')].find(x => x.textContent.trim().startsWith(id)); return tr ? tr.textContent : ''; };
+    ok('Decisions Log: CH-37 – CH-41, CH-43 Applied (Batch 7b)', ['CH-37', 'CH-38', 'CH-39', 'CH-40', 'CH-41', 'CH-43'].every(id => /Applied \(Batch 7b\)/.test(r(id)) && /13 Oct 2026/.test(r(id))) && /S8/.test(r('CH-43')));
+    const s23 = SC_LIST().find(x => x[0] === '23'), s7 = SC_LIST().find(x => x[0] === '7');
+    ok('Scenario #23 "Academy-office observation and fee" — 8 steps, no transfer step', !!s23 && s23[1] === 'Academy-office observation and fee' && s23[3].length === 8 && !s23[3].some(x => /transfer to new date|moves automatically/i.test(x.text)) && /first confirmed observation/.test(s23[3][3].text) && /waiver/.test(s23[3][5].text));
+    ok('Scenario #7: office steps use the request flow', s7[3].length === 10 && /advises an Academy-office observation/.test(s7[3][5].text) && /Coordinator approves/.test(s7[3][7].text) && !s7[3].some(x => /Assessor proposes an Academy office observation instead/.test(x.text)));
+    go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 7b/.test(s.textContent));
+    ok('UX Changelog: Batch 7b entry', !!ux && ['CH-37:', 'CH-38:', 'CH-39:', 'CH-40:', 'CH-41:', 'CH-43:'].every(k => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(k))));
+    SA(); ACT.qRouting(); const rows = [...document.querySelectorAll('#modal-root tbody tr')].map(tr => [...tr.children].map(td => td.textContent.trim()).join(' | '));
+    ok('Who approves what: 19 rows incl. the two 7b types', rows.length === 19 && rows.includes('Observation fee waiver | System Admin | Finance Admin review, then Super Admin (final) | Reminder') && rows.some(x => x.startsWith('Office observation request |'))); closeModal();
+    go('a-index'); ok('Admin index: 7b entries', ['a-queue.AQ-9201', 'a-queue.AQ-9101', 'a-learner.IA-L-30718.payments', 'a-programmes.NV-L3D.support'].every(t => !!app().querySelector('[data-t="' + t + '"]')));
+    coA(); go('c-index'); ok('Coordinator index: 7b entries', !!app().querySelector('[data-t="c-learner.' + cid() + '"]') && !!app().querySelector('[data-t="c-dashboard"]'));
+    FA(); go('f-index'); ok('Finance index: 7b entries', ['a-queue.AQ-9101', 'f-overdue', 'f-plans'].every(t => !!app().querySelector('[data-t="' + t + '"]')));
   });
 
   fresh();
