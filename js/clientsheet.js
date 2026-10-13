@@ -272,10 +272,10 @@ ACT.csToActions = () => { const p = $('#app .action-panel'); if (p) { p.scrollIn
 function csShortCards() {
   const en = W.enrolments.filter(e => e.kind === 'short');
   const acct = S.edge === 'unverified' || W.me.pendingVerification ? 'Pending verification' : 'Active';
-  const quizzes = en.filter(e => e.status === 'Active' && e.quiz && !e.quiz.attempts.some(a => a.result === 'Pass') && e.quiz.max - e.quiz.attempts.length > 0);
+  const quizzes = en.filter(e => e.status === 'Active').flatMap(e => (e.modules || []).filter(m => !shPassed(m) && m.quiz.max - m.quiz.attempts.length > 0).map(m => ({ id: e.id, m })));
   const inProg = en.filter(e => e.status === 'Active'), done = en.filter(e => e.status === 'Completed'), exp = en.filter(e => e.status === 'Expired-Incomplete');
   const first = quizzes[0] ? [quizzes[0].id, 'quiz'] : inProg[0] ? [inProg[0].id, 'content'] : null;
-  const tasks = [quizzes.length && `${plural(quizzes.length, 'quiz', 'quizzes')} to complete`, inProg.length && `${plural(inProg.length, 'course')} in progress`].filter(Boolean);
+  const tasks = [quizzes.length && `${plural(quizzes.length, 'module quiz', 'module quizzes')} to complete`, inProg.length && `${plural(inProg.length, 'course')} in progress`].filter(Boolean);
   const n = (k, v) => `<div class="cs-kv"><span class="cs-n num">${v}</span><span class="xs muted">${k}</span></div>`;
   return `<section class="cs-cards" aria-label="Your summary">
     <article class="card cs-card" data-cs="account"><h2 class="small muted">Account</h2><div>${chip(acct, acct === 'Active' ? 'green' : 'amber')}</div><p class="xs muted">${acct === 'Active' ? 'Your email is verified.' : 'Check your inbox to verify your email.'}</p></article>
@@ -321,9 +321,7 @@ ACT.csDoc = el => {
     actions: [{ label: 'Close' }, { label: `${ic('download', 15)} Download`, cls: 'btn-primary', fn: () => { toast(`${esc(f)} downloaded (simulated).`); return false; } }] });
 };
 
-/* ---------- C14: quiz tab heading ---------- */
-const _quizTabCs = quizTab;
-quizTab = function (e) { return _quizTabCs(e).replace('<h2>Course quiz</h2>', '<h2>What is this course about?</h2>'); };
+/* ---------- C14: quiz tab heading — now "What is this module about?" in every module quiz (CH-16, CH-28; set in screens-a.js) ---------- */
 
 /* ---------- C15: My Students — Discontinued hidden by default, "Show discontinued" (remembered this session) ---------- */
 const _tStudentsCs = SCREENS['t-students'];
@@ -377,7 +375,7 @@ SCREENS.index = p => _idxCs(p).replace('Demo Scenarios — 17 walkthroughs', 'De
   csIdxLi('Document preview pop-up (applicant)', { m: 'csDoc' }, 'C8 — PDF and image previews; other files show name, size, date and Download.'),
   csIdxLi('Payments — Purchase history (short course)', { v: 'A', r: 'payments' }, 'C10 — every purchase newest first, with its receipt.'),
   csIdxLi('Dashboard — Account, Tasks, Courses and expiring certificate cards', { v: 'A', r: 'dashboard' }, 'C11, C12 — the short-course learner\'s summary at a glance.'),
-  csIdxLi('Quiz tab — "What is this course about?"', { v: 'A', r: 'course.mh26.quiz' }, 'C14 — the quiz intro heading, with the instructions kept below it.')].join('')}</ul></section>`;
+  csIdxLi('Quiz tab — "What is this module about?"', { v: 'A', r: 'course.mh26.quiz' }, 'C14, CH-28 — each module quiz\'s heading, with the instructions kept below it.')].join('')}</ul></section>`;
 const _tIdxCs = SCREENS['t-index'];
 SCREENS['t-index'] = p => _tIdxCs(p) + `<section class="card idx-sec"><h2>Client suggestion sheet</h2><ul class="idx-list">${[
   ['My Students — Show discontinued', 't-students', 'C15 — discontinued learners hidden until you tick the box.'],

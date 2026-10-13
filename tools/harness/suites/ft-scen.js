@@ -40,10 +40,10 @@
   });
 
   await S_('#3 Extra quiz attempts', async () => {
-    step(3, 1); const e = W.enrolments.find(x => x.id === 'bls'); ok('#3.1 all attempts used', e.quiz.attempts.length >= e.quiz.max);
-    go('course', { id: 'bls' }); ACT.reqAttempts({ dataset: { id: 'bls' } }); $('#rq-reason').value = 'I have re-watched the videos.'; prim(); const r = W.requests[0]; ok('#3.1 request sent', r.type === 'Extra quiz attempts' && r.status === 'Requested', r.id);
+    step(3, 1); const e = W.enrolments.find(x => x.id === 'bls'), mq = e.modules[0].quiz; ok('#3.1 all attempts used on the Module 1 quiz (CH-16)', mq.attempts.length >= mq.max);
+    go('course', { id: 'bls' }); ACT.reqAttempts({ dataset: { id: 'bls', m: 'm1' } }); $('#rq-reason').value = 'I have re-watched the videos.'; prim(); const r = W.requests[0]; ok('#3.1 request sent for the module (CH-16)', r.type === 'Extra quiz attempts' && r.status === 'Requested' && r.mid === 'm1', r.id);
     step(3, 2); const qid = 'AQ-' + r.id; ok('#3.2 in the Academic Admin queue', !!qItem(qid), qid); go('a-queue', { id: qid }); ACT.qDo({ dataset: { id: qid, a: 'grant' } }); rsn(); prim();
-    step(3, 3); ok('#3.3 learner can attempt again', r.status === 'Granted' && e.quiz.attempts.length < e.quiz.max, r.status + ' ' + e.quiz.attempts.length + '/' + e.quiz.max);
+    step(3, 3); ok('#3.3 learner can attempt the module quiz again (CH-16)', r.status === 'Granted' && mq.attempts.length < mq.max, r.status + ' ' + mq.attempts.length + '/' + mq.max);
   });
 
   await S_('#4 Overdue fees', async () => {

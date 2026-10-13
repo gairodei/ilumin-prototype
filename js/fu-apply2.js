@@ -11,7 +11,7 @@ const PRIYA_JOINED = '2026-03-12T09:00:00.000Z';
 function fuShortEnrol(id, base, at, status) {
   const tpl = STORE.worlds.A.enrolments.find(e => e.kind === 'short' && (e.base || e.title).startsWith(base)) || STORE.worlds.A.enrolments.find(e => e.kind === 'short');
   const e = JSON.parse(JSON.stringify(tpl)), price = coursePrice(base);
-  return Object.assign(e, { id, base, title: base, status, enrolled: at, start: at, end: new Date(new Date(at).getTime() + 365 * DAY).toISOString(), progress: 20, sponsor: null, price, cur: 'GBP', certId: undefined, completedAt: undefined, reason: undefined, quiz: { ...e.quiz, attempts: [] }, reqs: (e.reqs || []).map(([r]) => [r, false]) });
+  return Object.assign(e, { id, base, title: base, status, enrolled: at, start: at, end: new Date(new Date(at).getTime() + 365 * DAY).toISOString(), progress: 20, sponsor: null, price, cur: 'GBP', certId: undefined, completedAt: undefined, reason: undefined, modules: shModules({ topic: e.topic }), reqs: (e.reqs || []).map(([r]) => [r, false]) });
 }
 function fuPriya() {
   PERSONAS.H = { ...PRIYA };

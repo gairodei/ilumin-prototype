@@ -215,16 +215,16 @@
     ok('Decisions Log: P-27 … P-30 Pending client', prow.length === 4 && ['P-27', 'P-28', 'P-29', 'P-30'].every((p, i) => prow[i].startsWith(p) && /Pending client/.test(prow[i])) && /Observation fee/.test(prow[0]) && /Mistyped country/.test(prow[1]) && /Data Correction/.test(prow[1]) && /Intake choice at sign-up/.test(prow[3]));
     const fu = secs.find(s => /Follow-up decisions \(P-05 – P-26\)/.test(s.textContent)), st = id => ([...fu.querySelectorAll('tbody tr')].find(tr => tr.firstChild.textContent === id) || {}).textContent || '';
     ok('Decisions Log: F1 Superseded (CH-01); F2, F3b, F8 Resolved; F3a Superseded', /Superseded \(CH-01\)/.test(st('F1')) && /Resolved \(CH-02\)/.test(st('F2')) && /Superseded \(CH-02\)/.test(st('F3a')) && /Resolved \(CH-03\)/.test(st('F3b')) && /Resolved \(CH-05\)/.test(st('F8')));
-    ok('Decisions Log: 19 scenarios; #16 is the new sign-up', /All 19 run end to end in the prototype\./.test(main()) && CDL_SCEN.filter(r => r[0] === '16').length === 1 && CDL_SCEN.find(r => r[0] === '16')[1] === 'New sign-up: documents → offer letter → payment → start' && !CDL_SCEN.some(r => r[1] === 'Learner moves country'));
+    ok('Decisions Log: 20 scenarios; #16 is the new sign-up', /All 20 run end to end in the prototype\./.test(main()) && CDL_SCEN.filter(r => r[0] === '16').length === 1 && CDL_SCEN.find(r => r[0] === '16')[1] === 'New sign-up: documents → offer letter → payment → start' && !CDL_SCEN.some(r => r[1] === 'Learner moves country'));
     go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 1/.test(s.textContent));
     ok('UX Changelog: Batch 1 entry lists its CH IDs', !!ux && ['CH-01:', 'CH-02:', 'CH-03:', 'CH-05:', 'CH-31:'].every(x => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(x))));
-    go('demo-scenarios'); ok('Demo Scenarios: "Nineteen", 19 sections, #16 is the new sign-up', /Nineteen end-to-end walkthroughs/.test(main()) && app().querySelectorAll('main section[id^="sc-"]').length === 19 && /New sign-up/.test((app().querySelector('#sc-16') || {}).textContent || ''));
-    renderDemo(); AFTER.forEach(f => f()); const b = document.querySelector('#demo-root [data-act="scOpen"]'); ok('Demo panel: "Open the 19 Demo Scenarios"', !b || b.textContent === 'Open the 19 Demo Scenarios', b && b.textContent);
+    go('demo-scenarios'); ok('Demo Scenarios: "Twenty", 20 sections, #16 is the new sign-up', /Twenty end-to-end walkthroughs/.test(main()) && app().querySelectorAll('main section[id^="sc-"]').length === 20 && /New sign-up/.test((app().querySelector('#sc-16') || {}).textContent || ''));
+    renderDemo(); AFTER.forEach(f => f()); const b = document.querySelector('#demo-root [data-act="scOpen"]'); ok('Demo panel: "Open the 20 Demo Scenarios"', !b || b.textContent === 'Open the 20 Demo Scenarios', b && b.textContent);
     learner('A'); go('index'); const ix = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
-    ok('Learner index: CH entries (incl. registration confirmation, 1b), each with a purpose line', !!ix && ix.querySelectorAll('li').length === 12 && !!ix.querySelector('[data-act="regStart"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 19 walkthroughs/.test(main()));
+    ok('Learner index: CH entries (incl. registration confirmation, 1b), each with a purpose line', !!ix && ix.querySelectorAll('li').length === 17 && !!ix.querySelector('[data-act="regStart"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 20 walkthroughs/.test(main()));
     ix.querySelector('[data-m="chCheckout"]').click(); await wait(150); ok('Learner index: checkout entry opens the checkout with the Stripe line', !!MODAL && !!mroot().querySelector('.ch-stripe')); closeModal();
     SA(); go('a-index'); const ax = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
-    ok('Admin index: Batch 1–3 entries with purposes', !!ax && ax.querySelectorAll('li').length === 10 && ['a-config', 'a-learner.IA-L-31900', 'a-dataprotection..residency', 'a-programmes.NV-L3.letter', 'a-admissions.APP-C', 'a-learner.IA-L-31188.admission'].every(t => ax.querySelector(`[data-t="${t}"]`)) && [...ax.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && !/Priya Nair \(moved country/.test(main()));
+    ok('Admin index: Batch 1–4 entries with purposes', !!ax && ax.querySelectorAll('li').length === 12 && ['a-config', 'a-learner.IA-L-31900', 'a-dataprotection..residency', 'a-programmes.NV-L3.letter', 'a-admissions.APP-C', 'a-learner.IA-L-31188.admission'].every(t => ax.querySelector(`[data-t="${t}"]`)) && [...ax.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && !/Priya Nair \(moved country/.test(main()));
   });
 
   /* ================= Batch 2 ================= */
@@ -429,6 +429,96 @@
     ok('UX Changelog: Batch 3 entry lists its CH IDs', !!ux && ['CH-11:', 'CH-12:', 'CH-13:', 'CH-14:'].every(x => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(x))));
     go('cd-log'); ok('Decisions Log: CH-10 assumption note', /Assumption: If the deposit balance isn't paid within the 28-day hold, the seat is released and programme content locks \(prototype assumption, pending client confirmation\)\./.test(main()));
     SA(); go('a-index'); ok('Admin index: Pause access, bank transfers and rejected-after-payment entries', ['a-learner.IA-L-18022.enrolments', 'f-learner.IA-L-31900', 'f-exceptions..bank'].every(t => app().querySelector(`[data-t="${t}"]`)) && !!app().querySelector('[data-act="chSc19Start"]'));
+  });
+
+  /* ================= Batch 4 ================= */
+  const take = (eid, mid, pass) => { W.quiz = { e: eid, m: mid, ans: Object.fromEntries(QUIZ_BANK.map((q, i) => [i, pass ? q[2] : (q[2] + 1) % q[1].length])), cur: 0, ends: Date.now() + 6e5, mode: 'one', conn: true }; finishQuiz(false); const r = W.quiz.result; W.quiz = null; return r; };
+
+  /* ---------- CH-16 data and learner screens ---------- */
+  await T('CH-16 modules with their own quizzes', async () => {
+    fresh(); learner('A'); const sh = W.enrolments.filter(e => e.kind === 'short');
+    ok('CH-16 every short course has 2–4 modules, each with its own quiz; no course quiz', sh.every(e => e.modules.length >= 2 && e.modules.length <= 4 && e.modules.every(m => m.quiz && m.quiz.pass && m.quiz.limit && m.quiz.max) && !('quiz' in e)), sh.map(e => e.id + ':' + e.modules.length).join());
+    ok('CH-16 module content is the course content (IDs kept)', sh.every(e => e.modules.flatMap(m => m.items).sort().join() === e.content.map(c => c.id).sort().join()));
+    ok('CH-16 completed courses have every module quiz passed', sh.filter(e => e.status === 'Completed').every(e => e.modules.every(shPassed)));
+    ok('CH-16 earlier attempts moved to Module 1 (bls: Module 1 exhausted)', shModState(W.enrolments.find(e => e.id === 'bls').modules[0]) === 'Attempts exhausted');
+    ok('CH-16 completion rule wording', sh.every(e => !e.reqs.some(([r]) => /Pass the quiz|standard quiz/.test(r))) && sh.filter(e => e.reqs.length).every(e => e.reqs.some(([r]) => r === 'Pass every module quiz with 80% or more')));
+    go('course', { id: 'mh26', tab: 'content' }); const mods = app().querySelectorAll('main .sh-mod');
+    ok('CH-16 Content tab: modules listed with their progress and their quiz', mods.length === 3 && [...mods].every(m => m.querySelector('[role="progressbar"]') && /What is this module about\?/.test(m.textContent) && m.querySelector('[data-act="shModPick"]')));
+    go('course', { id: 'mh26', tab: 'quiz' }); const h2 = [...app().querySelectorAll('main h2')].map(h => h.textContent.trim());
+    ok('CH-16 / CH-28 Quiz tab: module quizzes; heading "What is this module about?" with the instructions line', h2.includes('Module quizzes') && h2.includes('What is this module about?') && /Module 1 of 3 · The law and your responsibilities/.test(main()) && /The timer starts when you begin and can't be paused/.test(main()) && ['Questions', 'Time limit', 'Pass mark', 'Attempts used'].every(k => main().includes(k)) && !/Course quiz|final quiz/i.test(main().replace('there is no final course quiz', '')));
+    go('dashboard'); const tasks = app().querySelector('.cs-card[data-cs="tasks"]'), n = W.enrolments.filter(e => e.status === 'Active').reduce((a, e) => a + (e.modules || []).filter(m => !shPassed(m) && m.quiz.max > m.quiz.attempts.length).length, 0);
+    ok('CH-26 Tasks counts module quizzes to complete', !!tasks && tasks.textContent.includes(`${n} module quizzes to complete`), tasks && tasks.textContent);
+  });
+
+  /* ---------- Scenario #20 flow: per-module attempts, request, grant, completion, one certificate ---------- */
+  await T('CH-16 module quizzes end to end (#20)', async () => {
+    fresh(); ACT.chSc20Start(); const e = W.enrolments.find(x => x.id === 'mh26'), [m1, m2, m3] = e.modules, certs0 = W.certs.length;
+    ok('#20 start: content done, three module quizzes to pass', e.content.every(c => c.state === 'Completed') && e.modules.length === 3 && !e.modules.some(shPassed));
+    ok('#20 Module 1 passed', take('mh26', 'm1', true).result === 'Pass' && shPassed(m1) && e.status === 'Active');
+    [1, 2, 3].forEach(() => take('mh26', 'm2', false));
+    ok('#20 Module 2: attempts exhausted for that module only', shModState(m2) === 'Attempts exhausted' && shModState(m3) === 'Not started');
+    setUi('shMod-mh26', 'm2'); go('course', { id: 'mh26', tab: 'quiz' }); ok('#20 exhausted card for Module 2 with Request more attempts', /All 3 attempts used for this module/.test(main()) && !!app().querySelector('[data-act="reqAttempts"][data-m="m2"]'));
+    go('requests'); ok('#20 My Requests offers the request for the module', !!app().querySelector('[data-act="reqAttempts"][data-m="m2"]') && /Moving and Handling People — 2026, Hoists, slings and repositioning/.test(main()));
+    ACT.reqAttempts({ dataset: { id: 'mh26', m: 'm2' } }); $('#rq-reason').value = 'Missed the pass mark on the hoist questions.'; prim(); const r = W.requests[0];
+    ok('#20 request is for the Module 2 quiz', r.type === 'Extra quiz attempts' && r.mid === 'm2' && r.module === 'Hoists, slings and repositioning');
+    go('requests'); ok('#20 My Requests shows the module', /Moving and Handling People — 2026 — Hoists, slings and repositioning/.test(main()));
+    const qid = 'AQ-' + r.id, it = qItem(qid); ok('#20 Approvals Queue item names the module; first approver Academic Admin', !!it && /Hoists, slings and repositioning/.test(it.related[0]) && it.first === 'Rachel Hughes');
+    role('acaA'); go('a-queue', { id: qid }); ok('#20 queue detail shows the module quiz', /Module 2: Hoists, slings and repositioning/.test(main()));
+    ACT.qDo({ dataset: { id: qid, a: 'grant' } }); $('#rsn').value = 'Granted'; prim(); closeModal();
+    learner('A'); const e2 = W.enrolments.find(x => x.id === 'mh26'), m2b = e2.modules[1];
+    ok('#20 granted: Module 2 attempts available again', r.status === 'Granted' && m2b.quiz.max > m2b.quiz.attempts.length);
+    ok('#20 Module 2 passed; course not complete until Module 3', take('mh26', 'm2', true).result === 'Pass' && e2.status === 'Active');
+    take('mh26', 'm3', true);
+    ok('#20 every module quiz passed → Completed, one certificate issued', e2.status === 'Completed' && e2.progress === 100 && W.certs.length === certs0 + 1 && W.certs[0].enrol === 'mh26' && W.certs[0].status === 'Valid');
+    go('certificates'); ok('#20 certificate listed', /Moving and Handling People/.test(main()) && main().includes(W.certs[0].no));
+  });
+
+  /* ---------- CH-16 admin: Modules tab ---------- */
+  await T('CH-16 short-course editor — Modules tab', async () => {
+    fresh(); SA(); go('a-courses', { id: 'SC-01', tab: 'modules' }); const tabs = [...app().querySelectorAll('.subtabs [data-tab], .subtabs button')].map(b => b.textContent.trim());
+    ok('CH-16 "Modules" tab; no "Quiz" tab', tabs.includes('Modules') && !tabs.includes('Quiz'), tabs.join());
+    ok('CH-16 Modules tab: each module with content and its own quiz settings', app().querySelectorAll('.ch-cmod').length === 3 && /Module quiz — "What is this module about\?"/.test(main()) && !!$('#mq-m1-pass') && !/one quiz per course/i.test(main()));
+    ACT.chModAdd({ dataset: { c: 'SC-01' } }); $('#rsn').value = 'Hoist maintenance checks'; prim(); closeModal(); ok('CH-16 add module', chCourseMods(ADMIN.courses[0]).length === 4 && /Hoist maintenance checks/.test(main()));
+    ACT.chModMove({ dataset: { c: 'SC-01', m: 'm4', d: '-1' } }); ok('CH-16 reorder', chCourseMods(ADMIN.courses[0])[2].id === 'm4');
+    ACT.chModRetire({ dataset: { c: 'SC-01', m: 'm4' } }); $('#rsn').value = 'Merged into Module 3'; prim(); closeModal(); ok('CH-16 retire (kept, not deleted)', chCourseMods(ADMIN.courses[0]).find(m => m.id === 'm4').status === 'Retired' && chCourseMods(ADMIN.courses[0]).length === 4);
+    const box = app().querySelector('[data-onchange="chModItem"][data-m="m1"][data-i="c2"]'); box.checked = true; INP.chModItem(box); ok('CH-16 assign content to a module', chCourseMods(ADMIN.courses[0]).find(m => m.id === 'm1').items.includes('c2') && !chCourseMods(ADMIN.courses[0]).find(m => m.id === 'm2').items.includes('c2'));
+    const pm = $('#mq-m2-pass'); pm.value = '85'; INP.chModQuiz(pm); ok('CH-16 configure a module quiz (pass mark)', chCourseMods(ADMIN.courses[0]).find(m => m.id === 'm2').quiz.pass === 85);
+    go('a-courses', { id: 'SC-01', tab: 'completion' }); ok('CH-16 completion rule: every module quiz passed', /Every module quiz passed/.test(main()) && !/Quiz passed \(/.test(main()));
+    go('a-programmes', { id: 'NV-L3', tab: 'tree' }); ok('CH-16 NVQ programmes get no module quizzes', !/module quiz/i.test(main()) && !app().querySelector('[data-act="chModAdd"]'));
+  });
+
+  /* ---------- CH-18 answer keys, CH-15 module codes ---------- */
+  await T('CH-18 answer keys / CH-15 module codes', async () => {
+    fresh(); learner('C'); go('resources'); const keys = W.resources.flatMap(g => g.items.filter(i => i.kind === 'key').map(i => [g.unit, i]));
+    ok('CH-18 answer keys in Resources under their module', keys.length === 3 && keys.some(([u, i]) => /^U302/.test(u) && i.title === 'AC M12 Ways of Working in Adult Care — Knowledge Answer Key') && keys.every(([, i]) => i.dl));
+    ok('CH-18 shown with Download', /AC M12 Ways of Working in Adult Care — Knowledge Answer Key/.test(main()) && !!app().querySelector('[data-f="AC M12 Ways of Working in Adult Care — Knowledge Answer Key"]'));
+    $('#rt').value = 'key'; INP.resT($('#rt')); ok('CH-18 "Answer keys" type filter', app().querySelectorAll('main .li').length >= 3 && !/Class recording/.test(main()));
+    INP.resT({ value: '' });
+    ok('CH-15 Resources: module title and code by each module group', /Recognising and responding to abuse \(L\/652\/0601\)/.test(main()) && /Duty of care and dilemmas \(J\/652\/0501\)/.test(main()));
+    go('assignment', { id: 'a2' }); const kb = app().querySelector('[data-act="chAnsDl"]');
+    ok('CH-18 assignment page: "Answer key (guidance)" next to "Download criteria (PDF)"', !!kb && /Answer key \(guidance\)/.test(kb.textContent) && kb.previousElementSibling && kb.previousElementSibling.dataset.act === 'csCritPdf');
+    kb.click(); await wait(40); ok('CH-18 downloads the module\'s answer key', /AC M12 Ways of Working in Adult Care — Knowledge Answer Key\.pdf downloaded/.test(document.querySelector('#toasts').textContent));
+    ok('CH-18 submitting unchanged: per-criterion answer boxes, no upload template, no references box', !/upload[^.]*template|referenc/i.test([...app().querySelectorAll('main label, main legend, main h2, main h3')].map(l => l.textContent).join(' ')) && app().querySelectorAll('main .q').length === asgById('a2').qs.length);
+    ok('CH-15 assignment header shows the module and its code', /U302 · Module 1 — Person-centred values \(T\/652\/0001\)/.test(main()));
+    go('assignment', { id: 'a6' }); ok('CH-18 no answer key button when the module has none', !app().querySelector('[data-act="chAnsDl"]'));
+    go('progress'); ok('CH-15 progress tree: module codes', /Person-centred values \(T\/652\/0001\)/.test(main()) && /Safe working \(R\/652\/0701\)/.test(main()));
+    role('acaA'); go('a-programmes', { id: 'NV-L3', tab: 'tree' });
+    ok('CH-15 structure builder: editable code per module; CH-18 answer key per module', app().querySelectorAll('[data-onchange="chModCode"]').length === 9 && app().querySelectorAll('[data-act="chAnsUp"]').length === 9 && /AC M12 Ways of Working/.test(main()));
+    const inp = app().querySelector('[data-onchange="chModCode"][data-k="U307 M1"]'); inp.value = 'bad'; INP.chModCode(inp); ok('CH-15 code format checked', STORE.worlds.C.tree.find(u => u.code === 'U307').mods[0].ab === 'R/652/0701');
+    inp.value = 'Y/652/0799'; INP.chModCode(inp); ok('CH-15 code saved, audited, shown to learners', STORE.worlds.C.tree.find(u => u.code === 'U307').mods[0].ab === 'Y/652/0799' && ADMIN.audit[0].action === 'Module awarding-body code changed');
+    ACT.chAnsUp({ dataset: { k: 'U307 M1' } }); $('#rsn').value = 'New guidance'; ok('CH-18 upload needs a file', prim() === false); ACT.chAnsSample(); prim(); closeModal();
+    learner('C'); go('resources'); ok('CH-18 uploaded answer key appears under its module for learners', W.resources.some(g => /^U307/.test(g.unit) && g.items.some(i => i.kind === 'key' && /Knowledge Answer Key \(updated\)/.test(i.title))) && /Safe working \(Y\/652\/0799\)/.test(main()));
+    fresh();
+  });
+
+  /* ---------- Records (Batch 4) ---------- */
+  await T('CH records (Batch 4)', async () => {
+    fresh(); ACT.scOpen(); go('cd-log'); const t = main();
+    ok('Decisions Log: CH-15, CH-16, CH-18 Applied (Batch 4); CH-26, CH-28 updated', ['CH-15', 'CH-16', 'CH-18'].every(id => new RegExp(id + '[^]*?Applied \\(Batch 4\\)13 Oct 2026').test(t)) && /Tasks counts module quizzes \(Batch 4\)/.test(t) && /"What is this module about\?" \(Batch 4\)/.test(t));
+    go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 4/.test(s.textContent));
+    ok('UX Changelog: Batch 4 entry lists its CH IDs', !!ux && ['CH-16:', 'CH-26:', 'CH-28:', 'CH-15:', 'CH-18:'].every(x => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(x))));
+    const s20 = SC_LIST().find(x => x[0] === '20'); ok('Scenario #20 "Module quizzes"', !!s20 && s20[1] === 'Module quizzes' && s20[3].length === 6 && /exhausted/.test(s20[3][2].text) && /certificate/.test(s20[3][5].text));
+    SA(); go('a-index'); ok('Admin index: Modules tab, structure builder codes and answer keys', !!app().querySelector('[data-t="a-courses.SC-01.modules"]') && !!app().querySelector('[data-t="a-programmes.NV-L3.tree"]'));
   });
 
   fresh();

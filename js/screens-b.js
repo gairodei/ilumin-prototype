@@ -177,7 +177,7 @@ AFTER.push(() => { clearTimer('autosave'); if (S.route === 'assignment' && $('#s
 SCREENS.assignment = (p) => {
   const a = asgById(p.id); if (!a) return notFound();
   const crumbs = [['Assignments', 'assignments'], [a.title]];
-  const head = pageHead(esc(a.title), `${esc(a.unit)} · ${esc(W.nvq.title)}`, `${chip(a.status)}<span class="code">${roundLbl(a)}</span><span class="small muted">${a.resubUsed} of ${a.resubMax} resubmissions used</span>${a.qs.some(q => q.rounds.length) ? `<button class="btn btn-sm" data-act="pdfDl" data-id="${a.id}">${ic('download', 14)}Download as PDF</button>` : ''}`, crumbs);
+  const head = pageHead(esc(a.title), `${esc(a.unit)}${(x => x ? ' — ' + esc(modLabel(x.m)) : '')(nvqModOf(W.tree, a.unit))} · ${esc(W.nvq.title)}`, `${chip(a.status)}<span class="code">${roundLbl(a)}</span><span class="small muted">${a.resubUsed} of ${a.resubMax} resubmissions used</span>${a.qs.some(q => q.rounds.length) ? `<button class="btn btn-sm" data-act="pdfDl" data-id="${a.id}">${ic('download', 14)}Download as PDF</button>` : ''}`, crumbs);
   let main;
   if (W.nvq && W.nvq.status === 'Discontinued') main = `<div class="note b-red" role="status">${ic('lock')}<div><strong>Read-only — this programme has been discontinued.</strong> You can view your submitted answers and feedback but can't change them.</div></div>
     <div class="paper">${a.qs.map((q, i) => `<div class="q">${qHead(q, i)}${rte(a, q, 0, { disabled: true })}</div>`).join('')}</div>`;
@@ -286,7 +286,7 @@ function treeSection() {
   const units = W.tree.map((u, ui_) => {
     const mods = u.mods.map(m => {
       const los = m.los.filter(lo => !ft_ || lo.type === ft_).map(lo => { const cr = filt(lo.crit); if (!cr.length) return ''; return node(4, lo.code, `${lo.title}`, lo.crit, `<div class="small muted" style="padding:6px 12px">Assessment type set on this Learning Outcome: ${critType(lo.type)}</div>` + cr.map(c => critRow(c, lo.type)).join(''), anyF); }).join('');
-      return los ? node(3, m.code, m.title, critOf(m), los, anyF) : '';
+      return los ? node(3, m.code, modLabel(m), critOf(m), los, anyF) : '';
     }).join('');
     return mods ? node(1, u.code, u.title, critOf(u), mods, anyF || ui_ === 1) : '';
   }).join('');

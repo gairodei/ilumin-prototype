@@ -19,7 +19,7 @@ function initStore() {
   [...'BCDEF'].forEach((v, i) => STORE.worlds[v].certs.forEach(c => { if (c.no !== '—') c.no = c.no.replace(/(\d)$/, d => String((+d + i + 1) % 10)) + String.fromCharCode(65 + i); }));
   // Admin-only additions to learner data so every queue type has a live, linked record
   const F = STORE.worlds.F;
-  F.requests.unshift({ id: 'R-1077', type: 'Extra quiz attempts', target: 'Basic Life Support and Anaphylaxis', raised: D(-3, '19:40'), status: 'Requested', reason: 'I have re-watched the AED scenario twice and would like another chance.', decision: null });
+  F.requests.unshift({ id: 'R-1077', type: 'Extra quiz attempts', target: 'Basic Life Support and Anaphylaxis', mid: 'm1', module: 'Basic life support and using an AED', raised: D(-3, '19:40'), status: 'Requested', reason: 'I have re-watched the AED scenario twice and would like another chance.', decision: null });
   const C = STORE.worlds.C;
   C.requests.unshift({ id: 'R-1080', type: 'Profile change', target: 'Address', raised: D(-2, '08:30'), status: 'Requested', reason: 'I moved house on 28 September.', proposed: '12 Knighton Park Road, Leicester', decision: null });
   C.profilePending['Address'] = '12 Knighton Park Road, Leicester';
@@ -301,7 +301,7 @@ function derivedQueue() {
     w.requests.forEach(r => {
       const t = REQ_TYPE[r.type]; if (!t) return;
       const open = r.status === 'Requested', days = -daysTo(r.raised);
-      out.push({ id: 'AQ-' + r.id + (v === 'A' ? '' : '-' + v), type: t, raisedBy: name, raised: r.raised, status: open ? (r._qs || (days >= 7 ? 'Escalated' : 'Pending')) : REQ_STATUS[r.status], escalated: open && !r._qs && days >= 7, override: r._override, first: t === 'Learner profile change' ? 'Owen Price' : 'Rachel Hughes', related: [`${name} · ${r.target}`, 'a-learners.' + w.me.id + '.requests'], reason: r.reason, decidedBy: open ? null : r.status === 'Cancelled' ? name + ' (learner — cancelled)' : 'Rachel Hughes', decision: r.decision, req: r, v, tbd: null, history: [[name, r.raised, 'Raised', r.reason]].concat(r.decided && !r._hist ? [['Rachel Hughes', r.decided, r.status, r.decision]] : []).concat(r._hist || []), notes: r._notes || (r._notes = []) });
+      out.push({ id: 'AQ-' + r.id + (v === 'A' ? '' : '-' + v), type: t, raisedBy: name, raised: r.raised, status: open ? (r._qs || (days >= 7 ? 'Escalated' : 'Pending')) : REQ_STATUS[r.status], escalated: open && !r._qs && days >= 7, override: r._override, first: t === 'Learner profile change' ? 'Owen Price' : 'Rachel Hughes', related: [`${name} · ${r.target}${r.module ? ' — ' + r.module : ''}`, 'a-learners.' + w.me.id + '.requests'], reason: r.reason, decidedBy: open ? null : r.status === 'Cancelled' ? name + ' (learner — cancelled)' : 'Rachel Hughes', decision: r.decision, req: r, v, tbd: null, history: [[name, r.raised, 'Raised', r.reason]].concat(r.decided && !r._hist ? [['Rachel Hughes', r.decided, r.status, r.decision]] : []).concat(r._hist || []), notes: r._notes || (r._notes = []) });
     });
     if (w.admission && v === 'B' && ad0(w) !== 'Sign-up in progress') {
       const ad = w.admission, open = ['Awaiting review', 'Pending — Documents Required', 'Under Review'].includes(ad.status);

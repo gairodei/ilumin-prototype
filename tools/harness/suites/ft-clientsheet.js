@@ -188,8 +188,8 @@
     const card = k => app().querySelector(`.cs-card[data-cs="${k}"]`), sh = W.enrolments.filter(e => e.kind === 'short');
     ok('C11 three cards at the top', app().querySelectorAll('.cs-cards .cs-card').length === 3 && app().querySelector('.cs-cards').previousElementSibling.classList.contains('hello'));
     ok('C11 Account: Active', !!card('account') && /Active/.test(card('account').textContent));
-    const q = sh.filter(e => e.status === 'Active' && !e.quiz.attempts.some(a => a.result === 'Pass') && e.quiz.max > e.quiz.attempts.length), ip = sh.filter(e => e.status === 'Active');
-    ok('C11 Tasks: quizzes to complete + courses in progress', card('tasks').textContent.includes(`${q.length} quizzes to complete`) && card('tasks').textContent.includes(`${ip.length} courses in progress`), card('tasks').textContent);
+    const q = sh.filter(e => e.status === 'Active').flatMap(e => e.modules.filter(m => !m.quiz.attempts.some(a => a.result === 'Pass') && m.quiz.max > m.quiz.attempts.length).map(m => e)), ip = sh.filter(e => e.status === 'Active');
+    ok('C11 Tasks: module quizzes to complete + courses in progress (CH-26)', card('tasks').textContent.includes(`${q.length} module quizzes to complete`) && card('tasks').textContent.includes(`${ip.length} courses in progress`), card('tasks').textContent);
     const first = card('tasks').querySelector('[data-go="course"]'); ok('C11 Tasks links to the first task', !!first && first.dataset.id === q[0].id && first.dataset.tab === 'quiz');
     const nums = [...card('courses').querySelectorAll('.cs-n')].map(n => +n.textContent);
     ok('C11 Courses: in progress, completed, expired', nums.join() === [ip.length, sh.filter(e => e.status === 'Completed').length, sh.filter(e => e.status === 'Expired-Incomplete').length].join() && !!card('courses').querySelector('[data-go="courses"]'), nums.join());
@@ -206,7 +206,7 @@
   await T('C14 quiz intro heading', async () => {
     fresh(); learner('A'); go('course', { id: 'mh26', tab: 'quiz' });
     const h2 = [...app().querySelectorAll('h2')].map(h => h.textContent.trim());
-    ok('C14 heading "What is this course about?"', h2.includes('What is this course about?') && !h2.includes('Course quiz'), h2.join(' | '));
+    ok('C14 heading "What is this module about?" (CH-28)', h2.includes('What is this module about?') && !h2.includes('What is this course about?') && !h2.includes('Course quiz'), h2.join(' | '));
     ok('C14 instructions line kept below it', /The timer starts when you begin and can't be paused/.test(main()) && ['Questions', 'Time limit', 'Pass mark', 'Attempts used'].every(k => main().includes(k)));
   });
 
@@ -237,7 +237,7 @@
     fresh(); learner('C');
     ok('6 held (item 9 built by CH-07 – CH-11): plan cards, deposit card and Pay now carry no client-sheet changes', !/cs-|csReceipt/.test(planCard.toString()) && !/cs-/.test(depositCard.toString()) && !/cs-/.test(ACT.payInst.toString()));
     go('payments'); ok('6: Overdue now + Pay now still on Payments', /Overdue now/.test(main()) && !!app().querySelector('[data-act="payInst"]'));
-    ok('13: no quiz added to modules', W.resources.every(g => g.items.every(i => !/quiz/i.test(i.title))) && !W.assignments.some(a => /quiz/i.test(a.title)));
+    ok('13 built for short courses only (CH-16): NVQ modules have no quizzes', W.resources.every(g => g.items.every(i => !/quiz/i.test(i.title))) && !W.assignments.some(a => /quiz/i.test(a.title)));
     ok('Fixed status colours unchanged', TONE['Discontinued'] === 'red' && TONE['Expiring soon'] === 'amber' && TONE['Valid'] === 'green' && TONE['Revoked'] === 'red' && TONE['Overdue'] === 'red');
     ok('4 placeholder topics (CH: T01, T02, T03, T05 resolved)', TBD_TOPICS.length === 4);
   });
@@ -245,8 +245,8 @@
   /* ---------- Demo Scenario #18 ---------- */
   await T('Scenario #18', async () => {
     fresh(); const L = SC_LIST(), sc = L.find(x => x[0] === '18');
-    ok('#18 listed; #19 follows it (CH-12 – CH-14)', L.length === 19 && !!sc && sc[1] === 'Client sheet items' && L.every((x, i) => x[0] === String(i + 1)));
-    ACT.scOpen(); ok('#18 on the page; heading says Nineteen (CH-12 – CH-14)', /Nineteen end-to-end walkthroughs/.test(main()) && !!app().querySelector('#sc-18'));
+    ok('#18 listed; #19 and #20 follow it (CH-12 – CH-16)', L.length === 20 && !!sc && sc[1] === 'Client sheet items' && L.every((x, i) => x[0] === String(i + 1)));
+    ACT.scOpen(); ok('#18 on the page; heading says Twenty (CH-16)', /Twenty end-to-end walkthroughs/.test(main()) && !!app().querySelector('#sc-18'));
     const chk = [['assignment', () => !!app().querySelector('[data-act="csCritPdf"]')], ['certificates', () => !!app().querySelector('.cs-exp')], ['dashboard', () => !!app().querySelector('.hello .cs-status[data-s="attn"]')], ['payments', () => /Purchase history/.test(main())], ['t-students', () => !!app().querySelector('input[data-onchange="csShowDisc"]')]];
     sc[3].forEach((st, k) => { ACT.scOpen(); ACT.scStep({ dataset: { r: st.r, t: st.t } }); ok(`#18.${k + 1} opens ${st.r} → ${st.t} and shows the item`, S.route === chk[k][0] && chk[k][1](), S.route); });
   });
@@ -257,14 +257,14 @@
     const sec = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client suggestion sheet');
     ok('Index: Client suggestion sheet entries, each with a purpose line', !!sec && sec.querySelectorAll('.idx-list > li').length === 10 && [...sec.querySelectorAll('.idx-list > li')].every(li => li.querySelector('.idx-purpose')));
     ok('Index: new pop-ups listed', ['Criteria PDF preview', 'Receipt preview pop-up', 'Document preview pop-up'].every(t => sec && sec.textContent.includes(t)));
-    ok('Index: "19 walkthroughs" (CH-12 – CH-14)', /Demo Scenarios — 19 walkthroughs/.test(main()));
+    ok('Index: "20 walkthroughs" (CH-16)', /Demo Scenarios — 20 walkthroughs/.test(main()));
     sec.querySelector('[data-m="csReceipt"]').click(); await wait(120); ok('Index: receipt pop-up entry opens it', !!MODAL && /^Receipt/.test(MODAL.title)); closeModal();
     staff('A'); go('t-index'); ok('Assessor index: My Students, PD phone and Calendar entries', ['t-students', 't-pd', 't-calendar'].every(t => [...app().querySelectorAll('.idx-sec')].some(s => s.querySelector('h2').textContent === 'Client suggestion sheet' && s.querySelector(`[data-t="${t}"]`))));
     ACT.scOpen(); go('ux-changelog'); const ux = [...app().querySelectorAll('section.card')].find(s => /Client suggestion sheet/.test(s.querySelector('h2').textContent));
     ok('UX Changelog: one line per item ID', !!ux && ['C1', 'C2', 'C3', 'C4', 'C5', 'C7', 'C8', 'C10', 'C11', 'C12', 'C14', 'C15'].every(id => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(id + ':'))));
     go('cd-log'); const t = main();
-    ok('Client Decisions Log: built and held row (CH-07 – CH-11: item 9 built)', /Built: 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 14, 15\. Held pending client: 6 \(observation fee — P-27\), 13 \(module quizzes — CH-16, Batch 4\)\./.test(t));
-    ok('Client Decisions Log: #18 in the Demo scenarios table; "All 19 run end to end" (CH-12 – CH-14)', /All 19 run end to end in the prototype\./.test(t) && !/All 18 run/.test(t) && CDL_SCEN.some(r => r[0] === '18' && r[1] === 'Client sheet items'));
+    ok('Client Decisions Log: built and held row (CH-16: item 13 built)', /Built: 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15\. Held pending client: 6 \(observation fee — P-27\)\./.test(t));
+    ok('Client Decisions Log: #18 in the Demo scenarios table; "All 20 run end to end" (CH-16)', /All 20 run end to end in the prototype\./.test(t) && !/All 19 run/.test(t) && CDL_SCEN.some(r => r[0] === '18' && r[1] === 'Client sheet items'));
   });
 
   fresh();

@@ -36,6 +36,25 @@ function shortContent(topic) {
   }[topic] || [['doc', 'Course handbook', '10 pages', 'Completed', 1], ['video', 'Introduction', '10:00', 'Completed', 0, 100, ''], ['scorm', 'Interactive module', '20 min', 'Completed', 0, 0, 0, 90]];
   return T.map((r, i) => ({ id: 'c' + (i + 1), kind: r[0], title: r[1], dur: r[2], state: r[3], dl: !!r[4], watch: r[5] || 0, resume: r[6] || '0:00', score: r[7] || 0 }));
 }
+// CH-15: an NVQ module's label with its awarding-body code, e.g. "Person-centred values (T/652/0001)"
+const modLabel = m => m ? `${m.title}${m.ab ? ' (' + m.ab + ')' : ''}` : '';
+// The unit / module an assignment or resource group names ("U302 · Module 1", "U306 Safeguarding · Module 1")
+const nvqModOf = (tree, s) => { const r = /^(U\d+)\D*Module (\d+)/.exec(s || ''); if (!r) return null; const u = (tree || []).find(x => x.code === r[1]); const m = u && u.mods[+r[2] - 1]; return m ? { u, m, key: u.code + ' ' + m.code } : null; };
+// CH-16: every short course is split into modules; each module has its own content and its own quiz (there is no course quiz).
+// [module id, title, content item ids] by course topic ('' = courses with the standard three-item content)
+const SH_MODS = {
+  mh: [['m1', 'The law and your responsibilities', ['c1']], ['m2', 'Hoists, slings and repositioning', ['c2', 'c4']], ['m3', 'Risk assessment with TILEO', ['c3', 'c5']]],
+  bls: [['m1', 'Basic life support and using an AED', ['c1', 'c2']], ['m2', 'Anaphylaxis and the recovery position', ['c3', 'c4']]],
+  ipc: [['m1', 'The chain of infection and hand hygiene', ['c1', 'c2']], ['m2', 'Personal protective equipment', ['c3']], ['m3', 'Outbreaks, linen and waste', ['c4', 'c5']]],
+  cc: [['m1', 'Standards 1–2: your role and your development', ['c1', 'c2']], ['m2', 'Standards 3–4: duty of care, equality and diversity', ['c3', 'c4']], ['m3', 'Standard 5: person-centred care', ['c5']]],
+  '': [['m1', 'Introduction and handbook', ['c1', 'c2']], ['m2', 'Putting it into practice', ['c3']]],
+};
+const shModDefs = topic => SH_MODS[topic] || SH_MODS[''];
+// Seed: earlier attempts belong to module 1; a completed course has every module quiz passed
+function shModules(sh, mq = {}) {
+  const m1 = mq.m1 || [], passAt = (m1.find(a => a.result === 'Pass') || {}).at;
+  return shModDefs(sh.topic).map(([id, title, items], i) => ({ id, title, items: items.slice(), quiz: { q: 10, limit: mq.limit || 20, pass: 80, max: 3, attempts: i === 0 ? m1.map(a => ({ ...a })) : passAt ? [{ n: 1, at: passAt, score: 90, result: 'Pass' }] : [] } }));
+}
 
 /* CH-02: every price, payment, receipt and refund is in GBP — whatever the learner's country. */
 function makeWorld(v) {
@@ -51,34 +70,34 @@ function makeWorld(v) {
   const SH = {
     mh26: { title: 'Moving and Handling People — 2026', base: 'Moving and Handling People', status: 'Active', enrolled: D(-40), start: D(-40), end: D(50), progress: 62, price: 45, topic: 'mh',
       desc: 'Practical, law-based training on moving and handling people safely, using hoists, slide sheets and the TILEO risk assessment. Meets Care Certificate Standard 13 outcomes for moving and handling.',
-      reqs: [['Open all documents', true], ['Watch all videos to at least 90%', false], ['Complete the interactive SCORM module', true], ['Pass the quiz with 80% or more', false]],
-      quiz: { q: 10, limit: 20, pass: 80, max: 3, attempts: [{ n: 1, at: D(-6, '17:42'), score: 60, result: 'Fail' }] }, validity: '12 months' },
+      reqs: [['Open all documents', true], ['Watch all videos to at least 90%', false], ['Complete the interactive SCORM module', true], ['Pass every module quiz with 80% or more', false]],
+      mq: { limit: 20, m1: [{ n: 1, at: D(-6, '17:42'), score: 60, result: 'Fail' }] }, validity: '12 months' },
     mh25: { title: 'Moving and Handling People — 2025', base: 'Moving and Handling People', status: 'Completed', enrolled: D(-405), start: D(-405), end: D(-40), progress: 100, price: 45, topic: 'mh', certId: 'c1', completedAt: D(-342),
-      desc: 'Your 2025 enrolment. Re-enrolments are kept as separate records.', reqs: [['Open all documents', true], ['Watch all videos to at least 90%', true], ['Complete the interactive SCORM module', true], ['Pass the quiz with 80% or more', true]],
-      quiz: { q: 10, limit: 20, pass: 80, max: 3, attempts: [{ n: 1, at: D(-343, '19:10'), score: 70, result: 'Fail' }, { n: 2, at: D(-342, '18:02'), score: 90, result: 'Pass' }] }, validity: '12 months' },
+      desc: 'Your 2025 enrolment. Re-enrolments are kept as separate records.', reqs: [['Open all documents', true], ['Watch all videos to at least 90%', true], ['Complete the interactive SCORM module', true], ['Pass every module quiz with 80% or more', true]],
+      mq: { limit: 20, m1: [{ n: 1, at: D(-343, '19:10'), score: 70, result: 'Fail' }, { n: 2, at: D(-342, '18:02'), score: 90, result: 'Pass' }] }, validity: '12 months' },
     bls: { title: 'Basic Life Support and Anaphylaxis', base: 'Basic Life Support and Anaphylaxis', status: 'Active', enrolled: D(-25), start: D(-25), end: D(65), progress: 85, price: 39, topic: 'bls',
-      desc: 'Adult basic life support, AED use, the recovery position and recognising and responding to anaphylaxis.', reqs: [['Watch all videos to at least 90%', true], ['Complete the AED scenario', true], ['Open all documents', true], ['Pass the quiz with 80% or more', false]],
-      quiz: { q: 10, limit: 15, pass: 80, max: 3, attempts: [{ n: 1, at: D(-12, '18:20'), score: 60, result: 'Fail' }, { n: 2, at: D(-9, '19:05'), score: 70, result: 'Fail' }, { n: 3, at: D(-5, '20:31'), score: 75, result: 'Fail' }] }, validity: '12 months' },
+      desc: 'Adult basic life support, AED use, the recovery position and recognising and responding to anaphylaxis.', reqs: [['Watch all videos to at least 90%', true], ['Complete the AED scenario', true], ['Open all documents', true], ['Pass every module quiz with 80% or more', false]],
+      mq: { limit: 15, m1: [{ n: 1, at: D(-12, '18:20'), score: 60, result: 'Fail' }, { n: 2, at: D(-9, '19:05'), score: 70, result: 'Fail' }, { n: 3, at: D(-5, '20:31'), score: 75, result: 'Fail' }] }, validity: '12 months' },
     ipc: { title: 'Infection Prevention and Control', base: 'Infection Prevention and Control', status: 'Expired-Incomplete', enrolled: D(-99), start: D(-99), end: D(-9), progress: 45, price: 35, topic: 'ipc',
-      desc: 'The chain of infection, hand hygiene, PPE and outbreak management in care settings.', reqs: [['Open all documents', false], ['Watch all videos to at least 90%', false], ['Complete the PPE module', false], ['Pass the quiz with 80% or more', false]],
-      quiz: { q: 10, limit: 20, pass: 80, max: 3, attempts: [] }, validity: '12 months' },
+      desc: 'The chain of infection, hand hygiene, PPE and outbreak management in care settings.', reqs: [['Open all documents', false], ['Watch all videos to at least 90%', false], ['Complete the PPE module', false], ['Pass every module quiz with 80% or more', false]],
+      mq: { limit: 20, m1: [] }, validity: '12 months' },
     fire: { title: 'Fire Safety Awareness', base: 'Fire Safety Awareness', status: 'Payment Pending', enrolled: D(0, '07:58'), start: null, end: null, progress: 0, price: 29, topic: 'fire',
-      desc: 'Fire prevention, evacuation methods including horizontal evacuation, and using fire equipment in care settings.', reqs: [['Open all documents', false], ['Watch all videos', false], ['Pass the quiz with 80% or more', false]], quiz: { q: 10, limit: 15, pass: 80, max: 3, attempts: [] }, validity: '12 months' },
+      desc: 'Fire prevention, evacuation methods including horizontal evacuation, and using fire equipment in care settings.', reqs: [['Open all documents', false], ['Watch all videos', false], ['Pass every module quiz with 80% or more', false]], mq: { limit: 15, m1: [] }, validity: '12 months' },
     med: { title: 'Medication Awareness', base: 'Medication Awareness', status: 'Discontinued', enrolled: D(-60), start: D(-60), end: D(30), progress: 20, price: 49, topic: 'med',
       desc: 'Safe handling and administration of medicines in social care.', reason: 'Discontinued by the Academy on 2 Sep 2026: duplicate purchase. The duplicate payment has been refunded to your original payment method.',
-      reqs: [], quiz: { q: 10, limit: 20, pass: 80, max: 3, attempts: [] }, validity: '12 months' },
+      reqs: [], mq: { limit: 20, m1: [] }, validity: '12 months' },
     dem: { title: 'Dementia Awareness', base: 'Dementia Awareness', status: 'Completed', enrolled: D(-30), start: D(-30), end: D(60), progress: 100, price: 35, topic: 'dem', certId: 'c6', completedAt: D(0, '07:40'),
-      desc: 'Understanding dementia, person-centred communication and supporting wellbeing.', reqs: [['Open all documents', true], ['Watch all videos', true], ['Pass the quiz with 80% or more', true]],
-      quiz: { q: 10, limit: 20, pass: 80, max: 3, attempts: [{ n: 1, at: D(0, '07:38'), score: 90, result: 'Pass' }] }, validity: '24 months' },
+      desc: 'Understanding dementia, person-centred communication and supporting wellbeing.', reqs: [['Open all documents', true], ['Watch all videos', true], ['Pass every module quiz with 80% or more', true]],
+      mq: { limit: 20, m1: [{ n: 1, at: D(0, '07:38'), score: 90, result: 'Pass' }] }, validity: '24 months' },
     cc: { title: 'The Care Certificate (15 Standards)', base: 'The Care Certificate', status: 'Active', enrolled: D(-20), start: D(-20), end: D(160), progress: 22, price: 180, topic: 'cc',
-      desc: 'All 15 Care Certificate standards for people new to health and social care, delivered online.', reqs: [['Complete all 15 standards', false], ['Pass each standard quiz with 80% or more', false]],
-      quiz: { q: 10, limit: 20, pass: 80, max: 3, attempts: [] }, validity: 'No expiry' },
+      desc: 'All 15 Care Certificate standards for people new to health and social care, delivered online.', reqs: [['Complete all 15 standards', false], ['Pass every module quiz with 80% or more', false]],
+      mq: { limit: 20, m1: [] }, validity: 'No expiry' },
   };
   const pick = {
     A: ['mh26', 'mh25', 'bls', 'cc', 'ipc', 'fire', 'med', 'dem'], B: ['dem'], C: ['mh26', 'mh25', 'ipc'], D: ['mh26'],
     E: ['mh26', 'bls', 'fire', 'dem', 'ipc'], F: ['mh26', 'mh25', 'bls', 'cc', 'ipc', 'fire', 'med', 'dem'], G: [],
   }[v] || [];
-  w.enrolments = pick.map(id => ({ id, kind: 'short', type: 'Short course', sponsor: flags.sponsored ? me.sponsor : null, ...SH[id], content: shortContent(SH[id].topic), price: amt(SH[id].price) }));
+  w.enrolments = pick.map(id => { const { mq, ...sh } = SH[id]; return { id, kind: 'short', type: 'Short course', sponsor: flags.sponsored ? me.sponsor : null, ...sh, content: shortContent(sh.topic), modules: shModules(sh, mq), price: amt(sh.price) }; });
   if (v === 'C') { const i = w.enrolments.find(e => e.id === 'ipc'); i.status = 'Active'; i.end = D(40); }
 
   /* ---------- NVQ programme ---------- */
@@ -99,7 +118,7 @@ function makeWorld(v) {
     const c = (code, d, st, src, date, ev, obs) => ({ code, d, st, src, date: date != null ? D(date) : null, ev, obs });
     w.tree = [
       { code: 'U301', title: 'Promote communication in care settings', mods: [
-        { code: 'M1', title: 'Communication needs and methods', los: [
+        { code: 'M1', title: 'Communication needs and methods', ab: 'H/652/0101', los: [
           { code: 'LO1', title: 'Understand why effective communication is important', type: 'Knowledge', crit: [
             c('301 1.1', 'Identify the different reasons people communicate', 'Achieved', 'Assignment 1 · Q1', -150, 'assignment.a1'),
             c('301 1.2', 'Explain how communication affects relationships in an adult care setting', 'Achieved', 'Assignment 1 · Q2', -150, 'assignment.a1')] },
@@ -107,41 +126,41 @@ function makeWorld(v) {
             c('301 2.1', "Find out an individual's communication and language needs, wishes and preferences", 'Achieved', 'Observation · 14 Jul', -82, 'observations.o3', { o: 1, c: 1 }),
             c('301 2.2', "Demonstrate communication methods that meet an individual's needs", 'In Progress', 'Observation · 14 Jul', null, 'observations.o3', { o: 1, c: 0 }),
             c('301 2.3', 'Show how and when to seek advice about communication', 'Not Started', null, null, null, { o: 0, c: 0 })] }] },
-        { code: 'M2', title: 'Confidentiality', los: [
+        { code: 'M2', title: 'Confidentiality', ab: 'K/652/0102', los: [
           { code: 'LO3', title: 'Apply principles and practices relating to confidentiality', type: 'Knowledge', crit: [
             c('301 3.1', 'Explain the meaning of the term confidentiality', 'Achieved', 'Assignment 1 · Q3', -150, 'assignment.a1'),
             c('301 3.2', 'Describe ways to maintain confidentiality in day-to-day communication', 'Achieved', 'Assignment 1 · Q3', -150, 'assignment.a1')] }] }] },
       { code: 'U302', title: 'Promote person-centred approaches in care settings', mods: [
-        { code: 'M1', title: 'Person-centred values', los: [
+        { code: 'M1', title: 'Person-centred values', ab: 'T/652/0001', los: [
           { code: 'LO1', title: 'Understand person-centred approaches for care and support', type: 'Knowledge', crit: [
             c('302 1.1', 'Describe how person-centred values should influence all aspects of care work', 'Achieved', 'Assignment 2 · Q1', -30, 'assignment.a2'),
             c('302 1.2', 'Explain the importance of finding out the history, preferences, wishes and needs of the individual', 'Action Required', 'Assignment 2 · Q3', null, 'assignment.a2'),
             c('302 1.3', "Explain how to use an individual's care plan to record their history, preferences and wishes", 'Added to PD', 'Assignment 2 · Q2', null, 'assignment.a2')] },
           { code: 'LO3', title: 'Support individuals to take risks', type: 'Knowledge', crit: [
             c('302 3.2', 'Analyse how risk-taking can contribute to the wellbeing of an individual', 'Action Required', 'Assignment 2 · Q4', null, 'assignment.a2')] }] },
-        { code: 'M2', title: 'Working in a person-centred way', los: [
+        { code: 'M2', title: 'Working in a person-centred way', ab: 'A/652/0002', los: [
           { code: 'LO2', title: 'Work in a person-centred way', type: 'Observation', crit: [
             c('302 2.1', "Work with an individual and others to find out the individual's history, preferences, wishes and needs", 'In Progress', 'Observation (confirmed)', null, 'observations.o2', { o: 0, c: 0 }),
             c('302 2.4', 'Adapt actions and approaches in response to changing needs or preferences', 'Not Started', null, null, null, { o: 0, c: 0 })] }] }] },
       { code: 'U303', title: 'Equality, diversity, inclusion and human rights', mods: [
-        { code: 'M1', title: 'Inclusive practice', los: [
+        { code: 'M1', title: 'Inclusive practice', ab: 'D/652/0301', los: [
           { code: 'LO1', title: 'Understand the importance of equality and inclusion', type: 'Knowledge', crit: [
             c('303 1.1', 'Explain what is meant by diversity, equality, inclusion and discrimination', 'In Progress', 'Assignment 5 · Q1', null, 'assignment.a5'),
             c('303 1.2', 'Describe the effects of discrimination', 'In Progress', 'Assignment 5 · Q2', null, 'assignment.a5'),
             c('303 2.1', 'Explain how legislation and codes of practice apply to own work role', 'In Progress', 'Assignment 5 · Q3', null, 'assignment.a5')] }] }] },
       { code: 'U304', title: 'Personal development in care settings', mods: [
-        { code: 'M1', title: 'Reflective practice', los: [
+        { code: 'M1', title: 'Reflective practice', ab: 'F/652/0401', los: [
           { code: 'LO1', title: 'Understand what is required for competence in own work role', type: 'Knowledge', crit: [
             c('304 1.1', 'Describe the duties and responsibilities of own work role', 'In Progress', 'Assignment 7 · Q1', null, 'assignment.a7'),
             c('304 1.2', 'Explain expectations about own work role as expressed in relevant standards', 'Achieved', 'Assignment 7 · Q2', -40, 'assignment.a7')] }] }] },
       { code: 'U305', title: 'Duty of care in care settings', mods: [
-        { code: 'M1', title: 'Duty of care and dilemmas', los: [
+        { code: 'M1', title: 'Duty of care and dilemmas', ab: 'J/652/0501', los: [
           { code: 'LO1', title: 'Understand how duty of care contributes to safe practice', type: 'Knowledge', crit: [
             c('305 1.1', 'Explain what it means to have a duty of care in own work role', 'Not Started', null, null, 'assignment.a3'),
             c('305 1.2', 'Explain how duty of care relates to duty of candour', 'Not Started', null, null, 'assignment.a3'),
             c('305 2.1', 'Describe dilemmas that may arise between the duty of care and an individual\'s rights', 'Not Started', null, null, 'assignment.a3')] }] }] },
       { code: 'U306', title: 'Safeguarding and protection in care settings', mods: [
-        { code: 'M1', title: 'Recognising and responding to abuse', los: [
+        { code: 'M1', title: 'Recognising and responding to abuse', ab: 'L/652/0601', los: [
           { code: 'LO1', title: 'Understand principles of safeguarding adults', type: 'Knowledge', crit: [
             c('306 1.1', 'Explain the term safeguarding', 'In Progress', 'Assignment 4 · Q1', null, 'assignment.a4'),
             c('306 1.2', 'Explain own role and responsibilities in safeguarding individuals', 'In Progress', 'Assignment 4 · Q2', null, 'assignment.a4'),
@@ -149,7 +168,7 @@ function makeWorld(v) {
           { code: 'LO3', title: 'Respond to suspected or disclosed abuse', type: 'Observation', crit: [
             c('306 3.1', 'Demonstrate actions to take if there are suspicions that an individual is being abused', 'Not Started', null, null, null, { o: 0, c: 0 })] }] }] },
       { code: 'U307', title: 'Health and safety in care settings', mods: [
-        { code: 'M1', title: 'Safe working', los: [
+        { code: 'M1', title: 'Safe working', ab: 'R/652/0701', los: [
           { code: 'LO1', title: 'Understand own responsibilities for health and safety', type: 'Knowledge', crit: [
             c('307 1.1', 'Identify legislation relating to general health and safety', 'Not Started', null, null, 'assignment.a6'),
             c('307 1.2', 'Describe the main points of health and safety policies and procedures', 'Not Started', null, null, 'assignment.a6')] }] }] },
@@ -323,11 +342,11 @@ function makeWorld(v) {
 
   /* ---------- Requests ---------- */
   w.requests = [
-    { id: 'R-1042', type: 'Extra quiz attempts', target: 'Basic Life Support and Anaphylaxis', raised: D(-4, '21:02'), status: 'Granted', decided: D(-1, '10:15'), reason: 'I failed by 5% on attempt 3 after a night shift. I have re-watched all videos.', decision: 'Granted: +3 attempts. Please re-watch the AED scenario first.', grant: '+3 attempts' },
+    { id: 'R-1042', type: 'Extra quiz attempts', target: 'Basic Life Support and Anaphylaxis', mid: 'm1', module: 'Basic life support and using an AED', raised: D(-4, '21:02'), status: 'Granted', decided: D(-1, '10:15'), reason: 'I failed by 5% on attempt 3 after a night shift. I have re-watched all videos.', decision: 'Granted: +3 attempts. Please re-watch the AED scenario first.', grant: '+3 attempts' },
     { id: 'R-1051', type: 'More time on course', target: 'Infection Prevention and Control', raised: D(-2, '18:40'), status: 'Requested', reason: 'I was off sick for three weeks in September (fit note attached).', decision: null },
     { id: 'R-1013', type: 'Profile change', target: 'Mobile number', raised: D(-30, '12:00'), status: 'Approved', decided: D(-29, '09:30'), reason: 'New phone contract.', decision: 'Approved. Mobile updated to the new number.', grant: 'Field updated' },
     { id: 'R-0998', type: 'Profile change', target: 'Full name', raised: D(-50, '08:12'), status: 'Rejected', decided: D(-47, '14:20'), reason: 'Add middle name.', decision: 'Rejected: the ID provided does not show the middle name. Upload a passport or driving licence that shows it.' },
-    { id: 'R-0960', type: 'Extra quiz attempts', target: 'Moving and Handling People — 2025', raised: D(-345, '20:00'), status: 'Re-purchase Required', decided: D(-344), reason: 'Ran out of attempts.', decision: 'This course has already had one extension. Please re-purchase the course to continue.' },
+    { id: 'R-0960', type: 'Extra quiz attempts', target: 'Moving and Handling People — 2025', mid: 'm1', module: 'The law and your responsibilities', raised: D(-345, '20:00'), status: 'Re-purchase Required', decided: D(-344), reason: 'Ran out of attempts.', decision: 'This course has already had one extension. Please re-purchase the course to continue.' },
     { id: 'R-0911', type: 'More time on course', target: 'The Care Certificate (15 Standards)', raised: D(-15), status: 'Granted', decided: D(-14), reason: 'Moved house.', decision: 'Granted: +14 days.', grant: '+14 days, new end date ' + fd(D(160)) },
   ];
   if (v === 'B' || v === 'D') w.requests = w.requests.filter(r => r.type === 'Profile change');

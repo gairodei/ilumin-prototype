@@ -1166,3 +1166,10 @@ body.frame-mobile .modal.cs-sheet { top: 0; bottom: 0; left: 50%; transform: tra
 .ch-sig { max-width: 420px; font-style: italic; }
 .ch-sigblock { border-top: 2px solid var(--fg); padding-top: 8px; margin-top: 4px; font-size: .86rem; max-width: 720px; }
 .ch-pdf { max-width: 720px; }
+/* CH-15 / CH-16 / CH-18 module rows, module quizzes, answer keys */
+.ch-modrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 6px 12px; border-bottom: 1px dashed var(--line); }
+.ch-abc { display: flex; align-items: center; gap: 6px; }
+.ch-abc .input { width: 130px; }
+.ch-items { border: 0; padding: 0; margin: 8px 0; }
+.ch-retired { opacity: .6; }
+.sh-mod .bar-row { min-width: 160px; }

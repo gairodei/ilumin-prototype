@@ -40,11 +40,11 @@ function acaPatch() {
   const L = n => allLearners().find(l => l.name === n) || { id: '—', name: n };
   const att = (sc) => sc.map((s, k) => [D(-20 + k * 4, '19:' + String(10 + k * 7)), s, s >= 80 ? 'Pass' : 'Fail']);
   const q = (id, type, raisedBy, raised, status, learner, course, data, extra = {}) => ({ id, type, raisedBy, raised, status, first: 'Academic Admin', related: [`${learner} · ${course}`, 'a-learner.' + L(learner).id], notes: [], history: [[raisedBy, raised, 'Raised', extra.reason || '']], data: { learner, course, ...data }, ...extra });
-  const quiz = (max, sc) => ({ quizName: 'Course quiz', max, pass: 80, attempts: att(sc) });
+  const quiz = (max, sc, mod) => ({ quizName: mod, max, pass: 80, attempts: att(sc) });
   A.queue.push(
-    q('AQ-4001', 'Extra quiz attempts', 'Chloe Hughes', D(-2, '19:30'), 'Pending', 'Chloe Hughes', 'Infection Prevention and Control', { ...quiz(3, [60, 70, 75]), end: D(48) }, { reason: 'I was on night shifts during all three attempts. I have re-read the PPE guidance.' }),
-    q('AQ-4002', 'Extra quiz attempts', 'Oliver Bennett', D(-12, '20:05'), 'Approved', 'Oliver Bennett', 'Moving and Handling People', { ...quiz(3, [65, 70, 72]), end: D(30) }, { reason: 'Close to the pass mark each time.', decidedBy: ACA_A, decision: 'Granted: +3 attempts (original allowance). Re-watch the hoist video first.', outcome: 'Granted' }),
-    q('AQ-4003', 'Extra quiz attempts', 'Amelia Price', D(-4, '18:00'), 'Info Requested', 'Amelia Price', 'Dementia Awareness', { ...quiz(3, [50, 55, 60]), end: D(20) }, { reason: 'Technical issues on attempt 2.', extraHist: [[ACA_B, D(-3, '09:10'), 'Request further information', 'Please describe the technical issue and when it happened.']] }),
+    q('AQ-4001', 'Extra quiz attempts', 'Chloe Hughes', D(-2, '19:30'), 'Pending', 'Chloe Hughes', 'Infection Prevention and Control', { ...quiz(3, [60, 70, 75], 'Module 2: Personal protective equipment'), end: D(48) }, { reason: 'I was on night shifts during all three attempts. I have re-read the PPE guidance.' }),
+    q('AQ-4002', 'Extra quiz attempts', 'Oliver Bennett', D(-12, '20:05'), 'Approved', 'Oliver Bennett', 'Moving and Handling People', { ...quiz(3, [65, 70, 72], 'Module 2: Hoists, slings and repositioning'), end: D(30) }, { reason: 'Close to the pass mark each time.', decidedBy: ACA_A, decision: 'Granted: +3 attempts (original allowance). Re-watch the hoist video first.', outcome: 'Granted' }),
+    q('AQ-4003', 'Extra quiz attempts', 'Amelia Price', D(-4, '18:00'), 'Info Requested', 'Amelia Price', 'Dementia Awareness', { ...quiz(3, [50, 55, 60], 'Module 1: Introduction and handbook'), end: D(20) }, { reason: 'Technical issues on attempt 2.', extraHist: [[ACA_B, D(-3, '09:10'), 'Request further information', 'Please describe the technical issue and when it happened.']] }),
     q('AQ-4004', 'More time on short course', 'Sophie Wright', D(-9, '08:30'), 'Rejected', 'Sophie Wright', 'Fire Safety Awareness', { enrolled: D(-75), access: 60, expiry: D(-15), progress: 20, content: 25, quizSt: 'Not attempted', prevExt: ['+14 days (' + fd(D(-40)) + ')'] }, { reason: 'Busy at work.', decidedBy: ACA_A, decision: 'Rejected: one extension already granted and progress is 20%.', outcome: 'Rejected' }),
     q('AQ-4005', 'More time on short course', 'Emily Turner', D(-6, '12:00'), 'Returned to Requester', 'Emily Turner', 'Medication Awareness', { enrolled: D(-100), access: 90, expiry: D(-10), progress: 64, content: 80, quizSt: '1 of 3 used — 70% (Fail)', prevExt: [] }, { reason: 'Hospital stay.', decidedBy: ACA_B, decision: 'Returned — please attach the discharge letter.', extraHist: [[ACA_B, D(-5, '10:00'), 'Send back / Return to requester', 'Please attach the discharge letter.']] }),
     q('AQ-4006', 'Resubmission limit reached', 'James Pryce', D(-3, '16:40'), 'Pending', 'Oliver Bennett', 'Level 3 Diploma in Adult Care (England)', { batch: 'L3AC-JAN26', asg: 'Assignment 3 — Duty of care', crit: ['305 1.1', '305 1.2', '305 2.1'], rec: '(a) One exceptional resubmission', recCode: 'a', recBy: 'James Pryce', recReason: 'Learner has improved each round; only Q2 remains Not met. One more attempt is reasonable.', evidence: 'Round 3 shows clear progress on duty of care dilemmas.', policy: 2, end: D(160) }),
@@ -57,14 +57,14 @@ function acaPatch() {
   const fix = (id, o) => { const it = A.queue.find(i => i.id === id); if (it) Object.assign(it, o, { data: { ...(it.data || {}), ...(o.data || {}) } }); };
   fix('AQ-1007', { data: { learner: VNAME('C'), course: 'Level 3 Diploma in Adult Care (England)', batch: 'L3AC-JAN26', asg: 'Assignment 7 — Personal development', crit: ['304 1.1', '304 1.2'], recCode: 'a', recBy: 'Sarah Okonkwo', recReason: 'Q1 is close; the learner responded well to feedback.', policy: 2, end: D(99) } });
   fix('AQ-1008', { data: { learner: 'Ben Carter', course: 'Level 2 Diploma in Care (England)', batch: 'L2DC-MAR26', rec: 'Recommend discontinuation', recBy: 'James Pryce', recReason: 'No evidence submitted for 4 months despite 3 action plans.', att: '38%' } });
-  fix('AQ-1020', { outcome: 'Rejected', data: { learner: 'Harry Walsh', course: 'Fire Safety Awareness', ...quiz(3, [55, 60, 62]), end: D(-2) } });
+  fix('AQ-1020', { outcome: 'Rejected', data: { learner: 'Harry Walsh', course: 'Fire Safety Awareness', ...quiz(3, [55, 60, 62], 'Module 2: Putting it into practice'), end: D(-2) } });
   fix('AQ-1021', { outcome: 'Extension', data: { learner: 'Ruby Clarke', course: 'Dementia Awareness', enrolled: D(-110), access: 90, expiry: D(-20), progress: 72, content: 90, quizSt: 'Not attempted', prevExt: [] } });
   // Aisha (demo learner C): a pending extra-attempts request on an exhausted quiz
   const C = STORE.worlds.C;
   if (!C._acaSeed) {
     C._acaSeed = true;
-    const fs = C.enrolments.find(e => e.kind === 'short' && e.quiz && e.status === 'Active' && e.id !== 'bls') || C.enrolments.find(e => e.id === 'bls');
-    if (fs) { fs.quiz.attempts = [{ n: 1, at: D(-10, '19:00'), score: 60, result: 'Fail' }, { n: 2, at: D(-7, '20:10'), score: 70, result: 'Fail' }, { n: 3, at: D(-3, '18:45'), score: 78, result: 'Fail' }]; fs.quiz.max = 3; C.requests.unshift({ id: 'R-1083', type: 'Extra quiz attempts', target: fs.title, raised: D(-1, '21:15'), status: 'Requested', reason: 'I missed the pass mark by 2% on attempt 3. I have revised the module notes.', decision: null }); }
+    const fs = C.enrolments.find(e => e.kind === 'short' && e.modules && e.status === 'Active' && e.id !== 'bls') || C.enrolments.find(e => e.id === 'bls');
+    if (fs) { const fm = fs.modules[0]; fm.quiz.attempts = [{ n: 1, at: D(-10, '19:00'), score: 60, result: 'Fail' }, { n: 2, at: D(-7, '20:10'), score: 70, result: 'Fail' }, { n: 3, at: D(-3, '18:45'), score: 78, result: 'Fail' }]; fm.quiz.max = 3; C.requests.unshift({ id: 'R-1083', type: 'Extra quiz attempts', target: fs.title, mid: fm.id, module: fm.title, raised: D(-1, '21:15'), status: 'Requested', reason: 'I missed the pass mark by 2% on attempt 3. I have revised the module notes.', decision: null }); }
   }
   // Admissions (reviewed after sign-up): 4 unassigned, 6 with a reviewer, 2 nearing 7 days, 1 escalated, 1 approved
   allApplications();
@@ -237,11 +237,11 @@ function kBulk(ids, a) {
 
 /* Item detail: shared upgrade of the academic panels (Super Admin sees them too) */
 function quizInfo(i) {
-  if (i.req && i.v) { const e = STORE.worlds[i.v].enrolments.find(x => x.title === i.req.target); if (e && e.quiz) return { quizName: 'Course quiz', max: e.quiz._orig || 3, pass: e.quiz.pass, attempts: e.quiz.attempts.map(a => [a.at, a.score, a.result]), end: e.end, price: e.price, cur: STORE.worlds[i.v].me.cur }; }
-  const d = i.data || {}; return { quizName: d.quizName || 'Course quiz', max: d.max || 3, pass: d.pass || 80, attempts: d.attempts || [], end: d.end, price: (ADMIN.courses.find(c => (d.course || '').startsWith(c.title)) || {}).gbp, cur: 'GBP' };
+  if (i.req && i.v) { const rm = shReqMod(STORE.worlds[i.v], i.req); if (rm) { const { e, m } = rm; return { quizName: `Module ${e.modules.indexOf(m) + 1}: ${m.title}`, max: m.quiz._orig || 3, pass: m.quiz.pass, attempts: m.quiz.attempts.map(a => [a.at, a.score, a.result]), end: e.end, price: e.price, cur: STORE.worlds[i.v].me.cur }; } }
+  const d = i.data || {}; return { quizName: d.quizName || 'Module quiz', max: d.max || 3, pass: d.pass || 80, attempts: d.attempts || [], end: d.end, price: (ADMIN.courses.find(c => (d.course || '').startsWith(c.title)) || {}).gbp, cur: 'GBP' };
 }
 function timeInfo(i) {
-  if (i.req && i.v) { const e = STORE.worlds[i.v].enrolments.find(x => x.title === i.req.target) || {}; const prev = STORE.worlds[i.v].requests.filter(r => r.type === 'More time on course' && r.status === 'Granted' && r.target === i.req.target).map(r => r.grant); return { enrolled: e.enrolled, access: 90, expiry: e.end, progress: e.progress, content: Math.min(100, (e.progress || 0) + 10), quizSt: e.quiz ? (e.quiz.attempts.length ? `${e.quiz.attempts.length} of ${e.quiz.max} used` : 'Not attempted') : '—', prevExt: prev }; }
+  if (i.req && i.v) { const e = STORE.worlds[i.v].enrolments.find(x => x.title === i.req.target) || {}; const prev = STORE.worlds[i.v].requests.filter(r => r.type === 'More time on course' && r.status === 'Granted' && r.target === i.req.target).map(r => r.grant); return { enrolled: e.enrolled, access: 90, expiry: e.end, progress: e.progress, content: Math.min(100, (e.progress || 0) + 10), quizSt: e.modules ? e.modules.map((m, k) => `Module ${k + 1}: ${shModState(m)}`).join(' · ') : '—', prevExt: prev }; }
   return i.data || {};
 }
 function acaPanel(i) {
@@ -311,7 +311,7 @@ const OUTCOME = { grant: 'Granted', repurchase: 'Re-purchase Required', extend: 
 const _applyK = applyDecision;
 applyDecision = function (i, a, r, o = {}) {
   const wasOpen = isOpen(i);
-  if (i.type === 'Extra quiz attempts' && a === 'grant' && i.req && i.v) { const e = STORE.worlds[i.v].enrolments.find(x => x.title === i.req.target); if (e && e.quiz) e.quiz._orig = e.quiz._orig || 3; }
+  if (i.type === 'Extra quiz attempts' && a === 'grant' && i.req && i.v) { const rm = shReqMod(STORE.worlds[i.v], i.req); if (rm) rm.m.quiz._orig = rm.m.quiz._orig || 3; }
   _applyK(i, a, r, o);
   if (!ACA_TYPES.includes(i.type) || ['note', 'info', 'return'].includes(a)) return;
   const d = i.data || {};
@@ -607,7 +607,7 @@ SCREENS['a-courses'] = (p) => {
     act: c => `<button class="btn btn-sm" data-go="a-courses" data-id="${c.id}">Edit</button>` })}`;
 };
 const _pubCourseK = ACT.pubCourse;
-ACT.pubCourse = el => { const c = ADMIN.courses.find(x => x.id === el.dataset.id); const miss = c.id === 'SC-08' || c.title === 'Untitled course' ? ['Quiz: fewer questions in the bank (6) than questions shown (10)', 'Completion rules: no rule set', 'Certificate: no template selected'] : []; if (miss.length && !c._fixed) { openModal({ title: 'Can\'t publish yet', body: `<div class="note b-red">${ic('alert')}<div><strong>Fix these before publishing:</strong><ul class="small">${miss.map(m => `<li>${m}</li>`).join('')}</ul></div></div>`, actions: [{ label: 'Close' }, { label: 'Mark as fixed (prototype)', cls: 'btn-primary', fn: () => { c._fixed = true; toast('Marked as fixed — publish again.', 'info'); } }] }); return; } reasonDlg({ title: 'Publish course — ' + esc(c.title), ok: 'Publish', body: `<p class="small">Version ${c.version} becomes available for new enrolments.</p>`, onOk: r => { _pubCourseK(el); logA('Short Courses', c.title, 'Publish note', '—', 'Published', r); } }); };
+ACT.pubCourse = el => { const c = ADMIN.courses.find(x => x.id === el.dataset.id); const miss = c.id === 'SC-08' || c.title === 'Untitled course' ? ['Module 1 quiz: fewer questions in the bank (6) than questions shown (10)', 'Completion rules: no rule set', 'Certificate: no template selected'] : []; if (miss.length && !c._fixed) { openModal({ title: 'Can\'t publish yet', body: `<div class="note b-red">${ic('alert')}<div><strong>Fix these before publishing:</strong><ul class="small">${miss.map(m => `<li>${m}</li>`).join('')}</ul></div></div>`, actions: [{ label: 'Close' }, { label: 'Mark as fixed (prototype)', cls: 'btn-primary', fn: () => { c._fixed = true; toast('Marked as fixed — publish again.', 'info'); } }] }); return; } reasonDlg({ title: 'Publish course — ' + esc(c.title), ok: 'Publish', body: `<p class="small">Version ${c.version} becomes available for new enrolments.</p>`, onOk: r => { _pubCourseK(el); logA('Short Courses', c.title, 'Publish note', '—', 'Published', r); } }); };
 const _progsK = SCREENS['a-programmes'];
 SCREENS['a-programmes'] = (p) => {
   if (p.id) return _progsK(p);
@@ -832,7 +832,7 @@ ACT.kSimReq = () => {
   const A_ = STORE.worlds.A, e = A_.enrolments.find(x => x.id === 'mh26');
   const pending = A_.requests.some(r => r.type === 'Extra quiz attempts' && r.target === e.title && r.status === 'Requested');
   let id;
-  if (!pending) { e.quiz.attempts = [{ n: 1, at: D(-6, '17:42'), score: 60, result: 'Fail' }, { n: 2, at: D(-3, '19:10'), score: 72, result: 'Fail' }, { n: 3, at: D(0, '07:40'), score: 76, result: 'Fail' }]; id = 'R-' + (1090 + A_.requests.length); A_.requests.unshift({ id, type: 'Extra quiz attempts', target: e.title, raised: now().toISOString(), status: 'Requested', reason: 'I missed the pass mark three times by a small margin.', decision: null }); acaNotify('New queue item awaiting you', `Extra quiz attempts · ${VNAME('A')} (${id})`, 'a-queue.AQ-' + id); }
+  if (!pending) { const m1 = e.modules[0]; m1.quiz.attempts = [{ n: 1, at: D(-6, '17:42'), score: 60, result: 'Fail' }, { n: 2, at: D(-3, '19:10'), score: 72, result: 'Fail' }, { n: 3, at: D(0, '07:40'), score: 76, result: 'Fail' }]; id = 'R-' + (1090 + A_.requests.length); A_.requests.unshift({ id, type: 'Extra quiz attempts', target: e.title, mid: m1.id, module: m1.title, raised: now().toISOString(), status: 'Requested', reason: 'I missed the pass mark three times by a small margin.', decision: null }); acaNotify('New queue item awaiting you', `Extra quiz attempts · ${VNAME('A')} (${id})`, 'a-queue.AQ-' + id); }
   else { const E = STORE.worlds.E, ex = E.enrolments.find(x => x.status === 'Expired-Incomplete' && !E.requests.some(r => r.target === x.title && r.status === 'Requested')) || E.enrolments.find(x => x.kind === 'short'); if (ex.status !== 'Expired-Incomplete') { ex.status = 'Expired-Incomplete'; ex.end = D(-3); } id = 'R-' + (1095 + E.requests.length); E.requests.unshift({ id, type: 'More time on course', target: ex.title, raised: now().toISOString(), status: 'Requested', reason: 'Work rota changed — I need two more weeks.', decision: null }); acaNotify('New queue item awaiting you', `More time · ${VNAME('E')} (${id})`, 'a-queue.AQ-' + id + '-E'); }
   render(); toast(`Demo only: a learner raised ${id}. It's in "Awaiting me".`, 'info');
 };

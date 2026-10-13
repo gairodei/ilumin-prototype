@@ -147,7 +147,7 @@ function feedbackWidget() {
   if (W.flags.nvq && W.flags.admitted) {
     W.assignments.forEach(a => { const last = a.qs.flatMap(q => q.fb).sort((x, y) => new Date(y.at) - new Date(x.at))[0]; if (last) items.push({ at: last.at, t: a.title, d: a.overall, by: a.assessor, go: a.id, rag: a.qs.map(q => q.fb.length ? q.fb[q.fb.length - 1].rag : null).filter(Boolean) }); if (a.coord) items.push({ at: a.coord.at, t: 'Coordinator feedback — ' + a.title, d: a.coord.text, by: a.coord.by, go: a.id, coord: true }); });
   } else {
-    W.enrolments.forEach(e => (e.quiz?.attempts || []).forEach(at => items.push({ at: at.at, t: `Quiz result — ${e.title}`, d: `Attempt ${at.n}: ${at.score}% (pass mark ${e.quiz.pass}%)`, result: at.result, course: e.id })));
+    W.enrolments.forEach(e => (e.modules || []).forEach(m => m.quiz.attempts.forEach(at => items.push({ at: at.at, t: `Quiz result — ${e.title}, ${m.title}`, d: `Attempt ${at.n}: ${at.score}% (pass mark ${m.quiz.pass}%)`, result: at.result, course: e.id }))));
   }
   items = items.sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 4);
   return `<section class="card" aria-labelledby="fb-h"><div class="card-h"><h2 id="fb-h">${ic('msg')}Recent feedback</h2></div>${items.length ? `<ul class="list">${items.map(i => `<li class="li"><div class="li-b"><span class="strong">${esc(i.t)}</span><span class="small">${esc(i.d || '')}</span><span class="xs muted">${i.by ? esc(i.by) + ' · ' : ''}${fdt(i.at)}</span>${i.rag ? `<div class="chip-row">${i.rag.map(rag).join('')}</div>` : ''}${i.coord ? `<span>${chip('Coordinator feedback', 'grey')}</span>` : ''}${i.result ? chip(i.result) : ''}</div><div class="li-a"><button class="btn btn-sm" ${i.go ? `data-go="assignment" data-id="${i.go}" data-tab="feedback"` : `data-go="course" data-id="${i.course}" data-tab="quiz"`}>View</button></div></li>`).join('')}</ul>` : `<div class="empty"><p>No feedback yet.</p></div>`}</section>`;
@@ -187,7 +187,7 @@ SCREENS.course = (p) => {
   const crumbs = [['My Courses', 'courses'], [e.title]];
   const head = pageHead(esc(e.title), `${e.type} · enrolled ${fd(e.enrolled)}`, `${chip(e.status)}${e.sponsor ? `<span class="sponsor">${ic('building', 13)}Sponsored by ${esc(e.sponsor)}</span>` : ''}`, crumbs);
   if (e.status === 'Discontinued') return head + `<div class="lockpage" style="margin-top:10px"><div class="lock-ic" style="background:var(--red-bg);color:var(--red)">${ic('lock', 30)}</div><h2>This course has been discontinued</h2><p>${esc(e.reason)}</p><p class="small muted">Your other courses are not affected.</p>
-    <p class="small">You have <strong>read-only</strong> access to your past submissions and certificates for this course.</p>${e.quiz.attempts.length ? `<div class="card" style="text-align:left;width:100%"><h3>Your past quiz attempts (read-only)</h3>${attemptTable(e)}</div>` : '<p class="small muted">No quiz attempts were submitted on this course.</p>'}${(() => { const cs = W.certs.filter(c => c.course && e.title.startsWith(c.course.split(' —')[0])); return cs.length ? `<div class="card" style="text-align:left;width:100%"><h3>Certificates for this course (read-only)</h3><ul class="list small">${cs.map(c => `<li class="li"><div class="li-b"><strong>${esc(c.course)}</strong><span class="muted">#${esc(c.no)} · ${c.issued ? 'issued ' + fd(c.issued) : '—'}</span></div>${chip(c.status)}<button class="btn btn-sm" data-act="viewCert" data-id="${c.id}">View</button></li>`).join('')}</ul></div>` : ''; })()}<button class="btn" data-go="messages">Message the Academy</button></div>`;
+    <p class="small">You have <strong>read-only</strong> access to your past submissions and certificates for this course.</p>${shMods(e).some(m => m.quiz.attempts.length) ? `<div class="card" style="text-align:left;width:100%"><h3>Your past module quiz attempts (read-only)</h3>${attemptTable(e)}</div>` : '<p class="small muted">No quiz attempts were submitted on this course.</p>'}${(() => { const cs = W.certs.filter(c => c.course && e.title.startsWith(c.course.split(' —')[0])); return cs.length ? `<div class="card" style="text-align:left;width:100%"><h3>Certificates for this course (read-only)</h3><ul class="list small">${cs.map(c => `<li class="li"><div class="li-b"><strong>${esc(c.course)}</strong><span class="muted">#${esc(c.no)} · ${c.issued ? 'issued ' + fd(c.issued) : '—'}</span></div>${chip(c.status)}<button class="btn btn-sm" data-act="viewCert" data-id="${c.id}">View</button></li>`).join('')}</ul></div>` : ''; })()}<button class="btn" data-go="messages">Message the Academy</button></div>`;
   if (e.status === 'Payment Pending') return head + `<div class="lockpage"><div class="lock-ic" style="background:var(--amber-bg);color:var(--amber)">${ic('clock', 30)}</div><h2>We're confirming your payment</h2><p>We received your payment for ${esc(e.title)} at ${ft(e.enrolled)} and are waiting for your bank to confirm it. This usually takes a few minutes, but can take up to 24 hours. The course unlocks automatically.</p><button class="btn" data-act="confirmPay" data-id="${e.id}">Prototype: bank confirms payment</button></div>`;
   const t = p.tab || 'overview';
   const body = { overview: shortOverview, content: shortContent_, quiz: quizTab, certificate: certTab }[t] || shortOverview;
@@ -208,14 +208,18 @@ function shortOverview(e) {
 function shortContent_(e) {
   if (e.status === 'Expired-Incomplete') return `<div class="lockpage"><div class="lock-ic">${ic('lock', 30)}</div><h2>Your access has ended — renew</h2><p class="muted">Course content is hidden while your access is expired. Request more time or re-purchase to continue.</p><div class="row" style="justify-content:center"><button class="btn btn-primary" data-act="reqTime" data-id="${e.id}">Request more time</button><button class="btn" data-act="repurchase" data-id="${e.id}">Re-purchase</button></div></div>`;
   const icn = { doc: 'doc', video: 'video', scorm: 'pkg' }, lbl = { doc: 'Document', video: 'Vimeo video', scorm: 'SCORM package' };
-  return `<section class="card pad0"><div style="padding:16px 18px" class="row-b"><h2>Course content</h2><span class="small muted">${e.content.filter(c => c.state === 'Completed').length} of ${e.content.length} completed · work through the items in order</span></div>
-  <ol class="list" style="padding:0 18px">${e.content.map((c, i) => `<li class="li"><div class="li-icon">${ic(icn[c.kind])}</div><div class="li-b"><span class="xs muted">${i + 1} · ${lbl[c.kind]} · ${c.dur}</span><span class="strong">${esc(c.title)}</span>${c.kind === 'video' ? `<div style="max-width:260px">${bar(c.watch, 'Watched')}</div><span class="xs muted">${c.watch > 0 && c.watch < 100 ? 'Resume from ' + c.resume : c.watch >= 100 ? 'Watched' : 'Not started'}</span>` : ''}${c.kind === 'scorm' && c.score ? `<span class="xs muted">Score ${c.score}%</span>` : ''}</div>
-    <div class="li-a">${chip(c.state)}<button class="btn btn-sm ${c.state !== 'Completed' ? 'btn-primary' : ''}" data-act="openItem" data-e="${e.id}" data-id="${c.id}">${c.kind === 'scorm' ? 'Launch' : c.kind === 'video' ? (c.watch > 0 && c.watch < 100 ? 'Resume' : 'Watch') : 'Open'}</button>${c.dl ? `<button class="btn btn-sm btn-ghost" data-act="fakeDl" data-f="${esc(c.title)}.pdf" aria-label="Download ${esc(c.title)}">${ic('download', 15)}</button>` : ''}</div></li>`).join('')}</ol></section>`;
+  const item = c => { const i = e.content.indexOf(c); return `<li class="li"><div class="li-icon">${ic(icn[c.kind])}</div><div class="li-b"><span class="xs muted">${i + 1} · ${lbl[c.kind]} · ${c.dur}</span><span class="strong">${esc(c.title)}</span>${c.kind === 'video' ? `<div style="max-width:260px">${bar(c.watch, 'Watched')}</div><span class="xs muted">${c.watch > 0 && c.watch < 100 ? 'Resume from ' + c.resume : c.watch >= 100 ? 'Watched' : 'Not started'}</span>` : ''}${c.kind === 'scorm' && c.score ? `<span class="xs muted">Score ${c.score}%</span>` : ''}</div>
+    <div class="li-a">${chip(c.state)}<button class="btn btn-sm ${c.state !== 'Completed' ? 'btn-primary' : ''}" data-act="openItem" data-e="${e.id}" data-id="${c.id}">${c.kind === 'scorm' ? 'Launch' : c.kind === 'video' ? (c.watch > 0 && c.watch < 100 ? 'Resume' : 'Watch') : 'Open'}</button>${c.dl ? `<button class="btn btn-sm btn-ghost" data-act="fakeDl" data-f="${esc(c.title)}.pdf" aria-label="Download ${esc(c.title)}">${ic('download', 15)}</button>` : ''}</div></li>`; };
+  return `<section class="card"><div class="row-b"><h2>Modules</h2><span class="small muted">${shMods(e).length} modules · ${shMods(e).filter(shPassed).length} module quizzes passed · work through them in order</span></div><p class="small muted">Each module has its own content and its own quiz. Pass every module quiz to complete the course.</p></section>
+  ${shMods(e).map((m, k) => { const its = m.items.map(id => e.content.find(c => c.id === id)).filter(Boolean), done = its.filter(c => c.state === 'Completed').length + (shPassed(m) ? 1 : 0);
+    return `<section class="card pad0 sh-mod"><div style="padding:16px 18px" class="row-b"><div class="stack" style="gap:2px"><span class="eyebrow">Module ${k + 1} of ${shMods(e).length}</span><h2>${esc(m.title)}</h2></div><div style="min-width:180px">${bar(Math.round(done / (its.length + 1) * 100), 'Module ' + (k + 1) + ' progress')}</div></div>
+    <ol class="list" style="padding:0 18px">${its.map(item).join('')}<li class="li"><div class="li-icon">${ic('check')}</div><div class="li-b"><span class="xs muted">Module quiz</span><span class="strong">What is this module about?</span><span class="xs muted">${shModState(m)}</span></div><div class="li-a">${chip(shPassed(m) ? 'Passed' : shModState(m) === 'Attempts exhausted' ? 'Attempts exhausted' : 'Not passed', shPassed(m) ? 'green' : shModState(m) === 'Attempts exhausted' ? 'red' : 'grey')}<button class="btn btn-sm" data-act="shModPick" data-e="${e.id}" data-m="${m.id}">Go to the quiz</button></div></li></ol></section>`; }).join('')}`;
 }
 function recalcShort(e) {
-  const done = e.content.filter(c => c.state === 'Completed').length + (e.quiz.attempts.some(a => a.result === 'Pass') ? 1 : 0);
-  e.progress = Math.round(done / (e.content.length + 1) * 100);
-  const map = { 'Open all documents': e.content.filter(c => c.kind === 'doc').every(c => c.state !== 'Not opened'), 'Watch all videos to at least 90%': e.content.filter(c => c.kind === 'video').every(c => c.watch >= 90) };
+  // CH-16: progress counts every content item and every module quiz; complete when every module quiz is passed and the other rules are met
+  const mods = shMods(e), done = e.content.filter(c => c.state === 'Completed').length + mods.filter(shPassed).length;
+  e.progress = Math.round(done / (e.content.length + mods.length) * 100);
+  const map = { 'Open all documents': e.content.filter(c => c.kind === 'doc').every(c => c.state !== 'Not opened'), 'Watch all videos to at least 90%': e.content.filter(c => c.kind === 'video').every(c => c.watch >= 90), 'Pass every module quiz with 80% or more': mods.length > 0 && mods.every(shPassed) };
   e.reqs = e.reqs.map(([r, ok]) => [r, map[r] !== undefined ? map[r] : ok]);
 }
 ACT.openItem = el => {
@@ -244,36 +248,48 @@ ACT.vidPlay = () => {
 };
 ACT.scormFinish = el => { const e = enrolById(el.dataset.e), c = e.content.find(x => x.id === el.dataset.id); c.state = 'Completed'; c.score = 92; recalcShort(e); closeModal(); toast('SCORM module completed — score 92% recorded.'); };
 
-/* Quiz tab */
-function attemptTable(e) {
-  return `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Attempt</th><th>Date and time</th><th class="r">Score</th><th>Result</th></tr></thead><tbody>${e.quiz.attempts.length ? e.quiz.attempts.map(a => `<tr><td class="num">${a.n}</td><td>${fdt(a.at)}${a.auto ? ' · ' + chip('Auto-submitted', 'amber') : ''}</td><td class="r num">${a.score}%</td><td>${chip(a.result)}</td></tr>`).join('') : '<tr><td colspan="4" class="muted">No attempts yet.</td></tr>'}</tbody></table></div>`;
+/* Quiz tab — CH-16: a quiz in every module (no course quiz) */
+const shMods = e => e.modules || [];
+const shPassed = m => m.quiz.attempts.some(a => a.result === 'Pass');
+const shModOf = (e, mid) => shMods(e).find(m => m.id === mid);
+// The module shown on the Quiz tab: the one picked, else the first not yet passed
+const shCurMod = e => shModOf(e, ui('shMod-' + e.id)) || shMods(e).find(m => !shPassed(m)) || shMods(e)[0];
+const shModState = m => { const q = m.quiz, u = q.attempts.length; return shPassed(m) ? 'Passed' : u >= q.max ? 'Attempts exhausted' : u ? `${u} of ${q.max} attempts used` : 'Not started'; };
+const shModNo = (e, m) => shMods(e).indexOf(m) + 1;
+const shPendingReq = (e, m) => W.requests.find(r => r.type === 'Extra quiz attempts' && r.target === e.title && r.mid === m.id && r.status === 'Requested');
+const shReqMod = (w, r) => { const e = w.enrolments.find(x => x.title === r.target); if (!e || !e.modules) return null; return { e, m: shModOf(e, r.mid) || e.modules.find(m => !shPassed(m) && m.quiz.attempts.length >= m.quiz.max) || e.modules[0] }; };
+ACT.shModPick = el => { setUi('shMod-' + el.dataset.e, el.dataset.m); go('course', { id: el.dataset.e, tab: 'quiz' }); };
+function attemptTable(e, m) {
+  const rows = (m ? [m] : shMods(e)).flatMap(x => x.quiz.attempts.map(a => [x, a]));
+  return `<div class="tbl-wrap"><table class="tbl"><thead><tr>${m ? '' : '<th>Module</th>'}<th>Attempt</th><th>Date and time</th><th class="r">Score</th><th>Result</th></tr></thead><tbody>${rows.length ? rows.map(([x, a]) => `<tr>${m ? '' : `<td class="small">${esc(x.title)}</td>`}<td class="num">${a.n}</td><td>${fdt(a.at)}${a.auto ? ' · ' + chip('Auto-submitted', 'amber') : ''}</td><td class="r num">${a.score}%</td><td>${chip(a.result)}</td></tr>`).join('') : `<tr><td colspan="${m ? 4 : 5}" class="muted">No attempts yet.</td></tr>`}</tbody></table></div>`;
 }
 function quizTab(e) {
-  const q = e.quiz, used = q.attempts.length, left = q.max - used, passed = q.attempts.find(a => a.result === 'Pass');
   if (e.status === 'Expired-Incomplete') return shortContent_(e);
-  const last = q.attempts[used - 1];
+  const mods = shMods(e), m = shCurMod(e), k = shModNo(e, m), q = m.quiz, used = q.attempts.length, left = q.max - used, passed = q.attempts.find(a => a.result === 'Pass'), last = q.attempts[used - 1];
+  const list = `<section class="card"><h2>Module quizzes</h2><p class="small muted">Each module has its own quiz. Pass every module quiz to complete the course — there is no final course quiz.</p><ul class="list">${mods.map((x, i) => `<li class="li ${x === m ? 'hl' : ''}"><div class="li-b"><strong>Module ${i + 1}: ${esc(x.title)}</strong><span class="xs muted">${shModState(x)}</span></div>${chip(shPassed(x) ? 'Passed' : shModState(x) === 'Attempts exhausted' ? 'Attempts exhausted' : 'Not passed', shPassed(x) ? 'green' : shModState(x) === 'Attempts exhausted' ? 'red' : 'grey')}<button class="btn btn-sm" data-act="shModPick" data-e="${e.id}" data-m="${x.id}" aria-pressed="${x === m}">Open</button></li>`).join('')}</ul></section>`;
+  const eyebrow = `<p class="eyebrow">Module ${k} of ${mods.length} · ${esc(m.title)}</p>`;
   let top;
-  if (passed) top = `<div class="note b-green">${ic('check')}<div><strong>You passed with ${passed.score}%</strong> on attempt ${passed.n} (${fdt(passed.at)}). Your certificate is issued automatically.</div></div>`;
+  if (passed) top = `<div class="note b-green">${ic('check')}<div><strong>Module ${k} passed with ${passed.score}%</strong> on attempt ${passed.n} (${fdt(passed.at)}).${mods.every(shPassed) ? ' Every module quiz is passed — your certificate is issued automatically when the course is complete.' : ' Go on to the next module quiz.'}</div></div>`;
   else if (left <= 0) {
-    const pendingReq = W.requests.find(r => r.type === 'Extra quiz attempts' && r.target === e.title && r.status === 'Requested');
-    top = `<div class="card" style="border-color:var(--redor)"><h2 class="row" style="color:var(--redor)">${ic('alert')}All ${q.max} attempts used</h2><p>You haven't reached the pass mark of ${q.pass}% yet. Choose how to continue:</p>
-      ${pendingReq ? `<div class="note b-amber">${ic('clock')}<div>Your request ${pendingReq.id} for more attempts is with the Academy. We'll notify you when it's decided.</div></div>` : ''}
-      <div class="grid-2e"><div class="card flat"><h3>Request more attempts</h3><p class="small muted">Tell the Academy why you need more attempts. You'll see the decision in My Requests.</p><button class="btn btn-primary" data-act="reqAttempts" data-id="${e.id}" ${pendingReq ? 'disabled' : ''}>Request more attempts</button></div>
+    const pendingReq = shPendingReq(e, m);
+    top = `<div class="card" style="border-color:var(--redor)">${eyebrow}<h2 class="row" style="color:var(--redor)">${ic('alert')}All ${q.max} attempts used for this module</h2><p>You haven't reached the pass mark of ${q.pass}% on Module ${k} yet. Choose how to continue:</p>
+      ${pendingReq ? `<div class="note b-amber">${ic('clock')}<div>Your request ${pendingReq.id} for more attempts on this module is with the Academy. We'll notify you when it's decided.</div></div>` : ''}
+      <div class="grid-2e"><div class="card flat"><h3>Request more attempts</h3><p class="small muted">Tell the Academy why you need more attempts on this module's quiz. You'll see the decision in My Requests.</p><button class="btn btn-primary" data-act="reqAttempts" data-id="${e.id}" data-m="${m.id}" ${pendingReq ? 'disabled title="Your request is already with the Academy"' : ''}>Request more attempts</button></div>
       <div class="card flat"><h3>Re-purchase the course</h3><p class="small muted">Start a new enrolment at the full price (${money(repurchasePrice(e))}). Your current record is kept.</p><button class="btn" data-act="repurchase" data-id="${e.id}">Re-purchase course</button></div></div></div>`;
-  } else top = `<section class="card"><div class="row-b"><h2>Course quiz</h2>${last ? chip(`Last attempt: ${last.score}% · ${last.result}`, last.result === 'Pass' ? 'green' : 'red') : ''}</div>
+  } else top = `<section class="card">${eyebrow}<div class="row-b"><h2>What is this module about?</h2>${last ? chip(`Last attempt: ${last.score}% · ${last.result}`, last.result === 'Pass' ? 'green' : 'red') : ''}</div>
     <div class="kpis"><div class="kpi"><span class="xs muted">Questions</span><span class="big-num">${q.q}</span></div><div class="kpi"><span class="xs muted">Time limit</span><span class="big-num">${q.limit}<small class="small"> min</small></span></div><div class="kpi"><span class="xs muted">Pass mark</span><span class="big-num">${q.pass}%</span></div><div class="kpi"><span class="xs muted">Attempts used</span><span class="big-num">${used}<small class="small"> of ${q.max}</small></span></div></div>
     <div class="note b-blue">${ic('info')}<div class="small">The timer starts when you begin and can't be paused. Your answers save as you go. If time runs out, the quiz is submitted automatically with no review.</div></div>
-    <div><button class="btn btn-primary" data-act="startQuiz" data-id="${e.id}">${used ? 'Retry quiz' : 'Start quiz'} (attempt ${used + 1} of ${q.max})</button></div></section>`;
-  return `${top}<section class="stack"><h2>Attempt history</h2>${attemptTable(e)}</section>`;
+    <div><button class="btn btn-primary" data-act="startQuiz" data-id="${e.id}" data-m="${m.id}">${used ? 'Retry quiz' : 'Start quiz'} (attempt ${used + 1} of ${q.max})</button></div></section>`;
+  return `${list}${top}<section class="stack"><h2>Attempt history — Module ${k}</h2>${attemptTable(e, m)}</section>`;
 }
 ACT.startQuiz = el => {
-  const e = enrolById(el.dataset.id);
-  confirmDlg({ title: 'Start the quiz?', ok: 'Start quiz', body: `<p>You're about to start <strong>attempt ${e.quiz.attempts.length + 1} of ${e.quiz.max}</strong>.</p><ul class="small" style="margin:0;padding-left:18px"><li>${e.quiz.q} questions · ${e.quiz.limit} minutes · pass mark ${e.quiz.pass}%</li><li>The timer can't be paused once you start.</li><li>When time runs out, your answers are submitted automatically — there's no review and no undo.</li></ul>`, onOk: () => { W.quiz = { e: e.id, ans: {}, cur: 0, ends: Date.now() + e.quiz.limit * 6e4, mode: 'one', conn: true }; go('quiz', { id: e.id }); } });
+  const e = enrolById(el.dataset.id), m = shModOf(e, el.dataset.m) || shCurMod(e), q = m.quiz;
+  confirmDlg({ title: 'Start the quiz?', ok: 'Start quiz', body: `<p>Module ${shModNo(e, m)}: <strong>${esc(m.title)}</strong> — you're about to start <strong>attempt ${q.attempts.length + 1} of ${q.max}</strong>.</p><ul class="small" style="margin:0;padding-left:18px"><li>${q.q} questions · ${q.limit} minutes · pass mark ${q.pass}%</li><li>The timer can't be paused once you start.</li><li>When time runs out, your answers are submitted automatically — there's no review and no undo.</li></ul>`, onOk: () => { W.quiz = { e: e.id, m: m.id, ans: {}, cur: 0, ends: Date.now() + q.limit * 6e4, mode: 'one', conn: true }; go('quiz', { id: e.id }); } });
 };
 ACT.reqAttempts = el => {
-  const e = enrolById(el.dataset.id);
-  openModal({ title: 'Request more attempts', sub: esc(e.title), body: `<div class="field"><label for="rq-reason">Why do you need more attempts?</label><textarea class="textarea" id="rq-reason" placeholder="For example: I've re-watched the videos and want to try again."></textarea><span class="hint">The Academy usually replies within 2 working days.</span></div>`,
-    actions: [{ label: 'Cancel' }, { label: 'Send request', cls: 'btn-primary', fn: () => { const r = mval('#rq-reason'); if (!r) { fieldErr('#rq-reason', 'Enter a reason for your request'); return false; } const id = 'R-' + (1060 + W.requests.length); W.requests.unshift({ id, type: 'Extra quiz attempts', target: e.title, raised: now().toISOString(), status: 'Requested', reason: r, decision: null }); render(); toast(`Request ${id} sent. Track it in My Requests.`); } }] });
+  const e = enrolById(el.dataset.id), m = shModOf(e, el.dataset.m) || shCurMod(e);
+  openModal({ title: 'Request more attempts', sub: `${esc(e.title)} · Module ${shModNo(e, m)}: ${esc(m.title)}`, body: `<div class="field"><label for="rq-reason">Why do you need more attempts on this module's quiz?</label><textarea class="textarea" id="rq-reason" placeholder="For example: I've re-watched the videos and want to try again."></textarea><span class="hint">The Academy usually replies within 2 working days.</span></div>`,
+    actions: [{ label: 'Cancel' }, { label: 'Send request', cls: 'btn-primary', fn: () => { const r = mval('#rq-reason'); if (!r) { fieldErr('#rq-reason', 'Enter a reason for your request'); return false; } const id = 'R-' + (1060 + W.requests.length); W.requests.unshift({ id, type: 'Extra quiz attempts', target: e.title, mid: m.id, module: m.title, raised: now().toISOString(), status: 'Requested', reason: r, decision: null }); render(); toast(`Request ${id} sent. Track it in My Requests.`); } }] });
 };
 ACT.reqTime = el => {
   const e = enrolById(el.dataset.id);
@@ -285,7 +301,7 @@ ACT.simGrant = el => { const e = enrolById(el.dataset.e), r = W.requests.find(x 
 function repurchasePrice(e) { return e.price; }
 ACT.repurchase = el => {
   const e = enrolById(el.dataset.id), price = repurchasePrice(e);
-  checkout({ title: `${e.base} — new enrolment (${new Date(now()).getFullYear()})`, amount: price, cur: W.me.cur, onSuccess: () => { const id = e.id + 'r' + W.enrolments.length; W.enrolments.unshift({ ...e, price, cur: W.me.cur, id, title: e.base + ' — ' + new Date(now()).getFullYear() + ' (re-purchase)', status: 'Active', enrolled: now().toISOString(), start: now().toISOString(), end: D(90), progress: 0, content: shortContent(e.topic), quiz: { ...e.quiz, attempts: [] }, reqs: e.reqs.map(([r]) => [r, false]) }); } });
+  checkout({ title: `${e.base} — new enrolment (${new Date(now()).getFullYear()})`, amount: price, cur: W.me.cur, onSuccess: () => { const id = e.id + 'r' + W.enrolments.length; W.enrolments.unshift({ ...e, price, cur: W.me.cur, id, title: e.base + ' — ' + new Date(now()).getFullYear() + ' (re-purchase)', status: 'Active', enrolled: now().toISOString(), start: now().toISOString(), end: D(90), progress: 0, content: shortContent(e.topic), modules: shModules({ topic: e.topic }), reqs: e.reqs.map(([r]) => [r, false]) }); } });
 };
 function certTab(e) {
   const c = e.certId && W.certs.find(x => x.id === e.certId);
@@ -295,13 +311,13 @@ function certTab(e) {
 
 /* Quiz-taking screen */
 SCREENS.quiz = (p) => {
-  const e = enrolById(p.id), Q = W.quiz;
+  const e = enrolById(p.id), Q = W.quiz, m = Q && (shModOf(e, Q.m) || shCurMod(e));
   if (!Q || Q.e !== e.id) return `${pageHead('Quiz', esc(e.title))}<div class="card"><div class="empty"><p>This quiz isn't in progress.</p><button class="btn" data-go="course" data-id="${e.id}" data-tab="quiz">Back to quiz</button></div></div>`;
   if (Q.result) return quizResult(e, Q);
   const n = QUIZ_BANK.length, left = Math.max(0, Q.ends - Date.now());
   const qHtml = (i) => { const [t, opts] = QUIZ_BANK[i]; return `<fieldset class="card" style="border-width:1px"><legend class="sr">Question ${i + 1}</legend><span class="eyebrow">Question ${i + 1} of ${n}</span><h2>${esc(t)}</h2><div class="stack">${opts.map((o, k) => `<label class="opt"><input type="radio" name="qa${i}" value="${k}" ${Q.ans[i] === k ? 'checked' : ''} data-onchange="quizAns" data-i="${i}">${esc(o)}</label>`).join('')}</div></fieldset>`; };
   return `${!Q.conn ? `<div class="note b-amber" role="alert">${ic('wifioff')}<div><strong>Reconnecting — your answers are saved.</strong> Keep going; we'll sync as soon as you're back online.</div></div>` : ''}
-  <div class="page-h"><div><p class="eyebrow">${esc(e.title)} · attempt ${e.quiz.attempts.length + 1} of ${e.quiz.max}</p><h1>Course quiz</h1></div>
+  <div class="page-h"><div><p class="eyebrow">${esc(e.title)} · Module ${shModNo(e, m)}: ${esc(m.title)} · attempt ${m.quiz.attempts.length + 1} of ${m.quiz.max}</p><h1>What is this module about?</h1></div>
   <div class="row"><span class="save-chip ok" id="qsave" aria-live="polite">${ic('check', 13)}Saved</span><span class="timer ${left < 6e4 ? 'low' : ''}" id="qtimer" role="timer" aria-label="Time remaining">${ic('clock', 18)}<span>${mmss(left)}</span></span></div></div>
   <div class="row-b"><div class="quiz-nav" role="navigation" aria-label="Question navigator">${QUIZ_BANK.map((_, i) => `<button class="${Q.ans[i] !== undefined ? 'ans' : ''} ${Q.cur === i ? 'cur' : ''}" data-act="quizGo" data-i="${i}" aria-label="Question ${i + 1}${Q.ans[i] !== undefined ? ', answered' : ', not answered'}">${i + 1}</button>`).join('')}</div>
   </div>
@@ -333,22 +349,29 @@ ACT.quizSubmit = () => {
   confirmDlg({ title: 'Submit your quiz?', ok: 'Submit quiz', body: `<p>You've answered <strong>${n} of ${QUIZ_BANK.length}</strong> questions.${n < QUIZ_BANK.length ? ' Unanswered questions are marked as incorrect.' : ''}</p><p class="small muted">You can't change your answers after submitting.</p>`, onOk: () => finishQuiz(false) });
 };
 function finishQuiz(auto) {
-  const Q = W.quiz, e = enrolById(Q.e);
-  const correct = QUIZ_BANK.filter((q, i) => Q.ans[i] === q[2]).length, score = Math.round(correct / QUIZ_BANK.length * 100);
-  const at = { n: e.quiz.attempts.length + 1, at: now().toISOString(), score, result: score >= e.quiz.pass ? 'Pass' : 'Fail', auto };
-  e.quiz.attempts.push(at); Q.result = at; recalcShort(e);
-  if (at.result === 'Pass') { e.reqs = e.reqs.map(([r, ok]) => [r, r.startsWith('Pass') ? true : ok]); }
-  if (auto) W.notifs.unshift({ id: 'nq' + Date.now(), cat: 'Assignments', title: 'Quiz auto-submitted', body: `Time ran out on ${e.title}, attempt ${at.n}.`, at: now().toISOString(), go: `course.${e.id}.quiz`, unread: true });
+  const Q = W.quiz, e = enrolById(Q.e), m = shModOf(e, Q.m) || shCurMod(e), q = m.quiz;
+  const correct = QUIZ_BANK.filter((x, i) => Q.ans[i] === x[2]).length, score = Math.round(correct / QUIZ_BANK.length * 100);
+  const at = { n: q.attempts.length + 1, at: now().toISOString(), score, result: score >= q.pass ? 'Pass' : 'Fail', auto };
+  q.attempts.push(at); Q.result = at; recalcShort(e); shComplete(e);
+  if (auto) W.notifs.unshift({ id: 'nq' + Date.now(), cat: 'Assignments', title: 'Quiz auto-submitted', body: `Time ran out on ${e.title}, ${m.title}, attempt ${at.n}.`, at: now().toISOString(), go: `course.${e.id}.quiz`, unread: true });
   if (S.route === 'quiz') render();
   if (auto) openModal({ title: 'Time’s up — quiz submitted', dismissable: false, body: `<div class="note b-amber">${ic('clock')}<div>The time limit ran out, so your answers were submitted automatically. There's no review or undo for an auto-submitted quiz.</div></div>`, actions: [{ label: 'See my result', cls: 'btn-primary' }] });
 }
+// CH-16: the course is Completed when every module quiz is passed and the other rules are met — one certificate per course
+function shComplete(e) {
+  if (e.kind !== 'short' || e.status === 'Completed' || !e.reqs.length || !e.reqs.every(([, ok]) => ok)) return;
+  const at = now().toISOString(), id = 'cq' + e.id, yrs = /24/.test(e.validity) ? 2 : /No expiry/.test(e.validity) ? 0 : 1;
+  Object.assign(e, { status: 'Completed', progress: 100, completedAt: at, certId: id });
+  W.certs.unshift({ id, course: e.base || e.title, no: 'WEL-2026-0' + (2500 + W.certs.length), issued: at, expires: yrs ? new Date(new Date(at).getTime() + yrs * 365 * DAY).toISOString() : null, status: 'Valid', enrol: e.id });
+  W.notifs.unshift({ id: 'nc' + Date.now(), cat: 'Certificates', title: 'Certificate issued', body: `You completed ${e.title}. Your certificate is ready.`, at, go: 'certificates', unread: true });
+}
 function quizResult(e, Q) {
-  const r = Q.result, left = e.quiz.max - e.quiz.attempts.length;
-  return `${pageHead('Quiz result', esc(e.title), '', [['My Courses', 'courses'], [e.title, 'course', e.id], ['Quiz result']])}
-  <section class="card" style="max-width:640px"><div class="row" style="gap:24px"><div class="score-ring num" style="color:var(${r.result === 'Pass' ? '--green' : '--red'})">${r.score}%</div><div class="stack" style="gap:6px">${chip(r.result)}${r.auto ? chip('Auto-submitted', 'amber') : ''}<span class="small">Pass mark ${e.quiz.pass}% · attempt ${r.n} of ${e.quiz.max}</span><span class="small muted">${fdt(r.at)}</span></div></div>
-  <p>${r.result === 'Pass' ? 'Well done — you passed. Your certificate will be generated automatically once all requirements are complete.' : left > 0 ? `You didn't reach the pass mark this time. You have ${plural(left, 'attempt')} left.` : 'You have used all your attempts.'}</p>
-  <div class="row">${r.result !== 'Pass' && left > 0 ? `<button class="btn btn-primary" data-act="startQuiz" data-id="${e.id}">Retry quiz</button>` : ''}${r.result !== 'Pass' && left <= 0 ? `<button class="btn btn-primary" data-act="reqAttempts" data-id="${e.id}" ${W.requests.some(q => q.type === 'Extra quiz attempts' && q.target === e.title && q.status === 'Requested') ? 'disabled title="Your request is already with the Academy"' : ''}>Request more attempts</button>` : ''}<button class="btn" data-act="quizDone" data-id="${e.id}">Back to course</button></div></section>
-  <section class="stack"><h2>Attempt history</h2>${attemptTable(e)}</section>`;
+  const r = Q.result, m = shModOf(e, Q.m) || shCurMod(e), q = m.quiz, left = q.max - q.attempts.length, k = shModNo(e, m), next = shMods(e).find(x => !shPassed(x));
+  return `${pageHead('Quiz result', `${esc(e.title)} · Module ${k}: ${esc(m.title)}`, '', [['My Courses', 'courses'], [e.title, 'course', e.id], ['Quiz result']])}
+  <section class="card" style="max-width:640px"><div class="row" style="gap:24px"><div class="score-ring num" style="color:var(${r.result === 'Pass' ? '--green' : '--red'})">${r.score}%</div><div class="stack" style="gap:6px">${chip(r.result)}${r.auto ? chip('Auto-submitted', 'amber') : ''}<span class="small">Pass mark ${q.pass}% · attempt ${r.n} of ${q.max}</span><span class="small muted">${fdt(r.at)}</span></div></div>
+  <p>${r.result === 'Pass' ? (e.status === 'Completed' ? 'Well done — you passed the last module quiz and completed the course. Your certificate is ready.' : next ? `Well done — you passed Module ${k}. Next: Module ${shModNo(e, next)}, ${esc(next.title)}.` : 'Well done — you passed. Your certificate is generated automatically once all requirements are complete.') : left > 0 ? `You didn't reach the pass mark this time. You have ${plural(left, 'attempt')} left on this module.` : 'You have used all your attempts on this module.'}</p>
+  <div class="row">${r.result !== 'Pass' && left > 0 ? `<button class="btn btn-primary" data-act="startQuiz" data-id="${e.id}" data-m="${m.id}">Retry quiz</button>` : ''}${r.result !== 'Pass' && left <= 0 ? `<button class="btn btn-primary" data-act="reqAttempts" data-id="${e.id}" data-m="${m.id}" ${shPendingReq(e, m) ? 'disabled title="Your request is already with the Academy"' : ''}>Request more attempts</button>` : ''}<button class="btn" data-act="quizDone" data-id="${e.id}">Back to course</button></div></section>
+  <section class="stack"><h2>Attempt history — Module ${k}</h2>${attemptTable(e, m)}</section>`;
 }
 ACT.quizDone = el => { W.quiz = null; go('course', { id: el.dataset.id, tab: 'quiz' }); };
 
@@ -393,7 +416,7 @@ ACT.browseF = el => { setUi('browseF', el.dataset.k); render(); };
 INP.browseQ = el => { setUi('browseQ', el.value); const g = $('#catgrid'); const f = ui('browseF', 'all'), q = el.value.toLowerCase(); g.innerHTML = CATALOGUE.filter(c => (f === 'all' || c.kind === f) && (!q || c.title.toLowerCase().includes(q))).map(catCard).join('') || '<p class="muted">No courses match your search.</p>'; };
 ACT.buyCourse = el => {
   const c = CATALOGUE.find(x => x.id === el.dataset.id);
-  checkout({ title: c.title, amount: W.amt(c.price), onSuccess: () => { W.enrolments.unshift({ id: 'b' + c.id, kind: 'short', type: 'Short course', title: c.title + ' — ' + new Date(now()).getFullYear(), base: c.title, status: 'Active', enrolled: now().toISOString(), start: now().toISOString(), end: D(90), progress: 0, price: W.amt(c.price), topic: c.topic, desc: c.desc, reqs: [['Open all documents', false], ['Watch all videos to at least 90%', false], ['Pass the quiz with 80% or more', false]], content: shortContent(c.topic), quiz: { q: 10, limit: 20, pass: 80, max: 3, attempts: [] }, validity: c.validity }); W.plans.push({ e: 'b' + c.id, title: c.title, plan: 'One-time', total: W.amt(c.price), rows: [{ n: 1, amount: W.amt(c.price), due: now().toISOString(), status: 'Paid', paid: W.amt(c.price), receipt: 'RCP-28' + Math.floor(Math.random() * 900 + 100) }] }); } });
+  checkout({ title: c.title, amount: W.amt(c.price), onSuccess: () => { W.enrolments.unshift({ id: 'b' + c.id, kind: 'short', type: 'Short course', title: c.title + ' — ' + new Date(now()).getFullYear(), base: c.title, status: 'Active', enrolled: now().toISOString(), start: now().toISOString(), end: D(90), progress: 0, price: W.amt(c.price), topic: c.topic, desc: c.desc, reqs: [['Open all documents', false], ['Watch all videos to at least 90%', false], ['Pass every module quiz with 80% or more', false]], content: shortContent(c.topic), modules: shModules({ topic: c.topic }), validity: c.validity }); W.plans.push({ e: 'b' + c.id, title: c.title, plan: 'One-time', total: W.amt(c.price), rows: [{ n: 1, amount: W.amt(c.price), due: now().toISOString(), status: 'Paid', paid: W.amt(c.price), receipt: 'RCP-28' + Math.floor(Math.random() * 900 + 100) }] }); } });
 };
 ACT.applyNvq = el => {
   const c = CATALOGUE.find(x => x.id === el.dataset.id);
