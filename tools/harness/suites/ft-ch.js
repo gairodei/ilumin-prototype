@@ -1,6 +1,6 @@
 // Client decisions CH-01 … CH-31 — one block per batch.
 // Batch 1: CH-01 country fixed, CH-02 GBP only, CH-03 data region, CH-05 VAT invoices, CH-31 contact details,
-// the placeholder register (4 topics), CH-24 unchanged, and the CH records.
+// the placeholder register (4 topics), CH-24 unchanged, and the CH records. … Batch 6: CH-06 VAT on agency bundles.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -209,22 +209,22 @@
     ok('Decisions Log: sources S1–S6 listed', !!ch && ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].every(s => ch.textContent.includes(s)));
     ok('Decisions Log: CH-01, 02, 03, 05, 31 Applied (Batch 1), 13 Oct 2026', ['CH-01', 'CH-02', 'CH-03', 'CH-05', 'CH-31'].every(id => /Applied \(Batch 1\)13 Oct 2026/.test(row(id))));
     ok('Decisions Log: sources as in the change list', /S3→S4/.test(row('CH-01')) && /S3→S4\/S5/.test(row('CH-02')) && /S1→S2→S4/.test(row('CH-18')) && /S1\/S6/.test(row('CH-24')));
-    ok('Decisions Log: Batch 2 applied, CH-11 partly, later batches scheduled', ['CH-07', 'CH-08', 'CH-09', 'CH-10'].every(id => /Applied \(Batch 2\)13 Oct 2026/.test(row(id))) && /Applied \(Batch 2\/3\)13 Oct 2026/.test(row('CH-11')) && /Scheduled \(Batch 6\)/.test(row('CH-06')) && ['CH-12', 'CH-13', 'CH-14'].every(id => /Applied \(Batch 3\)13 Oct 2026/.test(row(id))) && /Applied \(Batch 5\)13 Oct 2026/.test(row('CH-17')));
+    ok('Decisions Log: Batch 2 applied, CH-11 partly, later batches scheduled', ['CH-07', 'CH-08', 'CH-09', 'CH-10'].every(id => /Applied \(Batch 2\)13 Oct 2026/.test(row(id))) && /Applied \(Batch 2\/3\)13 Oct 2026/.test(row('CH-11')) && /Applied \(Batch 6\)13 Oct 2026/.test(row('CH-06')) && ['CH-12', 'CH-13', 'CH-14'].every(id => /Applied \(Batch 3\)13 Oct 2026/.test(row(id))) && /Applied \(Batch 5\)13 Oct 2026/.test(row('CH-17')));
     ok('Decisions Log: earlier and confirmed items', /Confirmed: already built, no change/.test(row('CH-04')) && /Applied earlier \(C7, b8bce5b\)/.test(row('CH-24')) && /Confirmed: no change/.test(row('CH-30')));
     const pc = secs.find(s => s.querySelector('h2') && s.querySelector('h2').textContent === 'Pending client'), prow = pc ? [...pc.querySelectorAll('tbody tr')].map(r => r.textContent) : [];
     ok('Decisions Log: P-27 … P-30 Pending client', prow.length === 4 && ['P-27', 'P-28', 'P-29', 'P-30'].every((p, i) => prow[i].startsWith(p) && /Pending client/.test(prow[i])) && /Observation fee/.test(prow[0]) && /Mistyped country/.test(prow[1]) && /Data Correction/.test(prow[1]) && /Intake choice at sign-up/.test(prow[3]));
     const fu = secs.find(s => /Follow-up decisions \(P-05 – P-26\)/.test(s.textContent)), st = id => ([...fu.querySelectorAll('tbody tr')].find(tr => tr.firstChild.textContent === id) || {}).textContent || '';
     ok('Decisions Log: F1 Superseded (CH-01); F2, F3b, F8 Resolved; F3a Superseded', /Superseded \(CH-01\)/.test(st('F1')) && /Resolved \(CH-02\)/.test(st('F2')) && /Superseded \(CH-02\)/.test(st('F3a')) && /Resolved \(CH-03\)/.test(st('F3b')) && /Resolved \(CH-05\)/.test(st('F8')));
-    ok('Decisions Log: 21 scenarios; #16 is the new sign-up', /All 21 run end to end in the prototype\./.test(main()) && CDL_SCEN.filter(r => r[0] === '16').length === 1 && CDL_SCEN.find(r => r[0] === '16')[1] === 'New sign-up: documents → offer letter → payment → start' && !CDL_SCEN.some(r => r[1] === 'Learner moves country'));
+    ok('Decisions Log: 22 scenarios; #16 is the new sign-up', /All 22 run end to end in the prototype\./.test(main()) && CDL_SCEN.filter(r => r[0] === '16').length === 1 && CDL_SCEN.find(r => r[0] === '16')[1] === 'New sign-up: documents → offer letter → payment → start' && !CDL_SCEN.some(r => r[1] === 'Learner moves country'));
     go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 1/.test(s.textContent));
     ok('UX Changelog: Batch 1 entry lists its CH IDs', !!ux && ['CH-01:', 'CH-02:', 'CH-03:', 'CH-05:', 'CH-31:'].every(x => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(x))));
-    go('demo-scenarios'); ok('Demo Scenarios: "Twenty-one", 21 sections, #16 is the new sign-up', /Twenty-one end-to-end walkthroughs/.test(main()) && app().querySelectorAll('main section[id^="sc-"]').length === 21 && /New sign-up/.test((app().querySelector('#sc-16') || {}).textContent || ''));
-    renderDemo(); AFTER.forEach(f => f()); const b = document.querySelector('#demo-root [data-act="scOpen"]'); ok('Demo panel: "Open the 21 Demo Scenarios"', !b || b.textContent === 'Open the 21 Demo Scenarios', b && b.textContent);
+    go('demo-scenarios'); ok('Demo Scenarios: "Twenty-two", 22 sections, #16 is the new sign-up', /Twenty-two end-to-end walkthroughs/.test(main()) && app().querySelectorAll('main section[id^="sc-"]').length === 22 && /New sign-up/.test((app().querySelector('#sc-16') || {}).textContent || ''));
+    renderDemo(); AFTER.forEach(f => f()); const b = document.querySelector('#demo-root [data-act="scOpen"]'); ok('Demo panel: "Open the 22 Demo Scenarios"', !b || b.textContent === 'Open the 22 Demo Scenarios', b && b.textContent);
     learner('A'); go('index'); const ix = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
-    ok('Learner index: CH entries (incl. registration confirmation, 1b), each with a purpose line', !!ix && ix.querySelectorAll('li').length === 17 && !!ix.querySelector('[data-act="regStart"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 21 walkthroughs/.test(main()));
+    ok('Learner index: CH entries (incl. registration confirmation, 1b), each with a purpose line', !!ix && ix.querySelectorAll('li').length === 17 && !!ix.querySelector('[data-act="regStart"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 22 walkthroughs/.test(main()));
     ix.querySelector('[data-m="chCheckout"]').click(); await wait(150); ok('Learner index: checkout entry opens the checkout with the Stripe line', !!MODAL && !!mroot().querySelector('.ch-stripe')); closeModal();
     SA(); go('a-index'); const ax = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
-    ok('Admin index: Batch 1–5 entries with purposes', !!ax && ax.querySelectorAll('li').length === 14 && ['a-config', 'a-learner.IA-L-31900', 'a-dataprotection..residency', 'a-programmes.NV-L3.letter', 'a-admissions.APP-C', 'a-learner.IA-L-31188.admission'].every(t => ax.querySelector(`[data-t="${t}"]`)) && [...ax.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && !/Priya Nair \(moved country/.test(main()));
+    ok('Admin index: Batch 1–6 entries with purposes', !!ax && ax.querySelectorAll('li').length === 17 && ['a-config', 'a-learner.IA-L-31900', 'a-dataprotection..residency', 'a-programmes.NV-L3.letter', 'a-admissions.APP-C', 'a-learner.IA-L-31188.admission'].every(t => ax.querySelector(`[data-t="${t}"]`)) && [...ax.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && !/Priya Nair \(moved country/.test(main()));
   });
 
   /* ================= Batch 2 ================= */
@@ -595,6 +595,134 @@
     ok('UX Changelog: Batch 5 entry', !!ux && [...ux.querySelectorAll('li')].filter(li => li.textContent.startsWith('CH-17:')).length >= 4);
     coord('A'); go('c-index'); ok('Coordinator index: Assessors panel and learner override entries', !!app().querySelector('[data-t="c-batches.L3AC-JAN26"]') && !!app().querySelector('[data-t="c-learner.IA-L-30755"]'));
     go('c-learner', { id: 'IA-L-30755' }); ok('Coordinator A: Ben Carter\'s observation override with Reset', /James Pryce/.test(main()) && !!app().querySelector('[data-act="chOvReset"][data-k="obs"]'));
+  });
+
+  /* ================= Batch 6 ================= */
+  // CH-06 VAT on agency bundles
+  const P6 = id => STORE.biz.products.find(p => p.id === id);
+  const Q6 = id => ADMIN.queue.find(i => i.id === id);
+  const openVat = id => ADMIN.queue.find(i => i.type === 'Bundle VAT setting' && isOpen(i) && i.data.productId === id);
+  const setVat = (on, pct) => { const c = document.querySelector('#bp-vat'); c.checked = on; INP.chVatCalc(c); const x = document.querySelector('#bp-vatp'); x.value = pct; INP.chVatCalc(x); };
+  const vatDlg = (id, on, pct, r) => { ACT.chVatChange({ dataset: { id } }); const c = document.querySelector('#bp-vat'); c.checked = on; INP.chVatDlgCalc(c); const x = document.querySelector('#bp-vatp'); x.value = pct; INP.chVatDlgCalc(x); document.querySelector('#rsn').value = r; return press(); };
+  const decide = (i, a, r) => { ACT.qDo({ dataset: { id: i.id, a } }); const t = document.querySelector('#rsn'); if (t) t.value = r; return press(); };
+
+  await T('CH-06 mock data and the approval type', async () => {
+    fresh();
+    ok('CH-06 mock: CAT-1 VAT 20% approved, CAT-2 VAT 20% pending (published), CAT-3 no VAT', P6('CAT-1').vat.pct === 20 && !P6('CAT-1').vatPending && P6('CAT-2').status === 'Published' && !P6('CAT-2').vat && P6('CAT-2').vatPending.pct === 20 && P6('CAT-2').vatPending.qid === 'AQ-7301' && !P6('CAT-3').vat && !P6('CAT-3').vatPending);
+    ok('CH-06 mock queue items: AQ-7300 Approved by Finance, AQ-7301 Pending with Finance Admin', Q6('AQ-7300').status === 'Approved' && Q6('AQ-7300').decidedBy === FIN_A && Q6('AQ-7301').status === 'Pending' && Q6('AQ-7301').first === FIN_A && Q6('AQ-7301').raisedBy === BIZ_A);
+    ok('CH-06 type in every list (Super Admin, Finance, Business)', QTYPES.includes('Bundle VAT setting') && FIN_TYPES.includes('Bundle VAT setting') && BIZ_TYPES.includes('Bundle VAT setting') && qLbl('Bundle VAT setting') === 'Bundle VAT');
+    SA(); go('a-queue'); ACT.qRouting(); const rows = [...document.querySelectorAll('#modal-root tbody tr')].map(tr => [...tr.children].map(td => td.textContent.trim()).join(' | '));
+    ok('CH-06 "Who approves what": 15 rows incl. Bundle VAT setting', rows.length === 15 && rows.includes('Bundle VAT setting | Business Admin | Finance Admin | Super Admin'), rows.length);
+    closeModal();
+  });
+
+  await T('CH-06 Business Admin: editor VAT section, validation, preview', async () => {
+    fresh(); role('bizA'); go('a-bundles', { id: 'CAT-3', tab: 'catalogue' });
+    ACT.newBundle({ dataset: { id: 'CAT-3' } });
+    ok('CH-06 editor: "6. VAT" with Add VAT tick-box and VAT % field', !!document.querySelector('#modal-root #bp-vat') && !!document.querySelector('#modal-root #bp-vatp') && /6\. VAT/.test(mroot().textContent));
+    ok('CH-06 editor: VAT % disabled until ticked; preview says no VAT', document.querySelector('#bp-vatp').disabled && /No VAT/.test(document.querySelector('#bp-vatout').textContent));
+    setVat(true, ''); const n = ADMIN.queue.length; prim();
+    ok('CH-06 editor: VAT % required when ticked', !!MODAL && ADMIN.queue.length === n && /Enter the VAT %/.test(mroot().textContent));
+    setVat(true, 20); const net = priceOf(P6('CAT-3')).final;
+    ok('CH-06 editor preview: "£net + VAT (20%) £vat = £total"', document.querySelector('#bp-vatout').textContent === money(net, 'GBP') + ' + VAT (20%) ' + money(net * 0.2, 'GBP') + ' = ' + money(net * 1.2, 'GBP'), document.querySelector('#bp-vatout').textContent);
+    ACT.bpMode({ dataset: { m: 'auto' } }); ok('CH-06 editor: VAT kept when the modal redraws', document.querySelector('#bp-vat').checked && +document.querySelector('#bp-vatp').value === 20);
+    closeModal();
+  });
+
+  await T('CH-06 Business Admin raises → Finance approves → agency pays VAT', async () => {
+    fresh(); role('bizA'); go('a-bundles', { id: 'CAT-3', tab: 'catalogue' });
+    ok('CH-06 bundle detail: VAT "No VAT" and Change VAT', /VATNo VAT/.test(main()) && !!app().querySelector('[data-act="chVatChange"][data-id="CAT-3"]'));
+    const base = priceOf(P6('CAT-3')).final;
+    vatDlg('CAT-3', true, 20, 'HMRC: standard-rated training for agencies.');
+    const i = openVat('CAT-3');
+    ok('CH-06 Change VAT on a published bundle → "Bundle VAT setting" Pending with Finance', !!i && i.status === 'Pending' && i.first === FIN_A && i.raisedBy === ADMIN.me.name && i.data.to.pct === 20);
+    ok('CH-06 published bundle: current price stays until approved (still published, no VAT)', P6('CAT-3').status === 'Published' && !P6('CAT-3').vat && P6('CAT-3').vatPending.qid === i.id);
+    go('a-bundles', { id: 'CAT-3', tab: 'catalogue' }); ok('CH-06 detail: pending note with the queue item; Change VAT disabled with a reason', new RegExp('VAT change awaiting Finance approval \\(' + i.id).test(main()) && app().querySelector('[data-act="chVatChange"]').disabled && !!app().querySelector('[data-act="chVatChange"]').title);
+    role('agyA'); go('g-buy'); ok('CH-06 agency still sees the current price (no VAT) while pending', /Dementia Awareness seats/.test(main()) && main().includes(money(base, 'GBP') + ' — no VAT on this bundle'));
+    role('bizA'); decide(i, 'approve', 'ok'); closeModal(); applyDecision(i, 'approve', 'direct call', {}); ok('CH-06 Business Admin can\'t approve it (Finance decides; self-approval blocked, direct call too)', i.status === 'Pending' && !!P6('CAT-3').vatPending && !P6('CAT-3').vat);
+    closeModal(); role('finA'); ok('CH-06 Finance Admin (Leila Haddad) has it in "Awaiting me"', ADMIN.me.name === FIN_A && awaitingMe(i));
+    go('a-queue', { id: i.id }); ok('CH-06 queue item panel: change, net and what the agency would pay', /Bundle VAT setting/.test(main()) && /No VAT\s*→\s*VAT 20%/.test(main()) && main().includes(money(base * 1.2, 'GBP')));
+    decide(i, 'approve', 'Agreed.');
+    ok('CH-06 Finance approves → VAT 20% applies; nothing pending', i.status === 'Approved' && P6('CAT-3').vat.pct === 20 && !P6('CAT-3').vatPending);
+    ok('CH-06 Business Admin notified', STORE.biz.notifs.some(n => /Bundle VAT approved/.test(n.t) && n.b.includes(i.id)));
+    role('agyA'); go('g-buy'); const pr = priceFor(AGY_CATALOGUE().find(c => c.id === 'CAT-3'), 10);
+    ok('CH-06 Buy Bundles: "£net + VAT £vat = £total total"', main().includes(money(pr.net, 'GBP') + ' + VAT ' + money(pr.vat, 'GBP') + ' = ' + money(pr.total, 'GBP') + ' total') && Math.abs(pr.vat - pr.net * 0.2) < 0.005);
+    ok('CH-06 Buy Bundles: CAT-1 shows VAT, others without VAT say so', /no VAT on this bundle/.test(main()) && (app().querySelectorAll('.ch-vat').length === AGY_CATALOGUE().length));
+    ok('CH-06 pending VAT (CAT-2): Buy Bundles keeps the current price (no VAT)', AGY_CATALOGUE().find(c => c.id === 'CAT-2').vatPct === 0);
+    ACT.agBuy({ dataset: { id: 'CAT-3' } }); ok('CH-06 quantity dialog: total includes VAT, with the breakdown', mroot().textContent.includes('Total ' + money(pr.total, 'GBP')) && mroot().textContent.includes(money(pr.net, 'GBP') + ' + VAT ' + money(pr.vat, 'GBP')));
+    prim(); ok('CH-06 checkout: pay the total incl. VAT, breakdown shown', mroot().textContent.includes(money(pr.total, 'GBP')) && mroot().textContent.includes('+ VAT ' + money(pr.vat, 'GBP')));
+    agPayResult('success'); const p = STORE.agy.purchases[0];
+    ok('CH-06 purchase record: amount = total, with net, VAT % and VAT', p.amount === pr.total && p.net === pr.net && p.vatPct === 20 && p.vat === pr.vat);
+    const tx = STORE.fin.tx.find(t => t.ref === p.ref), bn = ADMIN.bundles.find(b => b.id === p.bundle);
+    ok('CH-06 Finance transaction and credited bundle carry the VAT', tx && tx.amount === pr.total && tx.vatPct === 20 && tx.net === pr.net && bn && bn.vatPct === 20);
+    const dl = MODAL.actions.find(a => a.label === 'Download receipt'); dl.fn();
+    const rt = mroot().textContent;
+    ok('CH-06 receipt: net, VAT % and amount, total paid', /Receipt RCP-/.test(rt) && rt.includes('Net' + money(pr.net, 'GBP')) && rt.includes('VAT20% · ' + money(pr.vat, 'GBP')) && rt.includes('Total paid' + money(pr.total, 'GBP')), rt.slice(0, 200));
+    closeModal(); S.agy.buy = null; go('g-purchases');
+    const hd = [...app().querySelectorAll('main thead th')].map(th => th.textContent.trim());
+    ok('CH-06 Purchases list: Net, VAT %, VAT and Total columns', ['Net', 'VAT %', 'VAT', 'Total'].every(x => hd.includes(x)), hd.join('|'));
+    ok('CH-06 Purchases list: the new row shows 20% and the VAT', main().includes('20%') && main().includes(money(pr.vat, 'GBP')));
+    ACT.agReceipt({ dataset: { ref: p.ref } }); ok('CH-06 Receipt button opens the breakdown', /Total paid/.test(mroot().textContent) && mroot().textContent.includes('20%')); closeModal();
+    go('g-purchase', { id: p.ref }); ok('CH-06 purchase detail: Net, VAT, Total', main().includes('Net' + money(pr.net, 'GBP')) && main().includes('VAT20% · ' + money(pr.vat, 'GBP')) && main().includes('Total' + money(pr.total, 'GBP')));
+    role('finA'); go('f-ledger'); const lh = [...app().querySelectorAll('main thead th')].map(th => th.textContent.trim());
+    ok('CH-06 Finance ledger: Net, VAT %, VAT and Total columns', ['Net', 'VAT %', 'VAT', 'Total'].every(x => lh.includes(x)), lh.join('|'));
+    const row = [...app().querySelectorAll('main tbody tr')].find(tr => tr.textContent.includes(p.ref));
+    ok('CH-06 ledger row: agency purchase with 20% VAT', !!row && row.textContent.includes('20%') && row.textContent.includes(money(pr.vat, 'GBP')) && row.textContent.includes(money(pr.net, 'GBP')));
+    const lrow = [...app().querySelectorAll('main tbody tr')].find(tr => /Learner/.test(tr.textContent) || STORE.fin.tx.some(t => t.payerType === 'Learner' && tr.textContent.includes(t.ref)));
+    ok('CH-06 ledger: learner payments carry no VAT', allTx().filter(t => t.payerType !== 'Agency').every(t => t.vatPct == null) && (!lrow || !/\d%/.test([...lrow.children].map(td => td.textContent).join('|'))));
+    go('f-agency'); const ah = [...app().querySelectorAll('main thead th')].map(th => th.textContent.trim());
+    ok('CH-06 Agency Payments → Purchase history: Net, VAT %, VAT, Total', ['Net', 'VAT %', 'VAT', 'Total'].every(x => ah.includes(x)) && main().includes('20%'), ah.join('|'));
+    go('f-reports', { tab: 'agency' }); const rh = [...app().querySelectorAll('main thead th')].map(th => th.textContent.trim());
+    ok('CH-06 Finance Reports → Agency: Net, VAT, Total', ['Net', 'VAT', 'Total'].every(x => rh.includes(x)) && main().includes(money(pr.vat, 'GBP')) && /VAT applies to agency bundle purchases only/.test(main()), rh.join('|'));
+  });
+
+  await T('CH-06 publish blocked while VAT pending; reject keeps the current setting', async () => {
+    fresh(); role('bizA'); go('a-bundles', { id: 'CAT-2', tab: 'catalogue' });
+    ok('CH-06 CAT-2 (published, VAT pending): note says the current price stays', /AQ-7301/.test(main()) && /current price stays in Buy Bundles until it's approved/.test(main()));
+    ACT.newBundle({ dataset: { id: 'CAT-2' } }); ok('CH-06 editor: VAT read-only while pending', !document.querySelector('#bp-vat') && /awaiting Finance approval/.test(mroot().textContent)); closeModal();
+    go('a-bundles', { id: 'CAT-8', tab: 'catalogue' }); vatDlg('CAT-8', true, 20, 'Add VAT before publishing.'); const i8 = openVat('CAT-8');
+    go('a-bundles', { id: 'CAT-8', tab: 'catalogue' }); const pub = app().querySelector('main button[title="VAT change awaiting Finance approval"]');
+    ok('CH-06 Draft CAT-8 with VAT pending: Publish disabled with a reason', !!i8 && !!pub && pub.disabled && /Publish/.test(pub.textContent) && !app().querySelector('[data-act="bPublish"][data-id="CAT-8"]'));
+    ACT.bPublish({ dataset: { id: 'CAT-8' } }); ok('CH-06 publish refused by the action too', /Can't publish/.test(MODAL.title) && /VAT change is awaiting Finance approval/.test(mroot().textContent) && P6('CAT-8').status === 'Draft'); closeModal();
+    role('finA'); decide(Q6('AQ-7301'), 'reject', 'Keep Infection control seats without VAT for now.');
+    ok('CH-06 Finance rejects → nothing pending, bundle stays without VAT', Q6('AQ-7301').status === 'Rejected' && !P6('CAT-2').vatPending && !P6('CAT-2').vat);
+    decide(i8, 'approve', 'Agreed.'); ok('CH-06 Finance approves CAT-8\'s VAT', i8.status === 'Approved' && P6('CAT-8').vat.pct === 20);
+    role('bizA'); go('a-bundles', { id: 'CAT-2', tab: 'catalogue' }); ok('CH-06 rejection shown on the bundle', /VAT change rejected \(AQ-7301\)/.test(main()));
+    go('a-bundles', { id: 'CAT-8', tab: 'catalogue' }); ok('CH-06 after approval: Publish available', !!app().querySelector('[data-act="bPublish"][data-id="CAT-8"]'));
+  });
+
+  await T('CH-06 new bundle with VAT; escalation; Super Admin immediate', async () => {
+    fresh(); role('bizA'); go('a-bundles'); ACT.newBundle(); document.querySelector('#bp-n').value = 'VAT test bundle'; setVat(true, 5); const n = STORE.biz.products.length; prim();
+    const p = STORE.biz.products[n], i = p && openVat(p.id);
+    ok('CH-06 new bundle with VAT → Draft + pending Finance approval', !!p && p.status === 'Draft' && !!i && i.data.to.pct === 5 && p.vatPending.qid === i.id);
+    ACT.bAdvance(); ok('CH-06 left 7 days → escalated to the Super Admin', allQueue().find(x => x.id === i.id).status === 'Escalated');
+    role('finA'); ok('CH-06 escalated: no longer awaiting the Finance Admin', !awaitingMe(i));
+    SA(); decide(i, 'approve', 'Escalated — approved.'); ok('CH-06 Super Admin decides the escalated item', i.status === 'Approved' && p.vat.pct === 5);
+    SA(); go('a-bundles', { id: 'CAT-3', tab: 'catalogue' }); vatDlg('CAT-3', true, 20, 'Super Admin sets VAT.');
+    const s = ADMIN.queue.find(x => x.type === 'Bundle VAT setting' && x.data.productId === 'CAT-3');
+    ok('CH-06 Super Admin\'s own change applies immediately (no approval)', P6('CAT-3').vat.pct === 20 && !P6('CAT-3').vatPending && s && s.saImmediate && s.status === 'Approved');
+  });
+
+  await T('CH-06 learners never pay VAT', async () => {
+    fresh(); learner('A'); const seen = ['payments', 'browse', 'courses'].map(r => { go(r); return main(); }).join(' ');
+    ok('CH-06 learner payments and catalogue: no VAT added', !/\+ VAT|VAT \d+%|VAT \(\d/.test(seen));
+    ok('CH-06 learner transactions carry no VAT fields', Object.values(STORE.worlds).every(w => (w.tx || []).every(t => t.vatPct == null)));
+  });
+
+  /* ---------- Records (Batch 6) ---------- */
+  await T('CH records (Batch 6)', async () => {
+    fresh(); const s22 = SC_LIST().find(x => x[0] === '22');
+    ok('Scenario #22 "Bundle VAT approval"', !!s22 && s22[1] === 'Bundle VAT approval' && s22[3].length === 5 && /Add VAT/.test(s22[3][0].text) && /Finance Admin approves/.test(s22[3][1].text) && /receipt/i.test(s22[3][4].text));
+    ok('Scenario #22 runs: Business Admin → Finance → agency', (() => { ACT.chSc22Biz(); const a = S.route === 'a-bundles' && isBiz(); ACT.chSc22Fin(); const b = isFin(); ACT.chSc22Agy(); return a && b && S.portal === 'agency' && S.route === 'g-buy'; })());
+    ACT.scOpen(); go('demo-scenarios'); ok('Demo Scenarios: #22 present', /Bundle VAT approval/.test((app().querySelector('#sc-22') || {}).textContent || ''));
+    go('cd-log'); const r6 = [...app().querySelectorAll('main tr')].find(tr => tr.textContent.trim().startsWith('CH-06')); ok('Decisions Log: CH-06 Applied (Batch 6) 13 Oct 2026', !!r6 && /Applied \(Batch 6\)/.test(r6.textContent) && /13 Oct 2026/.test(r6.textContent), r6 && r6.textContent);
+    ok('Decisions Log: #22 client-defined (CH-06)', CDL_SCEN.some(r => r[0] === '22' && r[2] === 'Client-defined (CH-06)'));
+    go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 6/.test(s.textContent));
+    ok('UX Changelog: Batch 6 entry', !!ux && [...ux.querySelectorAll('li')].filter(li => li.textContent.startsWith('CH-06:')).length >= 4);
+    SA(); go('a-index'); ok('Admin index: CH-06 entries with purpose lines', ['a-bundles.CAT-1.catalogue', 'a-bundles.CAT-2.catalogue', 'a-queue.AQ-7301'].every(x => !!app().querySelector('[data-t="' + x + '"]')) && /VAT awaits Finance approval/.test(main()));
+    role('bizA'); go('b-index'); ok('Business index: CH-06 entries', !!app().querySelector('[data-t="a-bundles.CAT-3.catalogue"]') && !!app().querySelector('[data-t="a-queue.AQ-7301"]'));
+    role('finA'); go('f-index'); ok('Finance index: CH-06 entries', !!app().querySelector('[data-t="a-queue.AQ-7301"]') && !!app().querySelector('[data-t="f-ledger"]'));
+    role('agyA'); go('g-index'); ok('Agency index: CH-06 entries', !!app().querySelector('[data-r="g-buy"]') && /net \+ VAT = total/.test(main()));
   });
 
   fresh();
