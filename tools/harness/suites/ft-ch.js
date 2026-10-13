@@ -209,22 +209,22 @@
     ok('Decisions Log: sources S1–S6 listed', !!ch && ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].every(s => ch.textContent.includes(s)));
     ok('Decisions Log: CH-01, 02, 03, 05, 31 Applied (Batch 1), 13 Oct 2026', ['CH-01', 'CH-02', 'CH-03', 'CH-05', 'CH-31'].every(id => /Applied \(Batch 1\)13 Oct 2026/.test(row(id))));
     ok('Decisions Log: sources as in the change list', /S3→S4/.test(row('CH-01')) && /S3→S4\/S5/.test(row('CH-02')) && /S1→S2→S4/.test(row('CH-18')) && /S1\/S6/.test(row('CH-24')));
-    ok('Decisions Log: Batch 2 applied, CH-11 partly, later batches scheduled', ['CH-07', 'CH-08', 'CH-09', 'CH-10'].every(id => /Applied \(Batch 2\)13 Oct 2026/.test(row(id))) && /Partly applied \(Batch 2; Batch 3 to come\)/.test(row('CH-11')) && /Scheduled \(Batch 6\)/.test(row('CH-06')) && /Scheduled \(Batch 3\)/.test(row('CH-12')) && /Scheduled \(Batch 5\)/.test(row('CH-17')));
+    ok('Decisions Log: Batch 2 applied, CH-11 partly, later batches scheduled', ['CH-07', 'CH-08', 'CH-09', 'CH-10'].every(id => /Applied \(Batch 2\)13 Oct 2026/.test(row(id))) && /Applied \(Batch 2\/3\)13 Oct 2026/.test(row('CH-11')) && /Scheduled \(Batch 6\)/.test(row('CH-06')) && ['CH-12', 'CH-13', 'CH-14'].every(id => /Applied \(Batch 3\)13 Oct 2026/.test(row(id))) && /Scheduled \(Batch 5\)/.test(row('CH-17')));
     ok('Decisions Log: earlier and confirmed items', /Confirmed: already built, no change/.test(row('CH-04')) && /Applied earlier \(C7, b8bce5b\)/.test(row('CH-24')) && /Confirmed: no change/.test(row('CH-30')));
     const pc = secs.find(s => s.querySelector('h2') && s.querySelector('h2').textContent === 'Pending client'), prow = pc ? [...pc.querySelectorAll('tbody tr')].map(r => r.textContent) : [];
     ok('Decisions Log: P-27 … P-30 Pending client', prow.length === 4 && ['P-27', 'P-28', 'P-29', 'P-30'].every((p, i) => prow[i].startsWith(p) && /Pending client/.test(prow[i])) && /Observation fee/.test(prow[0]) && /Mistyped country/.test(prow[1]) && /Data Correction/.test(prow[1]) && /Intake choice at sign-up/.test(prow[3]));
     const fu = secs.find(s => /Follow-up decisions \(P-05 – P-26\)/.test(s.textContent)), st = id => ([...fu.querySelectorAll('tbody tr')].find(tr => tr.firstChild.textContent === id) || {}).textContent || '';
     ok('Decisions Log: F1 Superseded (CH-01); F2, F3b, F8 Resolved; F3a Superseded', /Superseded \(CH-01\)/.test(st('F1')) && /Resolved \(CH-02\)/.test(st('F2')) && /Superseded \(CH-02\)/.test(st('F3a')) && /Resolved \(CH-03\)/.test(st('F3b')) && /Resolved \(CH-05\)/.test(st('F8')));
-    ok('Decisions Log: 18 scenarios; #16 is the new sign-up', /All 18 run end to end in the prototype\./.test(main()) && CDL_SCEN.filter(r => r[0] === '16').length === 1 && CDL_SCEN.find(r => r[0] === '16')[1] === 'New sign-up: documents → offer letter → payment → start' && !CDL_SCEN.some(r => r[1] === 'Learner moves country'));
+    ok('Decisions Log: 19 scenarios; #16 is the new sign-up', /All 19 run end to end in the prototype\./.test(main()) && CDL_SCEN.filter(r => r[0] === '16').length === 1 && CDL_SCEN.find(r => r[0] === '16')[1] === 'New sign-up: documents → offer letter → payment → start' && !CDL_SCEN.some(r => r[1] === 'Learner moves country'));
     go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 1/.test(s.textContent));
     ok('UX Changelog: Batch 1 entry lists its CH IDs', !!ux && ['CH-01:', 'CH-02:', 'CH-03:', 'CH-05:', 'CH-31:'].every(x => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(x))));
-    go('demo-scenarios'); ok('Demo Scenarios: "Eighteen", 18 sections, #16 is the new sign-up', /Eighteen end-to-end walkthroughs/.test(main()) && app().querySelectorAll('main section[id^="sc-"]').length === 18 && /New sign-up/.test((app().querySelector('#sc-16') || {}).textContent || ''));
-    renderDemo(); AFTER.forEach(f => f()); const b = document.querySelector('#demo-root [data-act="scOpen"]'); ok('Demo panel: "Open the 18 Demo Scenarios"', !b || b.textContent === 'Open the 18 Demo Scenarios', b && b.textContent);
+    go('demo-scenarios'); ok('Demo Scenarios: "Nineteen", 19 sections, #16 is the new sign-up', /Nineteen end-to-end walkthroughs/.test(main()) && app().querySelectorAll('main section[id^="sc-"]').length === 19 && /New sign-up/.test((app().querySelector('#sc-16') || {}).textContent || ''));
+    renderDemo(); AFTER.forEach(f => f()); const b = document.querySelector('#demo-root [data-act="scOpen"]'); ok('Demo panel: "Open the 19 Demo Scenarios"', !b || b.textContent === 'Open the 19 Demo Scenarios', b && b.textContent);
     learner('A'); go('index'); const ix = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
-    ok('Learner index: CH entries (incl. registration confirmation, 1b), each with a purpose line', !!ix && ix.querySelectorAll('li').length === 12 && !!ix.querySelector('[data-act="regStart"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 18 walkthroughs/.test(main()));
+    ok('Learner index: CH entries (incl. registration confirmation, 1b), each with a purpose line', !!ix && ix.querySelectorAll('li').length === 12 && !!ix.querySelector('[data-act="regStart"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && /Demo Scenarios — 19 walkthroughs/.test(main()));
     ix.querySelector('[data-m="chCheckout"]').click(); await wait(150); ok('Learner index: checkout entry opens the checkout with the Stripe line', !!MODAL && !!mroot().querySelector('.ch-stripe')); closeModal();
     SA(); go('a-index'); const ax = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
-    ok('Admin index: Batch 1 and 2 entries with purposes', !!ax && ax.querySelectorAll('li').length === 6 && ['a-config', 'a-learner.IA-L-31900', 'a-dataprotection..residency', 'a-programmes.NV-L3.letter', 'a-admissions.APP-C', 'a-learner.IA-L-31188.admission'].every(t => ax.querySelector(`[data-t="${t}"]`)) && [...ax.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && !/Priya Nair \(moved country/.test(main()));
+    ok('Admin index: Batch 1–3 entries with purposes', !!ax && ax.querySelectorAll('li').length === 10 && ['a-config', 'a-learner.IA-L-31900', 'a-dataprotection..residency', 'a-programmes.NV-L3.letter', 'a-admissions.APP-C', 'a-learner.IA-L-31188.admission'].every(t => ax.querySelector(`[data-t="${t}"]`)) && [...ax.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')) && !/Priya Nair \(moved country/.test(main()));
   });
 
   /* ================= Batch 2 ================= */
@@ -357,6 +357,78 @@
     learner('A'); go('index'); const ix = [...app().querySelectorAll('.idx-sec')].find(s => s.querySelector('h2').textContent === 'Client decisions (CH)');
     ok('Screen index: sign-up steps, signed PDF and Academy inbox, each with a purpose', ['chStep', 'chScInstalment', 'chSponsoredSignup', 'chSignedPdf'].every(a => ix.querySelector(`[data-act="${a}"]`)) && !!ix.querySelector('[data-r="ainbox"]') && [...ix.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')));
     ix.querySelector('[data-act="chStep"][data-s="3"]').click(); await wait(60); ok('Screen index: step 3 entry opens the offer letter step', S.route === 'admission' && stepCur() === 'Offer letter');
+  });
+
+  /* ================= Batch 3 ================= */
+  // press the dialog's main button (primary or danger) as a click would, closing it unless validation keeps it open
+  const act = () => { const a = MODAL && MODAL.actions.find(x => x.cls && /primary|danger/.test(x.cls)); const r = a && a.fn ? a.fn() : undefined; if (r !== false && MODAL) closeModal(); return r; };
+  const lastAudit = () => ADMIN.audit[0] || {};
+
+  /* ---------- CH-12 / CH-13 rejected after payment ---------- */
+  await T('CH-12 / CH-13 rejected after payment', async () => {
+    fresh(); ACT.chSc19Start(); ok('#19 start: Priya Raman paid and learning', W.signup.done && W.flags.admitted && chPaidTowards(W) === 300);
+    const fin0 = STORE.fin.notifs.length, aca0 = STORE.aca.notifs.length, q0 = ADMIN.queue.filter(x => x.type === 'Refund').length;
+    role('acaA'); go('a-admissions', { id: 'APP-B' }); ACT.appReject({ dataset: { id: 'APP-B' } }); $('#rsn').value = 'Entry requirement not met'; act();
+    const w = STORE.worlds.B;
+    ok('CH-12 rejected; access stays as it is', w.admission.status === 'Rejected' && w.flags.admitted && w.enrolments.includes(w.nvq));
+    ok('CH-13 no automatic refund', ADMIN.queue.filter(x => x.type === 'Refund').length === q0);
+    const fn = STORE.fin.notifs.slice(0, STORE.fin.notifs.length - fin0).find(n => n.t === 'Admission rejected after payment'), an = STORE.aca.notifs.slice(0, STORE.aca.notifs.length - aca0).find(n => n.t === 'Admission rejected after payment');
+    ok('CH-12 Finance Admins notified: learner, course, £ paid, link to the learner', !!fn && fn.to === 'all' && fn.b === 'Priya Raman, Level 3 Diploma in Adult Care (England), £300.00 paid' && fn.go === 'f-learner.IA-L-31188', fn && fn.b);
+    ok('CH-12 Academic Admins notified, linking to the learner', !!an && an.b === fn.b && an.go === 'a-learner.IA-L-31188');
+    go('a-admissions', { id: 'APP-B' }); ok('CH-13 rejected application: "Refund is a Finance decision" — no Raise refund for the Academic Admin', /Refund is a Finance decision \(raise a refund if appropriate\)\./.test(main()) && !btnAct('chRaiseRefund') && /Finance Admins have been notified/.test(main()));
+    learner('B'); go('assignments'); ok('CH-12 learner still opens programme content', !app().querySelector('main .lockpage'));
+    FA(); go('f-learner', { id: 'IA-L-31188' }); ok('CH-13 Finance learner record: hint with Raise refund', /Refund is a Finance decision/.test(main()) && !!btnAct('chRaiseRefund'));
+    btnAct('chRaiseRefund').click(); await wait(60); ok('CH-13 Raise refund opens the existing refund flow, pre-filled', !!MODAL && /refund/i.test(MODAL.title) && /Will be sent to/.test(mroot().textContent) && /Admission rejected after payment/.test(mroot().innerHTML)); closeModal();
+  });
+
+  /* ---------- CH-14 manual Pause access ---------- */
+  await T('CH-14 manual Pause access', async () => {
+    fresh(); FA(); go('f-learner', { id: 'IA-L-18022' });
+    const card = app().querySelector('.ch-access'); ok('CH-14 Finance learner record: Access by enrolment with Pause access', !!card && !!card.querySelector('[data-act="chPause"][data-e="nvq"]'));
+    card.querySelector('[data-act="chPause"][data-e="nvq"]').click(); await wait(40); ok('CH-14 reason is mandatory', act() === false && !!MODAL);
+    $('#rsn').value = 'Card payment disputed with the bank'; act(); const p = chPaused('IA-L-18022', 'nvq');
+    ok('CH-14 paused, audited', !!p && p.reason === 'Card payment disputed with the bank' && lastAudit().action === 'Access paused (manual)' && lastAudit().reason === 'Card payment disputed with the bank');
+    ok('CH-14 shown as paused with the reason for staff', /Access paused \(manual\)/.test(main()) && /Card payment disputed/.test(main()) && !!app().querySelector('.ch-access [data-act="chRestore"][data-e="nvq"]'));
+    const n = STORE.worlds.C.notifs[0]; ok('CH-14 learner notified, without the reason', n.title === 'Access paused' && !/disputed/.test(n.body));
+    learner('C'); go('dashboard'); ok('CH-14 learner sees the paused banner, without the reason', /Access paused\./.test(main()) && /Level 3 Diploma/.test(main()) && !/disputed/.test(html()));
+    go('assignments'); ok('CH-14 the paused enrolment\'s content is locked', !!app().querySelector('main .lockpage') && /Access paused/.test(main()));
+    const sc = W.enrolments.find(e => e.kind === 'short' && e.status === 'Active'); if (sc) { go('course', { id: sc.id }); ok('CH-14 other enrolments stay open', !app().querySelector('main .lockpage')); }
+    ok('CH-14 separate from the automatic pause', !W.accessPaused);
+    STORE.worlds.C.accessPaused = true; FA(); go('f-learner', { id: 'IA-L-18022' }); app().querySelector('.ch-access [data-act="chRestore"][data-e="nvq"]').click(); await wait(40); $('#rsn').value = 'Bank confirmed the payment'; act();
+    ok('CH-14 Restore access (with a reason) lifts the manual pause only', !chPaused('IA-L-18022', 'nvq') && STORE.worlds.C.accessPaused === true && lastAudit().action === 'Access restored (manual pause lifted)');
+    ok('CH-14 learner notified of the restore', STORE.worlds.C.notifs[0].title === 'Access restored');
+    STORE.worlds.C.accessPaused = false;
+    SA(); go('a-learner', { id: 'IA-L-18022', tab: 'enrolments' }); ok('CH-14 Learner 360 → Enrolments: Pause access on each row (Super Admin)', app().querySelectorAll('main [data-act="chPause"]').length === STORE.worlds.C.enrolments.length);
+    role('sysA'); go('f-learner', { id: 'IA-L-31900' }); ok('CH-14 System Admin can pause (Finance learner record)', !!app().querySelector('.ch-access [data-act="chPause"]'));
+    role('acaA'); go('a-learner', { id: 'IA-L-18022', tab: 'enrolments' }); ok('CH-14 Academic Admin has no Pause access', !app().querySelector('main [data-act="chPause"]'));
+    const a0 = ADMIN.audit.length; ACT.chPause({ dataset: { l: 'IA-L-18022', e: 'nvq' } }); ok('CH-14 direct call by a non-allowed role is refused and logged', !MODAL && !chPaused('IA-L-18022', 'nvq') && ADMIN.audit.length === a0 + 1 && /^Blocked: Pause access/.test(lastAudit().action));
+  });
+
+  /* ---------- CH-11 Finance: bank transfers awaiting confirmation ---------- */
+  await T('CH-11 bank transfers to confirm', async () => {
+    fresh(); ACT.chScInstalment(); ACT.suPay();
+    ok('CH-11 Finance told of the new bank transfer', STORE.fin.notifs[0].t === 'Bank transfer awaiting confirmation' && /IA-31188-INS1/.test(STORE.fin.notifs[0].b));
+    FA(); go('f-exceptions', { tab: 'bank' }); const rows = [...app().querySelectorAll('main tbody tr')];
+    ok('CH-11 tab "Bank transfers to confirm" lists sign-ups "Awaiting confirmation"', /Bank transfers to confirm/.test(main()) && rows.length === 2 && rows.every(r => /Awaiting confirmation/.test(r.textContent)) && rows.some(r => /Kavya Iyer/.test(r.textContent)) && rows.some(r => /Priya Raman/.test(r.textContent)));
+    ok('CH-11 each row: Record offline payment and Pause access', rows.every(r => r.querySelector('[data-act="finOffline"]') && r.querySelector('[data-act="chPause"]')));
+    const pr = rows.find(r => /Priya Raman/.test(r.textContent)); pr.querySelector('[data-act="finOffline"]').click(); await wait(60);
+    ok('CH-11 Record offline payment is pre-selected on her first instalment', $('#op-t').value === 'B|nvq|1' && +$('#op-a').value === 400);
+    $('#rsn').value = 'Bank statement 12 Oct'; act(); const w = STORE.worlds.B;
+    ok('CH-11 recording clears "Awaiting confirmation"', STORE.chBank.find(x => x.v === 'B').status === 'Confirmed' && w.signup.pay.status === 'Paid' && w.plans.find(p => p.e === 'nvq').rows[0].status === 'Paid');
+    go('f-exceptions', { tab: 'bank' }); const kr = [...app().querySelectorAll('main tbody tr')].find(r => /Kavya Iyer/.test(r.textContent)); kr.querySelector('[data-act="chPause"]').click(); await wait(40); $('#rsn').value = 'Transfer never arrived'; act();
+    ok('CH-11 / CH-14 Pause access from the same row', !!chPaused('IA-L-31900', 'Level 2 Diploma in Care (England)') && /Access paused/.test([...app().querySelectorAll('main tbody tr')].find(r => /Kavya Iyer/.test(r.textContent)).textContent));
+    go('f-exceptions', { tab: 'bank' }); [...app().querySelectorAll('main tbody tr')].find(r => /Kavya Iyer/.test(r.textContent)).querySelector('[data-act="finOffline"]').click(); await wait(60); $('#rsn').value = 'Arrived late'; act();
+    ok('CH-11 mock sign-up confirmed and in the ledger', STORE.chBank.find(x => x.lid === 'IA-L-31900').status === 'Confirmed' && STORE.fin.tx[0].payer === 'Kavya Iyer' && STORE.fin.tx[0].amount === 300);
+  });
+
+  /* ---------- Records (Batch 3) ---------- */
+  await T('CH records (Batch 3)', async () => {
+    fresh(); const s19 = SC_LIST().find(x => x[0] === '19');
+    ok('Scenario #19 "Rejected after payment": pays → rejected → notified → paused → refund decision', !!s19 && s19[1] === 'Rejected after payment' && s19[3].length === 5 && /rejects/.test(s19[3][1].text) && /pauses/.test(s19[3][3].text) && /refund/.test(s19[3][4].text));
+    ACT.scOpen(); go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 3/.test(s.textContent));
+    ok('UX Changelog: Batch 3 entry lists its CH IDs', !!ux && ['CH-11:', 'CH-12:', 'CH-13:', 'CH-14:'].every(x => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(x))));
+    go('cd-log'); ok('Decisions Log: CH-10 assumption note', /Assumption: If the deposit balance isn't paid within the 28-day hold, the seat is released and programme content locks \(prototype assumption, pending client confirmation\)\./.test(main()));
+    SA(); go('a-index'); ok('Admin index: Pause access, bank transfers and rejected-after-payment entries', ['a-learner.IA-L-18022.enrolments', 'f-learner.IA-L-31900', 'f-exceptions..bank'].every(t => app().querySelector(`[data-t="${t}"]`)) && !!app().querySelector('[data-act="chSc19Start"]'));
   });
 
   fresh();

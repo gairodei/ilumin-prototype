@@ -88,6 +88,10 @@ const CH_LOG = [
   ['CH-30', 'Sheet items already satisfied (no change)', 'S1', 'Confirmed: no change'],
   ['CH-31', 'Academy contact details (020 3983 0282 · info@welfarehs.co.uk · Mon–Sun 9:30 AM–6 PM)', 'S4/S5', 1],
 ];
+// Assumption notes shown under a decision (later batches add theirs)
+const CH_NOTES = {
+  'CH-10': 'If the deposit balance isn\'t paid within the 28-day hold, the seat is released and programme content locks (prototype assumption, pending client confirmation).',
+};
 // Batches applied so far, with the date each was applied (later batch files add theirs)
 const CH_APPLIED = { 1: '13 Oct 2026' };
 const chStatus = b => {
@@ -113,7 +117,7 @@ const CH_FU_STATUS = {
   F8: ['Resolved (CH-05)', 'VAT invoices are sent by the Academy by email, outside the system. The "Pending client" tags are replaced with that note.'],
 };
 CDL_FU.forEach(r => { const s = CH_FU_STATUS[r[0]]; if (s) { r[2] = s[0]; r[3] = s[1]; } });
-const chLogSections = () => `<section class="card"><h2>Client decisions — change list (CH-01 … CH-31)</h2><p class="small muted">Sources: ${CH_SOURCES.map(s => `<strong>${s[0]}</strong> ${esc(s[1])}`).join(' · ')}.</p>${recTbl(['ID', 'Decision', 'Source', 'Status', 'Date applied'], CH_LOG.map(r => { const [st, tone, dt] = chStatus(r[3]); return [r[0], esc(r[1]), r[2], chip(st, tone), dt || '—']; }))}<p class="small">Superseded / resolved by the change list: F1 (P-05), F2 (P-07), F3a and F3b (P-15), F8 (P-20) — see Follow-up decisions. Client suggestion sheet: items 9 and 13 are now decided (CH-07 … CH-11, CH-16); item 6 is pending (P-27).</p></section>
+const chLogSections = () => `<section class="card"><h2>Client decisions — change list (CH-01 … CH-31)</h2><p class="small muted">Sources: ${CH_SOURCES.map(s => `<strong>${s[0]}</strong> ${esc(s[1])}`).join(' · ')}.</p>${recTbl(['ID', 'Decision', 'Source', 'Status', 'Date applied'], CH_LOG.map(r => { const [st, tone, dt] = chStatus(r[3]); return [r[0], esc(r[1]) + (CH_NOTES[r[0]] ? `<div class="xs muted ch-note">Assumption: ${esc(CH_NOTES[r[0]])}</div>` : ''), r[2], chip(st, tone), dt || '—']; }))}<p class="small">Superseded / resolved by the change list: F1 (P-05), F2 (P-07), F3a and F3b (P-15), F8 (P-20) — see Follow-up decisions. Client suggestion sheet: items 9 and 13 are now decided (CH-07 … CH-11, CH-16); item 6 is pending (P-27).</p></section>
   <section class="card"><h2>Pending client</h2>${recTbl(['ID', 'Topic', 'Status', 'What it means in the prototype'], CH_PENDING.map(r => [r[0], esc(r[1]), chip('Pending client', 'amber'), esc(r[2])]))}</section>`;
 const _cdLogCh = SCREENS['cd-log'];
 // Placed after the first section (the final decisions list G1–G12 stays first)

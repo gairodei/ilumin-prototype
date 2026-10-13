@@ -84,7 +84,7 @@ function buildAdmin(av) {
   });
 
   // G3.1: learners from one other country (India) — CH-02: pay in GBP; CH-03: data region UK
-  [['Kavya Iyer', 'kavya.iyer@example.in', '+91 98450 21734', 'Moving and Handling People — 2026', 'Self-registration'], ['Vikram Nair', 'vikram.nair@example.in', '+91 99300 55812', 'The Care Certificate (15 Standards)', 'Welfare Buddy referral (code WB-HASSAN22)']].forEach(([name, email, mobile, course, referral], k) => A.learners.push({ id: 'IA-L-' + (31900 + k * 41), name, email, mobile, agency: null, courses: [course], acct: 'Active', rec: 'Active', region: 'UK', last: D(-2 - k, '11:20'), flags: [], dob: ['4 Feb 1993', '19 Oct 1989'][k], address: ['12 Indiranagar 100 Ft Road, Bengaluru', '6 Marine Drive, Kochi'][k], postcode: ['560038', '682031'][k], country: 'India', joined: fd(D(-60 - k * 30)), referral, cur: 'GBP', g31: true }));
+  [['Kavya Iyer', 'kavya.iyer@example.in', '+91 98450 21734', 'Moving and Handling People — 2026', 'Self-registration', 'Level 2 Diploma in Care (England)'], ['Vikram Nair', 'vikram.nair@example.in', '+91 99300 55812', 'The Care Certificate (15 Standards)', 'Welfare Buddy referral (code WB-HASSAN22)']].forEach(([name, email, mobile, course, referral, nvq], k) => A.learners.push({ id: 'IA-L-' + (31900 + k * 41), name, email, mobile, agency: null, courses: nvq ? [course, nvq] : [course], acct: 'Active', rec: 'Active', region: 'UK', last: D(-2 - k, '11:20'), flags: [], dob: ['4 Feb 1993', '19 Oct 1989'][k], address: ['12 Indiranagar 100 Ft Road, Bengaluru', '6 Marine Drive, Kochi'][k], postcode: ['560038', '682031'][k], country: 'India', joined: fd(D(-60 - k * 30)), referral, cur: 'GBP', g31: true }));
 
   /* ---------- Courses, programmes, batches ---------- */
   A.courses = [
