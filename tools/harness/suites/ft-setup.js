@@ -144,9 +144,93 @@
     ok('Scenario #26 "Create and sell a short course": 9 steps, ends with the certificate', !!s && s[1] === 'Create and sell a short course' && s[3].length === 9 && /buys/.test(s[3][6].text) && /certificate/i.test(s[3][8].text));
     ACT.s1Sc26Buy(); ok('Scenario #26 demo course published and in Browse', browseIds().some(id => (CATALOGUE.find(x => x.id === id) || {}).course === 'SC-26'));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S1 entry', /Setup fixes — short courses end to end/.test(main()));
-    go('demo-scenarios'); ok('Demo Scenarios: 26', app().querySelectorAll('main section[id^="sc-"]').length === 26 && /Twenty-six end-to-end walkthroughs/.test(main()));
+    go('demo-scenarios'); ok('Demo Scenarios: #26 present', !!app().querySelector('#sc-26'));
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: Setup fixes entries with purpose lines', !!sec && sec.querySelectorAll('li').length === 3 && [...sec.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')));
+    ok('Admin index: Setup fixes entries with purpose lines', !!sec && sec.querySelectorAll('li').length >= 3 && [...sec.querySelectorAll('li')].every(li => li.querySelector('.idx-purpose')));
+  });
+
+  /* ================= S2 — assignments ================= */
+  const tasV = v => { S.tas.v = v; tasEnter(); S.signedIn = true; };
+  const newAsg = (title) => { SA(); go('a-assignments'); ACT.newAsg(); const u = document.querySelector('#na-u'); u.value = [...u.options].find(o => /^U306 · Module 1/.test(o.textContent)).value; fill({ '#na-t': title, '#na-d': D(25, '21:59').slice(0, 16) }); prim(); return s2Defs().find(d => d.title === title); };
+  const addQs = (d, qs) => qs.forEach(t => { ACT.s2QAdd({ dataset: { id: d.id } }); fill({ '#aq-t': t }); prim(); });
+  const mapAll = d => { go('a-assignments', { id: d.id, tab: 'mapping' }); d.qs.filter(q => q.status === 'Active').forEach((q, i) => { const box = [...app().querySelectorAll('[data-onchange="mapChange"][data-q="' + q.id + '"]')][i % 2]; box.checked = true; INP.mapChange(box); }); };
+  const publish = (d, codes = ['L3AC-JAN26']) => { ACT.pubAsg({ dataset: { id: d.id } }); $$('.s2-pb').forEach(x => { x.checked = codes.includes(x.value); }); reason('Publish'); };
+
+  await T('S2-01 / S2-03 / S2-04 new assignment, its own questions and mapping', async () => {
+    fresh(); const n0 = s2Defs().length, d = newAsg('Assignment 30 — Safeguarding in practice');
+    ok('S2-01 "New assignment" creates a real Draft (not Assignment 8)', !!d && s2Defs().length === n0 + 1 && d.status === 'Draft' && d.unit === 'U306 · Module 1' && d.programme === 'Level 3 Diploma in Adult Care (England)' && S.route === 'a-assignments' && S.params.id === d.id);
+    go('a-assignments'); ok('S2-01 listed; Assignment 8 still its own draft', main().includes('Assignment 30 — Safeguarding in practice') && main().includes('Assignment 8 — Safeguarding legislation'));
+    go('a-assignments', { id: d.id, tab: 'questions' }); ACT.s2QAdd({ dataset: { id: d.id } });
+    ok('S2-03 the assignment-question dialog (text, attachments), not the quiz dialog', !!document.querySelector('#aq-t') && !!document.querySelector('#aq-a') && !document.querySelector('input[name="corr"]')); closeModal();
+    addQs(d, ['Explain the term safeguarding in your own words.', 'Describe your role if you suspect abuse.', 'Temporary question']);
+    ACT.s2QEdit({ dataset: { id: d.id, q: 'q2' } }); fill({ '#aq-t': 'Describe your role and responsibilities if you suspect abuse.' }); document.querySelector('#aq-a').checked = false; prim();
+    ACT.s2QMove({ dataset: { id: d.id, q: 'q2', d: '-1' } }); ACT.s2QRetire({ dataset: { id: d.id, q: 'q3' } });
+    ok('S2-03 add, edit (attachments off), reorder, retire', d.qs.length === 3 && d.qs[0].id === 'q2' && !d.qs[0].attach && d.qs[0].text.startsWith('Describe your role and responsibilities') && d.qs[2].status === 'Retired');
+    ACT.pubAsg({ dataset: { id: d.id } }); ok('S2-04 publish blocked until every question is mapped', /Can't publish yet/.test(MODAL.title) && /Not mapped/.test(mroot().textContent) && d.status === 'Draft'); closeModal();
+    mapAll(d); ok('S2-04 mapping saved (knowledge criteria only)', d.qs.filter(q => q.status === 'Active').every(q => q.crit.length && q.crit.every(c => /^306 /.test(c))) && !!app().querySelector('input[type=checkbox][disabled][title*="assessed only by observation"]'));
+  });
+
+  await T('S2-05 publish reaches the learner, calendar and the assessor\'s marking', async () => {
+    fresh(); const d = newAsg('Assignment 31 — Reporting concerns'); addQs(d, ['What signs of abuse might you notice?', 'Who do you report concerns to?']); mapAll(d); publish(d);
+    const C = STORE.worlds.C, a = C.assignments.find(x => x.id === d.id);
+    ok('S2-05 published with the assignment\'s own questions (not a3\'s)', d.status === 'Published' && !!a && a.qs.map(q => q.text).join('|') === 'What signs of abuse might you notice?|Who do you report concerns to?' && a.status === 'Not Started');
+    ok('S2-05 deadline on the learner\'s calendar; learner notified', C.events.some(e => e.id === 'ed' + d.id && e.start === d.due) && C.notifs.some(n => n.body.includes(d.title)));
+    ok('S2-05 Croydon learner (other programme) not reached', !STORE.worlds.D.assignments.some(x => x.id === d.id));
+    go('a-assignments', { id: d.id }); ok('S2-05 published page states the prototype limit', /reached 1 learner with full data/.test(main()) && /admin and Coordinator views only/.test(main()));
+    learner('C'); go('assignments'); ok('S2-05 learner\'s assignment list shows it', main().includes('Assignment 31 — Reporting concerns'));
+    go('assignment', { id: d.id }); ok('S2-05 learner\'s assignment page shows its questions', main().includes('Who do you report concerns to?'));
+    W.drafts[d.id + '.q1.0'] = '<p>Bruising and withdrawal.</p>'; W.drafts[d.id + '.q2.0'] = '<p>The safeguarding lead.</p>'; finaliseSubmit(asgById(d.id), false, now().toISOString());
+    tasV('A'); const row = tasSubs(true).find(r => r.a.id === d.id && r.L.v === 'C');
+    ok('S2-05 the assessor\'s marking has the submission', !!row && row.toMark); go('t-queue'); ok('S2-05 Marking Queue lists it', main().includes('Assignment 31'));
+    S.coo.v = 'A'; cooEnter(); S.signedIn = true; go('c-batches', { id: 'L3AC-JAN26' }); ok('S2-05 Coordinator batch view lists it', /Assignments published to this batch/.test(main()) && main().includes('Assignment 31 — Reporting concerns'));
+    SA(); go('a-assignments', { id: d.id }); ok('S2-05 Unpublish disabled after a submission (with a reason)', !!app().querySelector('[data-act="s2Unpublish"][disabled][title]'));
+    ACT.s2Retire({ dataset: { id: d.id } }); reason('Replaced');
+    ok('S2-05 retire keeps the submitted work', d.status === 'Retired' && STORE.worlds.C.assignments.find(x => x.id === d.id).status === 'Submitted');
+  });
+
+  await T('S2-02 / S2-05 deadline change and unpublish reach the learner', async () => {
+    fresh(); const d = newAsg('Assignment 32 — Record keeping'); addQs(d, ['Why do accurate records matter?']); mapAll(d); publish(d);
+    go('a-assignments', { id: d.id, tab: 'details' }); fill({ '#ae-d': D(35, '20:00').slice(0, 16), '#ae-t': 'Assignment 32 — Accurate record keeping' }); ACT.s2Save({ dataset: { id: d.id } }); reason('Moved');
+    const a = STORE.worlds.C.assignments.find(x => x.id === d.id);
+    ok('S2-02 saved: new version; the learner\'s deadline, title and calendar follow', d.version === 2 && a.due === d.due && a.title === 'Assignment 32 — Accurate record keeping' && STORE.worlds.C.events.find(e => e.id === 'ed' + d.id).start === d.due && STORE.worlds.C.notifs.some(n => /Deadline changed/.test(n.title)));
+    ok('S2-02 the assessor is told', STORE.tas.notifs.some(n => /Deadline changed/.test(n.t)));
+    ACT.s2Unpublish({ dataset: { id: d.id } }); reason('Not ready');
+    ok('S2-05 unpublish (no submissions): learner no longer sees it; Draft again', d.status === 'Draft' && !STORE.worlds.C.assignments.some(x => x.id === d.id) && !STORE.worlds.C.events.some(e => e.id === 'ed' + d.id));
+    learner('C'); go('assignments'); ok('S2-05 gone from the learner\'s list', !main().includes('Accurate record keeping'));
+  });
+
+  await T('S2-06 Edit brief: new text for learners who haven\'t submitted', async () => {
+    fresh(); SA(); go('a-assignments', { id: 'a3' }); const a3 = STORE.worlds.C.assignments.find(x => x.id === 'a3'), a4 = STORE.worlds.C.assignments.find(x => x.id === 'a4'), old4 = a4.brief;
+    ACT.kEditBrief({ dataset: { id: 'a3' } }); fill({ '#eb-t': 'New brief for duty of care: use the updated case study.', '#eb-r': 'Case study updated' }); prim();
+    ok('S2-06 the new text is saved and reaches the learner who hasn\'t submitted', /updated case study/.test(s2Def('a3').brief) && /updated case study/.test(a3.brief) && a3.briefV === s2Def('a3').briefV);
+    learner('C'); go('assignment', { id: 'a3' }); ok('S2-06 the learner\'s assignment page shows the new brief', main().includes('use the updated case study'));
+    SA(); ACT.kEditBrief({ dataset: { id: 'a4' } }); fill({ '#eb-t': 'A changed brief for safeguarding scenarios.', '#eb-r': 'Clarified' }); prim();
+    ok('S2-06 submitted work keeps the brief it answered', a4.brief === old4 && /changed brief/.test(s2Def('a4').brief));
+  });
+
+  await T('S2-07 whole-cohort extension (true count); none for drafts', async () => {
+    fresh(); SA(); go('a-assignments', { id: 'a3', tab: 'extensions' }); const b = ADMIN.batches.find(x => x.code === 'L3AC-JAN26'), n = chCohLids(b).length;
+    ok('S2-07 the cohort option shows the true number', document.querySelector('#ex-w option[value="cohort"]').textContent.includes(n + ' learners'));
+    fill({ '#ex-d': D(12).slice(0, 10), '#ex-r': 'Placement disruption' }); SUBMIT.asgExtend(document.querySelector('form[data-submit="asgExtend"]'));
+    const a3 = STORE.worlds.C.assignments.find(x => x.id === 'a3');
+    ok('S2-07 every learner in the cohort extended (world learner + the rest recorded); true count logged', a3.due.startsWith(D(12).slice(0, 10)) && chCohLids(b).filter(l => l !== STORE.worlds.C.me.id).every(l => STORE.s2Ext[l + '|a3']) && ADMIN.audit.some(x => x.action === 'Deadline extension (whole cohort)' && x.reason.includes(n + ' learners')));
+    go('a-assignments', { id: 'a8', tab: 'extensions' }); ok('S2-07 drafts: extensions not offered', /available once the assignment is published/.test(main()) && !app().querySelector('form[data-submit="asgExtend"]'));
+  });
+
+  await T('S2 existing demo: same assignment list; a9 publishes its own questions', async () => {
+    fresh(); const rows = adminAssignments();
+    ok('S2 list: the world C assignments, then a8, l2a1 and a9, with the same mapped counts', rows.map(r => r.id).join() === STORE.worlds.C.assignments.map(a => a.id).concat(['a8', 'l2a1', 'a9']).join() && rows.filter(r => r.a).every(r => r.mapped === r.a.crit.length) && rows.find(r => r.id === 'l2a1').mapped === 4 && rows.find(r => r.id === 'a9').mapped === 3);
+    SA(); go('a-assignments', { id: 'a9' }); ACT.pubAsg({ dataset: { id: 'a9' } }); reason('Ready');
+    const a9 = STORE.worlds.C.assignments.find(x => x.id === 'a9'); ok('S2-05 a9 publishes with its own questions (not a3\'s)', !!a9 && a9.qs[0].text === 'Describe the safe handling of medicines in your setting.' && !a9.qs.some(q => /duty of care/i.test(q.text)));
+  });
+
+  await T('S2 records and Scenario #27', async () => {
+    fresh(); const s = SC_LIST().find(x => x[0] === '27');
+    ok('Scenario #27 "Create and publish an assignment": 7 steps, ends with the Coordinator\'s release', !!s && s[1] === 'Create and publish an assignment' && s[3].length === 7 && /submits/.test(s[3][4].text) && /releases/.test(s[3][6].text));
+    ACT.s2Sc27Pub(); reason('Go'); ok('Scenario #27 demo assignment published to Aisha', STORE.worlds.C.assignments.some(a => a.id === 'a27'));
+    ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S2 entry', /Setup fixes — assignments/.test(main()));
+    go('demo-scenarios'); ok('Demo Scenarios: 27', app().querySelectorAll('main section[id^="sc-"]').length === 27);
+    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 5);
   });
 
   fresh();
