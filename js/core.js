@@ -157,7 +157,11 @@ function fiveBar(c, cls = '') {
   return `<div class="five ${cls}" role="img" aria-label="${t}">${FIVE.map(([k, tone]) => c[k] ? `<span class="f-${tone}" style="width:${c[k] / tot * 100}%"></span>` : '').join('')}</div>`;
 }
 const fiveLegend = (c, full) => `<div class="five-legend">${FIVE.map(([k]) => `${chip(k + (c ? ` · ${c[k] || 0}` : ''), TONE[k])}`).join('')}</div>`;
-const critType = t => `<span class="crit-type" title="Assessment type inherited from the Learning Outcome">${t === 'Knowledge' ? 'Knowledge' : 'Observation / Competency'}</span>`;
+// S3-06: assessment types are configurable (setup-s3.js replaces these): the name shown, the types offered, and the rule a type follows
+let critTypeLabel = t => t === 'Knowledge' ? 'Knowledge' : 'Observation / Competency';
+let critTypeNames = cur => ['Knowledge', 'Observation'];
+let critKind = t => t;
+const critType = t => `<span class="crit-type" title="Assessment type inherited from the Learning Outcome">${esc(critTypeLabel(t))}</span>`;
 function qr(seed, size = 76) {
   let h = 0; for (const c of String(seed)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   const n = 21; let r = '';

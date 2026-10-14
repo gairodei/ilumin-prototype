@@ -39,7 +39,7 @@ const _isS2 = initStore; initStore = function () { STORE.s2Defs = null; STORE.s2
 /* ---------- Criteria and units of the assignment's programme ---------- */
 function s2Tree(prog) {
   const pr = (ADMIN.programmes || []).find(p => p.title === prog);
-  if (pr && pr.chNew) return ch8Tree(pr.id).map(u => ({ code: u.code, title: u.title, mods: u.mods.map(m => ({ code: m.code, title: m.title, crit: m.los.flatMap(lo => lo.crit.map(c => ({ code: c.code, d: c.d, type: lo.type || 'Knowledge' }))) })) }));
+  if (pr && pr.chNew) return ch8Tree(pr.id).map(u => ({ code: u.code, title: u.title, mods: u.mods.map(m => ({ code: m.code, title: m.title, crit: m.los.flatMap(lo => lo.crit.map(c => ({ code: c.code, d: c.d, type: critKind(lo.type || 'Knowledge'), typeName: lo.type || 'Knowledge' }))) })) }));
   const v = /Level 2/.test(prog) ? 'D' : 'C', crit = withW(v, () => allCrit());
   return (STORE.worlds[v].tree || []).map(u => ({ code: u.code, title: u.title, mods: u.mods.map(m => ({ code: m.code, title: m.title })), crit: crit.filter(c => c.code.startsWith(u.code.replace(/^U/, '') + ' ')) }));
 }
@@ -54,7 +54,7 @@ const s2UnitOpts = (prog, cur) => s2Tree(prog).flatMap(u => u.mods.map((m, k) =>
 /* ---------- The admin list reads the definitions ---------- */
 adminAssignments = function () {
   return s2Defs().filter(d => d.status !== 'Deleted').map(d => { const copy = d.copies[0] && STORE.worlds[d.copies[0].v] ? STORE.worlds[d.copies[0].v].assignments.find(x => x.id === d.copies[0].id) : null; const act = d.qs.filter(q => q.status === 'Active');
-    return { id: d.id, title: d.title, programme: d.programme, unit: d.unit, due: copy && d.seeded ? copy.due : d.due, status: d.status, version: d.version, mapped: d.seeded && copy ? copy.crit.length : new Set(act.flatMap(q => q.crit)).size, marker: d.marker, a: copy || undefined, def: d }; });
+    return { id: d.id, title: d.title, programme: d.programme, unit: d.unit, due: copy && d.seeded ? copy.due : d.due, status: d.status, version: d.version, mapped: d.seeded && copy ? copy.crit.length : new Set(act.flatMap(q => q.crit)).size, marker: s2MarkedBy(d), a: copy || undefined, def: d }; });
 };
 
 /* ---------- S2-01 New assignment ---------- */
@@ -70,14 +70,17 @@ ACT.newAsg = () => {
 INP.s2NaProg = el => { $('#na-u').innerHTML = s2UnitOpts(el.value); };
 
 /* ---------- The editor ---------- */
+// S2 / CH-17: marking follows the batch's assignment assessor — shown, not edited here
+const s2MarkBatches = d => (d.batches.length ? d.batches.map(c => ADMIN.batches.find(b => b.code === c)) : ADMIN.batches.filter(b => b.course === d.programme && !S2_LIVE.includes(b.status))).filter(Boolean);
+const s2MarkedBy = d => { const ns = Array.from(new Set(s2MarkBatches(d).map(b => chAllocOf(b).asg).filter(Boolean))); return ns.length ? ns.join(', ') : 'not set yet'; };
 const s2HasSubs = d => d.copies.some(c => { const a = s2Copy(c); return a && a.qs.some(q => q.rounds.length); });
 const s2Copy = c => STORE.worlds[c.v] && STORE.worlds[c.v].assignments.find(x => x.id === c.id);
 const s2Reach = d => d.copies.filter(s2Copy).length;
 function s2Details(d) {
-  const pub = d.status === 'Published', staff = ADMIN.staff.filter(s => s.roles.includes('Assessor'));
+  const pub = d.status === 'Published';
   return `<form class="card form-grid" onsubmit="return false"><div class="field full"><label for="ae-t">Title</label><input class="input" id="ae-t" value="${esc(d.title)}"></div>
     <div class="field full"><label for="ae-b">Brief</label>${pub ? `<div class="card flat small">${d.brief}</div><span class="hint">Brief version ${d.briefV}. Change it with "Edit brief (new version)".</span>` : `<textarea class="textarea" id="ae-b" rows="5">${esc(s2Text(d.brief))}</textarea>`}</div>
-    <div class="field"><label for="ae-u">Target unit / module</label><select class="select" id="ae-u" ${pub ? 'disabled title="Unpublish to change the unit"' : ''}>${s2UnitOpts(d.programme, d.unit)}</select></div><div class="field"><label for="ae-m">Assigned marker</label><select class="select" id="ae-m">${staff.map(s => `<option ${s.name === d.marker ? 'selected' : ''}>${s.name}</option>`).join('')}</select><span class="hint">Marking follows the batch's assignment assessor (CH-17).</span></div>
+    <div class="field"><label for="ae-u">Target unit / module</label><select class="select" id="ae-u" ${pub ? 'disabled title="Unpublish to change the unit"' : ''}>${s2UnitOpts(d.programme, d.unit)}</select></div><div class="field s2-marker"><span class="lbl">Marker</span><p class="small">Marked by: <strong>${esc(s2MarkedBy(d))}</strong>, set in the batch's Assessors panel.</p></div>
     <div class="field"><label for="ae-d">Deadline</label><input class="input" type="datetime-local" id="ae-d" value="${d.due.slice(0, 16)}"></div><div class="field"><label for="ae-f">File rules</label><input class="input" id="ae-f" value="${esc(d.files)}"></div><div class="field"><label for="ae-rs">Resubmissions allowed</label><input class="input num" type="number" min="0" id="ae-rs" value="${d.resubMax}"></div><div class="field"><label for="ae-rw">Resubmission window (days)</label><input class="input num" type="number" min="1" id="ae-rw" value="${d.window}"></div>
     ${pub ? `<label class="check full"><input type="checkbox" id="ae-n" checked>Notify learners of a deadline change</label>` : ''}</form>`;
 }
@@ -115,14 +118,14 @@ asgEditor = function (id, t) {
 /* ---------- S2-02 Details save (deadline reaches the learner, calendar and assessor) ---------- */
 ACT.s2Save = el => {
   const d = s2Def(el.dataset.id); if (!d) return; const pub = d.status === 'Published';
-  const v = { title: $('#ae-t').value.trim(), unit: pub ? d.unit : $('#ae-u').value.split(' — ')[0], marker: $('#ae-m').value, due: $('#ae-d').value ? new Date($('#ae-d').value + ':00Z').toISOString() : '', files: $('#ae-f').value.trim(), resubMax: +$('#ae-rs').value, window: +$('#ae-rw').value, brief: pub ? d.brief : s2Html($('#ae-b').value.trim()) };
+  const v = { title: $('#ae-t').value.trim(), unit: pub ? d.unit : $('#ae-u').value.split(' — ')[0], due: $('#ae-d').value ? new Date($('#ae-d').value + ':00Z').toISOString() : '', files: $('#ae-f').value.trim(), resubMax: +$('#ae-rs').value, window: +$('#ae-rw').value, brief: pub ? d.brief : s2Html($('#ae-b').value.trim()) };
   if (!v.title) return fieldErr('#ae-t', 'Enter a title'); if (s2Defs().some(x => x !== d && x.title.toLowerCase() === v.title.toLowerCase())) return fieldErr('#ae-t', 'Another assignment has this title'); if (!v.due) return fieldErr('#ae-d', 'Choose a deadline'); if (!(v.resubMax >= 0)) return fieldErr('#ae-rs', '0 or more'); if (!(v.window >= 1)) return fieldErr('#ae-rw', 'At least 1 day');
-  const notify = pub && $('#ae-n') && $('#ae-n').checked, before = `${d.title} · due ${fdt(d.due)} · ${d.marker}`;
+  const notify = pub && $('#ae-n') && $('#ae-n').checked, before = `${d.title} · due ${fdt(d.due)}`;
   reasonDlg({ title: pub ? 'Save as a new version?' : 'Save assignment', ok: 'Save', label: 'Change summary (required)', body: pub ? `<div class="note b-blue">${ic('layers')}<div class="small">Edits after publishing create Version ${d.version + 1}. A new deadline reaches learners, their calendars and the assessor.</div></div>` : '', onOk: r => {
     const dueChanged = v.due !== d.due; Object.assign(d, v); if (pub) d.version++;
     d.copies.forEach(c => { const w = STORE.worlds[c.v], a = s2Copy(c); if (!a) return; a.title = d.title; a.resubMax = d.resubMax; if (dueChanged && a.status !== 'Completed') { if (a.status === 'Resubmission Required') a.resubDue = d.due; else { a.originalDue = a.originalDue || a.due; a.due = d.due; } a.closed = false; const ev = w.events.find(e => e.id === 'ed' + a.id); if (ev) { ev.start = ev.end = d.due; ev.title = d.title.split('—')[0].trim() + ' due'; } if (notify) notifyLearner(c.v, 'Assignments', 'Deadline changed', `${d.title} is now due ${fdt(d.due)}.`, 'assignment.' + a.id); } });
     if (dueChanged && pub) tasNotify('Deadline changed', `${d.title} — due ${fdt(d.due)}`, 't-assign.' + d.id, 'Caseload');
-    s2Log(d, pub ? `Saved — version ${d.version}` : 'Saved (Draft)', before, `${d.title} · due ${fdt(d.due)} · ${d.marker}`, r); render(); toast(pub ? `Saved as version ${d.version}.${dueChanged ? ' The new deadline reaches learners, calendars and the assessor.' : ''}` : 'Saved.'); } });
+    s2Log(d, pub ? `Saved — version ${d.version}` : 'Saved (Draft)', before, `${d.title} · due ${fdt(d.due)}`, r); render(); toast(pub ? `Saved as version ${d.version}.${dueChanged ? ' The new deadline reaches learners, calendars and the assessor.' : ''}` : 'Saved.'); } });
 };
 
 /* ---------- S2-03 Questions ---------- */
@@ -153,7 +156,7 @@ function s2Targets(d, codes) { return Object.keys(STORE.worlds || {}).filter(v =
 function s2CopyTo(v, d) {
   const w = STORE.worlds[v], crit = s2Crit(d), act = d.qs.filter(q => q.status === 'Active'), used = Array.from(new Set(act.flatMap(q => q.crit)));
   if (w.assignments.some(x => x.id === d.id)) return null;
-  const a = { id: d.id, title: d.title, unit: d.unit, due: d.due, status: 'Not Started', round: 'Sub 1', resubUsed: 0, resubMax: d.resubMax, brief: d.brief, briefV: d.briefV, resources: [['Assignment template (DOCX)']], timeline: [], crit: used.map(code => { const c = crit.find(x => x.code === code) || { d: code }; return [code, c.d, 'Knowledge']; }), qs: act.map(q => ({ id: q.id, text: q.text, crit: q.crit[0] || '', crits: q.crit.slice(), attach: q.attach, rounds: [], fb: [], state: 'open' })), s2: true };
+  const a = { id: d.id, title: d.title, unit: d.unit, due: d.due, status: 'Not Started', round: 'Sub 1', resubUsed: 0, resubMax: d.resubMax, brief: d.brief, briefV: d.briefV, resources: [['Assignment template (DOCX)']], timeline: [], crit: used.map(code => { const c = crit.find(x => x.code === code) || { d: code }; return [code, c.d, c.typeName || 'Knowledge']; }), qs: act.map(q => ({ id: q.id, text: q.text, crit: q.crit[0] || '', crits: q.crit.slice(), attach: q.attach, rounds: [], fb: [], state: 'open' })), s2: true };
   w.assignments.push(a); w.events.push({ id: 'ed' + d.id, type: 'deadline', title: d.title.split('—')[0].trim() + ' due', start: d.due, end: d.due, course: w.nvq.title, go: 'assignment.' + d.id });
   notifyLearner(v, 'Assignments', 'New assignment', `${d.title} is open — due ${fdt(d.due)}.`, 'assignment.' + d.id);
   return { v, id: d.id };

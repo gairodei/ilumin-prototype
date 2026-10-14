@@ -188,7 +188,7 @@ SCREENS.assignment = (p) => {
   else main = lockedView(a);
   return head + asgHeader(a) + main;
 };
-function qHead(q, i) { const c = allCrit().find(x => x.code === q.crit); return `<div class="q-h"><span class="q-n">Q${i + 1}</span><div class="stack" style="gap:6px"><span class="q-t">${esc(q.text)}</span><div class="row"><span class="code">${q.crit}</span>${critType(c ? c.type : 'Knowledge')}</div></div></div>`; }
+function qHead(q, i) { const c = allCrit().find(x => x.code === q.crit); return `<div class="q-h"><span class="q-n">Q${i + 1}</span><div class="stack" style="gap:6px"><span class="q-t">${esc(q.text)}</span><div class="row"><span class="code">${q.crit}</span>${critType(c ? c.typeName || c.type : 'Knowledge')}</div></div></div>`; }
 function answerSheet(a) {
   return `<section class="stack"><div class="row-b" style="position:sticky;top:calc(var(--hdr) + 8px);z-index:5;background:var(--bg);padding:6px 0"><h2>Answer sheet</h2><div class="row"><span id="savechip" class="save-chip ok" role="status" aria-live="polite">${ic('check', 13)}${Object.keys(W.drafts).some(k => k.startsWith(a.id)) ? 'Saved' : 'Auto-save on'}</span><button class="btn btn-primary" data-act="reviewSubmit" data-id="${a.id}">Review &amp; Submit</button></div></div>
   <p class="small muted">Your answers save automatically as you type and at least every 10 seconds.</p>
@@ -285,7 +285,7 @@ function treeSection() {
   const anyF = fs || ft_;
   const units = W.tree.map((u, ui_) => {
     const mods = u.mods.map(m => {
-      const los = m.los.filter(lo => !ft_ || lo.type === ft_).map(lo => { const cr = filt(lo.crit); if (!cr.length) return ''; return node(4, lo.code, `${lo.title}`, lo.crit, `<div class="small muted" style="padding:6px 12px">Assessment type set on this Learning Outcome: ${critType(lo.type)}</div>` + cr.map(c => critRow(c, lo.type)).join(''), anyF); }).join('');
+      const los = m.los.filter(lo => !ft_ || critKind(lo.type) === ft_).map(lo => { const cr = filt(lo.crit); if (!cr.length) return ''; return node(4, lo.code, `${lo.title}`, lo.crit, `<div class="small muted" style="padding:6px 12px">Assessment type set on this Learning Outcome: ${critType(lo.type)}</div>` + cr.map(c => critRow(c, lo.type)).join(''), anyF); }).join('');
       return los ? node(3, m.code, modLabel(m), critOf(m), los, anyF) : '';
     }).join('');
     return mods ? node(1, u.code, u.title, critOf(u), mods, anyF || ui_ === 1) : '';
@@ -301,7 +301,7 @@ INP.trState = el => { setUi('trState', el.value); render(); };
 INP.trType = el => { setUi('trType', el.value); render(); };
 function planSection() {
   const gaps = allCrit().filter(c => c.st !== 'Achieved');
-  const need = c => c.st === 'Added to PD' ? 'Discuss in your Professional Discussion' : c.st === 'Action Required' ? 'Rework required — see assessor feedback' : c.type === 'Observation' ? 'Workplace observation by your assessor' : c.st === 'In Progress' ? 'Waiting for assessor judgement' : 'Written evidence via assignment';
+  const need = c => c.st === 'Added to PD' ? 'Discuss in your Professional Discussion' : c.st === 'Action Required' ? 'Rework required — see assessor feedback' : c.evMethod && c.type !== 'Knowledge' && c.type !== 'Observation' ? c.evMethod : c.type === 'Observation' ? 'Workplace observation by your assessor' : c.st === 'In Progress' ? 'Waiting for assessor judgement' : 'Written evidence via assignment';
   return `<div class="grid-2"><section class="card"><h2>Outstanding criteria (${gaps.length})</h2><ul class="list">${gaps.map(c => `<li class="li"><div class="li-b"><div class="row" style="gap:6px"><span class="code">${c.code}</span>${chip(c.st)}${critType(c.type)}</div><span class="small">${esc(c.d)}</span><span class="xs muted">Evidence still needed: ${need(c)}</span></div><div class="li-a">${c.ev ? `<button class="btn btn-sm" data-act="goTok" data-t="${c.ev}">Go</button>` : `<button class="btn btn-sm" data-go="observations">Go</button>`}</div></li>`).join('')}</ul></section>
   <section class="card"><h2>Improvement plan</h2><p class="small muted">Work through these in order. Tick an item when you've done it.</p><ol class="list">${W.plan.map((p, i) => `<li class="li"><label class="check"><input type="checkbox" ${p.done ? 'checked' : ''} data-onchange="planDone" data-id="${p.id}" aria-label="Mark '${esc(p.action)}' as done"></label><div class="li-b"><span class="strong ${p.done ? 'strike' : ''}">${i + 1}. ${esc(p.action)}</span><span class="xs muted">Criteria ${esc(p.crit)} · target ${fd(p.target)} · ${p.src === 'System' ? chip('System', 'grey') : chip('Assessor recommendation', 'teal')}</span></div><div class="li-a"><button class="btn btn-sm" data-act="goTok" data-t="${p.go}">Open</button></div></li>`).join('')}</ol></section></div>`;
 }

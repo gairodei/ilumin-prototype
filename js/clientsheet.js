@@ -36,12 +36,12 @@ makeWorld = function (v) {
 function csCrit(a, code) {
   const t = allCrit().find(x => x.code === code), ac = (a.crit || []).find(x => x[0] === code);
   const type = t ? t.type : ac ? ac[2] : 'Knowledge';
-  return { code, d: t ? t.d : ac ? ac[1] : '', type, ev: (t && t.evReq) || csEvReq(type) };
+  return { code, d: t ? t.d : ac ? ac[1] : '', type, typeName: t && t.typeName, ev: (t && t.evReq) || csEvReq(type) };
 }
 let CS_ASG = null;
 function csQHead(q, i) {
   const c = csCrit(CS_ASG, q.crit);
-  return `<div class="q-h"><span class="q-n">Q${i + 1}</span><div class="stack" style="gap:6px"><span class="q-t">${esc(q.text)}</span><div class="row"><span class="code">${q.crit}</span>${critType(c.type)}</div>
+  return `<div class="q-h"><span class="q-n">Q${i + 1}</span><div class="stack" style="gap:6px"><span class="q-t">${esc(q.text)}</span><div class="row"><span class="code">${q.crit}</span>${critType(c.typeName || c.type)}</div>
     <dl class="cs-crit small"><dt>Criterion</dt><dd>${esc(c.d)}</dd><dt>Evidence requirements</dt><dd>${esc(c.ev)}</dd></dl></div></div>`;
 }
 const csUnitTitle = a => { const code = (a.unit || '').split(' ')[0], u = (W.tree || []).find(x => x.code === code); return u ? u.title : ''; };
@@ -49,7 +49,7 @@ function csCritDoc(a) {
   return `<div class="cs-pdf"><p class="xs muted">Illumin Academy · Assessment criteria</p><h3>${esc(a.title)}</h3>
     <dl class="cs-dl small"><dt>Programme</dt><dd>${esc(W.nvq.title)}</dd><dt>Unit / module</dt><dd>${esc(a.unit)}${csUnitTitle(a) ? ' — ' + esc(csUnitTitle(a)) : ''}</dd></dl>
     <ol class="cs-pdf-q">${a.qs.map((q, i) => { const c = csCrit(a, q.crit); return `<li data-q="${i + 1}"><strong>Q${i + 1}. ${esc(q.text)}</strong>
-      <dl class="cs-dl small"><dt>Code</dt><dd class="mono">${esc(c.code)}</dd><dt>Descriptor</dt><dd>${esc(c.d)}</dd><dt>Assessment type</dt><dd>${c.type === 'Knowledge' ? 'Knowledge' : 'Observation / Competency'}</dd><dt>Evidence requirements</dt><dd>${esc(c.ev)}</dd></dl></li>`; }).join('')}</ol></div>`;
+      <dl class="cs-dl small"><dt>Code</dt><dd class="mono">${esc(c.code)}</dd><dt>Descriptor</dt><dd>${esc(c.d)}</dd><dt>Assessment type</dt><dd>${esc(critTypeLabel(c.typeName || c.type))}</dd><dt>Evidence requirements</dt><dd>${esc(c.ev)}</dd></dl></li>`; }).join('')}</ol></div>`;
 }
 ACT.csCritPdf = el => {
   const a = asgById(el.dataset.id); if (!a) return;
