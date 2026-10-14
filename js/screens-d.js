@@ -136,7 +136,7 @@ SCREENS.help = () => {
     ['What happens if I miss a deadline?', 'The answer sheet closes at the deadline and late submissions aren\'t accepted. If you need more time, contact your assessor before the deadline to ask for an extension.'],
     ['Why wasn\'t my Zoom attendance recorded?', 'Attendance only counts when you join with the email address registered with Illumin Academy. Check you\'re signed in to Zoom with that email.'],
     ['How do I pay an instalment?', 'Go to Payments and choose "Pay now" next to the instalment. If a payment is 15 days overdue we\'ll remind you; at 30 days your course access is paused until it\'s paid.'],
-    ['When do I get my certificate?', 'Short-course certificates are issued automatically when you complete all requirements. NVQ certificates are issued after the awarding body confirms your achievement.'],
+    ['When do I get my certificate?', 'Short-course certificates are issued in the LMS automatically when you complete all requirements: view, download and verify them under Certificates. NVQ and other long-term qualification certificates are sent to you by post after the awarding body confirms your achievement — they aren\'t issued or downloaded in the LMS.'],
     ['How can someone check my certificate is real?', 'Use "Copy verification link" on the certificate and share it. Anyone with the link can see whether the certificate is valid.'],
   ];
   return `${pageHead('Help / Contact Academy')}

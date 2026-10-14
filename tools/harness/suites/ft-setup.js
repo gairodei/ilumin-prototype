@@ -1060,6 +1060,29 @@
     ok('Queue notes still persist — kept with the queue, not on the applicant\'s document', allQueue().find(i => i.id === it.id).notes.length === 1 && !STORE.worlds.B.docs.some(d => '_notes' in d));
   });
 
+  /* ================= N1 — certificate delivery (SRS v1.3.2, proposed) ================= */
+  await T('N1 NVQ qualification certificates are posted; short-course certificates stay digital', async () => {
+    fresh(); const certSnap = () => JSON.stringify([Object.fromEntries(Object.entries(STORE.worlds).map(([k, w]) => [k, w.certs || null])), STORE.agy.certs]), c0 = certSnap();
+    learner('C'); S.edge = 'qualified'; setVariant('C'); go('progress'); const cel = app().querySelector('.celebrate');
+    ok('N1 qualified NVQ learner: "Qualification requirements met" with every criterion achieved (unchanged)', W.qualified && !!cel && /Qualification requirements met/.test(cel.textContent) && W.tree.every(u => u.mods.every(m => m.los.every(l => l.crit.every(c => c.st === 'Achieved')))));
+    ok('N1 the steps say the certificate is sent by post, outside the LMS', /quality checks/.test(cel.textContent) && /claim is sent to the awarding body/.test(cel.textContent) && /qualification certificate is sent to you by post/.test(cel.textContent) && /isn't issued, downloaded or verified in the LMS/.test(cel.textContent));
+    ok('N1 no NVQ certificate action is advertised (no "Go to Certificates", no download / view / verify)', !cel.querySelector('button, a, [data-go], [data-act]') && !/appears in Certificates/.test(cel.textContent) && /digital certificates for your short courses only/.test(cel.textContent));
+    go('course', { id: 'nvq' }); ok('N1 the NVQ programme page has no certificate tab or download', !/Certificate tab|Download certificate/i.test(main()) && !app().querySelector('[data-act="viewCert"], [data-act="copyVerify"]'));
+    go('help'); ok('N1 Help FAQ: short courses issued in the LMS; NVQ certificates sent by post', /Short-course certificates are issued in the LMS/.test(main()) && /sent to you by post after the awarding body confirms/.test(main()) && !/NVQ certificates are issued after/.test(main()));
+    go('certificates'); const nvqT = W.nvq.title;
+    ok('N1 the Certificates page still lists the learner\'s genuine short-course certificates — none for the NVQ', W.certs.length > 0 && !!app().querySelector('[data-act="viewCert"]') && !W.certs.some(c => c.course === nvqT) && !main().includes(nvqT));
+    ACT.viewCert({ dataset: { id: W.certs.find(c => c.status !== 'Revoked').id } }); ok('N1 a short-course certificate still opens with Download PDF', !!MODAL && !!MODAL.actions.find(x => /Download PDF/.test(x.label))); closeModal();
+    S.edge = 'none'; setVariant('C');
+    ok('N1 learner, agency and dashboard certificate records unchanged by these screens', certSnap() === c0);
+    // Short-course generation and verification still work
+    fresh(); learner('A'); const e = W.enrolments.find(x => x.kind === 'short' && x.status === 'Active' && x.reqs && x.reqs.length), n0 = W.certs.length; e.reqs.forEach(r => { r[1] = true; }); shComplete(e);
+    const cert = W.certs.find(c => c.course === (e.base || e.title) && c.issued && daysTo(c.issued) > -1);
+    ok('N1 completing a short course still issues one digital certificate', W.certs.length === n0 + 1 && !!cert);
+    verOpen(cert.no, 'q'); ok('N1 the new short-course certificate verifies (Valid)', /Valid/.test(main()) && ADMIN.audit[0].module === 'Certificate verification');
+    learner('C'); go('index'); ok('N1 learner screen index: qualified state described as "the certificate comes by post"', /the certificate comes by post/.test(html()) && !/what happens before the certificate/.test(html()));
+    ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: N1 entry', /Certificate delivery — NVQ certificates are posted/.test(main()));
+  });
+
   fresh();
   const out = document.createElement('pre'); out.id = 'ft-out'; out.textContent = R.join('\n') + '\n' + R.filter(x => x.startsWith('PASS')).length + '/' + R.length; document.body.appendChild(out);
 })();
