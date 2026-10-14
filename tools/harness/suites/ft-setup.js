@@ -232,7 +232,7 @@
     ACT.s2Sc27Pub(); reason('Go'); ok('Scenario #27 demo assignment published to Aisha', STORE.worlds.C.assignments.some(a => a.id === 'a27'));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S2 entry', /Setup fixes — assignments/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
-    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 16);
+    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 19);
   });
 
   /* ================= S3 — NVQ programmes ================= */
@@ -385,7 +385,7 @@
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S3 entry', /Setup fixes — NVQ programmes/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 16 /* S4a: 5 entries added */);
+    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 19 /* S4a: 5, S4b: 3 entries added */);
     SA(); go('a-assignments', { id: 'a9' }); ok('S2 / CH-17: "Marked by: … set in the batch\'s Assessors panel" — read-only, no input', /Marked by: .+, set in the batch's Assessors panel/.test(main()) && !app().querySelector('#ae-m') && !app().querySelector('.s2-marker input, .s2-marker select'));
   });
 
@@ -743,7 +743,7 @@
     const s29 = SC_LIST().find(x => x[0] === '29'); ok('Scenario #29: 6 steps, set-up then a new learner\'s sign-up', !!s29 && s29[3].length === 6 && /Daniel Okafor/.test(s29[3][3].text));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S4a entry', /Setup fixes — admission and money/.test(main()));
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 16);
+    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 19 /* S4b: 3 entries added */);
     fresh(); const z = apply4('F', T2); ACT.suNext(); ok('E2E (negative): the country rule still applies — no Level 2 batch for a UAE applicant (CH-42)', z.signup.step === 1 && !z.signup.batch);
   });
 
@@ -834,6 +834,230 @@
     ok('Existing hold deadlines are unchanged by the setting (the new learner and Aisha)', e.admission.deposit.holdUntil === e0 && e.admission.deposit.holdDays === 1 && STORE.worlds.C.admission.deposit.holdUntil === holdC0);
     chReleaseSeat(e); ok('P-32 unchanged: release says his own 1-day hold, deposit kept', e.admission.deposit.kept && /after 1 days/.test(e.admission.history.slice(-1)[0][0]));
     go('f-plans', { tab: 'templates' }); ok('The 28-day maximum is shown as a prototype choice to confirm with the client', /1–28 days; the 28-day maximum is a prototype choice to confirm with the client/.test(main()));
+  });
+
+  /* ================= S4b — resources, batches and scheduling ================= */
+  const COO = v => { S.coo.v = v; cooEnter(); S.signedIn = true; };
+  const TCH = v => { S.tas.v = v; tasEnter(); S.signedIn = true; };
+  const itemsOf = v => STORE.worlds[v].resources.flatMap(g => g.items);
+  const itemOf = (v, rid) => itemsOf(v).find(i => i.s4id === rid);
+  const resAdd = o => { ACT.aUpload(); fill({ '#rs-t': o.t, '#rs-d': o.d || '' }); document.querySelector('#rs-y').value = o.type || 'PDF'; if (o.p) { document.querySelector('#rs-p').value = o.p; INP.s4bProg(document.querySelector('#rs-p')); } if (o.m) document.querySelector('#rs-m').value = o.m; if (o.url) fill({ '#rs-u': o.url }); else ACT.s4bSample(); if (o.k) { document.querySelector(`input[name="rs-k"][value="${o.k}"]`).checked = true; if (o.date) fill({ '#rs-dt': o.date }); if (o.after) document.querySelector('#rs-a').value = o.after; } const r = prim(); if (r !== false) closeModal(); return r; };
+  const newest = () => S4B().res[0];
+  const evsOf = v => STORE.worlds[v].events;
+
+  await T('S4-01 resources: add, publish, reach the right learners; versions; retire', async () => {
+    fresh(); const aisha0 = JSON.stringify(STORE.worlds.C.resources), grace0 = JSON.stringify(STORE.worlds.D.resources);
+    ok('S4-01 seeded resources leave Aisha\'s and Grace\'s groups exactly as before', (s4bSyncAll(), JSON.stringify(STORE.worlds.C.resources) === aisha0 && JSON.stringify(STORE.worlds.D.resources) === grace0));
+    SA(); go('a-resources'); resAdd({ t: 'Person-centred care plan example', d: 'An anonymised example plan.', type: 'PDF', p: 'NV-L3', m: 'U302 M1' });
+    const r = newest();
+    ok('S4-01 Add: saved as Draft with title, description, type, file, programme, module, release; audited', r.title === 'Person-centred care plan example' && r.status === 'Draft' && r.pid === 'NV-L3' && r.unit === 'U302' && r.mod === 'M1' && /sample/.test(r.ref) && r.rel.k === 'now' && ADMIN.audit[0].action === 'Resource added' && /Person-centred care plan example/.test(main()));
+    ok('S4-01 a Draft doesn\'t reach learners', !itemOf('C', r.id));
+    ACT.s4bPub({ dataset: { id: r.id } }); reason('Ready');
+    const g = STORE.worlds.C.resources.find(x => x.items.some(i => i.s4id === r.id));
+    ok('S4-01 Publish: Aisha gets it in her U302 Module 1 group, next to the answer key', !!g && /^U302/.test(g.unit) && g.items.some(i => i.id === 'ak-U302-M1') && ADMIN.audit[0].action === 'Resource published');
+    learner('C'); go('resources'); ok('S4-01 consuming screen: Aisha\'s Learning Resources lists it', /Person-centred care plan example/.test(main()));
+    ok('S4-01 Grace (Level 2) doesn\'t get a Level 3 resource', !itemOf('D', r.id) && JSON.stringify(STORE.worlds.D.resources) === grace0);
+    itemOf('C', r.id).state = 'Completed';
+    SA(); ACT.s4bVer({ dataset: { id: r.id } }); ACT.s4bSample(); reason('Updated example');
+    ok('S4-01 New version: v2 recorded, v1 kept; Aisha\'s progress kept', r.version === 2 && r.versions.length === 2 && r.versions[0].v === 1 && itemOf('C', r.id).state === 'Completed' && itemOf('C', r.id).v === 2);
+    ACT.resHist({ dataset: { id: r.id } }); ok('S4-01 Versions shows both versions with who and file', /Version 2 \(current\)/.test(mroot().textContent) && /Version 1/.test(mroot().textContent)); closeModal();
+    ACT.resLog({ dataset: { id: r.id } }); ok('S4-01 Access log comes from learners\' real progress', /Aisha Rahman/.test(mroot().textContent) && /Completed/.test(mroot().textContent)); closeModal();
+    ACT.s4bEdit({ dataset: { id: r.id } }); fill({ '#rs-t': 'Person-centred plan example (2027)' }); reason('Title');
+    ok('S4-01 Edit: the learner sees the new title; progress kept', itemOf('C', r.id).title === 'Person-centred plan example (2027)' && itemOf('C', r.id).state === 'Completed' && ADMIN.audit[0].action === 'Resource changed');
+    ACT.s4bUnpub({ dataset: { id: r.id } }); reason('Pause'); ok('S4-01 Unpublish: removed from Aisha', !itemOf('C', r.id));
+    ACT.s4bPub({ dataset: { id: r.id } }); reason('Back'); ok('S4-01 Republish: back, with her progress', itemOf('C', r.id) && itemOf('C', r.id).state === 'Completed');
+    ACT.s4bRetire({ dataset: { id: r.id } }); reason('Superseded');
+    ok('S4-01 Retire: removed for learners, history kept, can\'t be published again', !itemOf('C', r.id) && r.status === 'Retired' && r.versions.length === 2 && (go('a-resources'), !app().querySelector(`[data-act="s4bPub"][data-id="${r.id}"]`)));
+    ACT.s4bPub({ dataset: { id: r.id } }); ok('S4-01 (negative) a retired resource can\'t be republished', !MODAL && r.status === 'Retired');
+    ACT.aUpload(); fill({ '#rs-t': 'Bad file' }); document.querySelector('#rs-y').value = 'PDF'; setUi('s4bFile', 'setup.exe'); ok('S4-01 (negative) the file must match the type', prim() === false); closeModal();
+    ACT.aUpload(); fill({ '#rs-t': 'Bad link' }); document.querySelector('#rs-y').value = 'Link'; fill({ '#rs-u': 'not a link' }); ok('S4-01 (negative) a link must start with https://', prim() === false); closeModal();
+    ok('S4-01 the short-course rows say they are managed in the course editor', (go('a-resources'), /managed in the course's Content tab/.test(main())));
+  });
+
+  await T('S4-01 release rules, locked resources and learners on another batch', async () => {
+    fresh(); const asg0 = JSON.stringify(STORE.worlds.C.resources.map(g => [g.unit, g.asg || null])); SA(); go('a-resources');
+    resAdd({ t: 'Safe handling quiz notes', type: 'PDF', p: 'NV-L3', m: 'U306 M1', k: 'date', date: D(10).slice(0, 10) }); const r1 = newest(); ACT.s4bPub({ dataset: { id: r1.id } }); reason('Go');
+    resAdd({ t: 'Unit 306 wrap-up', type: 'PDF', p: 'NV-L3', m: 'U306 M1', k: 'after', after: 'U305 M1' }); const r2 = newest(); ACT.s4bPub({ dataset: { id: r2.id } }); reason('Go');
+    const i1 = itemOf('C', r1.id), i2 = itemOf('C', r2.id);
+    ok('S4-01 release on a date: locked with the date', i1.state === 'Locked' && /Unlocks on/.test(i1.lock));
+    ok('S4-01 release after a module: locked until U305 Module 1 is complete', i2.state === 'Locked' && /U305 Module 1/.test(i2.lock));
+    learner('C'); ACT.openRes({ dataset: { id: i1.id } }); ok('S4-01 (negative) a locked resource can\'t be opened, even directly', !MODAL && i1.state === 'Locked');
+    STORE.worlds.C.tree.find(u => u.code === 'U305').mods[0].los.forEach(l => l.crit.forEach(c => { c.st = 'Achieved'; })); go('resources');
+    ok('S4-01 after rule: unlocked once Aisha completes U305 Module 1', itemOf('C', r2.id).state === 'New' && !itemOf('C', r2.id).lock);
+    ACT.openRes({ dataset: { id: itemOf('C', r2.id).id } }); ok('S4-01 the unlocked resource opens', !!MODAL && itemOf('C', r2.id).state === 'Opened'); closeModal();
+    // Daniel signs up to another Level 3 batch: he gets the resources of his structure
+    const d = apply4('A', T3); finish4(d, 'instalment'); learner('A'); go('resources');
+    ok('S4-01 a new Level 3 learner gets the published Level 3 resources (in his module groups)', !!itemOf('A', 'RS-02') && !!itemOf('A', r1.id) && itemOf('A', r1.id).state === 'Locked');
+    ok('S4-01 the original resources keep Aisha\'s answer keys and assessment links', itemsOf('C').some(i => i.id === 'ak-U306-M1') && JSON.stringify(STORE.worlds.C.resources.filter(g => JSON.parse(asg0).some(y => y[0] === g.unit)).map(g => [g.unit, g.asg || null])) === asg0 && itemsOf('C').find(i => i.id === 'r2').state === 'Opened');
+  });
+
+  await T('S4-01 Coordinator release changes (this batch only) and teacher permissions', async () => {
+    fresh(); const d = apply4('A', T3); finish4(d, 'instalment'); const n0 = STORE.worlds.C.notifs ? STORE.worlds.C.notifs.length : 0;
+    COO('A'); go('c-modules'); ok('S4-01 the Coordinator sees "Edit release" on her batch', !!app().querySelector('[data-act="cooRel"][data-b="L3AC-JAN26"][data-id="RS-02"]'));
+    ACT.cooRel({ dataset: { b: 'L3AC-JAN26', id: 'RS-02' } }); document.querySelector('input[name="rr-k"][value="date"]').checked = true; fill({ '#rr-d': D(14).slice(0, 10), '#rr-r': 'Covered in week 3' }); prim(); closeModal();
+    ok('S4-01 Aisha\'s copy is now locked until the new date; her progress is kept for later', itemOf('C', 'RS-02').state === 'Locked' && itemOf('C', 'RS-02').st0 === 'Opened' && /Unlocks on/.test(itemOf('C', 'RS-02').lock));
+    ok('S4-01 another batch (Daniel, Leicester Cohort 8) is unaffected', itemOf('A', 'RS-02').state !== 'Locked');
+    ok('S4-01 "Notify affected learners" notifies Aisha only; audited (D2)', (STORE.worlds.C.notifs || []).length > n0 && /Resource release changed/.test(JSON.stringify(STORE.worlds.C.notifs[0])) && ADMIN.audit[0].action === 'Release changed (D2)');
+    const n1 = (STORE.worlds.C.notifs || []).length; ACT.cooRel({ dataset: { b: 'L3AC-JAN26', id: 'RS-02' } }); document.querySelector('input[name="rr-k"][value="now"]').checked = true; document.querySelector('#rr-n').checked = false; fill({ '#rr-r': 'Back to now' }); prim(); closeModal();
+    ok('S4-01 without "Notify", no notification; the release applies', (STORE.worlds.C.notifs || []).length === n1 && itemOf('C', 'RS-02').state === 'Opened');
+    COO('B'); ACT.cooRel({ dataset: { b: 'L3AC-JAN26', id: 'RS-02' } }); ok('S4-01 (negative) another Coordinator can\'t change this batch\'s release (refused, logged)', !MODAL && ADMIN.audit[0].action === 'Blocked: change releases for this batch');
+    ACT.cooRel({ dataset: { b: 'L2DC-MAR26', id: 'RS-02' } }); ok('S4-01 (negative) a Level 3 resource can\'t be released to a Level 2 batch', !MODAL);
+    TCH('T'); go('t-assign', { tab: 'resources' }); resAdd({ t: 'Marcus\'s handout', type: 'PDF', p: 'NV-L3', m: 'U306 M1' }); const r = newest();
+    ok('S4-01 a teacher adds a Draft for a programme he teaches', r.title === 'Marcus\'s handout' && r.status === 'Draft' && r.by === 'Marcus Bell');
+    ACT.s4bPub({ dataset: { id: r.id } }); ok('S4-01 (negative) a teacher can\'t publish (refused, logged)', r.status === 'Draft' && ADMIN.audit[0].action === 'Blocked: publish resources');
+    ok('S4-01 (negative) a teacher can\'t add to a programme he isn\'t allocated to', !s4bResProgs().some(p => p.id === 'NV-L2') && s4bCanRes('add', null, 'NV-L2') === false);
+  });
+
+  await T('S4-02 batch details: impact preview, rules, permissions; commitments kept', async () => {
+    fresh(); const d = apply4('A', T3); finish4(d, 'deposit'); const b = ADMIN.batches.find(x => x.code === d.signup.batch), plan0 = JSON.stringify(d.plans), hold0 = d.admission.deposit.holdUntil, alloc0 = JSON.stringify(chAllocOf(b));
+    SA(); go('a-batches', { id: b.code });
+    const ed = (o, twice = true) => { ACT.s4bBatchEdit({ dataset: { id: b.code } }); fill(o); const r1 = prim(); if (r1 !== false || !twice) return r1; const shown = document.querySelector('#bd-i').textContent; const r2 = prim(); if (r2 !== false && MODAL) closeModal(); return [shown, r2]; };
+    ok('S4-02 capacity below the number enrolled is refused', ed({ '#bd-c': String(b.enrolled - 1), '#bd-r': 'x' }, false) === false && /can't be below/.test(mroot().textContent)); closeModal();
+    ok('S4-02 an end date before the start is refused', ed({ '#bd-e': b.start.slice(0, 10), '#bd-r': 'x' }, false) === false); closeModal();
+    const ns = new Date(new Date(b.start).getTime() + 7 * DAY).toISOString().slice(0, 10), [shown] = ed({ '#bd-s': ns, '#bd-c': String(b.cap + 2), '#bd-d': 'Tuesday evening cohort', '#bd-r': 'Venue availability' });
+    ok('S4-02 saving first shows the impact (learners, sessions, deadlines, timetable, deposit eligibility, notifications)', /Impact of these changes/.test(shown) && /Learners/.test(shown) && /Sessions/.test(shown) && /Assignment deadlines/.test(shown) && /New applicants/.test(shown) && /Notifications/.test(shown));
+    ok('S4-02 saved: dates, capacity, description; audited', b.start.slice(0, 10) === ns && b.desc === 'Tuesday evening cohort' && ADMIN.audit[0].action === 'Batch details changed');
+    go('a-batches', { id: b.code }); ok('S4-02 consuming screen: the batch page shows the new dates and description', main().includes(fd(b.start)) && /Tuesday evening cohort/.test(main()));
+    ok('S4-02 the enrolled learner\'s plan and hold don\'t change; their batch dates do', JSON.stringify(d.plans) === plan0 && d.admission.deposit.holdUntil === hold0 && d.nvq.batchStart === b.start);
+    ok('S4-02 CH-17 assessor allocations unchanged', JSON.stringify(chAllocOf(b)) === alloc0);
+    ok('S4-02 the Coordinator was notified', STORE.coo.notifs.some(n => n.to === b.coord && n.t === 'Batch details changed'));
+    const ob = ADMIN.batches.find(x => x.code === 'L3AC-JAN26'); ACT.s4bBatchEdit({ dataset: { id: ob.code } });
+    ok('S4-02 a started batch: dates and mode locked, capacity and description editable', document.querySelector('#bd-s').disabled && document.querySelector('#bd-m').disabled && !document.querySelector('#bd-c').disabled); closeModal();
+    FA4(); ACT.s4bBatchEdit({ dataset: { id: b.code } }); ok('S4-02 (negative) Finance can\'t edit batch details (refused, logged)', !MODAL && ADMIN.audit[0].action === 'Blocked: edit batch details');
+    COO('A'); S.portal = 'coord'; ACT.s4bBatchEdit({ dataset: { id: 'L3AC-JAN26' } }); ok('S4-02 (negative) a Coordinator can\'t edit batch details', !MODAL);
+  });
+
+  await T('S4-03 / S4-04 sessions: add, edit, reschedule, cancel — on every calendar', async () => {
+    fresh(); SA(); setUi('s4bSchedB', 'L3AC-JAN26'); go('a-scheduling');
+    ok('S4-03 the console covers every running or planned batch', document.querySelectorAll('#s4b-sb option').length === ADMIN.batches.filter(S4B_LIVE).length);
+    ACT.addSession({ dataset: { b: 'L3AC-JAN26' } }); fill({ '#se-n': 'Revision class', '#se-d': D(20, '17:00').slice(0, 16), '#se-m': '90' }); document.querySelector('#se-t').value = 'Marcus Bell'; prim();
+    const s = s4bSess('L3AC-JAN26').find(x => x.title === 'Revision class');
+    ok('S4-03 Add session: stored with batch, title, time, length, teacher, simulated Zoom, status, history; audited', !!s && s.teacher === 'Marcus Bell' && (new Date(s.end) - new Date(s.start)) === 90 * 6e4 && /simulated/.test(s.link) && s.status === 'Scheduled' && s.hist.length === 1 && ADMIN.audit[0].action === 'Session added');
+    learner('C'); go('calendar'); ok('S4-04 Aisha\'s calendar has it (learner of the batch)', evsOf('C').some(e => e.id === s.id && e.title === 'Revision class'));
+    learner('D'); go('calendar'); ok('S4-04 Grace (another batch) doesn\'t see it', !evsOf('D').some(e => e.id === s.id));
+    TCH('T'); go('t-calendar'); setUi('ccView', 'agenda'); setUi('ccDate', D(20).slice(0, 10)); render(); ok('S4-04 teacher calendar (Marcus) shows it', !!app().querySelector(`main [data-id="${s.id}"]`));
+    COO('A'); go('c-timeline'); ok('S4-04 Coordinator timeline shows it', !!app().querySelector(`[data-id="${s.id}"]`));
+    SA(); go('a-batches', { id: 'L3AC-JAN26', tab: 'schedule' }); ok('S4-04 the batch Schedule tab lists the real sessions', /Revision class/.test(main()) && !!app().querySelector(`[data-act="s4bSessCancel"][data-id="${s.id}"]`));
+    ACT.s4bSessEdit({ dataset: { b: 'L3AC-JAN26', id: s.id } }); fill({ '#se-d': D(21, '18:00').slice(0, 16), '#se-m': '120', '#se-r': 'Room change' }); prim();
+    ok('S4-03 Edit / reschedule: new time and length, history, audited; the learner\'s calendar follows', s.start === D(21, '18:00') && (new Date(s.end) - new Date(s.start)) === 120 * 6e4 && s.hist.length === 2 && ADMIN.audit[0].action === 'Session changed' && evsOf('C').find(e => e.id === s.id).start === s.start);
+    COO('A'); ACT.cooEditEv({ dataset: { b: 'L3AC-JAN26', id: s.id } }); fill({ '#ee-n': D(22, '18:00').slice(0, 16), '#ee-r': 'Clash at work' }); prim();
+    ok('S4-03 the Coordinator\'s date edit moves the same session and keeps its 2-hour length (D7 / F5 store)', s.start === D(22, '18:00') && (new Date(s.end) - new Date(s.start)) === 120 * 6e4);
+    SA(); const e2 = batchEvents(ADMIN.batches.find(x => x.code === 'L3AC-JAN26')).find(e => e.id === 'e2'), len = new Date(e2.end) - new Date(e2.start);
+    ACT.kEditEv({ dataset: { b: 'L3AC-JAN26', id: 'e2' } }); fill({ '#ke-n': D(3, '17:00').slice(0, 16), '#ke-r': 'Moved' }); prim(); if (MODAL) prim();
+    const e2b = batchEvents(ADMIN.batches.find(x => x.code === 'L3AC-JAN26')).find(e => e.id === 'e2'), w2 = evsOf('C').find(e => e.id === 'e2');
+    ok('S4-03 a date edit keeps the event\'s length (it used to collapse to zero)', len === 90 * 6e4 && new Date(e2b.end) - new Date(e2b.start) === len && new Date(w2.end) - new Date(w2.start) === len);
+    const n0 = (STORE.worlds.C.notifs || []).length; ACT.s4bSessCancel({ dataset: { b: 'L3AC-JAN26', id: s.id } }); reason('Teacher unwell');
+    ok('S4-03 Cancel: kept and marked cancelled everywhere, reason recorded, learners notified', s.status === 'Cancelled' && s.reason === 'Teacher unwell' && /^Cancelled — /.test(evsOf('C').find(e => e.id === s.id).title) && (STORE.worlds.C.notifs || []).length > n0 && ADMIN.audit[0].action === 'Session cancelled');
+    go('a-batches', { id: 'L3AC-JAN26', tab: 'schedule' }); ok('S4-04 the Schedule tab shows it cancelled', /Cancelled — Revision class/.test(main()));
+    ACT.s4bSessCancel({ dataset: { b: 'L3AC-JAN26', id: 'eda3' } }); ok('S4-03 (negative) a deadline can\'t be cancelled as a session', !MODAL);
+    COO('A'); S.portal = 'coord'; ACT.addSession({ dataset: { b: 'L3AC-JAN26' } }); ok('S4-03 (negative) a Coordinator can\'t add sessions (refused, logged)', !MODAL && ADMIN.audit[0].action === 'Blocked: add sessions');
+    ok('S2 deadlines are untouched by session actions', evsOf('C').filter(e => /^ed/.test(e.id)).every(e => !/Cancelled/.test(e.title)));
+  });
+
+  await T('S4-03 conflicts are real and recalculated; S4-04 Coordinator changes notify both', async () => {
+    fresh(); SA();
+    ok('S4-03 the two dashboard conflicts come from real sessions', kConflicts().length === 2 && kConflicts().some(c => c.what === 'Teacher double-booked' && /Marcus Bell/.test(c.detail)) && kConflicts().some(c => c.what === 'Cohort double-booked' && /Croydon Cohort 4/.test(c.detail)));
+    const tc = kConflicts().find(c => c.what === 'Teacher double-booked');
+    ACT.kResolve({ dataset: { id: tc.id } }); document.querySelector('#kr-a').value = 'move'; document.querySelector('#kr-s').value = 'b'; reason('Try an hour later');
+    const qa = s4bSess('SC-MH26')[0];
+    ok('S4-03 "Move by one hour" really moves the session — but the 90-minute class still overlaps, so it is NOT reported resolved', qa.start === D(2, '18:00') && kConflicts().some(c => c.id === tc.id) && ADMIN.audit[0].action === 'Conflict change applied — still conflicting');
+    ACT.kResolve({ dataset: { id: tc.id } }); document.querySelector('#kr-a').value = 'teacher'; document.querySelector('#kr-s').value = 'b'; document.querySelector('#kr-t').value = 'Omar Siddiqui'; reason('Omar covers');
+    ok('S4-03 "Assign another teacher" changes that session\'s teacher; the conflict is gone', qa.teacher === 'Omar Siddiqui' && !kConflicts().some(c => c.id === tc.id) && ADMIN.audit[0].action === 'Conflict resolved' && ADMIN.batches.find(x => x.code === 'L3AC-JAN26').teachers[0] === 'Marcus Bell');
+    ok('S4-04 the new teacher is notified', STORE.tas.notifs.some(n => /Omar Siddiqui: Live Q&A/.test(n.b || '')));
+    s4bSess('L2DC-MAR26')[0].teacher = 'Marcus Bell'; TCH('T'); go('t-calendar'); setUi('ccView', 'agenda'); setUi('ccDate', D(9).slice(0, 10)); render();
+    ok('S4-04 a teacher sees a session assigned to him in a batch he isn\'t allocated to', !!app().querySelector('main [data-id="ss-2"]')); s4bSess('L2DC-MAR26')[0].teacher = 'Tom Whitfield';
+    SA(); const cc = kConflicts().find(c => c.what === 'Cohort double-booked'); ACT.kResolve({ dataset: { id: cc.id } }); document.querySelector('#kr-a').value = 'cancel'; reason('Duplicate');
+    ok('S4-03 "Cancel the duplicate session" really cancels it; no conflicts left', kConflicts().length === 0 && ADMIN.audit.some(a => a.action === 'Session cancelled'));
+    learner('D'); go('calendar'); ok('S4-04 Grace\'s calendar shows the cancelled session as cancelled', evsOf('D').some(e => /^Cancelled — /.test(e.title) && /^ss-/.test(e.id)));
+    SA(); go('a-scheduling'); ok('S4-03 the console says no conflicts', /No conflicts detected/.test(main()));
+    COO('A'); S.portal = 'coord'; ACT.kResolve({ dataset: { id: 'x' } }); ok('S4-03 (negative) a Coordinator can\'t resolve conflicts', !MODAL);
+    // Coordinator change: both coordinators notified, visibility follows
+    SA(); const b = ADMIN.batches.find(x => x.code === 'L3AC-JAN26'); ACT.changeCoord({ dataset: { id: b.code } }); document.querySelector('#cc-to').value = 'Michael Osei'; reason('Leave cover');
+    ok('S4-04 Change Coordinator: both the previous and the new Coordinator are notified', b.coord === 'Michael Osei' && STORE.coo.notifs.some(n => n.to === 'Dr Helen Carter' && n.t === 'Batch reassigned') && STORE.coo.notifs.some(n => n.to === 'Michael Osei' && n.t === 'New batch assigned to you'));
+    COO('B'); ok('S4-04 the new Coordinator now sees the batch; the previous one doesn\'t', myBatches().some(x => x.code === b.code) && (COO('A'), !myBatches().some(x => x.code === b.code)));
+    SA(); const nb = ADMIN.batches.find(x => !x.coord && S4B_LIVE(x)); if (nb) { ACT.batchStaff({ dataset: { id: nb.code } }); document.querySelector('#bs-c').value = 'Laura Kemp'; reason('First coordinator'); }
+    ok('S4-04 allocating a first Coordinator (Change allocations) notifies them', !nb || STORE.coo.notifs.some(n => n.to === 'Laura Kemp' && n.t === 'New batch assigned to you' && n.b.includes(nb.code)));
+  });
+
+  await T('S4b preservation: Aisha, Grace, Priya; S2 deadlines; CH-17; P-33; S3 / S4a pins', async () => {
+    fresh(); const C = STORE.worlds.C, D_ = STORE.worlds.D, B = STORE.worlds.B, c0 = JSON.stringify([C.resources, C.plans, C.signup]), d0 = JSON.stringify([D_.resources, D_.plans]), b0 = JSON.stringify([B.docs, B.signup]);
+    SA(); go('a-resources'); go('a-scheduling'); go('a-batches', { id: 'L3AC-JAN26', tab: 'schedule' }); learner('C'); go('resources'); go('calendar'); learner('D'); go('resources');
+    ok('Aisha\'s resources, plans and sign-up are unchanged by S4b (screens visited)', JSON.stringify([C.resources, C.plans, C.signup]) === c0);
+    ok('Grace\'s resources and plans unchanged', JSON.stringify([D_.resources, D_.plans]) === d0);
+    ok('Priya\'s documents and sign-up unchanged', JSON.stringify([B.docs, B.signup]) === b0);
+    ok('S3 / S4a pins kept (structure version, plan, letter)', B.signup.plan.fee === 2400 && B.signup.letterV === 1 && C.signup.plan && !STORE.worlds.C.nvq.progVersion);
+    const b = ADMIN.batches.find(x => x.code === 'L3AC-JAN26'), al0 = JSON.stringify(chAllocOf(b)), cap0 = b.cap; SA();
+    ACT.s4bBatchEdit({ dataset: { id: b.code } }); fill({ '#bd-c': String(cap0 + 1), '#bd-r': 'More places' }); prim(); prim(); closeModal();
+    ACT.addSession({ dataset: { b: b.code } }); fill({ '#se-d': D(30, '17:00').slice(0, 16) }); prim(); if (MODAL) prim(); closeModal();
+    ok('CH-17 / P-33: the three assessors are unchanged and none is the Coordinator after batch and session changes', JSON.stringify(chAllocOf(b)) === al0 && !Object.values(chAllocOf(b)).includes(b.coord) && b.cap === cap0 + 1);
+  });
+
+  /* ================= S4b shared classes (client clarification) and the queue-read mutation ================= */
+  const shareAdd = (owner, o) => { ACT.addSession({ dataset: { b: owner } }); fill({ '#se-n': o.t, '#se-d': o.at.slice(0, 16), '#se-m': String(o.mins || 90) }); document.querySelector('#se-t').value = o.teacher || 'Marcus Bell'; (o.with || []).forEach(c => { const x = document.querySelector(`.se-w[value="${c}"]`); if (x) x.checked = true; }); let r = prim(); let n = 0; while (r === false && MODAL && n++ < 3 && !/is on another programme|isn't running/.test(mroot().textContent)) r = prim(); if (MODAL && r !== false) closeModal(); return r; };
+  const calCount = id => app().querySelectorAll(`main [data-id="${id}"]`).length;
+
+  await T('S4b shared class: one session, two batches of the same programme', async () => {
+    fresh(); const d = apply4('A', T3); finish4(d, 'instalment'); const LEI = d.signup.batch, t = apply4('E', T3); ACT.suNext(); t.docs.forEach(x => { x.status = 'Submitted'; }); ACT.suNext(); setUi('suSig', 'Tom Whitfield'); setUi('suDecl', true); ACT.suSign(); chSetBatch(t, ADMIN.batches.find(b => b.code === 'L3AC-JAN27-MAN')); setUi('suOpt', 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal();
+    const pins0 = JSON.stringify([STORE.worlds.C.nvq.progVersion, d.nvq.progVersion, d.signup.plan, STORE.worlds.C.plans, d.plans, d.admission.deposit]), nSess0 = s4bAllSess().length;
+    SA(); ACT.addSession({ dataset: { b: 'L3AC-JAN26' } });
+    ok('Share: the session editor offers only other batches of the same programme', [...document.querySelectorAll('.se-w')].every(x => s4PidOfTitle(ADMIN.batches.find(b => b.code === x.value).course) === 'NV-L3') && !!document.querySelector(`.se-w[value="${LEI}"]`) && !document.querySelector('.se-w[value="L2DC-MAR26"]'));
+    fill({ '#se-n': 'Shared class: safeguarding scenarios', '#se-d': D(16, '17:00').slice(0, 16), '#se-m': '90' }); document.querySelector('#se-t').value = 'Marcus Bell'; document.querySelector(`.se-w[value="${LEI}"]`).checked = true;
+    ok('Share: saving first shows who takes part (both batches and their learners)', prim() === false && /Who takes part/.test(mroot().textContent) && mroot().textContent.includes(LEI) && /organising batch/.test(mroot().textContent) && /doesn't complete any module/.test(mroot().textContent));
+    prim(); closeModal(); const s = s4bAllSess().find(x => x.title === 'Shared class: safeguarding scenarios');
+    ok('Share: ONE session record (owner + participating batch), audited', !!s && s.batch === 'L3AC-JAN26' && s.with.join() === LEI && s4bAllSess().length === nSess0 + 1 && /shared with/.test(ADMIN.audit[0].after));
+    learner('C'); go('calendar'); const cA = evsOf('C').filter(e => e.id === s.id).length;
+    learner('A'); go('calendar'); const dA = evsOf('A').filter(e => e.id === 'bs-' + s.id || e.id === s.id).length;
+    ok('Calendar: Aisha (organising batch) and Daniel (taking part) both see it, once each', cA === 1 && dA === 1);
+    learner('E'); go('calendar'); ok('Calendar (negative): Tom, in another Level 3 batch not taking part, doesn\'t see it', t.signup.done && t.signup.batch === 'L3AC-JAN27-MAN' && !evsOf('E').some(e => e.id === s.id || e.id === 'bs-' + s.id));
+    learner('D'); go('calendar'); ok('Calendar (negative): Grace (Level 2) doesn\'t see it', !evsOf('D').some(e => e.id === s.id || e.id === 'bs-' + s.id));
+    SA(); go('a-batches', { id: 'L3AC-JAN26', tab: 'schedule' }); const inA = /Shared class: safeguarding scenarios/.test(main()) && /Organised here/.test(main());
+    go('a-batches', { id: LEI, tab: 'schedule' }); ok('Schedules: it is in both batches\' Schedule tabs (marked shared), still one record', inA && /Shared class: safeguarding scenarios/.test(main()) && /Organised by L3AC-JAN26/.test(main()) && s4bAllSess().filter(x => x.title === s.title).length === 1);
+    TCH('T'); go('t-calendar'); setUi('ccView', 'agenda'); setUi('ccDate', D(16).slice(0, 10)); render(); ok('Teacher: Marcus (teaches both batches) sees the session once', calCount(s.id) === 1);
+    SA(); go('a-scheduling', { tab: 'monitor' }); setUi('ccView', 'agenda'); ok('Admin calendar: shown once', (render(), app().querySelectorAll(`main [data-id="${s.id}"]`).length <= 1));
+    ok('Conflicts: sharing the class with two batches is not a duplicate-session clash', !kConflicts().some(c => c.detail.includes('Shared class')));
+    ok('Versions / commitments: learners\' programme versions, plans and deposits unchanged', JSON.stringify([STORE.worlds.C.nvq.progVersion, d.nvq.progVersion, d.signup.plan, STORE.worlds.C.plans, d.plans, d.admission.deposit]) === pins0);
+    ok('Progress: attending is not completion — no criterion changes', JSON.stringify(STORE.worlds.C.tree) === JSON.stringify(STORE.worlds.C.tree) && !d.tree.some(u => u.mods.some(m => m.los.some(l => l.crit.some(c => c.st !== 'Not Started')))));
+    // Real clashes are still detected
+    shareAdd(LEI, { t: 'Separate tutorial', at: D(16, '17:30'), mins: 60, teacher: 'Omar Siddiqui' });
+    ok('Conflicts: a separate session in a participating batch at the same time is a real clash', kConflicts().some(c => c.what === 'Cohort double-booked' && /Shared class/.test(c.detail) && /Separate tutorial/.test(c.detail)));
+    const sep = s4bAllSess().find(x => x.title === 'Separate tutorial'); ACT.s4bSessCancel({ dataset: { b: LEI, id: sep.id } }); reason('Not needed');
+    shareAdd('L3AC-JAN27-MAN', { t: 'Manchester class', at: D(16, '17:15'), mins: 60, teacher: 'Marcus Bell' });
+    ok('Conflicts: the same teacher in a third batch at that time is still a teacher clash', kConflicts().some(c => c.what === 'Teacher double-booked' && /Manchester class/.test(c.detail)));
+    const man = s4bAllSess().find(x => x.title === 'Manchester class'); ACT.s4bSessCancel({ dataset: { b: 'L3AC-JAN27-MAN', id: man.id } }); reason('Clash');
+    // Edits and cancellation reach every batch; notifications once per person
+    const nC = (STORE.worlds.C.notifs || []).length, nA = (STORE.worlds.A.notifs || []).length, tn = STORE.tas.notifs.length, cn = STORE.coo.notifs.length;
+    ACT.s4bSessEdit({ dataset: { b: LEI, id: s.id } }); fill({ '#se-d': D(17, '18:00').slice(0, 16), '#se-r': 'Room booking' }); prim(); closeModal();
+    ok('Edit: from either batch it changes the one record; both learners\' calendars follow', s.start === D(17, '18:00') && evsOf('C').find(e => e.id === s.id).start === s.start && evsOf('A').find(e => e.id === 'bs-' + s.id).start === s.start);
+    ok('Notifications: each learner once; Marcus once; each Coordinator once', (STORE.worlds.C.notifs || []).length === nC + 1 && (STORE.worlds.A.notifs || []).length === nA + 1 && STORE.tas.notifs.length - tn === 1 && (x => x.length === 2 && new Set(x.map(n => n.to)).size === 2)(STORE.coo.notifs.slice(0, STORE.coo.notifs.length - cn).filter(n => n.to)) /* person-targeted; the activity feed entry (no recipient) is the existing audit feed */);
+    COO('A'); S.portal = 'coord'; ACT.cooEditEv({ dataset: { b: 'L3AC-JAN26', id: s.id } }); ok('Coordinator of the organising batch can still move it (D7 / F5)', !!MODAL); closeModal();
+    const leiB = ADMIN.batches.find(b => b.code === LEI), c0 = leiB.coord; leiB.coord = 'Michael Osei'; COO('B'); S.portal = 'coord'; ACT.cooEditEv({ dataset: { b: LEI, id: s.id } }); const blocked = !MODAL && ADMIN.audit[0].action; closeModal(); leiB.coord = c0;
+    ok('Coordinator (negative): only the organising batch\'s Coordinator can move a shared class (refused, logged)', blocked === 'Blocked: move a shared class organised by another batch');
+    SA(); ACT.s4bSessCancel({ dataset: { b: 'L3AC-JAN26', id: s.id } }); reason('Teacher unwell');
+    ok('Cancel: one record cancelled; both learners see it cancelled', s.status === 'Cancelled' && /^Cancelled — /.test(evsOf('C').find(e => e.id === s.id).title) && evsOf('A').find(e => e.id === 'bs-' + s.id).cancelled);
+  });
+
+  await T('S4b shared class: invalid and unauthorised sharing, removing a batch, single sessions', async () => {
+    fresh(); SA(); const n0 = s4bAllSess().length;
+    ACT.addSession({ dataset: { b: 'L3AC-JAN26' } }); fill({ '#se-n': 'Cross-programme try', '#se-d': D(19, '17:00').slice(0, 16) });
+    document.querySelector('.s4b-share').insertAdjacentHTML('beforeend', '<input type="checkbox" class="se-w" value="L2DC-MAR26" checked>');
+    ok('Share (negative): a batch of another programme is rejected, even injected into the form; logged', prim() === false && /another programme/.test(mroot().textContent) && s4bAllSess().length === n0 && ADMIN.audit[0].action === 'Blocked: share session'); closeModal();
+    FA4(); ACT.s4bSessEdit({ dataset: { b: 'L2DC-MAR26', id: 'ss-2' } }); ok('Share (negative): Finance can\'t change sessions or sharing (refused, logged)', !MODAL && ADMIN.audit[0].action === 'Blocked: edit sessions');
+    COO('A'); S.portal = 'coord'; ACT.addSession({ dataset: { b: 'L3AC-JAN26' } }); ok('Share (negative): a Coordinator can\'t create a shared class', !MODAL && ADMIN.audit[0].action === 'Blocked: add sessions');
+    SA(); const d = apply4('A', T3); finish4(d, 'instalment'); const LEI = d.signup.batch; SA();
+    shareAdd('L3AC-JAN26', { t: 'Joint revision', at: D(23, '17:00'), with: [LEI] }); const s = s4bAllSess().find(x => x.title === 'Joint revision');
+    learner('A'); go('calendar'); const had = evsOf('A').some(e => e.id === 'bs-' + s.id);
+    SA(); ACT.s4bSessEdit({ dataset: { b: 'L3AC-JAN26', id: s.id } }); document.querySelector(`.se-w[value="${LEI}"]`).checked = false; fill({ '#se-r': 'Leicester 8 has its own class' });
+    ok('Unshare: removing a batch shows the impact first', prim() === false && /no longer taking part/.test(mroot().textContent)); prim(); closeModal();
+    ok('Unshare: Daniel no longer has it; Aisha keeps it; audited', had && !evsOf('A').some(e => e.id === 'bs-' + s.id) && evsOf('C').some(e => e.id === s.id) && ADMIN.audit[0].action === 'Session sharing changed' && s.with.length === 0);
+    learner('D'); go('calendar'); const ss2 = s4bSessById('ss-2'); ok('Single-batch sessions are unchanged and still valid (seeded Croydon sessions)', ss2.batch === 'L2DC-MAR26' && !(ss2.with || []).length && evsOf('D').some(e => e.id === 'ss-2'));
+  });
+
+  await T('S4b: reading admin screens never changes an applicant\'s records (queue notes)', async () => {
+    fresh(); const snap = () => JSON.stringify(Object.fromEntries(Object.entries(STORE.worlds).map(([k, w]) => [k, [w.docs || null, w.admission || null, w.requests || null]]))), s0 = snap();
+    SA(); ['a-dashboard', 'a-queue', 'a-admissions', 'a-batches', 'a-learners', 'a-finance'].forEach(r => go(r)); go('a-admissions', { id: 'APP-B' }); acaEnter('KA'); S.signedIn = true; go('a-dashboard'); go('a-queue');
+    ok('Opening the dashboards, Approvals Queue and Admissions leaves every applicant\'s documents, admission and requests unchanged (Priya included)', snap() === s0 && !STORE.worlds.B.docs.some(d => '_notes' in d));
+    SA(); const it = allQueue().find(i => i.id === 'AQ-DOC-B-' + STORE.worlds.B.docs.find(x => x.status === 'Submitted').id); it.notes.push(['Rachel Hughes', now().toISOString(), 'Checked the certificate']);
+    ok('Queue notes still persist — kept with the queue, not on the applicant\'s document', allQueue().find(i => i.id === it.id).notes.length === 1 && !STORE.worlds.B.docs.some(d => '_notes' in d));
   });
 
   fresh();
