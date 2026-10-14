@@ -11,7 +11,9 @@
 const CH_DEP = 300, CH_INST_N = 6, CH_HOLD_DAYS = 28, CH_ACADEMY_MAIL = 'info@welfarehs.co.uk';
 const CH_DECL = 'I hereby certify that the information and any documents provided are true, accurate and authentic. I have read and agree to the Terms & Conditions of Welfare Academy.';
 const chW = v => STORE.worlds[v];
-const chFee = w => NVQ_FEES[w.nvq.title] || 2400;
+// S4-06 / S4-07: fee, deposit, instalments and hold days come from these (setup-s4a.js reads the programme's plan and the configuration)
+let chProgFeeOf = w => NVQ_FEES[w.nvq.title] || 2400, chDepOf = w => CH_DEP, chInstNOf = w => CH_INST_N, chHoldDays = () => CH_HOLD_DAYS;
+const chFee = w => chProgFeeOf(w);
 const chBatch = code => ((typeof ADMIN !== 'undefined' && ADMIN && ADMIN.batches) || []).find(b => b.code === code);
 const chBatchLbl = b => b ? `${b.label} — ${b.code}` : '—';
 const chSponsored = w => !!w.flags.sponsored;
@@ -20,6 +22,7 @@ const chStepKey = w => (chSteps(w)[w.signup.step - 1] || [])[0];
 // Intakes the learner can choose: open or planned batches of their programme that haven't started and have a place
 const chIntakes = w => ADMIN.batches.filter(b => b.course === w.nvq.title && ['Open', 'Planned'].includes(b.status) && new Date(b.start) > now());
 const chHasPlace = b => b && b.enrolled < b.cap;
+// CH-10: a deposit is offered only when the batch starts in 28 days or more (fixed). The configurable hold (chHoldDays) is how long the seat is then held.
 const chDepositOk = b => !!b && daysTo(b.start) >= CH_HOLD_DAYS;
 const chMandUploaded = w => w.docs.filter(d => d.mand && d.status !== 'Pending');
 const chMandMissing = w => w.docs.filter(d => d.mand && d.status === 'Pending');
@@ -132,15 +135,15 @@ function chStepLetter(w) {
 }
 const chRefOf = (w, opt) => `IA-${w.me.id.slice(-5)}-${opt === 'deposit' ? 'DEP' : 'INS1'}`;
 function chStepPay(w) {
-  const b = chBatch(w.signup.batch), fee = chFee(w), depOk = chDepositOk(b), inst = fee / CH_INST_N;
+  const b = chBatch(w.signup.batch), fee = chFee(w), depOk = chDepositOk(b), inst = fee / chInstNOf(w);
   if (!chHasPlace(b)) return `<section class="card"><h2>4. Payment</h2><div class="note b-amber" role="alert">${ic('alert')}<div><strong>${esc(b ? b.label : 'Your intake')} is now full.</strong> Its last place went before you paid. Choose another intake — your documents and signed offer letter are kept.<div class="b-act"><button class="btn btn-sm btn-primary" data-act="suGo" data-s="1">Choose another intake</button></div></div></div>${chNav(w, '')}</section>`;
   let opt = ui('suOpt', depOk ? 'deposit' : 'instalment'); if (opt === 'deposit' && !depOk) opt = 'instalment';
   const method = ui('suMethod', 'card');
-  const amount = opt === 'deposit' ? CH_DEP : inst;
+  const amount = opt === 'deposit' ? chDepOf(w) : inst;
   return `<section class="card"><h2>4. Payment</h2><dl class="kv"><dt>Intake</dt><dd>${esc(chBatchLbl(b))} · starts ${fd(b.start)} (in ${daysTo(b.start)} days)</dd><dt>Programme fee</dt><dd class="num">${money(fee, 'GBP')}</dd></dl>
     <fieldset class="stack"><legend class="lbl">How do you want to pay?</legend>
-    ${depOk ? `<label class="check"><input type="radio" name="su-opt" value="deposit" ${opt === 'deposit' ? 'checked' : ''} data-onchange="suOpt"><span><strong>Deposit (holds your seat) — ${money(CH_DEP, 'GBP')} now</strong><br><span class="small muted">Then pay the ${money(fee - CH_DEP, 'GBP')} balance within ${CH_HOLD_DAYS} days, in one go or in parts.</span></span></label>` : `<div class="note b-grey ch-nodep">${ic('info')}<div class="small"><strong>No deposit for this intake.</strong> ${esc(b.label)} starts in ${daysTo(b.start)} days. A deposit can only hold a seat when the intake starts in ${CH_HOLD_DAYS} days or more, so you pay the first instalment.</div></div>`}
-    <label class="check"><input type="radio" name="su-opt" value="instalment" ${opt === 'instalment' ? 'checked' : ''} data-onchange="suOpt"><span><strong>Instalments — ${CH_INST_N} monthly payments of ${money(inst, 'GBP')}</strong><br><span class="small muted">Pay the first instalment (${money(inst, 'GBP')}) now.</span></span></label></fieldset>
+    ${depOk ? `<label class="check"><input type="radio" name="su-opt" value="deposit" ${opt === 'deposit' ? 'checked' : ''} data-onchange="suOpt"><span><strong>Deposit (holds your seat) — ${money(chDepOf(w), 'GBP')} now</strong><br><span class="small muted">Then pay the ${money(fee - chDepOf(w), 'GBP')} balance within ${chHoldDays()} days, in one go or in parts.</span></span></label>` : `<div class="note b-grey ch-nodep">${ic('info')}<div class="small"><strong>No deposit for this intake.</strong> ${esc(b.label)} starts in ${daysTo(b.start)} days. A deposit can only hold a seat when the intake starts in ${CH_HOLD_DAYS} days or more, so you pay the first instalment.</div></div>`}
+    <label class="check"><input type="radio" name="su-opt" value="instalment" ${opt === 'instalment' ? 'checked' : ''} data-onchange="suOpt"><span><strong>Instalments — ${chInstNOf(w)} monthly payments of ${money(inst, 'GBP')}</strong><br><span class="small muted">Pay the first instalment (${money(inst, 'GBP')}) now.</span></span></label></fieldset>
     <fieldset class="stack"><legend class="lbl">Payment method</legend>
     <label class="check"><input type="radio" name="su-m" value="card" ${method === 'card' ? 'checked' : ''} data-onchange="suMethod"><span><strong>Card</strong> <span class="small muted">— pay now on our secure Stripe page</span></span></label>
     <label class="check"><input type="radio" name="su-m" value="bank" ${method === 'bank' ? 'checked' : ''} data-onchange="suMethod"><span><strong>Bank transfer</strong> <span class="small muted">— you start now; Finance confirms your payment</span></span></label></fieldset>
@@ -187,27 +190,27 @@ ACT.suSign = () => {
 ACT.suPay = () => {
   const w = W, b = chBatch(w.signup.batch), depOk = chDepositOk(b), opt0 = ui('suOpt', depOk ? 'deposit' : 'instalment'), opt = opt0 === 'deposit' && !depOk ? 'instalment' : opt0, method = ui('suMethod', 'card');
   if (!chHasPlace(b)) { render(); return; }
-  const amount = opt === 'deposit' ? CH_DEP : chFee(w) / CH_INST_N;
+  const amount = opt === 'deposit' ? chDepOf(w) : chFee(w) / chInstNOf(w);
   if (method === 'bank') { chComplete(w, { opt, method, amount, ref: chRefOf(w, opt) }); return; }
-  checkout({ title: opt === 'deposit' ? 'NVQ deposit — ' + w.nvq.title : `NVQ instalment 1 of ${CH_INST_N} — ` + w.nvq.title, amount, onSuccess: (paid, ref) => chComplete(w, { opt, method, amount, ref }, true) });
+  checkout({ title: opt === 'deposit' ? 'NVQ deposit — ' + w.nvq.title : `NVQ instalment 1 of ${chInstNOf(w)} — ` + w.nvq.title, amount, onSuccess: (paid, ref) => chComplete(w, { opt, method, amount, ref }, true) });
 };
 ACT.suStart = () => chComplete(W, { opt: null, method: null });
 
 /* ---------- Completing the sign-up (CH-07 step 5, CH-11: the learner starts straight away, card or bank transfer) ---------- */
 function chComplete(w, { opt, method, amount, ref }, fromCheckout, quiet) {
   const s = w.signup, b = chBatch(s.batch), at = quiet || now().toISOString(), fee = chFee(w), bank = method === 'bank';
-  const status = bank ? 'Awaiting confirmation by Finance' : 'Paid', hold = new Date(new Date(at).getTime() + CH_HOLD_DAYS * DAY).toISOString();
+  const status = bank ? 'Awaiting confirmation by Finance' : 'Paid', holdDays = chHoldDays(), hold = new Date(new Date(at).getTime() + holdDays * DAY).toISOString(), dep = chDepOf(w), n = chInstNOf(w);
   s.pay = opt ? { opt, method, amount, at, status, ref } : null; s.done = true; s.step = chSteps(w).length;
   if (b) b.enrolled++;
   Object.assign(w.nvq, { batch: chBatchLbl(b), batchStart: b ? b.start : w.nvq.batchStart, start: b ? b.start : w.nvq.start, end: b ? b.end : w.nvq.end, status: 'Active', enrolled: at });
   w.flags.admitted = true; if (!w.enrolments.includes(w.nvq)) w.enrolments.unshift(w.nvq);
   const ad = w.admission; Object.assign(ad, { status: 'Awaiting review', batch: w.nvq.batch, batchStart: w.nvq.batchStart }); ad.history.push(['Sign-up complete', at]);
-  if (opt === 'deposit') Object.assign(ad.deposit, { min: CH_DEP, paid: !bank, paidAt: at, holdUntil: hold, balance: fee - CH_DEP, awaiting: bank });
+  if (opt === 'deposit') Object.assign(ad.deposit, { min: dep, paid: !bank, paidAt: at, holdUntil: hold, holdDays, balance: fee - dep, awaiting: bank });
   if (opt) {
-    const rows = opt === 'deposit' ? [{ n: 1, amount: fee - CH_DEP, due: hold, status: 'Pending', paid: 0 }]
-      : Array.from({ length: CH_INST_N }, (_, i) => ({ n: i + 1, amount: fee / CH_INST_N, due: new Date(new Date(at).getTime() + i * 30 * DAY).toISOString(), status: i ? 'Pending' : status, paid: i || bank ? 0 : fee / CH_INST_N, receipt: i || bank ? undefined : 'RCP-' + (27000 + +w.me.id.slice(-3)) }));
+    const rows = opt === 'deposit' ? [{ n: 1, amount: fee - dep, due: hold, status: 'Pending', paid: 0 }]
+      : Array.from({ length: n }, (_, i) => ({ n: i + 1, amount: fee / n, due: new Date(new Date(at).getTime() + i * 30 * DAY).toISOString(), status: i ? 'Pending' : status, paid: i || bank ? 0 : fee / n, receipt: i || bank ? undefined : 'RCP-' + (27000 + +w.me.id.slice(-3)) }));
     w.plans = w.plans.filter(p => p.e !== 'nvq');
-    w.plans.unshift({ e: 'nvq', title: w.nvq.title, plan: opt === 'deposit' ? 'Deposit and balance' : 'Instalments', total: fee, partial: true, cur: 'GBP', deposit: opt === 'deposit' ? { amount: CH_DEP, status, paidAt: at, hold } : null, rows });
+    w.plans.unshift({ e: 'nvq', title: w.nvq.title, plan: opt === 'deposit' ? 'Deposit and balance' : 'Instalments', total: fee, partial: true, cur: 'GBP', deposit: opt === 'deposit' ? { amount: dep, status, paidAt: at, hold } : null, rows });
     if (bank) (STORE.chBank = STORE.chBank || []).push({ v: w.v, name: chFullName(w), lid: w.me.id, ref, amount, at, opt, status: 'Awaiting confirmation' });
   }
   if (quiet) return;
@@ -269,7 +272,7 @@ function chQuickSignup(w, { opt = 'deposit', method = 'card', at = D(-9, '18:20'
   w.docs.filter(d => d.mand && d.status === 'Pending').forEach(d => { d.status = 'Submitted'; d.file = d.file || (d.id === 'd6' ? 'cv_priya_raman.pdf' : 'document.pdf'); d.uploaded = d.uploaded || D(-10, '20:10'); d.versions.unshift([d.file, d.uploaded, 'Awaiting review']); });
   const L = chLetterFor(w); s.sig = { name: chFullName(w), at: D(-10, '20:30'), ip: chIp(w), v: L.v };
   w.admission.history.push(['Offer letter signed', s.sig.at]);
-  chComplete(w, { opt, method, amount: opt === 'deposit' ? CH_DEP : chFee(w) / CH_INST_N, ref: method === 'bank' ? chRefOf(w, opt) : 'TXN-70888' }, false, at);
+  chComplete(w, { opt, method, amount: opt === 'deposit' ? chDepOf(w) : chFee(w) / chInstNOf(w), ref: method === 'bank' ? chRefOf(w, opt) : 'TXN-70888' }, false, at);
 }
 const _applyEdgeCh = applyEdge;
 applyEdge = function () {

@@ -92,12 +92,13 @@ function chReleaseSeat(w, quiet) {
   if (b) b.enrolled = Math.max(0, b.enrolled - 1);
   s.releasedFrom = b ? b.code : s.batch; s.batch = null; w.nvq.batch = ''; w.nvq.status = 'Seat released';
   Object.assign(w.admission.deposit, { released: true, kept: true }); w.flags.admitted = true; if (!w.enrolments.includes(w.nvq)) w.enrolments.unshift(w.nvq);
-  w.admission.history.push(['Seat released — balance unpaid after 28 days (deposit kept)', now().toISOString()]);
+  const hd = w.admission.deposit.holdDays || chHoldDays(); // S4-07: the hold agreed at payment
+  w.admission.history.push([`Seat released — balance unpaid after ${hd} days (deposit kept)`, now().toISOString()]);
   if (quiet) return;
   notifyLearner(w.v, 'Admission', 'Your seat was released', CH_REL_BANNER, 'dashboard');
-  if (b) chCooNotify(b.coord, 'Seat released', `${chFullName(w)} left ${b.label} (${b.code}) — balance unpaid after the 28-day hold.`, 'c-batches.' + b.code);
+  if (b) chCooNotify(b.coord, 'Seat released', `${chFullName(w)} left ${b.label} (${b.code}) — balance unpaid after the ${hd}-day hold.`, 'c-batches.' + b.code);
   if (STORE.fin) STORE.fin.notifs.unshift({ to: 'all', t: 'Seat released — deposit kept', b: `${chFullName(w)} · ${b ? b.code : ''} · deposit ${money(w.admission.deposit.min || CH_DEP, 'GBP')} kept`, at: now().toISOString(), go: 'f-deposits', unread: true });
-  if (ADMIN && ADMIN.audit) logA('Admissions', `${chFullName(w)} (${w.me.id})`, 'Seat released', b ? b.code : '—', 'Removed from batch; deposit kept', 'Balance unpaid after the 28-day hold');
+  if (ADMIN && ADMIN.audit) logA('Admissions', `${chFullName(w)} (${w.me.id})`, 'Seat released', b ? b.code : '—', 'Removed from batch; deposit kept', `Balance unpaid after the ${hd}-day hold`);
 }
 const _edgeCh7c = applyEdge;
 applyEdge = function () {

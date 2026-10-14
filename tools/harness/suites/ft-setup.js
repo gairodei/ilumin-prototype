@@ -231,8 +231,8 @@
     ok('Scenario #27 "Create and publish an assignment": 7 steps, ends with the Coordinator\'s release', !!s && s[1] === 'Create and publish an assignment' && s[3].length === 7 && /submits/.test(s[3][4].text) && /releases/.test(s[3][6].text));
     ACT.s2Sc27Pub(); reason('Go'); ok('Scenario #27 demo assignment published to Aisha', STORE.worlds.C.assignments.some(a => a.id === 'a27'));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S2 entry', /Setup fixes — assignments/.test(main()));
-    go('demo-scenarios'); ok('Demo Scenarios: 28 (S3: #28 added)', app().querySelectorAll('main section[id^="sc-"]').length === 28);
-    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 11);
+    go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
+    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 16);
   });
 
   /* ================= S3 — NVQ programmes ================= */
@@ -383,9 +383,9 @@
     ACT.s3Sc28Edit(); ACT.s3Sc28Pub(); reason('Go'); ok('Scenario #28 demo: Version 3 published with U308', s3Pr('NV-L3').version === 3 && STORE.s3.trees['NV-L3'].some(u => u.code === 'U308') && !STORE.worlds.C.tree.some(u => u.code === 'U308'));
     ACT.s3Sc28Obs(); ok('Scenario #28 demo: IA-5 on the observation form', /IA-5/.test((mroot().querySelector('#op-ia') || {}).textContent || '')); closeModal();
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S3 entry', /Setup fixes — NVQ programmes/.test(main()));
-    go('demo-scenarios'); ok('Demo Scenarios: 28', app().querySelectorAll('main section[id^="sc-"]').length === 28);
+    go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 11);
+    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 16 /* S4a: 5 entries added */);
     SA(); go('a-assignments', { id: 'a9' }); ok('S2 / CH-17: "Marked by: … set in the batch\'s Assessors panel" — read-only, no input', /Marked by: .+, set in the batch's Assessors panel/.test(main()) && !app().querySelector('#ae-m') && !app().querySelector('.s2-marker input, .s2-marker select'));
   });
 
@@ -573,6 +573,267 @@
     ok('Marker: read-only line shows the batch\'s assignment assessor', bs.length > 0 && main().includes('Marked by: ' + before + ', set in the batch\'s Assessors panel') && !app().querySelector('.s2-marker input, .s2-marker select, .s2-marker textarea'));
     chAllocOf(bs[0]).asg = 'James Pryce'; bs.slice(1).forEach(b => { chAllocOf(b).asg = 'James Pryce'; }); go('a-assignments', { id: 'a9' });
     ok('Marker: changing the batch\'s assignment assessor changes the line', s2MarkedBy(d) === 'James Pryce' && main().includes('Marked by: James Pryce, set in the batch\'s Assessors panel'));
+  });
+
+  /* ================= S4a — admission and money ================= */
+  const FA4 = () => { setAdminIdentity('FA'); S.portal = 'admin'; S.signedIn = true; S.ui = {}; };
+  const T3 = 'Level 3 Diploma in Adult Care (England)', T2 = 'Level 2 Diploma in Care (England)';
+  // A learner without an NVQ starts a real sign-up from Browse
+  const apply4 = (v, title, country) => { learner(v); if (country) W.me.country = country; go('browse'); const c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === title); ACT.applyNvq({ dataset: { id: c.id } }); prim(); return W; };
+  const farBatch = title => ADMIN.batches.find(b => b.course === title && ['Open', 'Planned'].includes(b.status) && daysTo(b.start) >= 30 && b.enrolled < b.cap);
+  // Details, documents, the letter; then pay (bank transfer: no checkout pop-up) with the option asked for
+  const finish4 = (w, opt, batch) => { chSetBatch(w, batch || farBatch(w.nvq.title)); ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); setUi('suOpt', opt || 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal(); return w; };
+  const ckAdd = (pid, o, r = 'Setup test') => { ACT.s4CkAdd({ dataset: { p: pid } }); fill(o); if (o['#ck-e']) document.querySelector('#ck-e').checked = true; reason(r); };
+  const planSet = (pid, o) => { ACT.s4PlanEdit({ dataset: { p: pid } }); if ('dep' in o) { document.querySelector(`input[name="pp-dm"][value="${o.dep == null ? 'default' : 'own'}"]`).checked = true; if (o.dep != null) fill({ '#pp-dv': String(o.dep) }); } if (o.fee) fill({ '#pp-f': String(o.fee) }); if (o.n) fill({ '#pp-n': String(o.n) }); return reason(o.r || 'Setup test'); };
+  const cfgSet = (d, h) => { ACT.s4CfgEdit(); fill({ '#cf-d': String(d), '#cf-h': String(h) }); return reason('Setup test'); };
+
+  await T('S4-05 programme checklists: builder, edit, UK / UAE items, used at the right sign-up', async () => {
+    fresh(); SA(); setUi('clProg', 'NV-L3'); go('a-admissions', { tab: 'builder' });
+    const opts = [...document.querySelectorAll('#clp option')].map(o => o.value);
+    ok('S4-05 builder: the Programme list is the real programmes (not retired)', ['NV-L2', 'NV-L3', 'NV-L4', 'NV-L5', 'NV-N1', 'NV-N2'].every(x => opts.includes(x)) && !opts.includes('NV-L3O') && !!document.querySelector('[data-onchange="s4ClProg"]'));
+    ok('S4-05 seeded from today\'s applicant documents: UK and UAE versions', ['Passport or UK photo driving licence|UK', 'Passport|UAE', 'Right to work (share code letter)|UK', 'Emirates ID and residence visa|UAE', 'Enhanced DBS certificate|UK', 'Police clearance certificate|UAE', 'CV|All'].every(k => s4List('NV-L3').items.some(i => i.name + '|' + i.applies === k)) && /Applies to/.test(main()));
+    const v0 = s4List('NV-L3').v; ckAdd('NV-L3', { '#ck-n': 'Overseas qualification statement', '#ck-m': '0', '#ck-a': 'UAE', '#ck-f': 'PDF', '#ck-s': '3', '#ck-g': 'Only if your qualification is from outside the UK.' });
+    const it = s4List('NV-L3').items.find(i => i.name === 'Overseas qualification statement');
+    ok('S4-05 Add item: saved with every field, version up, audited, shown', !!it && !it.mand && it.applies === 'UAE' && it.max === '3 MB' && s4List('NV-L3').v === v0 + 1 && ADMIN.audit[0].action === 'Checklist item added' && /Overseas qualification statement/.test(main()));
+    ACT.s4CkAdd({ dataset: { p: 'NV-L3' } }); fill({ '#ck-n': 'Bad', '#ck-f': 'EXE' }); ok('S4-05 (negative) formats are checked', reason('x') === false); closeModal();
+    const cv = s4List('NV-L3').items.findIndex(i => i.name === 'CV'); ACT.s4CkEdit({ dataset: { p: 'NV-L3', i: cv } }); fill({ '#ck-s': '2' }); reason('Smaller CV files');
+    ok('S4-05 Edit: the change is saved and audited', s4List('NV-L3').items[cv].max === '2 MB' && ADMIN.audit[0].action === 'Checklist item changed');
+    const ref = s4List('NV-L3').items.findIndex(i => i.name === 'Employer reference letter'); ACT.s4CkRetire({ dataset: { p: 'NV-L3', i: ref } }); reason('Not needed');
+    ok('S4-05 Retire: kept on the list as Retired, audited', s4List('NV-L3').items[ref].status === 'Retired' && ADMIN.audit[0].action === 'Checklist item retired');
+    ACT.s4CkMove({ dataset: { p: 'NV-L3', i: 1, d: -1 } }); ok('S4-05 Move: order changes, audited', s4List('NV-L3').items[0].name === 'Passport' && ADMIN.audit[0].action === 'Checklist order changed');
+    ckAdd('NV-L2', { '#ck-n': 'Care Certificate (if you hold one)', '#ck-m': '0', '#ck-a': 'All', '#ck-f': 'PDF', '#ck-s': '5' });
+    // New applicants: Daniel (UK) on Level 3, Fatima (UAE) on Level 2, Tom (country India) on Level 3
+    const d = apply4('A', T3), dn = d.docs.map(x => x.name);
+    ok('S4-05 Daniel (UK, Level 3): All + UK items, the Level 3 list (not Level 2\'s), in its order', d.signup.prog === 'NV-L3' && dn.includes('Passport or UK photo driving licence') && dn.includes('Enhanced DBS certificate') && !dn.includes('Passport') && !dn.includes('Emirates ID and residence visa') && !dn.includes('Overseas qualification statement') && !dn.includes('Employer reference letter') && !dn.includes('Care Certificate (if you hold one)') && d.docs.find(x => x.name === 'CV').max === '2 MB');
+    go('admission'); ok('S4-05 consuming screen: Daniel\'s documents step lists those items', S.route === 'admission' && (ACT.suNext(), /Enhanced DBS certificate/.test(main())) && !/Emirates ID/.test(main()) && /Documents for applicants in United Kingdom/.test(main()));
+    ok('S4-05 has-expiry reaches the applicant', /has an expiry date/.test(main()) && d.docs.find(x => x.name === 'Right to work (share code letter)').expiryReq);
+    startUpload(d.docs.find(x => x.name === 'CV').id, 'cv.pdf', 3 * 1048576); ok('S4-05 the item\'s own maximum size is enforced (3 MB CV refused at 2 MB)', /maximum size is 2 MB/.test(JSON.stringify(ui('upl-' + d.docs.find(x => x.name === 'CV').id, {}))));
+    const f = apply4('F', T3), fnm = f.docs.map(x => x.name);
+    ok('S4-05 Fatima (UAE, Level 3): All + UAE items, including Level 3\'s UAE-only item', f.signup.prog === 'NV-L3' && fnm.includes('Passport') && fnm.includes('Emirates ID and residence visa') && fnm.includes('Police clearance certificate') && fnm.includes('Overseas qualification statement') && !fnm.includes('Enhanced DBS certificate') && !fnm.includes('Right to work (share code letter)') && !fnm.includes('Care Certificate (if you hold one)'));
+    const e = apply4('E', T2), en = e.docs.map(x => x.name);
+    ok('S4-05 Tom (UK, Level 2): All + UK items and Level 2\'s own item (Level 3 changes don\'t leak)', e.signup.prog === 'NV-L2' && en.includes('Enhanced DBS certificate') && en.includes('Care Certificate (if you hold one)') && en.includes('Employer reference letter') && e.docs.find(x => x.name === 'CV').max === '5 MB' && !en.includes('Passport'));
+    const t = apply4('H', T3, 'India');
+    ok('S4-05 other country (India): the UK items by the region rule (CH-03), flagged — nothing dropped', t.docs.some(x => x.name === 'Right to work (share code letter)') && t.signup.docsRegion === 'UK' && ADMIN.audit.some(a => a.action === 'Sign-up terms fixed' && /country India/.test(a.after)));
+    SA(); go('a-admissions', { id: 'APP-H' }); ok('S4-05 Admissions: the application shows the checklist version and the other-country flag', /Checklist version \d+ — UK items for India/.test(main()) && /provisional, pending client confirmation/.test(main()));
+    // Snapshot: a later change doesn't touch an application in progress
+    const snap = JSON.stringify(d.docs.map(x => x.name)); ckAdd('NV-L3', { '#ck-n': 'Occupational health form', '#ck-m': '1', '#ck-a': 'All', '#ck-f': 'PDF', '#ck-s': '5' });
+    ok('S4-05 in-progress application keeps its copied list', JSON.stringify(d.docs.map(x => x.name)) === snap && !d.docs.some(x => x.name === 'Occupational health form'));
+    ok('S4-05 Priya Raman\'s seeded documents are unchanged', JSON.stringify(STORE.worlds.B.docs.map(x => [x.name, x.status])) === JSON.stringify([['Passport', 'Approved'], ['Emirates ID and residence visa', 'Approved'], ['Proof of address (last 3 months)', 'Rejected'], ['Police clearance certificate', 'Resubmission Required'], ['Highest qualification certificate', 'Submitted'], ['CV', 'Pending'], ['Employer reference letter', 'Pending']]));
+    FA4(); go('a-admissions', { tab: 'builder' }); const n0 = s4List('NV-L3').items.length; ACT.s4CkAdd({ dataset: { p: 'NV-L3' } });
+    ok('S4-05 (negative) Finance can\'t change a checklist (refused, logged)', !MODAL && s4List('NV-L3').items.length === n0 && ADMIN.audit[0].action === 'Blocked: change the document checklist');
+    acaEnter('KA'); S.signedIn = true; go('a-programmes', { id: 'NV-N1', tab: 'docs' });
+    ok('S4-05 the wizard\'s checklist step uses the same list (quick picks + details)', document.querySelectorAll('.ch8-doc').length === 7 && !!document.querySelector('.s4-ck [data-act="s4CkAdd"][data-p="NV-N1"]'));
+  });
+
+  await T('S4-06 / S4-07 programme payment plans and the deposit default reach sign-up', async () => {
+    fresh();
+    ok('S4-06 seeded from today\'s sign-up: L3 £2,400 / default £300 / 6; L2 £1,800; L5 £3,600; NV-N2 own £150 / 3', (t => t.fee === 2400 && t.deposit === 300 && !t.own && t.inst === 6)(s4TermsOf('NV-L3')) && s4TermsOf('NV-L2').fee === 1800 && s4TermsOf('NV-L5').fee === 3600 && (t => t.fee === 900 && t.deposit === 150 && t.own && t.inst === 3)(s4TermsOf('NV-N2')));
+    ok('S4-06 Level 4 has no fee: needs configuration (no £2,400 fallback)', /no active payment plan|No programme fee/.test(s4TermsOf('NV-L4').issue) && s4TermsOf('NV-L4').fee === null);
+    ok('S4-06 the conflicting legacy templates don\'t change the Level 3 plan (£350 × 6, £175 × 12)', STORE.fin.templates.some(r => /Level 3/.test(r.course) && r.gbp === 350) && STORE.fin.templates.some(r => r.gbp === 175 && r.n === 12) && s4TermsOf('NV-L3').inst === 6 && s4TermsOf('NV-L3').fee / s4TermsOf('NV-L3').inst === 400);
+    FA4(); go('f-plans', { tab: 'templates' });
+    ok('S4-06 Finance → Plan templates: programme plans, deposit default, legacy templates marked unassigned', !!app().querySelector('.s4-plans') && !!app().querySelector('.s4-cfg') && /Legacy plan templates — unassigned/.test(main()) && /never used at sign-up/.test(main()) && !!app().querySelector('[data-act="s4PlanEdit"][data-p="NV-L4"]') && /Needs configuration/.test(app().querySelector('.s4-plans tr[data-pid="NV-L4"]').textContent));
+    ACT.s4PlanEdit({ dataset: { t: 'PL-1' } }); ok('S4-06 a legacy template only pre-fills the editor (nothing saved until "Save")', !!MODAL && document.querySelector('#pp-n').value === '12' && s4Plans('NV-L3').length === 1); closeModal();
+    ok('S4-06 the editor has no way to postpone the first instalment (CH-10)', (ACT.s4PlanEdit({ dataset: { p: 'NV-L2' } }), /First instalment: due at sign-up/.test(mroot().textContent) && !mroot().querySelector('input[type="date"]'))); closeModal();
+    ok('S4-06 (negative) a plan that doesn\'t divide evenly is refused', planSet('NV-L2', { n: 7 }) === false && s4Plans('NV-L2').length === 1); closeModal();
+    ok('S4-06 (negative) a deposit at or above the fee is refused', planSet('NV-L2', { dep: 1800 }) === false); closeModal();
+    planSet('NV-L2', { dep: 200, r: 'Lower L2 deposit' });
+    ok('S4-06 Edit: version 2 with every field, audited; version 1 kept', (p => p.v === 2 && p.deposit === 200 && p.inst === 6 && p.partial === true)(s4PlanCur('NV-L2')) && s4Plans('NV-L2')[0].status === 'Superseded' && ADMIN.audit[0].action === 'Payment plan saved');
+    planSet('NV-L4', { fee: 3000, dep: null, r: 'Fee confirmed' }); ok('S4-06 Set up the Level 4 plan: no longer needs configuration', !s4TermsOf('NV-L4').issue && s4TermsOf('NV-L4').fee === 3000);
+    ACT.s4PlanRetire({ dataset: { p: 'NV-L5' } }); reason('Under review'); ok('S4-06 Retire: Level 5 now needs configuration; history kept', !!s4TermsOf('NV-L5').issue && s4Plans('NV-L5')[0].status === 'Retired' && ADMIN.audit[0].action === 'Payment plan retired');
+    SA(); planSet('NV-L3', { fee: 2700, r: 'New fee' }); learner('A'); go('browse');
+    ok('S4-06 a fee change (Super Admin) reaches Browse for new learners; the agency / bundle list price doesn\'t move (CH-04, CH-06)', CATALOGUE.find(c => c.kind === 'nvq' && c.title === T3).price === 2700 && NVQ_FEES[T3] === 2400 && /2,700/.test(main()));
+    FA4();
+    FA4(); cfgSet(250, 21); ok('S4-07 deposit default and hold saved, audited, shown in System Configuration', S4().cfg.deposit === 250 && S4().cfg.hold === 21 && ADMIN.audit[0].action === 'Updated' && (SA(), go('a-config'), /£250\.00 · 21 days/.test(main())));
+    ok('S4-07 precedence: default programmes use £250, own deposits keep theirs (L2 £200, NV-N2 £150)', s4TermsOf('NV-L3').deposit === 250 && s4TermsOf('NV-L2').deposit === 200 && s4TermsOf('NV-N2').deposit === 150);
+    // A new Level 3 deposit sign-up uses the new default and hold
+    const b = farBatch(T3), d = apply4('A', T3); finish4(d, 'deposit', b);
+    ok('S4-07 sign-up: deposit £250, balance £2,450, hold 21 days, first row due at the hold', d.signup.done && d.admission.deposit.min === 250 && d.admission.deposit.balance === 2450 && d.admission.deposit.holdDays === 21 && Math.round(daysTo(d.admission.deposit.holdUntil)) === 21 && d.plans.find(p => p.e === 'nvq').rows[0].amount === 2450);
+    ok('S4-07 / CH-10 deposit eligibility stays at 28 days with a 21-day hold (25 days away: no deposit)', !chDepositOk({ start: D(25) }) && chDepositOk({ start: D(28) }));
+    learner('A'); go('payments'); ok('S4-06 consuming screen: Daniel\'s Payments page shows the £2,450 balance', /2,450/.test(main()));
+    FA4(); setUi('fpL', 'A'); go('f-plans'); ok('S4-06 consuming screen: Finance → Payment Plans shows his schedule', /2,450/.test(main()) && /Level 3 Diploma in Adult Care/.test(main()));
+    chReleaseSeat(d); ok('S4-07 / P-32 seat release states his own 21-day hold; deposit kept; batch seat freed', d.admission.deposit.released && d.admission.deposit.kept && /after 21 days/.test(d.admission.history.slice(-1)[0][0]) && !d.signup.batch);
+    // Instalments: Tom on Level 2 (own £200 deposit plan, instalments), first instalment due now
+    const f = apply4('E', T2); finish4(f, 'instalment');
+    const pl = f.plans.find(p => p.e === 'nvq');
+    ok('S4-06 instalment sign-up: 6 × £300 from the Level 2 plan; the first is due at sign-up', pl.rows.length === 6 && pl.rows.every(r => r.amount === 300) && Math.abs(daysTo(pl.rows[0].due)) < 1 && pl.total === 1800);
+  });
+
+  await T('S4-06 / S4-07 existing learners and applicants keep their terms; blocked payment', async () => {
+    fresh(); const aisha = JSON.stringify(STORE.worlds.C.plans), priya = STORE.worlds.B;
+    FA4(); cfgSet(250, 21); SA(); planSet('NV-L3', { fee: 2700, n: 6, r: 'New fee' });
+    ok('S4-06 enrolled learners keep their plans (Aisha byte-for-byte)', JSON.stringify(STORE.worlds.C.plans) === aisha);
+    ok('S4-07 Priya (sign-up in progress) keeps the plan in force when she started: £2,400, £300 deposit', priya.signup.plan.fee === 2400 && priya.signup.plan.deposit === 300 && priya.signup.letterV === 1, JSON.stringify(priya.signup.plan) + ' lv ' + priya.signup.letterV + ' same ' + (priya === STORE.worlds.B));
+    S.variant = 'B'; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; W.signup.step = 4; setUi('suOpt', 'deposit'); go('admission');
+    ok('S4-07 Priya\'s payment step still shows £300 (her pinned terms)', /£300\.00/.test(main()) && !/£250\.00/.test(main()));
+    learner('A'); go('browse'); const c = CATALOGUE.find(x => x.id === 'k7'); ACT.applyNvq({ dataset: { id: 'k7' } }); prim();
+    ok('S4a Priya\'s demo journey isn\'t used for new learners; she still opens hers from the demo switcher', W.v === 'A' && W.signup.prog === 'NV-L3' && STORE.worlds.B.signup.step === 4 - 0 && !!c);
+    FA4(); ACT.s4PlanRetire({ dataset: { p: 'NV-L2' } }); reason('Repricing'); const f = apply4('E', T2);
+    ACT.suNext(); f.docs.forEach(x => { x.status = 'Submitted'; }); ACT.suNext(); setUi('suSig', 'Tom Whitfield'); setUi('suDecl', true); ACT.suSign(); render();
+    ok('S4-06 a plan that needs configuration blocks payment with a clear message', /Payment isn't available yet — needs configuration/.test(main()) && !app().querySelector('[data-act="suPay"]'));
+    ACT.suPay(); ok('S4-06 (negative) a direct payment attempt is refused and logged; nothing recorded', !f.signup.done && !f.plans.some(p => p.e === 'nvq') && ADMIN.audit[0].action === 'Blocked: payment');
+  });
+
+  await T('S4-08 Finance / Super Admin plan operations and permissions', async () => {
+    fresh(); SA(); go('a-finance', { tab: 'plans' });
+    ok('S4-08 Super Admin → Instalment plans: programme plans, deposit default, per-learner operations', !!app().querySelector('.s4-plans') && !!app().querySelector('.s4-cfg') && ['adjust', 'waive', 'discount'].every(k => !!app().querySelector(`[data-act="s4Adj"][data-k="${k}"]`)));
+    setUi('s4AdjL', 'C'); setUi('s4AdjE', 'nvq'); render(); const pl = STORE.worlds.C.plans.find(p => p.e === 'nvq'), open = pl.rows.filter(r => r.status !== 'Paid'), row = open[0], amt0 = row.amount, n0 = STORE.fin.adjust.length;
+    ACT.s4Adj({ dataset: { k: 'discount' } }); fill({ '#wv-r': String(row.n), '#wv-a': '50' }); document.querySelector('#wv-k').value = 'amt'; reason('Early payment');
+    ok('S4-08 "Discount" = Finance\'s waiver / discount on the learner\'s real plan', row.amount === amt0 - 50 && row.waived >= 50 && STORE.fin.adjust.length === n0 + 1);
+    const due0 = open[open.length - 1].due; ACT.s4Adj({ dataset: { k: 'adjust' } }); fill({ '#ad-r': String(open[open.length - 1].n), '#ad-d': D(60).slice(0, 10) }); reason('Hardship');
+    ok('S4-08 "Adjust schedule" moves the instalment (Finance\'s own tool)', open[open.length - 1].due !== due0);
+    FA4(); setUi('fpL', 'C'); go('f-plans'); ok('S4-08 consuming screen: Finance → Payment Plans shows the waiver on Aisha\'s instalment', /waived £50\.00/.test(main()));
+    learner('C'); go('payments'); ok('S4-08 consuming screen: Aisha\'s Payments page shows the reduced instalment', main().includes(money(row.amount, 'GBP')));
+    role('sysA'); go('a-finance', { tab: 'plans' }); const before = JSON.stringify(STORE.worlds.C.plans);
+    ok('S4-08 System Admin: read-only (no plan or learner buttons)', !app().querySelector('[data-act="s4PlanEdit"]') && !app().querySelector('[data-act="s4Adj"]'));
+    ACT.s4Adj({ dataset: { k: 'waive' } }); ok('S4-08 (negative) System Admin direct waive refused, logged, plan unchanged', !MODAL && JSON.stringify(STORE.worlds.C.plans) === before && /^Blocked:/.test(ADMIN.audit[0].action));
+    ACT.finAdjust({ dataset: { v: 'C', e: 'nvq' } }); ok('S4-08 (negative) Finance\'s own tool refuses non-Finance roles too', !MODAL);
+    ACT.s4PlanEdit({ dataset: { p: 'NV-L3' } }); ok('S4-08 (negative) System Admin can\'t edit a programme plan', !MODAL && ADMIN.audit[0].action === 'Blocked: change payment plans');
+    ACT.cfgEdit({ dataset: { id: ADMIN.config.find(c => c.name === S4_CFG).id } }); ok('S4-07 (negative) System Admin can\'t edit the deposit configuration (direct call)', !MODAL && S4().cfg.deposit === 300 && ADMIN.audit[0].action === 'Blocked: change the deposit configuration');
+    acaEnter('KA'); S.signedIn = true; ACT.ch8SavePlan({ dataset: { id: 'NV-N2' } }); ok('S4-08 (negative) Academic Admin can\'t save a wizard plan', ADMIN.audit[0].action === 'Blocked: payment plan' && s4TermsOf('NV-N2').deposit === 150);
+    FA4(); go('f-plans', { tab: 'templates' }); ok('S4-08 Finance: editable plans and deposit default', !!app().querySelector('[data-act="s4PlanEdit"][data-p="NV-L3"]') && !!app().querySelector('[data-act="s4CfgEdit"]'));
+    SA(); go('a-programmes', { id: 'NV-N2', tab: 'plan' }); fill({ '#pp-d': '180', '#pp-n': '3' }); ACT.ch8SavePlan({ dataset: { id: 'NV-N2' } });
+    ok('S4-06 the wizard\'s plan step writes the same versioned plan', s4TermsOf('NV-N2').deposit === 180 && s4PlanCur('NV-N2').v === 2 && ADMIN.audit[0].action === 'Payment plan saved');
+  });
+
+  await T('S4-09 offer-letter versions, restore, pinning and the signed record', async () => {
+    fresh(); SA(); go('a-programmes', { id: 'NV-L3', tab: 'letter' }); const v1 = chLetterCur('NV-L3'), v1t = JSON.stringify(v1.text);
+    ACT.chLetterUp({ dataset: { id: 'NV-L3' } }); ACT.chLetterSample(); fill({ '#lt-x': 'Version two paragraph about {{programme}}.\n\nSecond paragraph for {{full_name}}.' }); reason('New wording');
+    const v2 = chLetterCur('NV-L3');
+    ok('S4-09 a new version stores its own text and file; version 1 unchanged', v2.v === 2 && v2.text.length === 2 && /Version two paragraph/.test(v2.text[0]) && JSON.stringify(chLetters('NV-L3')[0].text) === v1t && v2.file === 'offer letter (client template).docx' && ADMIN.audit[0].action === 'Offer letter uploaded');
+    ok('S4-09 versions can\'t be edited in place (frozen)', Object.isFrozen(v2) && Object.isFrozen(v2.text));
+    ACT.s4LetterPrev({ dataset: { id: 'NV-L3', v: '1' } }); ok('S4-09 preview of an earlier version shows its own text', /letter version 1/.test(mroot().textContent) && /Offer letter — version 1/.test(MODAL.title) && !/Version two paragraph/.test(mroot().textContent)); closeModal();
+    // Daniel starts now: pinned to version 2
+    const d = apply4('A', T3); ok('S4-09 the letter version is pinned when the sign-up starts', d.signup.letterV === 2);
+    SA(); ACT.s4LetterRestore({ dataset: { id: 'NV-L3', v: '1' } }); reason('Back to the client template');
+    const v3 = chLetterCur('NV-L3');
+    ok('S4-09 Restore as new version: version 3 = version 1\'s text; history kept', v3.v === 3 && JSON.stringify(v3.text) === v1t && v3.from === 1 && chLetters('NV-L3').length === 3 && ADMIN.audit[0].action === 'Offer letter restored as new version');
+    learner('A'); go('admission'); ACT.suNext(); d.docs.forEach(x => { x.status = 'Submitted'; }); ACT.suNext();
+    ok('S4-09 Daniel reads version 2 (his pinned version), not the newer version 3', /Version two paragraph about Level 3 Diploma/.test(main()) && /letter version 2/.test(main()));
+    setUi('suSig', 'Daniel Okafor'); setUi('suDecl', true); ACT.suSign();
+    ok('S4-09 signing keeps an unchangeable snapshot of the signed text, with the version', d.signup.sig.v === 2 && d.signup.sig.snapshot && /Version two paragraph/.test(d.signup.sig.snapshot.text[0]) && Object.isFrozen(d.signup.sig.snapshot));
+    SA(); ACT.chLetterUp({ dataset: { id: 'NV-L3' } }); ACT.chLetterSample(); fill({ '#lt-x': 'Version four wording.' }); reason('Later change');
+    ACT.chSignedPdf({ dataset: { v: 'A' } });
+    ok('S4-09 the signed letter still shows what was signed after later versions', /Version two paragraph/.test(mroot().textContent) && !/Version four wording/.test(mroot().textContent) && /exact text signed/.test(mroot().textContent));
+    ok('S4-09 the PDF download is labelled simulated (no false "downloaded")', /Download PDF \(simulated\)/.test(MODAL.actions.find(x => /Download PDF/.test(x.label)).label) && /PDF \(simulated\)/.test(MODAL.sub || ''));
+    closeModal();
+    ok('S4-09 Priya (seeded) still signs version 1', STORE.worlds.B.signup.letterV === 1 && chLetterFor(STORE.worlds.B).v === 1);
+    FA4(); const n = chLetters('NV-L3').length; ACT.chLetterUp({ dataset: { id: 'NV-L3' } });
+    ok('S4-09 (negative) Finance can\'t upload a letter (refused, logged)', !MODAL && chLetters('NV-L3').length === n && ADMIN.audit[0].action === 'Blocked: change the offer letter');
+    ACT.s4LetterRestore({ dataset: { id: 'NV-L3', v: '1' } }); ok('S4-09 (negative) Finance can\'t restore a version', !MODAL && chLetters('NV-L3').length === n);
+  });
+
+  await T('S4a end to end: new Level 2 and Level 3 learners get their own programme\'s set-up; Priya and #16 unchanged', async () => {
+    fresh(); FA4(); planSet('NV-L2', { dep: 200, r: 'L2 deposit' });
+    SA(); ckAdd('NV-L2', { '#ck-n': 'Care Certificate (if you hold one)', '#ck-m': '0', '#ck-a': 'All', '#ck-f': 'PDF', '#ck-s': '5' });
+    ACT.chLetterUp({ dataset: { id: 'NV-L2' } }); ACT.chLetterSample(); fill({ '#lt-x': 'Level 2 welcome text.' }); reason('L2 v2');
+    const b3 = farBatch(T3), b2 = farBatch(T2);
+    const d = apply4('A', T3); finish4(d, 'deposit', b3);
+    const f = apply4('E', T2); finish4(f, 'deposit', b2);
+    const u = apply4('F', T3); finish4(u, 'deposit');
+    ok('E2E: Daniel (L3) — L3 checklist (UK), L3 plan (£300 default), L3 letter v1, L3 structure', d.signup.done && d.docs.some(x => x.name === 'Enhanced DBS certificate') && !d.docs.some(x => /Care Certificate/.test(x.name)) && d.admission.deposit.min === 300 && d.signup.sig.v === 1 && d.tree.some(u => u.code === 'U301') && d.nvq.title === T3);
+    ok('E2E: Tom (L2) — L2 checklist (UK + L2 item), L2 plan (own £200), L2 letter v2', f.signup.done && f.docs.some(x => x.name === 'Enhanced DBS certificate') && f.docs.some(x => /Care Certificate/.test(x.name)) && f.admission.deposit.min === 200 && f.signup.sig.v === 2 && /Level 2 welcome text/.test(f.signup.sig.snapshot.text[0]) && f.nvq.title === T2);
+    ok('E2E: Fatima (UAE, L3) — UAE items, nearest UAE batch (CH-42), L3 plan', u.signup.done && u.docs.some(x => x.name === 'Emirates ID and residence visa') && !u.docs.some(x => x.name === 'Enhanced DBS certificate') && /AUH/.test(u.signup.batch) && u.admission.deposit.min === 300);
+    const g = apply4('F', T3); ok('E2E: one NVQ sign-up per learner (Fatima can\'t start a second)', g === u && STORE.worlds.F.signup.prog === 'NV-L3');
+    ok('E2E: the sign-up order is unchanged (details → documents → letter → payment → start)', chSteps(d).map(s => s[0]).join() === 'details,documents,letter,payment,start');
+    ok('E2E: real batch, version and enrolment state', b3.enrolled >= 1 && d.signup.batch === b3.code && d.nvq.progVersion === s3Pr('NV-L3').version && d.admission.status === 'Awaiting review');
+    SA(); go('a-admissions'); ok('E2E: all three appear in Admissions → Applications for review (review after payment)', /Daniel Okafor/.test(main()) && /Tom Whitfield/.test(main()) && /Fatima Al Mansoori/.test(main()));
+    go('a-admissions', { id: 'APP-A' }); ok('E2E: the application shows the fixed checklist / plan / letter versions', /Checklist version 1 — UK items for United Kingdom/.test(main()) && /offer letter version 1/.test(main()));
+    const B = STORE.worlds.B; ok('E2E: Priya Raman\'s seeded journey is unchanged (step 2, UAE documents, letter v1, £300)', B.signup.step === 2 && !B.signup.prog && B.docs.length === 7 && B.docs[1].name === 'Emirates ID and residence visa' && B.signup.letterV === 1 && B.signup.plan.deposit === 300 && B.admission.deposit.min === 300);
+    const s16 = SC_LIST().find(x => x[0] === '16'); ok('E2E: Scenario #16 is still Priya\'s new sign-up', !!s16 && /New sign-up/.test(s16[1]));
+    const s29 = SC_LIST().find(x => x[0] === '29'); ok('Scenario #29: 6 steps, set-up then a new learner\'s sign-up', !!s29 && s29[3].length === 6 && /Daniel Okafor/.test(s29[3][3].text));
+    ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S4a entry', /Setup fixes — admission and money/.test(main()));
+    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
+    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 16);
+    fresh(); const z = apply4('F', T2); ACT.suNext(); ok('E2E (negative): the country rule still applies — no Level 2 batch for a UAE applicant (CH-42)', z.signup.step === 1 && !z.signup.batch);
+  });
+
+  /* ================= S4a acceptance verification ================= */
+  const agyPrices = () => JSON.stringify(AGY_CATALOGUE().map(c => [c.id, c.unit, c.fixedPct, priceFor(c, 10)]));
+  const nvqProd = extra => priceOf({ courses: [T3], seats: 10, pct: null, slabs: null, customTotal: null, cur: 'GBP', ...extra });
+
+  await T('S4a verification 1 — price consistency and commercial isolation (CH-04, CH-06)', async () => {
+    fresh(); const agy0 = agyPrices(), buys0 = JSON.stringify([STORE.agy.purchases, STORE.agy.ledger]), aisha0 = JSON.stringify(STORE.worlds.C.plans), shorts0 = JSON.stringify(CATALOGUE.filter(c => c.kind !== 'nvq').map(c => [c.id, c.price])), courses0 = JSON.stringify(ADMIN.courses.map(c => [c.id, c.gbp]));
+    const pPct0 = JSON.stringify(nvqProd({ pct: 10 })), pNeg0 = JSON.stringify(nvqProd({ customTotal: 20000 }));
+    FA4(); go('f-plans', { tab: 'templates' }); ACT.s4PlanEdit({ dataset: { p: 'NV-L3' } });
+    ok('Price: Finance sees the programme fee read-only in the plan editor', document.querySelector('#pp-f').readOnly && /only the Super Administrator changes it/.test(mroot().textContent));
+    document.querySelector('#pp-f').readOnly = false; fill({ '#pp-f': '2700' });
+    ok('Price (negative): Finance can\'t change a programme\'s price through a plan (refused, logged)', reason('Try') === false && s4TermsOf('NV-L3').fee === 2400 && ADMIN.audit[0].action === 'Blocked: change the programme fee'); closeModal();
+    ok('Price: the plan editor lists NVQ programmes only — no short course', (ACT.s4PlanEdit({ dataset: { t: 'PL-0' } }), [...document.querySelectorAll('#pp-p option')].every(o => s3Progs().some(p => p.id === o.value)))); closeModal();
+    planSet('NV-L4', { fee: 3000, r: 'Fee confirmed by Finance' }); ok('Price: Finance can set a missing fee (Level 4 needs configuration)', s4TermsOf('NV-L4').fee === 3000 && !s4TermsOf('NV-L4').issue);
+    SA(); planSet('NV-L3', { fee: 2700, r: 'New price list' });
+    ok('Price: the Super Admin changes the Level 3 fee: new version, audited', s4TermsOf('NV-L3').fee === 2700 && ADMIN.audit[0].action === 'Payment plan saved');
+    learner('A'); go('browse'); ok('Price: a new learner sees £2,700 on Browse', /2,700/.test(main()));
+    const d = apply4('A', T3); finish4(d, 'instalment');
+    ok('Price: the new learner\'s sign-up uses £2,700 (6 × £450)', d.plans.find(p => p.e === 'nvq').total === 2700 && d.plans.find(p => p.e === 'nvq').rows[0].amount === 450);
+    ok('CH-04: an enrolled learner\'s agreed fee, plan and balance are unchanged (Aisha)', JSON.stringify(STORE.worlds.C.plans) === aisha0);
+    ok('CH-04: an applicant in progress keeps her pinned £2,400 (Priya)', STORE.worlds.B.signup.plan.fee === 2400);
+    ok('CH-06: agency bundle prices, VAT and discounts are unchanged; purchases and ledger untouched', agyPrices() === agy0 && JSON.stringify([STORE.agy.purchases, STORE.agy.ledger]) === buys0 && NVQ_FEES[T3] === 2400);
+    ok('Negotiated / discounted NVQ bundle prices aren\'t recalculated from the new fee', JSON.stringify(nvqProd({ pct: 10 })) === pPct0 && JSON.stringify(nvqProd({ customTotal: 20000 })) === pNeg0);
+    ok('Short-course selling prices are untouched by plan edits', JSON.stringify(CATALOGUE.filter(c => c.kind !== 'nvq').map(c => [c.id, c.price])) === shorts0 && JSON.stringify(ADMIN.courses.map(c => [c.id, c.gbp])) === courses0);
+  });
+
+  await T('S4a verification 2 — deposit eligibility is fixed at 28 days; the hold is configurable (CH-10, P-32)', async () => {
+    fresh(); const holdC0 = STORE.worlds.C.admission.deposit.holdUntil, inDays = n => new Date(now().getTime() + (n - 0.5) * DAY).toISOString(); // shown as 'in n days'
+    [1, 21, 28].forEach(h => { FA4(); if (S4().cfg.hold !== h) cfgSet(300, h);
+      ok(`CH-10 boundary with a ${h}-day hold: 28 days away → deposit; 27 days away → instalments only`, S4().cfg.hold === h && daysTo(inDays(28)) === 28 && daysTo(inDays(27)) === 27 && chDepositOk({ start: inDays(28) }) && !chDepositOk({ start: inDays(27) })); });
+    FA4(); cfgSet(300, 21);
+    const mk = (code, days) => { const b = { code, label: 'Test intake ' + days, course: T3, start: inDays(days), end: D(days + 300), cap: 10, enrolled: 0, mode: 'Online', coord: 'Laura Kemp', teachers: [], assessors: [], status: 'Open', wait: 0, roster: [], coh: [] }; ADMIN.batches.push(b); return b; };
+    const b27 = mk('TST-27', 27), b28 = mk('TST-28', 28);
+    const toPay = (v, b) => { const w = apply4(v, T3); ACT.suNext(); w.docs.forEach(x => { x.status = 'Submitted'; }); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); chSetBatch(w, b); setUi('suOpt', ''); render(); return w; };
+    const a = toPay('A', b27);
+    ok('CH-10 payment step: batch 27 days away with a 21-day hold → no deposit option, the reason says 28 days', !document.querySelector('input[name="su-opt"][value="deposit"]') && /28 days or more/.test(main()));
+    const e = toPay('E', b28);
+    ok('CH-10 payment step: batch 28 days away → deposit offered; balance due within 21 days (the hold)', !!document.querySelector('input[name="su-opt"][value="deposit"]') && /within 21 days/.test(main()));
+    setUi('suOpt', 'deposit'); setUi('suMethod', 'bank'); render(); ACT.suPay();
+    ok('S4-07 the new deposit holds the seat for 21 days (configured), not until the batch starts', e.signup.done && e.admission.deposit.holdDays === 21 && Math.round(daysTo(e.admission.deposit.holdUntil)) === 21);
+    ok('S4-07 an existing deposit keeps its agreed hold deadline', STORE.worlds.C.admission.deposit.holdUntil === holdC0);
+    FA4(); cfgSet(300, 14); ok('S4-07 a later hold change doesn\'t move a running hold', e.admission.deposit.holdDays === 21 && Math.round(daysTo(e.admission.deposit.holdUntil)) === 21);
+    chReleaseSeat(e);
+    ok('P-32 seat release: removed from the batch, deposit kept, materials read-only', chReleased(e) && e.admission.deposit.kept && !e.signup.batch && e.nvq.status === 'Seat released' && /after 21 days/.test(e.admission.history.slice(-1)[0][0]));
+    learner('E'); ACT.chSignAgain(); go('admission');
+    ok('P-32 sign up again: instalments only (no deposit)', e.signup.noDeposit && (render(), !document.querySelector('input[name="su-opt"][value="deposit"]')));
+  });
+
+  await T('S4a verification 3 — the default deposit is inherited until a programme has its own', async () => {
+    fresh(); FA4();
+    ok('Inherit: NV-N1 (wizard) follows the default; NV-N2 has its own £150', s4PlanCur('NV-N1').deposit === null && s4PlanCur('NV-N2').deposit === 150);
+    cfgSet(250, 28); ok('Inherit: a default change reaches NV-N1 (and Level 3), not NV-N2', s4TermsOf('NV-N1').deposit === 250 && s4TermsOf('NV-L3').deposit === 250 && s4TermsOf('NV-N2').deposit === 150);
+    SA(); go('a-programmes', { id: 'NV-N1', tab: 'plan' }); ok('Inherit: the wizard plan step shows "Use the default" selected', document.querySelector('input[name="pp-wdm"][value="default"]').checked);
+    fill({ '#pp-n': '4' }); ACT.ch8SavePlan({ dataset: { id: 'NV-N1' } });
+    ok('Inherit: saving the wizard plan step without choosing an own deposit keeps inheriting', s4PlanCur('NV-N1').deposit === null && s4PlanCur('NV-N1').inst === 4);
+    SA(); go('a-programmes', { id: 'NV-N1', tab: 'plan' }); document.querySelector('input[name="pp-wdm"][value="own"]').checked = true; fill({ '#pp-d': '400' }); ACT.ch8SavePlan({ dataset: { id: 'NV-N1' } });
+    FA4(); cfgSet(260, 28); ok('Override: NV-N1\'s own £400 is no longer affected by the default', s4TermsOf('NV-N1').deposit === 400 && s4TermsOf('NV-L3').deposit === 260);
+    // The same distinction end to end on a published wizard programme (NV-N2): inherit, sign up, override, sign up
+    planSet('NV-N2', { dep: null, r: 'Follow the default' }); go('f-plans', { tab: 'templates' });
+    ok('Builder: NV-N2 now shows the default deposit', /\(default\)/.test(app().querySelector('.s4-plans tr[data-pid="NV-N2"]').textContent) && /£260\.00/.test(app().querySelector('.s4-plans tr[data-pid="NV-N2"]').textContent));
+    const n2T = n2().title, w1 = apply4('A', n2T); ACT.suNext(); w1.docs.forEach(x => { x.status = 'Submitted'; }); ACT.suNext(); setUi('suSig', 'Daniel Okafor'); setUi('suDecl', true); ACT.suSign(); chSetBatch(w1, ADMIN.batches.find(b => b.code === 'L2PW-DEC26-ONL')); setUi('suOpt', 'deposit'); render();
+    ok('Payment step: the inherited deposit (£260)', /Deposit \(holds your seat\) — £260\.00 now/.test(main()));
+    setUi('suMethod', 'bank'); render(); ACT.suPay();
+    ok('Payment record: deposit £260, balance £640', w1.admission.deposit.min === 260 && w1.plans.find(p => p.e === 'nvq').rows[0].amount === 640 && w1.signup.plan.own === false);
+    FA4(); setUi('fpL', 'A'); go('f-plans'); ok('Finance view: his £640 balance', /640/.test(main()));
+    planSet('NV-N2', { dep: 180, r: 'Own deposit' }); cfgSet(270, 28);
+    ok('Override: NV-N2\'s £180 stays when the default changes; the earlier learner keeps £260', s4TermsOf('NV-N2').deposit === 180 && w1.admission.deposit.min === 260);
+    go('f-plans', { tab: 'templates' }); ok('Builder: NV-N2 shows its own deposit', /£180\.00 \(own\)/.test(app().querySelector('.s4-plans tr[data-pid="NV-N2"]').textContent));
+    const w2 = apply4('E', n2T); ACT.suNext(); w2.docs.forEach(x => { x.status = 'Submitted'; }); ACT.suNext(); setUi('suSig', 'Tom Whitfield'); setUi('suDecl', true); ACT.suSign(); chSetBatch(w2, ADMIN.batches.find(b => b.code === 'L2PW-DEC26-ONL')); setUi('suOpt', 'deposit'); setUi('suMethod', 'bank'); render();
+    ok('Payment step: the own deposit (£180)', /Deposit \(holds your seat\) — £180\.00 now/.test(main()));
+    ACT.suPay(); ok('Payment record: deposit £180, balance £720, recorded as own', w2.admission.deposit.min === 180 && w2.plans.find(p => p.e === 'nvq').rows[0].amount === 720 && w2.signup.plan.own === true);
+  });
+
+  await T('S4a seat hold capped at 1–28 days (prototype choice; CH-10 eligibility unchanged)', async () => {
+    fresh(); FA4(); const holdC0 = STORE.worlds.C.admission.deposit.holdUntil, cfgRow = () => ADMIN.config.find(c => c.name === S4_CFG);
+    ok('Hold default is 28 days', S4().cfg.hold === 28 && /28 days/.test(cfgRow().value));
+    [0, 29, 90].forEach(h => { const r = cfgSet(300, h); ok(`Hold ${h} days is rejected (refused, logged, unchanged)`, r === false && S4().cfg.hold === 28 && ADMIN.audit[0].action === 'Rejected: seat hold out of range' && new RegExp('Enter 1 to 28 days').test(mroot().textContent)); closeModal(); });
+    ACT.cfgEdit({ dataset: { id: cfgRow().id } }); document.querySelector('#cf-h').removeAttribute('max'); fill({ '#cf-d': '300', '#cf-h': '45' });
+    ok('Hold out of range is refused through the System Configuration action too (input limit removed)', reason('Bypass') === false && S4().cfg.hold === 28); closeModal();
+    ok('Hold 1 day (lower boundary) is accepted', cfgSet(300, 1) !== false && S4().cfg.hold === 1 && /1 days/.test(cfgRow().value));
+    const e = apply4('E', T3); finish4(e, 'deposit');
+    ok('A new deposit sign-up is held for 1 day', e.signup.done && e.admission.deposit.holdDays === 1 && Math.round(daysTo(e.admission.deposit.holdUntil)) === 1);
+    ok('CH-10 eligibility is still 28 days with a 1-day hold', chDepositOk({ start: new Date(now().getTime() + 27.5 * DAY).toISOString() }) && !chDepositOk({ start: new Date(now().getTime() + 26.5 * DAY).toISOString() }));
+    const e0 = e.admission.deposit.holdUntil;
+    ok('Hold 28 days (upper boundary) is accepted', cfgSet(300, 28) !== false && S4().cfg.hold === 28);
+    ok('Existing hold deadlines are unchanged by the setting (the new learner and Aisha)', e.admission.deposit.holdUntil === e0 && e.admission.deposit.holdDays === 1 && STORE.worlds.C.admission.deposit.holdUntil === holdC0);
+    chReleaseSeat(e); ok('P-32 unchanged: release says his own 1-day hold, deposit kept', e.admission.deposit.kept && /after 1 days/.test(e.admission.history.slice(-1)[0][0]));
+    go('f-plans', { tab: 'templates' }); ok('The 28-day maximum is shown as a prototype choice to confirm with the client', /1–28 days; the 28-day maximum is a prototype choice to confirm with the client/.test(main()));
   });
 
   fresh();

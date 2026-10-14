@@ -106,7 +106,7 @@
   });
   // ---------- G12.6/7 ----------
   T('G12.6/7 Demo Scenarios', () => {
-    ACT.scOpen(); const secs = document.querySelectorAll('main section[id^="sc-"]'); ok('28 scenarios (S3: #28 added)', secs.length === 28, secs.length);
+    ACT.scOpen(); const secs = document.querySelectorAll('main section[id^="sc-"]'); ok('29 scenarios (S4a: #29 added)', secs.length === 29, secs.length);
     ok('#1 has Coordinator release step', /Release queue/.test(document.getElementById('sc-1').textContent)); ok('#6 Super Admin step', /processed immediately/.test(document.getElementById('sc-6').textContent));
     ok('#7 withdrawal → office branch', /withdraws permission/.test(document.getElementById('sc-7').textContent) && /Academy office/.test(document.getElementById('sc-7').textContent));
     ok('#8 raiser is Assessor', /Assessor raises/.test(document.getElementById('sc-8').textContent)); ok('#9 no invoice document', !/invoice/i.test(document.getElementById('sc-9').textContent));

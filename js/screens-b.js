@@ -64,7 +64,7 @@ function startUpload(id, name, size) {
   const ext = (name.split('.').pop() || '').toLowerCase();
   const allowed = d.formats.toLowerCase().includes('docx') && ext === 'docx' || ['pdf', 'jpg', 'jpeg', 'png'].includes(ext) && d.formats.toLowerCase().includes(ext === 'jpeg' ? 'jpg' : ext);
   if (!allowed) { setUi('upl-' + id, { err: `"${name}" is a .${ext} file. Upload a ${d.formats} file.` }); render(); return; }
-  if (size > 5 * 1024 * 1024) { setUi('upl-' + id, { err: `"${name}" is ${(size / 1048576).toFixed(1)} MB. The maximum size is ${d.max}.` }); render(); return; }
+  if (size > (parseFloat(d.max) || 5) * 1024 * 1024) { /* S4-05: the checklist item's maximum size */ setUi('upl-' + id, { err: `"${name}" is ${(size / 1048576).toFixed(1)} MB. The maximum size is ${d.max}.` }); render(); return; }
   setUi('upl-' + id, { name, p: 0 }); render();
   let p = 0;
   const t = setInterval(() => {
