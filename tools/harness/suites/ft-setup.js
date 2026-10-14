@@ -232,7 +232,7 @@
     ACT.s2Sc27Pub(); reason('Go'); ok('Scenario #27 demo assignment published to Aisha', STORE.worlds.C.assignments.some(a => a.id === 'a27'));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S2 entry', /Setup fixes — assignments/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
-    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 19);
+    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3, N4: 1 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 20);
   });
 
   /* ================= S3 — NVQ programmes ================= */
@@ -385,7 +385,7 @@
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S3 entry', /Setup fixes — NVQ programmes/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 19 /* S4a: 5, S4b: 3 entries added */);
+    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 20 /* S4a: 5, S4b: 3, N4: 1 entries added */);
     SA(); go('a-assignments', { id: 'a9' }); ok('S2 / CH-17: "Marked by: … set in the batch\'s Assessors panel" — read-only, no input', /Marked by: .+, set in the batch's Assessors panel/.test(main()) && !app().querySelector('#ae-m') && !app().querySelector('.s2-marker input, .s2-marker select'));
   });
 
@@ -743,7 +743,7 @@
     const s29 = SC_LIST().find(x => x[0] === '29'); ok('Scenario #29: 6 steps, set-up then a new learner\'s sign-up', !!s29 && s29[3].length === 6 && /Daniel Okafor/.test(s29[3][3].text));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S4a entry', /Setup fixes — admission and money/.test(main()));
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 19 /* S4b: 3 entries added */);
+    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 20 /* S4b: 3, N4: 1 entries added */);
     fresh(); const z = apply4('F', T2); ACT.suNext(); ok('E2E (negative): the country rule still applies — no Level 2 batch for a UAE applicant (CH-42)', z.signup.step === 1 && !z.signup.batch);
   });
 
@@ -1081,6 +1081,63 @@
     verOpen(cert.no, 'q'); ok('N1 the new short-course certificate verifies (Valid)', /Valid/.test(main()) && ADMIN.audit[0].module === 'Certificate verification');
     learner('C'); go('index'); ok('N1 learner screen index: qualified state described as "the certificate comes by post"', /the certificate comes by post/.test(html()) && !/what happens before the certificate/.test(html()));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: N1 entry', /Certificate delivery — NVQ certificates are posted/.test(main()));
+  });
+
+  /* ================= N4 — session-linked attendance registers ================= */
+  await T('N4 one register per session, by learner ID; shared class; teacher, Coordinator, learner, admin', async () => {
+    fresh(); const legacy0 = JSON.stringify([ADMIN.sessions, ADMIN.unmatched]), tree0 = JSON.stringify(STORE.worlds.C.tree), conf0 = kConflicts().length;
+    const d = apply4('A', T3); finish4(d, 'instalment'); const LEI = d.signup.batch, DID = d.me.id, AID = STORE.worlds.C.me.id, GID = STORE.worlds.D.me.id;
+    SA(); shareAdd('L3AC-JAN26', { t: 'Shared revision class', at: D(-1, '11:00'), mins: 60, teacher: 'Marcus Bell', with: [LEI] }); const s = s4bAllSess().find(x => x.title === 'Shared revision class');
+    const el = n4Eligible(s), jan = chCohLids(ADMIN.batches.find(b => b.code === 'L3AC-JAN26'));
+    ok('N4 eligible learners = the learner IDs of both batches taking part', !!s && el.includes(AID) && el.includes(DID) && jan.every(l => el.includes(l)) && el.every(l => /^IA-L-\d+$/.test(l)));
+    ok('N4 learners of unrelated batches are excluded (Grace, Croydon Cohort 4)', !el.includes(GID) && !chCohLids(ADMIN.batches.find(b => b.code === 'L2DC-MAR26')).some(l => el.includes(l)));
+    go('a-attendance'); ok('N4 admin Attendance lists the class session; the Zoom sessions are kept as legacy registers', !!app().querySelector(`.n4-admin [data-go="a-attendance"][data-id="${s.id}"]`) && /Legacy Zoom registers \(name-based\)/.test(main()));
+    go('a-attendance', { id: s.id }); ok('N4 one register for the session; opening it writes nothing', /Attendance register — Shared revision class/.test(main()) && app().querySelectorAll('.n4-reg tr[data-lid]').length === el.length && !N4().regs[s.id]);
+    ADMIN.batches.find(b => b.code === LEI).roster.push(['Aisha Rahman', AID, 'Self-funded']);
+    go('a-attendance', { id: s.id }); ok('N4 a learner in both batches has ONE row (de-duplicated by learner ID)', n4Eligible(s).length === el.length && app().querySelectorAll(`.n4-reg tr[data-lid="${AID}"]`).length === 1);
+    // Simulated Zoom import: matched by registered email only; re-import is idempotent
+    ACT.n4Import({ dataset: { s: s.id } }); const reg = N4().regs[s.id], nRows = Object.keys(reg.rows).length, nUm = Object.keys(reg.unmatched).length;
+    ok('N4 import (simulated): one row per eligible learner, audited', nRows === n4Eligible(s).length && ADMIN.audit[0].action === 'Zoom attendance imported (simulated)');
+    const um = Object.values(reg.unmatched), guest = um.find(p => /^Guest/.test(p.name));
+    ok('N4 unmatched participants are kept, never matched by name (a guest, anyone not using the registered email)', !!guest && guest.state === 'Open' && um.filter(p => /\(phone\)/.test(p.name)).every(p => reg.rows[p.pid.split(':')[1]].status === 'Absent'));
+    ACT.n4Set({ dataset: { s: s.id, l: AID } }); document.querySelector('#n4-st').value = 'Present'; fill({ '#n4-m': '55' }); reason('Joined from the classroom PC');
+    ok('N4 manual correction: reason and history kept, audited', reg.rows[AID].status === 'Present' && reg.rows[AID].src === 'manual' && reg.rows[AID].hist[0][4] === 'Joined from the classroom PC' && reg.rows[AID].hist.length >= 2 && ADMIN.audit[0].action === 'Attendance corrected');
+    ACT.n4Import({ dataset: { s: s.id } });
+    ok('N4 re-import: no duplicate rows or participants; the manual correction is kept', Object.keys(reg.rows).length === nRows && Object.keys(reg.unmatched).length === nUm && reg.rows[AID].status === 'Present' && reg.rows[AID].src === 'manual' && /manual kept/.test(ADMIN.audit[0].after));
+    ACT.n4Match({ dataset: { s: s.id, p: guest.pid } }); document.querySelector('#n4-ml').insertAdjacentHTML('beforeend', `<option value="${GID}">Grace</option>`); document.querySelector('#n4-ml').value = GID; fill({ '#rsn': 'Try' });
+    ok('N4 (negative) a participant can\'t be credited to a learner who isn\'t taking part (refused, logged)', prim() === false && !reg.rows[GID] && guest.state === 'Open' && ADMIN.audit[0].action === 'Blocked: credit attendance to a learner who isn\'t taking part'); closeModal();
+    ACT.n4Match({ dataset: { s: s.id, p: guest.pid } }); document.querySelector('#n4-ml').value = DID; reason('Daniel confirmed he joined as a guest');
+    ok('N4 a person matches the participant to a verified learner ID, with a reason', guest.state === 'Matched' && guest.lid === DID && reg.rows[DID].src === 'zoom (matched)' && ADMIN.audit[0].action === 'Zoom participant matched');
+    // Teacher: the session's teacher manages; another teacher can't
+    TCH('T'); go('t-sessions'); ok('N4 teacher (Marcus): the session is in "Your class sessions"', !!app().querySelector(`.n4-tas [data-id="${s.id}"]`));
+    go('t-sessions', { id: s.id }); ok('N4 teacher opens the same register', /Attendance register — Shared revision class/.test(main()) && !!app().querySelector(`[data-act="n4Set"][data-l="${DID}"]`));
+    const dSt = reg.rows[DID].status; ACT.n4Set({ dataset: { s: s.id, l: DID } }); document.querySelector('#n4-st').value = dSt === 'Late' ? 'Present' : 'Late'; reason('Joined at 11:12');
+    ok('N4 teacher records a correction (audited as the teacher)', reg.rows[DID].status !== dSt && reg.rows[DID].hist[0][1] === 'Marcus Bell');
+    TCH('A'); go('t-sessions', { id: s.id }); ok('N4 (negative) another teacher can\'t open the register', /only open registers for sessions you teach/.test(main()) && ADMIN.audit[0].action === 'Blocked: open this attendance register');
+    const before = JSON.stringify(reg.rows); ACT.n4Set({ dataset: { s: s.id, l: DID } }); ok('N4 (negative) another teacher can\'t change attendance (refused, logged, unchanged)', !MODAL && JSON.stringify(reg.rows) === before && ADMIN.audit[0].action === 'Blocked: record attendance for this session');
+    FA4(); ACT.n4Set({ dataset: { s: s.id, l: AID } }); ok('N4 (negative) Finance can\'t change attendance', !MODAL && JSON.stringify(reg.rows) === before);
+    // Coordinator: view only, own batches' learners
+    COO('A'); go('c-attendance'); ok('N4 Coordinator (Leicester Cohort 7) sees the session (view only)', !!app().querySelector(`.n4-coo [data-act="n4View"][data-s="${s.id}"]`));
+    ACT.n4View({ dataset: { s: s.id } }); ok('N4 Coordinator sees her batch\'s learners only — not Daniel (Leicester Cohort 8); no edit buttons', !!mroot().querySelector(`tr[data-lid="${AID}"]`) && !mroot().querySelector(`tr[data-lid="${DID}"]`) && !mroot().querySelector('[data-act="n4Set"], [data-act="n4Import"]')); closeModal();
+    COO('B'); ACT.n4View({ dataset: { s: s.id } }); ok('N4 (negative) a Coordinator of neither batch can\'t view it', !MODAL && ADMIN.audit[0].action === 'Blocked: view this attendance register');
+    // Learner: own row only; a shared class counted once
+    learner('C'); go('attendance'); const card = app().querySelector('.n4-learner');
+    ok('N4 Aisha sees her own record for the session (Present), counted once', !!card && /Attended 1 of 1 recorded class/.test(card.textContent) && card.querySelectorAll(`tr[data-sid="${s.id}"]`).length === 1 && /Present/.test(card.textContent));
+    ok('N4 a learner sees no one else\'s attendance', !card.textContent.includes('Daniel') && !card.textContent.includes(DID));
+    learner('A'); go('attendance'); ok('N4 Daniel sees his own record', /Attended 1 of 1 recorded class/.test(app().querySelector('.n4-learner').textContent));
+    SA(); go('a-learner', { id: AID, tab: 'attendance' }); ok('N4 Learner 360 → Attendance shows the same register record', /Class sessions — attendance register/.test(main()) && /Attended 1 of 1 recorded class/.test(main()));
+    // Reschedule, remove a batch, cancel: history kept
+    ACT.s4bSessEdit({ dataset: { b: 'L3AC-JAN26', id: s.id } }); fill({ '#se-d': D(-1, '12:00').slice(0, 16), '#se-r': 'Moved' }); prim(); closeModal();
+    ok('N4 rescheduling keeps the same register and rows', s.start === D(-1, '12:00') && N4().regs[s.id] === reg && Object.keys(reg.rows).length === nRows);
+    ACT.s4bSessEdit({ dataset: { b: 'L3AC-JAN26', id: s.id } }); document.querySelector(`.se-w[value="${LEI}"]`).checked = false; fill({ '#se-r': 'Leicester 8 has its own class' }); prim(); prim(); closeModal();
+    go('a-attendance', { id: s.id }); ok('N4 removing a batch keeps its learners\' attendance as read-only history', !!reg.rows[DID] && !!app().querySelector(`.n4-past tr[data-lid="${DID}"]`) && !app().querySelector(`[data-act="n4Set"][data-l="${DID}"]`));
+    ACT.s4bSessCancel({ dataset: { b: 'L3AC-JAN26', id: s.id } }); reason('Room flooded'); const rows1 = JSON.stringify(reg.rows);
+    ACT.n4Set({ dataset: { s: s.id, l: AID } }); ok('N4 cancelling keeps recorded attendance; no new entries', JSON.stringify(reg.rows) === rows1 && !MODAL && reg.rows[AID].status === 'Present');
+    learner('C'); go('attendance'); ok('N4 the learner sees it marked cancelled with her recorded status kept', /Cancelled/.test(app().querySelector('.n4-learner').textContent) && /Present/.test(app().querySelector('.n4-learner').textContent));
+    ok('N4 attendance completes nothing (Aisha\'s criteria unchanged)', JSON.stringify(STORE.worlds.C.tree) === tree0);
+    ok('N4 the seeded Zoom sessions and unmatched list are unchanged', JSON.stringify([ADMIN.sessions, ADMIN.unmatched]) === legacy0);
+    SA(); go('a-attendance', { id: 'ZS-01' }); ok('N4 a legacy Zoom register still opens as before', /Session register/.test(main()) && /Aisha Rahman/.test(main()));
+    ok('N4 S4b conflicts and calendars unaffected', kConflicts().length === conf0 && (learner('C'), go('calendar'), evsOf('C').some(e => e.id === s.id)));
   });
 
   fresh();
