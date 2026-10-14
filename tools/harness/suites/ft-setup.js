@@ -232,7 +232,7 @@
     ACT.s2Sc27Pub(); reason('Go'); ok('Scenario #27 demo assignment published to Aisha', STORE.worlds.C.assignments.some(a => a.id === 'a27'));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S2 entry', /Setup fixes — assignments/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
-    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3, N4: 1, N2: 1 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 21);
+    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 22);
   });
 
   /* ================= S3 — NVQ programmes ================= */
@@ -385,7 +385,7 @@
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S3 entry', /Setup fixes — NVQ programmes/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 21 /* S4a: 5, S4b: 3, N4: 1, N2: 1 entries added */);
+    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 22 /* S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1 entries added */);
     SA(); go('a-assignments', { id: 'a9' }); ok('S2 / CH-17: "Marked by: … set in the batch\'s Assessors panel" — read-only, no input', /Marked by: .+, set in the batch's Assessors panel/.test(main()) && !app().querySelector('#ae-m') && !app().querySelector('.s2-marker input, .s2-marker select'));
   });
 
@@ -743,7 +743,7 @@
     const s29 = SC_LIST().find(x => x[0] === '29'); ok('Scenario #29: 6 steps, set-up then a new learner\'s sign-up', !!s29 && s29[3].length === 6 && /Daniel Okafor/.test(s29[3][3].text));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S4a entry', /Setup fixes — admission and money/.test(main()));
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 21 /* S4b: 3, N4: 1, N2: 1 entries added */);
+    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 22 /* S4b: 3, N4: 1, N2: 1, N3: 1 entries added */);
     fresh(); const z = apply4('F', T2); ACT.suNext(); ok('E2E (negative): the country rule still applies — no Level 2 batch for a UAE applicant (CH-42)', z.signup.step === 1 && !z.signup.batch);
   });
 
@@ -1187,7 +1187,7 @@
     ACT.s4bBatchEdit({ dataset: { id: 'L3SP-MAR27' } }); const sl = document.querySelector('#bd-dm'); sl.disabled = false; sl.innerHTML = '<option>Self-Paced</option><option>Fully Assisted</option>'; sl.value = 'Fully Assisted'; fill({ '#bd-r': 'Forced by System Admin' });
     ok('N2 (negative) a forced mode change on an enrolled batch is refused for the System Admin too (logged, unchanged)', prim() === false && sp.dmode === 'Self-Paced' && ADMIN.audit[0].action === 'Blocked: change delivery mode'); closeModal();
     FA4(); ACT.s4bBatchEdit({ dataset: { id: 'L3SP-SYS27' } }); ok('N2 (negative) Finance still can\'t edit batch details', !MODAL && sysB.dmode === 'Fully Assisted' && ADMIN.audit[0].action === 'Blocked: edit batch details');
-    role('sysA'); ACT.addSession({ dataset: { b: 'L3SP-SYS27' } }); ok('N2 System Admin session rights not broadened (Add session still Super Admin / Academic Admin only)', !MODAL && ADMIN.audit[0].action === 'Blocked: add sessions');
+    role('sysA'); ACT.addSession({ dataset: { b: 'L3SP-SYS27' } }); ok('N2 / N3 the System Admin can add a class session (client-confirmed: Timetable: classes ☒, Create Zoom sessions ☒)', !!MODAL && !!document.querySelector('#se-n')); closeModal();
     // CH-17 / P-33, shared classes and N4 registers still work across modes
     SA(); go('a-batches', { id: 'L3SP-MAR27', tab: 'staff' }); ok('N2 CH-17 / P-33 unchanged on a Self-Paced batch (Coordinator can\'t be its assessor)', main().includes(CH_P33) && !Object.values(chAllocOf(sp)).includes(sp.coord));
     shareAdd('L3AC-JAN26', { t: 'Mixed-mode class', at: D(-1, '13:00'), mins: 60, teacher: 'Marcus Bell', with: ['L3SP-MAR27'] }); const s = s4bAllSess().find(x => x.title === 'Mixed-mode class');
@@ -1200,6 +1200,94 @@
     acaEnter('KA'); S.signedIn = true; go('a-programmes', { id: 'NV-N1', tab: 'details' }); ok('N2 wizard Details: "Default delivery mode for new batches"', /Default delivery mode for new batches/.test(main()) && !/<legend class="lbl">Support type<\/legend>/.test(html()));
     go('a-programmes', { id: 'NV-N1', tab: 'review' }); ok('N2 wizard Review: the same label', /Default delivery mode for new batches/.test(main()));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: N2 entry; N4 limitations stated', /NVQ batch-level delivery mode/.test(main()) && /NOT client-approved academic eligibility policies/.test(main()) && /Thresholds tab is not functional yet/.test(main()) && /unverified demo data/.test(main()) && /Grace Mensah/.test(main()));
+  });
+
+  /* ================= N3 — class planning (weekly Fully Assisted, limited Self-Paced) ================= */
+  const n3Save = (code, o) => { ACT.n3Weekly({ dataset: { b: code } }); if (!MODAL) return false; const set = { '#n3-wd': o.wd || 'Tuesday', '#n3-t': o.t || '17:00', '#n3-m': String(o.m || 90), '#n3-te': o.te || 'Marcus Bell', '#n3-f': o.f, '#n3-to': o.to, '#n3-n': o.n || 'Weekly class', '#n3-r': o.r || 'Timetable' }; Object.entries(set).forEach(([k, v]) => { document.querySelector(k).value = v; }); const p1 = prim(), pv = (document.querySelector('#n3-pv') || {}).textContent || ''; const p2 = p1 === false ? prim() : p1; if (MODAL) closeModal(); return { pv, p2 }; };
+  const dayAdd = (iso, n) => new Date(new Date(iso).getTime() + n * DAY).toISOString().slice(0, 10);
+  await T('N3 class planning: weekly plan, limited plan, sharing, history, conflicts, permissions', async () => {
+    fresh(); const keep = JSON.stringify([STORE.worlds.C.plans, STORE.worlds.C.assignments.map(a => a.due), STORE.worlds.B.signup, STORE.chFees]), janN = s4bSessFor('L3AC-JAN26').length;
+    SA(); go('a-batches'); const fa = mkBatchN2('L3FA-W27', T3, 'Fully Assisted', 'Online', 'Dr Helen Carter'), sp = mkBatchN2('L3SP-W27', T3, 'Self-Paced', 'Online', 'Dr Helen Carter'), sp2 = mkBatchN2('L3SP-X27', T3, 'Self-Paced', 'Online', 'Dr Helen Carter');
+    go('a-batches', { id: 'L3FA-W27', tab: 'schedule' }); ok('N3 Fully Assisted batch → weekly class plan on the Schedule tab (not configured yet)', /Class plan — Fully Assisted \(weekly\)/.test(main()) && /hasn't been configured/.test(main()) && !!app().querySelector('[data-act="n3Weekly"]'));
+    go('a-batches', { id: 'L3SP-W27', tab: 'schedule' }); ok('N3 Self-Paced batch → limited class plan', /Class plan — Self-Paced \(limited classes\)/.test(main()) && !!app().querySelector('[data-act="n3Target"]') && !app().querySelector('[data-act="n3Weekly"]'));
+    const f = fa.start.slice(0, 10), t4 = dayAdd(fa.start, 27), exp = n3Dates({ weekday: 'Tuesday', time: '17:00', from: f, to: t4 }, fa);
+    const r1 = n3Save('L3FA-W27', { f, to: t4 }), occ = n3Plan('L3FA-W27').occ, ids = Object.values(occ), ss = ids.map(s4bSessById);
+    ok('N3 weekly plan: preview first, then saved', /Preview — nothing is saved yet/.test(r1.pv) && new RegExp(exp.length + ' new class').test(r1.pv) && n3Plan('L3FA-W27').weeklyStatus === 'Saved' && ADMIN.audit.some(a => a.action === 'Class plan saved'));
+    ok('N3 one real S4b session per Tuesday, each with its own stable id; no attendance created', exp.length === 4 && ids.length === 4 && new Set(ids).size === 4 && ss.every(s => s && s.batch === 'L3FA-W27' && s.status === 'Scheduled' && (new Date(s.end) - new Date(s.start)) === 90 * 6e4 && s.teacher === 'Marcus Bell') && ids.every(id => !N4().regs[id]));
+    ok('N3 one notice per person for the whole plan (not one per class): the Coordinator once, the teacher once', STORE.coo.notifs.filter(n => n.t === 'Class timetable changed' && n.to === 'Dr Helen Carter').length === 1 && STORE.tas.notifs.filter(n => n.t === 'Class timetable changed' && /^Marcus Bell:/.test(n.b)).length === 1);
+    go('a-batches', { id: 'L3FA-W27', tab: 'schedule' }); ok('N3 the Schedule tab lists them; the header shows the plan', ids.every(id => !!app().querySelector(`[data-act="s4bSessEdit"][data-id="${id}"]`)) && /Weekly: Tuesdays 17:00/.test(main()));
+    const r2 = n3Save('L3FA-W27', { f, to: t4 }); ok('N3 saving the same plan again creates no duplicates', /No change to the sessions/.test(r2.pv) && s4bSessFor('L3FA-W27').length === 4 && Object.values(n3Plan('L3FA-W27').occ).join() === ids.join());
+    // Learners: one on the FA batch (roster), Daniel on the Self-Paced batch
+    const lid = ADMIN.learners[40].id; fa.roster.push([ADMIN.learners[40].name, lid, 'Self-funded']);
+    const d = apply4('A', T3); ACT.suNext(); d.docs.forEach(x => { x.status = 'Submitted'; }); ACT.suNext(); setUi('suSig', 'Daniel Okafor'); setUi('suDecl', true); ACT.suSign(); chSetBatch(d, sp); setUi('suOpt', 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal(); const plan0 = JSON.stringify(d.plans);
+    // A held class (attended) and one changed individually
+    SA(); const [s1, s2, s3, s4] = ss; s1.start = D(-1, '17:00'); s1.end = D(-1, '18:30'); ACT.n4Import({ dataset: { s: s1.id } }); const rows1 = JSON.stringify(N4().regs[s1.id].rows);
+    ACT.s4bSessEdit({ dataset: { b: 'L3FA-W27', id: s2.id } }); fill({ '#se-d': s2.start.slice(0, 11) + '19:00', '#se-r': 'Teacher training' }); prim(); closeModal(); const s2start = s2.start;
+    const r3 = n3Save('L3FA-W27', { f, to: t4, t: '18:00', r: 'Later start' });
+    ok('N3 editing the plan: preview lists updated and kept classes', /2 upcoming classes updated/.test(r3.pv) && /2 kept unchanged/.test(r3.pv) && /held or attended/.test(r3.pv) && /changed individually/.test(r3.pv));
+    ok('N3 the held class and its attendance are untouched; the individually changed class keeps its time', s1.start === D(-1, '17:00') && JSON.stringify(N4().regs[s1.id].rows) === rows1 && s2.start === s2start && s3.start.slice(11, 16) === '18:00' && s4.start.slice(11, 16) === '18:00');
+    // Self-Paced: a planned number, own and shared classes, counted once
+    ACT.n3Target({ dataset: { b: 'L3SP-W27' } }); fill({ '#n3-c': '3' }); reason('Three classes for this intake');
+    ok('N3 Self-Paced planned number saved (per batch, any number)', n3Plan('L3SP-W27').target === 3 && /Incomplete — 0 of 3 planned/.test(n3SpState(sp).label));
+    ACT.n3Target({ dataset: { b: 'L3SP-X27' } }); fill({ '#n3-c': '5' }); reason('Five classes'); ok('N3 another Self-Paced batch of the same programme: a different number (5)', n3Plan('L3SP-X27').target === 5);
+    ACT.n3Target({ dataset: { b: 'L3SP-W27' } }); fill({ '#n3-c': '0' }); ok('N3 (negative) the number must be a whole number of classes', reason('x') === false); closeModal();
+    ACT.n3Join({ dataset: { b: 'L3SP-W27' } }); ok('N3 "Join a shared class" offers upcoming classes of Fully Assisted batches of the same programme only', [...document.querySelectorAll('#n3-j option')].every(o => { const s = s4bSessById(o.value); return s4PidOfTitle(n3Batch(s.batch).course) === 'NV-L3' && n2ModeOf(n3Batch(s.batch)) === 'Fully Assisted'; }) && [...document.querySelectorAll('#n3-j option')].some(o => o.value === s4.id) && ![...document.querySelectorAll('#n3-j option')].some(o => o.value === s1.id));
+    document.querySelector('#n3-j').value = s4.id; reason('Shared revision class');
+    ACT.addSession({ dataset: { b: 'L3SP-W27' } }); fill({ '#se-n': 'Self-Paced check-in class', '#se-d': dayAdd(sp.start, 10) + 'T17:00', '#se-m': '60' }); prim(); if (MODAL) prim(); closeModal();
+    ok('N3 the shared class is ONE session (still organised by the Fully Assisted batch) and counts once for each batch', s4.batch === 'L3FA-W27' && s4.with.join() === 'L3SP-W27' && n3SpClasses('L3SP-W27').length === 2 && s4bSessFor('L3FA-W27').filter(s => s.id === s4.id).length === 1 && /Incomplete — 2 of 3 planned/.test(n3SpState(sp).label));
+    ACT.n3Complete({ dataset: { b: 'L3SP-W27' } }); ok('N3 (negative) "Mark plan complete" is refused while the count doesn\'t match (logged)', !MODAL && !n3Plan('L3SP-W27').complete && ADMIN.audit[0].action === 'Blocked: mark class plan complete');
+    ACT.n3Target({ dataset: { b: 'L3SP-W27' } }); fill({ '#n3-c': '2' }); reason('Two is enough'); ACT.n3Complete({ dataset: { b: 'L3SP-W27' } }); reason('Checked');
+    ok('N3 count matches → plan marked complete', n3Plan('L3SP-W27').complete && /^Complete — 2 of 2 planned/.test(n3SpState(sp).label));
+    ACT.n3Target({ dataset: { b: 'L3SP-W27' } }); fill({ '#n3-c': '1' }); reason('Test'); ok('N3 over-allocated plans are identified', /Over-allocated — 2 planned, 1 intended/.test(n3SpState(sp).label)); ACT.n3Target({ dataset: { b: 'L3SP-W27' } }); fill({ '#n3-c': '2' }); reason('Back');
+    go('a-batches', { id: 'L3SP-W27', tab: 'schedule' }); ok('N3 Self-Paced Schedule tab: the plan, both classes (one shared) and the timetable', /shared — organised by L3FA-W27/.test(main()) && /this batch's class/.test(main()) && app().querySelectorAll('.n3-cls li').length === 2);
+    learner('A'); go('calendar'); ok('N3 Daniel (Self-Paced) has the shared class and his own class on his calendar, once each', d.events.filter(e => e.id === 'bs-' + s4.id).length === 1 && d.events.some(e => /Self-Paced check-in class/.test(e.title)));
+    TCH('T'); go('t-calendar'); setUi('ccView', 'agenda'); setUi('ccDate', s4.start.slice(0, 10)); render(); ok('N3 the teacher sees the shared class once', app().querySelectorAll(`main [data-id="${s4.id}"]`).length === 1);
+    COO('A'); go('c-batches', { id: 'L3SP-W27' }); ok('N3 Coordinator overview shows the class plan', /Class plan/.test(main()) && /2 of 2 planned/.test(main()));
+    ok('N3 the N4 register for the shared class includes the eligible learners of both batches', n4Eligible(s4).includes(d.me.id) && n4Eligible(s4).includes(lid) && !n4Eligible(s4).includes(STORE.worlds.C.me.id));
+    SA(); ACT.n3Remove({ dataset: { b: 'L3SP-W27', s: s4.id } }); reason('Not needed');
+    ok('N3 removing the shared class from the Self-Paced plan leaves it on the Fully Assisted timetable; Daniel no longer has it', n3Live(s4) && s4.with.length === 0 && s4bSessFor('L3FA-W27').some(s => s.id === s4.id) && !d.events.some(e => e.id === 'bs-' + s4.id) && n3SpClasses('L3SP-W27').length === 1);
+    // Range shrink cancels (keeps) upcoming plan classes; cancelling a held class keeps its attendance
+    const r4 = n3Save('L3FA-W27', { f, to: dayAdd(fa.start, 13), t: '18:00', r: 'Shorter run' });
+    ok('N3 dates dropped from the plan are cancelled and kept in history (not deleted)', /no longer in the plan — cancelled/.test(r4.pv) && s4.status === 'Cancelled' && s4.n3Removed && !!s4bSessById(s4.id) && s1.status !== 'Cancelled');
+    ACT.s4bSessCancel({ dataset: { b: 'L3FA-W27', id: s1.id } }); reason('Recorded in error');
+    ok('N3 cancelling a held class keeps its attendance history', s1.status === 'Cancelled' && JSON.stringify(N4().regs[s1.id].rows) === rows1);
+    // Conflicts
+    ACT.addSession({ dataset: { b: 'L3AC-JAN26' } }); fill({ '#se-n': 'Clashing class', '#se-d': s2.start.slice(0, 16), '#se-m': '60' }); document.querySelector('#se-t').value = 'Marcus Bell'; prim(); prim(); closeModal();
+    ok('N3 a plan class still clashes with the same teacher\'s other class (detected)', kConflicts().some(c => c.what === 'Teacher double-booked' && /Clashing class/.test(c.detail) && /Weekly class/.test(c.detail)));
+    // Permissions
+    role('sysA'); const n0 = s4bAllSess().length; const r5 = n3Save('L3FA-W27', { f, to: dayAdd(fa.start, 27), t: '18:00', r: 'Sys extends' });
+    const occN = n3Plan('L3FA-W27').occ, newIds = Object.values(occN).filter(id => !ids.includes(id)), ns = newIds.map(s4bSessById);
+    ok('N3 the System Admin configures and generates the weekly plan (client-confirmed: Timetable: classes ☒) — preview first, then saved', /Preview — nothing is saved yet/.test(r5.pv) && n3Plan('L3FA-W27').weeklyStatus === 'Saved' && newIds.length === 2 && s4bAllSess().length === n0 + 2 && ns.every(s => s && s.status === 'Scheduled' && s.start.slice(11, 16) === '18:00' && s.hist[0][1] === ADMIN.me.name));
+    ok('N3 regenerated dates get new sessions; the cancelled ones stay cancelled in history with their ids', s3.status === 'Cancelled' && s4.status === 'Cancelled' && !!s4bSessById(s3.id) && !newIds.includes(s3.id) && !newIds.includes(s4.id));
+    const r6 = n3Save('L3FA-W27', { f, to: dayAdd(fa.start, 27), t: '18:00', r: 'Sys re-saves' }); ok('N3 the System Admin re-saving the same plan creates no duplicates', /No change to the sessions/.test(r6.pv) && s4bAllSess().length === n0 + 2);
+    ok('N3 the System Admin\'s generated classes reach the timetable, the teacher\'s calendar and the N4 register', (go('a-batches', { id: 'L3FA-W27', tab: 'schedule' }), newIds.every(id => !!app().querySelector(`[data-id="${id}"]`))) && n4Eligible(ns[0]).includes(lid) && (TCH('T'), go('t-calendar'), setUi('ccView', 'agenda'), setUi('ccDate', ns[0].start.slice(0, 10)), render(), app().querySelectorAll(`main [data-id="${ns[0].id}"]`).length === 1));
+    role('sysA');
+    ACT.n3Target({ dataset: { b: 'L3SP-X27' } }); fill({ '#n3-c': '4' }); reason('Sys sets'); ok('N3 System Admin can set a Self-Paced planned number (configuration)', n3Plan('L3SP-X27').target === 4);
+    ACT.n3Join({ dataset: { b: 'L3SP-X27' } }); ok('N3 the System Admin can join a valid shared class (same programme, Fully Assisted)', !!MODAL && [...document.querySelectorAll('#n3-j option')].some(o => o.value === ns[0].id)); document.querySelector('#n3-j').value = ns[0].id; reason('Sys joins');
+    ok('N3 joined: one session, counted once for the Self-Paced batch, audited', ns[0].with.includes('L3SP-X27') && n3SpClasses('L3SP-X27').length === 1 && ADMIN.audit[0].action === 'Session sharing changed');
+    ACT.s4bSessEdit({ dataset: { b: 'L3FA-W27', id: ns[1].id } }); fill({ '#se-d': ns[1].start.slice(0, 11) + '16:00', '#se-r': 'Sys reschedule' }); prim(); if (MODAL) prim(); closeModal();
+    ok('N3 the System Admin edits / reschedules a class: same id, length kept, history and audit', ns[1].start.slice(11, 16) === '16:00' && (new Date(ns[1].end) - new Date(ns[1].start)) === 90 * 6e4 && ns[1].hist[0][2] === 'Changed' && ADMIN.audit[0].action === 'Session changed');
+    const cc = kConflicts().find(c => /Clashing class/.test(c.detail)); go('a-scheduling'); ok('N3 the System Admin sees the unresolved conflict with Resolve', !!cc && !!app().querySelector(`[data-act="kResolve"][data-id="${cc.id}"]`));
+    ACT.kResolve({ dataset: { id: cc.id } }); document.querySelector('#kr-a').value = 'move'; document.querySelector('#kr-s').value = [...document.querySelectorAll('#kr-s option')].find(o => /Clashing class/.test(o.textContent)).value; reason('Try an hour later');
+    ok('N3 a move that still overlaps stays visibly unresolved (not reported resolved)', kConflicts().some(c => c.id === cc.id || /Clashing class/.test(c.detail)) && ADMIN.audit[0].action === 'Conflict change applied — still conflicting' && (go('a-scheduling'), /Clashing class/.test(main())));
+    const cc2 = kConflicts().find(c => /Clashing class/.test(c.detail)); ACT.kResolve({ dataset: { id: cc2.id } }); document.querySelector('#kr-a').value = 'teacher'; document.querySelector('#kr-s').value = [...document.querySelectorAll('#kr-s option')].find(o => /Clashing class/.test(o.textContent)).value; document.querySelector('#kr-t').value = 'Omar Siddiqui'; reason('Omar covers');
+    ok('N3 the System Admin resolves it by assigning another teacher — the conflict is gone', !kConflicts().some(c => /Clashing class/.test(c.detail)) && ADMIN.audit[0].action === 'Conflict resolved');
+    const clash = s4bAllSess().find(s => s.title === 'Clashing class'); ACT.s4bSessCancel({ dataset: { b: 'L3AC-JAN26', id: clash.id } }); reason('Not needed after all');
+    ok('N3 the System Admin cancels a class session (kept in history, audited)', clash.status === 'Cancelled' && !!s4bSessById(clash.id) && ADMIN.audit[0].action === 'Session cancelled');
+    ACT.s4bSessCancel({ dataset: { b: 'L3FA-W27', id: 'eda3' } }); ok('N3 (negative) the System Admin can\'t cancel a deadline or observation as a class session', !MODAL);
+    ok('N3 historical session ids and attendance unchanged after the System Admin\'s changes', s1.status === 'Cancelled' && JSON.stringify(N4().regs[s1.id].rows) === rows1 && s2.start === s2start && ids.every(id => !!s4bSessById(id)));
+    FA4(); ACT.addSession({ dataset: { b: 'L3FA-W27' } }); const fa1 = !MODAL && ADMIN.audit[0].action === 'Blocked: add sessions'; ACT.kResolve({ dataset: { id: 'x' } }); const fa2 = !MODAL && ADMIN.audit[0].action === 'Blocked: resolve conflicts'; ACT.n3Join({ dataset: { b: 'L3SP-X27' } }); const fa3 = !MODAL && ADMIN.audit[0].action === 'Blocked: join a shared class'; ACT.s4bSessEdit({ dataset: { b: 'L3FA-W27', id: ns[0].id } });
+    ok('N3 (negative) Finance stays restricted: add session, resolve, join, edit — all refused and logged', fa1 && fa2 && fa3 && !MODAL && ADMIN.audit[0].action === 'Blocked: edit sessions');
+    COO('A'); S.portal = 'coord'; ACT.addSession({ dataset: { b: 'L3FA-W27' } }); const co1 = !MODAL; ACT.n3Weekly({ dataset: { b: 'L3FA-W27' } }); ok('N3 (negative) a Coordinator can\'t add sessions or generate a weekly plan', co1 && !MODAL);
+    role('sysA');
+    ACT.s4bBatchEdit({ dataset: { id: 'L3SP-X27' } }); ok('N3 System Admin still edits batch details (client-confirmed matrix)', !!MODAL); closeModal();
+    FA4(); ACT.n3Weekly({ dataset: { b: 'L3FA-W27' } }); ok('N3 (negative) Finance can\'t configure a class plan (refused, logged)', !MODAL && ADMIN.audit[0].action === 'Blocked: configure the class plan');
+    COO('A'); S.portal = 'coord'; ACT.n3Target({ dataset: { b: 'L3SP-W27' } }); ok('N3 (negative) a Coordinator can\'t configure a class plan', !MODAL && n3Plan('L3SP-W27').target === 2);
+    // Preservation
+    SA(); go('a-batches', { id: 'L3AC-JAN26', tab: 'schedule' }); ok('N3 existing batches: timetable unchanged, plan shown as not configured', /hasn't been configured/.test(main()) && !n3Plan('L3AC-JAN26') && s4bSessFor('L3AC-JAN26').length === janN + 1);
+    go('a-batches', { id: 'L3SP-W27', tab: 'staff' }); ok('N3 CH-17 / P-33 unchanged', main().includes(CH_P33) && !Object.values(chAllocOf(sp)).includes(sp.coord));
+    ok('N3 N2 modes unchanged; learner plans, S2 deadlines, sign-up and fees unchanged', fa.dmode === 'Fully Assisted' && sp.dmode === 'Self-Paced' && JSON.stringify(d.plans) === plan0 && JSON.stringify([STORE.worlds.C.plans, STORE.worlds.C.assignments.map(a => a.due), STORE.worlds.B.signup, STORE.chFees]) === keep);
+    ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: N3 entry', /NVQ class planning: weekly Fully Assisted classes/.test(main()));
   });
 
   fresh();
