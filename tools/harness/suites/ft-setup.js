@@ -232,7 +232,7 @@
     ACT.s2Sc27Pub(); reason('Go'); ok('Scenario #27 demo assignment published to Aisha', STORE.worlds.C.assignments.some(a => a.id === 'a27'));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S2 entry', /Setup fixes — assignments/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
-    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3, N4: 1 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 20);
+    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3, N4: 1, N2: 1 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 21);
   });
 
   /* ================= S3 — NVQ programmes ================= */
@@ -385,7 +385,7 @@
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S3 entry', /Setup fixes — NVQ programmes/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 20 /* S4a: 5, S4b: 3, N4: 1 entries added */);
+    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 21 /* S4a: 5, S4b: 3, N4: 1, N2: 1 entries added */);
     SA(); go('a-assignments', { id: 'a9' }); ok('S2 / CH-17: "Marked by: … set in the batch\'s Assessors panel" — read-only, no input', /Marked by: .+, set in the batch's Assessors panel/.test(main()) && !app().querySelector('#ae-m') && !app().querySelector('.s2-marker input, .s2-marker select'));
   });
 
@@ -743,7 +743,7 @@
     const s29 = SC_LIST().find(x => x[0] === '29'); ok('Scenario #29: 6 steps, set-up then a new learner\'s sign-up', !!s29 && s29[3].length === 6 && /Daniel Okafor/.test(s29[3][3].text));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S4a entry', /Setup fixes — admission and money/.test(main()));
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 20 /* S4b: 3, N4: 1 entries added */);
+    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 21 /* S4b: 3, N4: 1, N2: 1 entries added */);
     fresh(); const z = apply4('F', T2); ACT.suNext(); ok('E2E (negative): the country rule still applies — no Level 2 batch for a UAE applicant (CH-42)', z.signup.step === 1 && !z.signup.batch);
   });
 
@@ -1138,6 +1138,68 @@
     ok('N4 the seeded Zoom sessions and unmatched list are unchanged', JSON.stringify([ADMIN.sessions, ADMIN.unmatched]) === legacy0);
     SA(); go('a-attendance', { id: 'ZS-01' }); ok('N4 a legacy Zoom register still opens as before', /Session register/.test(main()) && /Aisha Rahman/.test(main()));
     ok('N4 S4b conflicts and calendars unaffected', kConflicts().length === conf0 && (learner('C'), go('calendar'), evsOf('C').some(e => e.id === s.id)));
+  });
+
+  /* ================= N2 — batch-level delivery mode (Fully Assisted / Self-Paced) ================= */
+  const mkBatchN2 = (code, course, dm, chan, coord) => { ACT.newBatch(); if (!MODAL) return false; fill({ '#nb-c': code }); const co = document.querySelector('#nb-co'); co.value = course; INP.n2NbCourse(co); if (dm) document.querySelector('#nb-dm').value = dm; if (chan) document.querySelector('#nb-m').value = chan; if (prim() === false) return false; const ac = document.querySelector('#nb-ac'); ac.value = coord === '' ? '' : coord || ac.options[1].value; if (prim() === false) return false; prim(); prim(); prim(); return ADMIN.batches.find(b => b.code === code) || null; };
+  await T('N2 batch delivery mode: create, show, seed, edit rules, permissions, preservation', async () => {
+    fresh(); const keep = JSON.stringify([STORE.worlds.C.plans, STORE.worlds.C.nvq, STORE.worlds.C.tree, STORE.worlds.D.plans, STORE.chFees, STORE.worlds.B.signup]);
+    ok('N2 seed: every existing NVQ batch is Fully Assisted, marked as a seeded default (not client-confirmed)', ADMIN.batches.filter(b => n2IsNvqTitle(b.course)).every(b => b.dmode === 'Fully Assisted' && b.dmodeSrc === 'seed default') && !SHORT_BATCH().dmode);
+    ok('N2 seed: NV-L3D keeps Self-Paced as its programme default for new batches (it has no batches)', n2DefaultFor(s3Pr('NV-L3D').title) === 'Self-Paced' && !ADMIN.batches.some(b => b.course === s3Pr('NV-L3D').title) && n2DefaultFor(T3) === 'Fully Assisted');
+    acaEnter('KA'); S.signedIn = true; go('a-batches'); ACT.newBatch();
+    ok('N2 Create batch asks for the delivery mode separately from the delivery channel', !!document.querySelector('#nb-dm') && [...document.querySelectorAll('#nb-dm option')].map(o => o.value).join() === 'Fully Assisted,Self-Paced' && [...document.querySelectorAll('#nb-m option')].map(o => o.value).join() === 'Online,Classroom,Blended' && /Delivery channel/.test(mroot().textContent)); closeModal();
+    ok('N2 (negative) both modes still require an Academic Coordinator', mkBatchN2('L3SP-NOCO', T3, 'Self-Paced', 'Online', '') === false && !ADMIN.batches.some(b => b.code === 'L3SP-NOCO') && /coordinator/i.test(mroot().textContent)); closeModal();
+    const sp = mkBatchN2('L3SP-MAR27', T3, 'Self-Paced', 'Online', 'Dr Helen Carter'), fa = mkBatchN2('L3FA-MAR27', T3, 'Fully Assisted', 'Classroom', 'Dr Helen Carter');
+    ok('N2 two batches of the same programme with different delivery modes; channel kept separately', !!sp && !!fa && sp.course === fa.course && sp.dmode === 'Self-Paced' && fa.dmode === 'Fully Assisted' && sp.mode === 'Online' && fa.mode === 'Classroom' && sp.dmodeSrc === 'set');
+    ok('N2 the choice is audited when the batch is created', ADMIN.audit.some(a => a.action === 'Delivery mode set' && a.entity.includes('L3SP-MAR27') && a.after === 'Self-Paced'));
+    go('a-batches'); const row = [...app().querySelectorAll('main tr')].find(r => r.textContent.includes('L3SP-MAR27'));
+    ok('N2 batch list: Delivery mode column', !!row && /Self-Paced/.test(row.textContent));
+    go('a-batches', { id: 'L3SP-MAR27' }); ok('N2 batch detail: delivery mode and the Self-Paced support wording', /Delivery mode: Self-Paced/.test(main()) && /academic support is through LMS messages/i.test(main()) && /not routine phone calls/.test(main()));
+    COO('A'); setUi('cbTab', 'planned'); go('c-batches'); const crow = [...app().querySelectorAll('main tr')].find(r => r.textContent.includes('L3SP-MAR27'));
+    ok('N2 Coordinator batch list shows it', !!crow && /Self-Paced/.test(crow.textContent));
+    go('c-batches', { id: 'L3SP-MAR27' }); ok('N2 Coordinator overview: channel and mode separate; no "weekly live classes" claim for Self-Paced', /Delivery channel/.test(main()) && /Self-Paced/.test(app().querySelector('.n2-mode').textContent) && !/Online delivery with weekly live classes/.test(main()) && /not routine phone calls/.test(main()));
+    // A learner on the Self-Paced batch
+    const d = apply4('A', T3); ok('N2 sign-up batch panel shows the assigned batch\'s delivery mode', /Fully Assisted/.test(chAssignedHtml(d)));
+    ACT.suNext(); d.docs.forEach(x => { x.status = 'Submitted'; }); ACT.suNext(); setUi('suSig', 'Daniel Okafor'); setUi('suDecl', true); ACT.suSign(); chSetBatch(d, sp); setUi('suOpt', 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal();
+    learner('A'); go('course', { id: 'nvq' }); ok('N2 learner programme overview: Delivery channel and Delivery mode (Self-Paced) with the support wording', d.signup.batch === 'L3SP-MAR27' && /Delivery channel/.test(main()) && /Self-Paced/.test((app().querySelector('.n2-mode') || {}).textContent || '') && /not routine phone calls/.test(main()));
+    ok('N2 same programme structure and version for both modes', d.tree.map(u => u.code).join() === STORE.s3.trees['NV-L3'].map(u => u.code).join() && d.nvq.title === T3);
+    // Editing: allowed while empty (with a reason, audited); refused once learners are enrolled, also when forced
+    SA(); ACT.s4bBatchEdit({ dataset: { id: 'L3FA-MAR27' } }); ok('N2 empty batch: the delivery mode can be edited', !document.querySelector('#bd-dm').disabled);
+    document.querySelector('#bd-dm').value = 'Self-Paced'; fill({ '#bd-r': 'Planned as a Self-Paced intake' }); prim(); prim(); closeModal();
+    ok('N2 empty batch: mode changed with the reason, audited, history kept', fa.dmode === 'Self-Paced' && fa.dmodeHist[0][4] === 'Planned as a Self-Paced intake' && ADMIN.audit.some(a => a.action === 'Delivery mode changed' && a.before === 'Fully Assisted' && a.after === 'Self-Paced'));
+    ACT.s4bBatchEdit({ dataset: { id: 'L3SP-MAR27' } }); const sel = document.querySelector('#bd-dm');
+    ok('N2 batch with an enrolled learner: the mode field is locked with the reason', sel.disabled && /transfer and impact policy/.test(mroot().textContent));
+    sel.disabled = false; sel.innerHTML = '<option>Self-Paced</option><option>Fully Assisted</option>'; sel.value = 'Fully Assisted'; fill({ '#bd-r': 'Forced' });
+    ok('N2 (negative) forcing a mode change on an enrolled batch is refused and logged; nothing changes', prim() === false && sp.dmode === 'Self-Paced' && ADMIN.audit[0].action === 'Blocked: change delivery mode'); closeModal();
+    const jan = ADMIN.batches.find(b => b.code === 'L3AC-JAN26'); ACT.s4bBatchEdit({ dataset: { id: jan.code } }); ok('N2 seeded batch with learners (Leicester Cohort 7): locked', document.querySelector('#bd-dm').disabled); closeModal();
+    FA4(); ACT.newBatch(); ok('N2 (negative) Finance can\'t create a batch (refused, logged)', !MODAL && ADMIN.audit[0].action === 'Blocked: create batch');
+    role('sysA'); go('a-batches'); const sysB = mkBatchN2('L3SP-SYS27', T3, 'Self-Paced', 'Online', 'Dr Helen Carter');
+    ok('N2 the System Admin can create an NVQ batch and choose its delivery mode (client-confirmed permissions: Create and edit batches ☒)', !!sysB && sysB.dmode === 'Self-Paced' && sysB.dmodeSrc === 'set' && sysB.coord === 'Dr Helen Carter' && ADMIN.audit.some(a => a.action === 'Delivery mode set' && a.entity.includes('L3SP-SYS27')));
+    ok('N2 (negative) the System Admin still needs an Academic Coordinator', mkBatchN2('L3SP-SYSX', T3, 'Self-Paced', 'Online', '') === false && !ADMIN.batches.some(b => b.code === 'L3SP-SYSX')); closeModal();
+    COO('A'); S.portal = 'coord'; ACT.newBatch(); ok('N2 (negative) a Coordinator can\'t create a batch (refused, logged)', !MODAL && ADMIN.audit[0].action === 'Blocked: create batch');
+    COO('A'); S.portal = 'coord'; ACT.s4bBatchEdit({ dataset: { id: 'L3FA-MAR27' } }); ok('N2 (negative) a Coordinator can\'t change the delivery mode', !MODAL && fa.dmode === 'Self-Paced');
+    // System Admin: Edit batch details (client-confirmed permissions: Create and edit batches ☒)
+    role('sysA'); go('a-batches', { id: 'L3SP-SYS27' }); ok('N2 the System Admin sees "Edit details"', !!app().querySelector('[data-act="s4bBatchEdit"][data-id="L3SP-SYS27"]'));
+    ACT.s4bBatchEdit({ dataset: { id: 'L3SP-SYS27' } }); ok('N2 the System Admin can open Edit batch details; an empty batch\'s mode is editable', !!MODAL && !document.querySelector('#bd-dm').disabled);
+    document.querySelector('#bd-dm').value = 'Fully Assisted'; fill({ '#bd-r': '' }); ok('N2 (negative) the System Admin still needs a reason', prim() === false && sysB.dmode === 'Self-Paced');
+    fill({ '#bd-r': 'Changed to a weekly-class intake' }); prim(); prim(); closeModal();
+    ok('N2 the System Admin changes an empty batch\'s delivery mode: saved, audited, history kept', sysB.dmode === 'Fully Assisted' && sysB.dmodeHist[0][2] === 'Self-Paced' && ADMIN.audit.some(a => a.action === 'Delivery mode changed' && a.entity.includes('L3SP-SYS27') && a.after === 'Fully Assisted'));
+    ACT.s4bBatchEdit({ dataset: { id: 'L3SP-MAR27' } }); const sl = document.querySelector('#bd-dm'); sl.disabled = false; sl.innerHTML = '<option>Self-Paced</option><option>Fully Assisted</option>'; sl.value = 'Fully Assisted'; fill({ '#bd-r': 'Forced by System Admin' });
+    ok('N2 (negative) a forced mode change on an enrolled batch is refused for the System Admin too (logged, unchanged)', prim() === false && sp.dmode === 'Self-Paced' && ADMIN.audit[0].action === 'Blocked: change delivery mode'); closeModal();
+    FA4(); ACT.s4bBatchEdit({ dataset: { id: 'L3SP-SYS27' } }); ok('N2 (negative) Finance still can\'t edit batch details', !MODAL && sysB.dmode === 'Fully Assisted' && ADMIN.audit[0].action === 'Blocked: edit batch details');
+    role('sysA'); ACT.addSession({ dataset: { b: 'L3SP-SYS27' } }); ok('N2 System Admin session rights not broadened (Add session still Super Admin / Academic Admin only)', !MODAL && ADMIN.audit[0].action === 'Blocked: add sessions');
+    // CH-17 / P-33, shared classes and N4 registers still work across modes
+    SA(); go('a-batches', { id: 'L3SP-MAR27', tab: 'staff' }); ok('N2 CH-17 / P-33 unchanged on a Self-Paced batch (Coordinator can\'t be its assessor)', main().includes(CH_P33) && !Object.values(chAllocOf(sp)).includes(sp.coord));
+    shareAdd('L3AC-JAN26', { t: 'Mixed-mode class', at: D(-1, '13:00'), mins: 60, teacher: 'Marcus Bell', with: ['L3SP-MAR27'] }); const s = s4bAllSess().find(x => x.title === 'Mixed-mode class');
+    ok('N2 a class shared between a Fully Assisted and a Self-Paced batch of the same programme is one session', !!s && s.with.join() === 'L3SP-MAR27' && n4Eligible(s).includes(d.me.id) && n4Eligible(s).includes(STORE.worlds.C.me.id));
+    ACT.n4Import({ dataset: { s: s.id } }); ok('N2 one N4 register for both batches', Object.keys(N4().regs[s.id].rows).length === n4Eligible(s).length && !!N4().regs[s.id].rows[d.me.id]);
+    ok('N2 historical learners, plans, fees, versions and assessments unchanged', JSON.stringify([STORE.worlds.C.plans, STORE.worlds.C.nvq, STORE.worlds.C.tree, STORE.worlds.D.plans, STORE.chFees, STORE.worlds.B.signup]) === keep);
+    const f = chFeeRaise(d.me.id, T3, D(5), 'A', true); ok('N2 CH-38 not changed in N2 (transitional until N5): a fee for a Self-Paced batch learner still follows the programme setting (£70)', !!f && f.amount === 70 && f.support === 'Fully assisted' && sp.dmode === 'Self-Paced');
+    // P-31 wording
+    go('a-programmes', { id: 'NV-L3D', tab: 'support' }); ok('N2 programme Support type = default for new batches (not the mode of enrolled batches); P-31 tag kept', /default delivery mode for new batches/.test(main()) && /never changes an existing batch/.test(main()) && /Transitional until N5/.test(main()) && !!app().querySelector('.tbd') && !!document.querySelector('input[name="ch-sup"][value="Self-paced"]:checked'));
+    acaEnter('KA'); S.signedIn = true; go('a-programmes', { id: 'NV-N1', tab: 'details' }); ok('N2 wizard Details: "Default delivery mode for new batches"', /Default delivery mode for new batches/.test(main()) && !/<legend class="lbl">Support type<\/legend>/.test(html()));
+    go('a-programmes', { id: 'NV-N1', tab: 'review' }); ok('N2 wizard Review: the same label', /Default delivery mode for new batches/.test(main()));
+    ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: N2 entry; N4 limitations stated', /NVQ batch-level delivery mode/.test(main()) && /NOT client-approved academic eligibility policies/.test(main()) && /Thresholds tab is not functional yet/.test(main()) && /unverified demo data/.test(main()) && /Grace Mensah/.test(main()));
   });
 
   fresh();
