@@ -207,7 +207,7 @@ function shortOverview(e) {
 }
 function shortContent_(e) {
   if (e.status === 'Expired-Incomplete') return `<div class="lockpage"><div class="lock-ic">${ic('lock', 30)}</div><h2>Your access has ended — renew</h2><p class="muted">Course content is hidden while your access is expired. Request more time or re-purchase to continue.</p><div class="row" style="justify-content:center"><button class="btn btn-primary" data-act="reqTime" data-id="${e.id}">Request more time</button><button class="btn" data-act="repurchase" data-id="${e.id}">Re-purchase</button></div></div>`;
-  const icn = { doc: 'doc', video: 'video', scorm: 'pkg' }, lbl = { doc: 'Document', video: 'Vimeo video', scorm: 'SCORM package' };
+  const icn = { doc: 'doc', video: 'video', scorm: 'pkg', link: 'link' }, lbl = { doc: 'Document', video: 'Vimeo video', scorm: 'SCORM package', link: 'Link' }; // S1-03 links
   const item = c => { const i = e.content.indexOf(c); return `<li class="li"><div class="li-icon">${ic(icn[c.kind])}</div><div class="li-b"><span class="xs muted">${i + 1} · ${lbl[c.kind]} · ${c.dur}</span><span class="strong">${esc(c.title)}</span>${c.kind === 'video' ? `<div style="max-width:260px">${bar(c.watch, 'Watched')}</div><span class="xs muted">${c.watch > 0 && c.watch < 100 ? 'Resume from ' + c.resume : c.watch >= 100 ? 'Watched' : 'Not started'}</span>` : ''}${c.kind === 'scorm' && c.score ? `<span class="xs muted">Score ${c.score}%</span>` : ''}</div>
     <div class="li-a">${chip(c.state)}<button class="btn btn-sm ${c.state !== 'Completed' ? 'btn-primary' : ''}" data-act="openItem" data-e="${e.id}" data-id="${c.id}">${c.kind === 'scorm' ? 'Launch' : c.kind === 'video' ? (c.watch > 0 && c.watch < 100 ? 'Resume' : 'Watch') : 'Open'}</button>${c.dl ? `<button class="btn btn-sm btn-ghost" data-act="fakeDl" data-f="${esc(c.title)}.pdf" aria-label="Download ${esc(c.title)}">${ic('download', 15)}</button>` : ''}</div></li>`; };
   return `<section class="card"><div class="row-b"><h2>Modules</h2><span class="small muted">${shMods(e).length} modules · ${shMods(e).filter(shPassed).length} module quizzes passed · work through them in order</span></div><p class="small muted">Each module has its own content and its own quiz. Pass every module quiz to complete the course.</p></section>
@@ -314,12 +314,12 @@ SCREENS.quiz = (p) => {
   const e = enrolById(p.id), Q = W.quiz, m = Q && (shModOf(e, Q.m) || shCurMod(e));
   if (!Q || Q.e !== e.id) return `${pageHead('Quiz', esc(e.title))}<div class="card"><div class="empty"><p>This quiz isn't in progress.</p><button class="btn" data-go="course" data-id="${e.id}" data-tab="quiz">Back to quiz</button></div></div>`;
   if (Q.result) return quizResult(e, Q);
-  const n = QUIZ_BANK.length, left = Math.max(0, Q.ends - Date.now());
-  const qHtml = (i) => { const [t, opts] = QUIZ_BANK[i]; return `<fieldset class="card" style="border-width:1px"><legend class="sr">Question ${i + 1}</legend><span class="eyebrow">Question ${i + 1} of ${n}</span><h2>${esc(t)}</h2><div class="stack">${opts.map((o, k) => `<label class="opt"><input type="radio" name="qa${i}" value="${k}" ${Q.ans[i] === k ? 'checked' : ''} data-onchange="quizAns" data-i="${i}">${esc(o)}</label>`).join('')}</div></fieldset>`; };
+  const n = S1Q() /* S1-05 */.length, left = Math.max(0, Q.ends - Date.now());
+  const qHtml = (i) => { const [t, opts] = S1Q() /* S1-05 */[i]; return `<fieldset class="card" style="border-width:1px"><legend class="sr">Question ${i + 1}</legend><span class="eyebrow">Question ${i + 1} of ${n}</span><h2>${esc(t)}</h2><div class="stack">${opts.map((o, k) => `<label class="opt"><input type="radio" name="qa${i}" value="${k}" ${Q.ans[i] === k ? 'checked' : ''} data-onchange="quizAns" data-i="${i}">${esc(o)}</label>`).join('')}</div></fieldset>`; };
   return `${!Q.conn ? `<div class="note b-amber" role="alert">${ic('wifioff')}<div><strong>Reconnecting — your answers are saved.</strong> Keep going; we'll sync as soon as you're back online.</div></div>` : ''}
   <div class="page-h"><div><p class="eyebrow">${esc(e.title)} · Module ${shModNo(e, m)}: ${esc(m.title)} · attempt ${m.quiz.attempts.length + 1} of ${m.quiz.max}</p><h1>What is this module about?</h1></div>
   <div class="row"><span class="save-chip ok" id="qsave" aria-live="polite">${ic('check', 13)}Saved</span><span class="timer ${left < 6e4 ? 'low' : ''}" id="qtimer" role="timer" aria-label="Time remaining">${ic('clock', 18)}<span>${mmss(left)}</span></span></div></div>
-  <div class="row-b"><div class="quiz-nav" role="navigation" aria-label="Question navigator">${QUIZ_BANK.map((_, i) => `<button class="${Q.ans[i] !== undefined ? 'ans' : ''} ${Q.cur === i ? 'cur' : ''}" data-act="quizGo" data-i="${i}" aria-label="Question ${i + 1}${Q.ans[i] !== undefined ? ', answered' : ', not answered'}">${i + 1}</button>`).join('')}</div>
+  <div class="row-b"><div class="quiz-nav" role="navigation" aria-label="Question navigator">${S1Q() /* S1-05 */.map((_, i) => `<button class="${Q.ans[i] !== undefined ? 'ans' : ''} ${Q.cur === i ? 'cur' : ''}" data-act="quizGo" data-i="${i}" aria-label="Question ${i + 1}${Q.ans[i] !== undefined ? ', answered' : ', not answered'}">${i + 1}</button>`).join('')}</div>
   </div>
   ${qHtml(Q.cur) + `<div class="row-b"><button class="btn" data-act="quizGo" data-i="${Q.cur - 1}" ${Q.cur === 0 ? 'disabled' : ''}>${ic('back', 15)}Previous</button>${Q.cur < n - 1 ? `<button class="btn btn-primary" data-act="quizGo" data-i="${Q.cur + 1}">Next ${ic('chev', 15)}</button>` : `<button class="btn btn-primary" data-act="quizSubmit">Submit quiz</button>`}</div>`}
   <div class="card flat" style="border-style:dashed"><span class="eyebrow">Prototype controls</span><div class="row"><button class="btn btn-sm" data-act="quizConn">Simulate connection loss</button><button class="btn btn-sm" data-act="quizLow">Jump to final 60 seconds</button><button class="btn btn-sm" data-act="quizExpire">Let the timer run out</button></div></div>`;
@@ -340,17 +340,17 @@ INP.quizAns = el => {
   const s = $('#qsave'); s.className = 'save-chip busy'; s.innerHTML = ic('refresh', 13) + 'Saving…';
   setTimeout(() => { if (!$('#qsave')) return; s.className = Q.conn ? 'save-chip ok' : 'save-chip'; s.innerHTML = Q.conn ? ic('check', 13) + 'Saved' : ic('clock', 13) + 'Saved on this device'; }, 600);
 };
-ACT.quizGo = el => { W.quiz.cur = Math.max(0, Math.min(QUIZ_BANK.length - 1, +el.dataset.i)); render(); };
+ACT.quizGo = el => { W.quiz.cur = Math.max(0, Math.min(S1Q() /* S1-05 */.length - 1, +el.dataset.i)); render(); };
 ACT.quizConn = () => { W.quiz.conn = false; render(); setTimeout(() => { if (W.quiz && !W.quiz.result) { W.quiz.conn = true; render(); toast('Reconnected. Your answers are synced.'); } }, 5000); };
 ACT.quizLow = () => { W.quiz.ends = Date.now() + 60e3; };
 ACT.quizExpire = () => { W.quiz.ends = Date.now() + 3e3; };
 ACT.quizSubmit = () => {
   const Q = W.quiz, n = Object.keys(Q.ans).length;
-  confirmDlg({ title: 'Submit your quiz?', ok: 'Submit quiz', body: `<p>You've answered <strong>${n} of ${QUIZ_BANK.length}</strong> questions.${n < QUIZ_BANK.length ? ' Unanswered questions are marked as incorrect.' : ''}</p><p class="small muted">You can't change your answers after submitting.</p>`, onOk: () => finishQuiz(false) });
+  confirmDlg({ title: 'Submit your quiz?', ok: 'Submit quiz', body: `<p>You've answered <strong>${n} of ${S1Q() /* S1-05 */.length}</strong> questions.${n < S1Q() /* S1-05 */.length ? ' Unanswered questions are marked as incorrect.' : ''}</p><p class="small muted">You can't change your answers after submitting.</p>`, onOk: () => finishQuiz(false) });
 };
 function finishQuiz(auto) {
   const Q = W.quiz, e = enrolById(Q.e), m = shModOf(e, Q.m) || shCurMod(e), q = m.quiz;
-  const correct = QUIZ_BANK.filter((x, i) => Q.ans[i] === x[2]).length, score = Math.round(correct / QUIZ_BANK.length * 100);
+  const correct = S1Q() /* S1-05 */.filter((x, i) => Q.ans[i] === x[2]).length, score = Math.round(correct / S1Q() /* S1-05 */.length * 100);
   const at = { n: q.attempts.length + 1, at: now().toISOString(), score, result: score >= q.pass ? 'Pass' : 'Fail', auto };
   q.attempts.push(at); Q.result = at; recalcShort(e); shComplete(e);
   if (auto) W.notifs.unshift({ id: 'nq' + Date.now(), cat: 'Assignments', title: 'Quiz auto-submitted', body: `Time ran out on ${e.title}, ${m.title}, attempt ${at.n}.`, at: now().toISOString(), go: `course.${e.id}.quiz`, unread: true });

@@ -1184,3 +1184,10 @@ body.frame-mobile .modal.cs-sheet { top: 0; bottom: 0; left: 50%; transform: tra
 .ch-feecard .big-num, .ch-paycards .big-num { font-size: 1.35rem; }
 .ch-orcard .row, .ch-feecard .row { flex-wrap: wrap; }
 @media (max-width: 560px) { .ch-dialcard { grid-column: 1 / -1; } }
+
+/* Setup fixes */
+/* S1-03 / S1-05 short-course content and module questions */
+.s1-ch { flex-wrap: wrap; gap: 8px; }
+.s1-add { white-space: normal; text-align: left; max-width: 100%; }
+.s1-qh { margin-top: 8px; flex-wrap: wrap; gap: 8px; }
+.s1-qs li { margin-bottom: 6px; }
