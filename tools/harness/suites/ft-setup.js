@@ -232,7 +232,7 @@
     ACT.s2Sc27Pub(); reason('Go'); ok('Scenario #27 demo assignment published to Aisha', STORE.worlds.C.assignments.some(a => a.id === 'a27'));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S2 entry', /Setup fixes — assignments/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
-    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 23);
+    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 24);
   });
 
   /* ================= S3 — NVQ programmes ================= */
@@ -385,7 +385,7 @@
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S3 entry', /Setup fixes — NVQ programmes/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 23 /* S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1 entries added */);
+    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 24 /* S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1 entries added */);
     SA(); go('a-assignments', { id: 'a9' }); ok('S2 / CH-17: "Marked by: … set in the batch\'s Assessors panel" — read-only, no input', /Marked by: .+, set in the batch's Assessors panel/.test(main()) && !app().querySelector('#ae-m') && !app().querySelector('.s2-marker input, .s2-marker select'));
   });
 
@@ -743,7 +743,7 @@
     const s29 = SC_LIST().find(x => x[0] === '29'); ok('Scenario #29: 6 steps, set-up then a new learner\'s sign-up', !!s29 && s29[3].length === 6 && /Daniel Okafor/.test(s29[3][3].text));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S4a entry', /Setup fixes — admission and money/.test(main()));
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 23 /* S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1 entries added */);
+    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 24 /* S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1 entries added */);
     fresh(); const z = apply4('F', T2); ACT.suNext(); ok('E2E (negative): the country rule still applies — no Level 2 batch for a UAE applicant (CH-42)', z.signup.step === 1 && !z.signup.batch);
   });
 
@@ -1374,6 +1374,237 @@
     fresh(); ok('S4c the demo reset clears the requests and restores the seeded rates', discData().requests.length === 0 && !ADMIN.queue.some(i => i.id === id) && discNow().v === 2);
   });
 
+  /* ================= S5a — staff administration, custom roles and permission security ================= */
+  const SYS = () => { ACT.switchRole({ dataset: { r: 'sysA' } }); S.signedIn = true; };
+  const sec0 = () => ADMIN.security.length;
+  const tick = (sel, list) => list.forEach(x => { const [m, k] = x.split(':'); document.querySelector(`main .cap[data-m="${m}"][data-k="${k}"]`).checked = true; });
+  const nuPick = list => list.forEach(v => { [...document.querySelectorAll('#modal-root .nu-role')].find(x => x.value === v).checked = true; });
+  const newCustom = (n, caps) => { go('a-roles'); ACT.newRole(); fill({ '#cr-n': n }); prim(); closeModal(); go('a-roles', { id: 'new' }); tick('main', caps); SUBMIT.createRole(); prim(); closeModal(); return n + ' (custom)'; };
+  const navR = () => [...document.querySelectorAll('.adm-side [data-go]')].map(a => a.dataset.go);
+
+  await T('S5a role security: canonical role identity — the Super Administrator role is locked for System Admins (UI, URL, direct, crafted)', async () => {
+    fresh(); SYS(); rolesData(); const caps0 = JSON.stringify(ADMIN.roleCaps['Super Administrator']);
+    go('a-roles'); ok('S5a (11) the roles list shows the Super Administrator role locked for a System Admin — no link, no edit button', !document.querySelector('main [data-id="Super_Administrator"]') && /Super Admin only/.test(main()));
+    ok('S5a the roles page states who can change what (four operations)', /Who can change what/.test(main()) && /Edit a role's capabilities/.test(main()) && /Assign or remove a role/.test(main()) && /Create or retire a custom role/.test(main()) && /Super Administrator authority/.test(main()) && !/Base roles are locked/.test(main()));
+    for (const id of ['Super_Administrator', 'Super Administrator', 'Super%20Administrator', 'super_administrator', ' Super__Administrator ', 'SUPER+ADMINISTRATOR']) { const n = sec0(); go('a-roles', { id }); ok(`S5a (12) altered role id "${id}" shows the lock page and is logged`, /Only a Super Administrator can do this/.test(main()) && !document.querySelector('main form[data-submit="saveCaps"]') && ADMIN.security.length === n + 1); }
+    const n1 = sec0(), a1 = ADMIN.audit.length, f = document.createElement('form'); f.dataset.r = 'Super_Administrator'; document.body.appendChild(f); SUBMIT.saveCaps(f); const opened = !!MODAL; closeModal(); f.remove();
+    ok('S5a (13) a direct save with a crafted role id is refused: capabilities unchanged, security log and audit', !opened && JSON.stringify(ADMIN.roleCaps['Super Administrator']) === caps0 && ADMIN.security.length === n1 + 1 && /^System Administrator Owen Price attempted: change capabilities of Super Administrator/.test(ADMIN.security[0].detail) && ADMIN.audit[0].action === 'Blocked: change capabilities of Super Administrator' && ADMIN.audit.length === a1 + 1);
+    const d0 = JSON.stringify(ADMIN.discountCap); INP.discCapRole({ dataset: { r: 'Super_Administrator' }, checked: false }); ok('S5a (13) the Super Administrator role\'s named capability can\'t be changed by a direct call', JSON.stringify(ADMIN.discountCap) === d0 && /attempted: change "Change discount rate" for Super Administrator/.test(ADMIN.security[0].detail));
+    SA(); go('a-roles', { id: 'Super_Administrator' }); ok('S5a (16) the Super Admin still opens and can save the Super Administrator role', !!document.querySelector('main form[data-submit="saveCaps"] button[type="submit"]'));
+  });
+
+  await T('S5a capability edits: authorised roles only, checked when confirmed, locks enforced on the saved values, refusals audited', async () => {
+    fresh(); SYS(); go('a-roles', { id: 'Teacher' }); tick('main', ['Reports:V']); SUBMIT.saveCaps(document.querySelector('main form[data-submit="saveCaps"]')); reason('Teachers see reports');
+    ok('S5a a System Admin edits an ordinary role\'s capabilities (audited)', ADMIN.roleCaps.Teacher.Reports === 'V' && ADMIN.audit[0].action === 'Capabilities changed' && ADMIN.audit[0].actor === 'Owen Price');
+    go('a-roles', { id: 'Teacher' }); const cb = document.querySelector('main .cap[data-m="Marking & Verification"][data-k="E"]'); cb.disabled = false; cb.checked = true; const c1 = JSON.stringify(ADMIN.roleCaps.Teacher), n = sec0(); SUBMIT.saveCaps(document.querySelector('main form[data-submit="saveCaps"]'));
+    ok('S5a (14) a crafted mark/verify capability is refused (checked on the values, not the disabled box) and logged', JSON.stringify(ADMIN.roleCaps.Teacher) === c1 && !MODAL && ADMIN.security.length === n + 1 && /Mark\/verify stays with the Assessor/.test(ADMIN.audit[0].reason));
+    go('a-roles', { id: 'Teacher' }); tick('main', ['Certificates:V']); SUBMIT.saveCaps(document.querySelector('main form[data-submit="saveCaps"]')); const dlg = MODAL;
+    S.sysCtx = 'Finance Admin'; document.querySelector('#rsn').value = 'later'; const r3 = dlg.actions[1].fn(); S.sysCtx = 'System Administrator'; closeModal();
+    ok('S5a (6) the permission is re-checked when the change is confirmed: refused once the actor is no longer a System Admin', r3 === false && !ADMIN.roleCaps.Teacher.Certificates && ADMIN.audit[0].action === 'Blocked: change capabilities of Teacher');
+    fresh(); bizEnter('BA'); rolesData(); const c2 = JSON.stringify(ADMIN.roleCaps.Teacher), ff = document.createElement('form'); ff.dataset.r = 'Teacher'; document.body.appendChild(ff); SUBMIT.saveCaps(ff); ff.remove(); closeModal();
+    ok('S5a (14) a Business Admin can\'t change capabilities by a direct call (refused, logged)', JSON.stringify(ADMIN.roleCaps.Teacher) === c2 && /Only a Super Administrator or a System Administrator/.test(ADMIN.audit[0].reason));
+    ACT.newRole(); ok('S5a (14) … nor create or retire a role', !MODAL && ADMIN.audit[0].action === 'Blocked: create a custom role' && (ACT.retireRole({ dataset: { r: 'Admissions Officer (custom)' } }), !MODAL && s5RoleRec('Admissions Officer (custom)').status === 'Active'));
+  });
+
+  await T('S5a Super Administrator authority: granting and removing it stay with the Super Admin; existing protections kept', async () => {
+    fresh(); SYS(); const t = ADMIN.staff.find(s => s.id === 'ST-009'); go('a-staff', { id: t.id, tab: 'roles' });
+    const opt = [...document.querySelectorAll('#gr option')].find(o => /^Super Administrator/.test(o.textContent)); ok('S5a (15) a System Admin sees Super Administrator only as a disabled option', !!opt && opt.disabled);
+    for (const v of ['Super Administrator', 'Super_Administrator', 'super administrator']) { go('a-staff', { id: t.id, tab: 'roles' }); const s = document.querySelector('#gr'); s.innerHTML = `<option>${v}</option>`; s.value = v; const n = sec0(); ACT.grantRole({ dataset: { id: t.id } }); ok(`S5a (15) a direct grant of "${v}" by a System Admin is refused and logged`, !t.roles.some(r => /super/i.test(r)) && !MODAL && ADMIN.security.length === n + 1); }
+    const g = ADMIN.staff.find(s => s.id === 'ST-002'), n2 = g.roles.length; ACT.revokeRole({ dataset: { id: g.id, r: 'Super_Administrator' } }); ok('S5a (15) a System Admin can\'t remove Super Administrator (crafted id too)', g.roles.length === n2 && !MODAL);
+    ACT.addUser(); const boxes = [...document.querySelectorAll('#modal-root .nu-role')], cbS = boxes.find(x => x.value === 'Super Administrator'), cbY = boxes.find(x => x.value === 'System Administrator');
+    ok('S5a Add user: Super Administrator and System Administrator are disabled for a System Admin', cbS && cbS.disabled && cbY && cbY.disabled);
+    cbS.disabled = false; cbS.checked = true; fill({ '#nu-n': 'Crafted Person', '#nu-e': 'crafted.person@illumin-academy.example' }); const ns = ADMIN.staff.length, r = prim(); closeModal();
+    ok('S5a (15) a crafted Add user with Super Administrator is refused — no account created', r === false && ADMIN.staff.length === ns && ADMIN.audit[0].action === 'Blocked: create a staff account with Super Administrator');
+    SA(); go('a-staff', { id: g.id, tab: 'roles' }); ACT.revokeRole({ dataset: { id: g.id, r: 'Super Administrator' } }); reason('Test');
+    ok('S5a (16) the Super Admin can remove Super Administrator from another account', !g.roles.includes('Super Administrator'));
+    const nd = ADMIN.staff.find(s => s.id === 'ST-001'); ACT.revokeRole({ dataset: { id: nd.id, r: 'Super Administrator' } }); ok('S5a (16) the last Super Administrator still can\'t be removed', nd.roles.includes('Super Administrator') && !!MODAL && /At least one Super Administrator must remain/.test(mroot().textContent)); closeModal();
+    go('a-staff', { id: g.id, tab: 'roles' }); document.querySelector('#gr').value = 'Super Administrator'; ACT.grantRole({ dataset: { id: g.id } }); reason('Restore'); ok('S5a (16) the Super Admin can grant Super Administrator', g.roles.includes('Super Administrator'));
+  });
+
+  await T('S5-01 staff profile editing: validated, audited, shown; staff ID, allocations and history kept', async () => {
+    fresh(); SYS(); const s = ADMIN.staff.find(x => x.id === 'ST-006'), alloc = () => JSON.stringify(ADMIN.batches.map(b => [b.code, b.teachers, b.assessors, b.coord])), al0 = alloc(), h0 = ADMIN.audit.filter(a => a.entity === s.name).length;
+    go('a-staff', { id: s.id }); ok('S5-01 the profile tab offers "Edit profile" to a System Admin', !!document.querySelector('main [data-act="s5EditStaff"]'));
+    ACT.s5EditStaff({ dataset: { id: s.id } }); fill({ '#s5-e': 'marcus.bell2@illumin-academy.example', '#s5-m': '+44 7700 900 555', '#s5-q': 'PGCE, Level 3 Adult Care, Level 4 Education and Training', '#s5-r': 'Updated contact details' }); const r = prim(); closeModal();
+    ok('S5a (1) an authorised edit saves email, mobile and qualifications; same staff ID', r !== false && s.email === 'marcus.bell2@illumin-academy.example' && s.mobile === '+44 7700 900 555' && /Level 4 Education/.test(s.quals) && s.id === 'ST-006' && s.name === 'Marcus Bell');
+    const a = ADMIN.audit[0]; ok('S5a (3) the change is audited: before → after, actor and reason', a.action === 'Profile updated' && a.entity === 'Marcus Bell' && /Email: marcus\.bell@/.test(a.before) && /Email: marcus\.bell2@/.test(a.after) && /Mobile: \+44 7700 900 555/.test(a.after) && a.actor === 'Owen Price' && a.reason === 'Updated contact details');
+    go('a-staff'); ok('S5a the staff list shows the new email', main().includes('marcus.bell2@illumin-academy.example'));
+    go('a-staff', { id: s.id }); ok('S5a the staff detail shows the new details and the staff ID', main().includes('+44 7700 900 555') && main().includes('ST-006'));
+    ok('S5a (4) allocations unchanged; history kept and extended', alloc() === al0 && ADMIN.audit.filter(x => x.entity === s.name).length === h0 + 1);
+    const snap = () => JSON.stringify(ADMIN.staff), s0 = snap(), base = { name: s.name, email: s.email, mobile: s.mobile, quals: s.quals };
+    [[{ name: '' }, 'name'], [{ name: 'R2-D2' }, 'name'], [{ email: 'not-an-email' }, 'email'], [{ email: 'james.pryce@illumin-academy.example' }, 'email'], [{ email: 'JAMES.PRYCE@Illumin-Academy.example' }, 'email'], [{ email: 'michael.osei.tas@illumin-academy.example' }, 'email'], [{ mobile: 'call me' }, 'mobile'], [{ name: 'James Pryce' }, 'name'], [{ name: 'Marcus Bellamy' }, 'name'], [{ quals: 'x'.repeat(201) }, 'quals']]
+      .forEach(([v, k]) => { const res = s5SaveProfile(s.id, { ...base, ...v }, 'Try'); ok(`S5a (2) invalid ${k} refused, nothing changed: ${JSON.stringify(v).slice(0, 50)}`, !res.ok && !!res.errs && !!res.errs[k] && snap() === s0); });
+    const nr = s5SaveProfile(s.id, { ...base, email: 'x.y@illumin-academy.example' }, ''); ok('S5a (2) a missing reason is refused, nothing saved', !nr.ok && !!nr.errs.reason && snap() === s0);
+    ok('S5a (2) no change → nothing saved', !s5SaveProfile(s.id, base, 'Same').ok && snap() === s0);
+    ok('S5a renaming someone referred to by name (persona, allocations) is refused with the reason', /sign-in persona|refer to this person by name/.test(s5SaveProfile(s.id, { ...base, name: 'Marcus Bellamy' }, 'x').errs.name));
+    ACT.s5EditStaff({ dataset: { id: s.id } }); fill({ '#s5-e': 'bad', '#s5-r': 'x' }); const rr = prim(); ok('S5a the dialog shows the error and stays open', rr === false && !!MODAL && /Enter a valid email/.test(mroot().textContent)); closeModal();
+    ACT.addUser(); fill({ '#nu-n': 'Priya Natarajan', '#nu-e': 'priya.natarajan@illumin-academy.example' }); nuPick(['Teacher']); prim(); closeModal();
+    const nu = ADMIN.staff.find(x => x.email === 'priya.natarajan@illumin-academy.example'), id0 = nu.id, rn = s5SaveProfile(nu.id, { name: 'Priya Natarajan-Shah', email: nu.email, mobile: '', quals: '' }, 'Name changed by deed poll');
+    go('a-staff', { id: nu.id, tab: 'activity' }); ok('S5a a name can change where nothing refers to it; the ID is kept and earlier history stays on the record', rn.ok && nu.name === 'Priya Natarajan-Shah' && nu.id === id0 && /User created/.test(main()) && /Profile updated/.test(main()));
+    ACT.addUser(); fill({ '#nu-n': 'Someone Else', '#nu-e': 'Priya.Natarajan@illumin-academy.example' }); nuPick(['Teacher']); const nd = ADMIN.staff.length, rd = prim(); ok('S5a Add user refuses an email another staff account already uses', rd === false && ADMIN.staff.length === nd); closeModal();
+    const sup = ADMIN.staff.find(x => x.id === 'ST-002'), n = sec0(), rs = s5SaveProfile(sup.id, { name: sup.name, email: 'g@x.example', mobile: sup.mobile, quals: '' }, 'x');
+    ok('S5a a System Admin can\'t edit a Super Administrator account (refused, logged)', !rs.ok && sup.email === 'graham.ellis@illumin-academy.example' && ADMIN.security.length === n + 1);
+    go('a-staff', { id: sup.id }); ok('S5a … and isn\'t offered "Edit profile" there', !document.querySelector('main [data-act="s5EditStaff"]'));
+    bizEnter('BA'); const rb = s5SaveProfile('ST-006', { name: 'Marcus Bell', email: 'zz@x.example', mobile: '', quals: '' }, 'x'); ok('S5a another admin role can\'t edit profiles by a direct call', !rb.ok && ADMIN.staff.find(x => x.id === 'ST-006').email === 'marcus.bell2@illumin-academy.example');
+    SA(); INP.adminVariant({ value: 'B' }); INP.adminVariant({ value: 'A' }); SA(); const s2 = ADMIN.staff.find(x => x.id === 'ST-006');
+    ok('S5a profile edits survive an admin rebuild (matched by staff ID and original email, not by name)', s2.email === 'marcus.bell2@illumin-academy.example' && s2.mobile === '+44 7700 900 555' && s2.name === 'Marcus Bell' && ADMIN.staff.filter(x => x.email === 'marcus.bell2@illumin-academy.example').length === 1);
+  });
+
+  await T('S5-02 custom roles: create, assign on a new account, grant / revoke, retire', async () => {
+    fresh(); SYS(); go('a-roles'); ACT.newRole(); fill({ '#cr-n': 'Admissions Clerk', '#cr-d': 'Checks applicant documents' }); prim(); closeModal(); go('a-roles', { id: 'new' });
+    const rc = document.querySelector('main .cap[data-m="Roles & Capabilities"][data-k="E"]'); ok('S5a the draft editor locks role administration for a custom role', !!rc && rc.disabled);
+    tick('main', ['Admissions & Documents:V', 'Admissions & Documents:E', 'Learners:V']); SUBMIT.createRole(); prim(); closeModal(); const CR = 'Admissions Clerk (custom)';
+    ok('S5a (5) a System Admin creates a custom role with its capabilities (audited)', !!s5RoleRec(CR) && ADMIN.roleCaps[CR]['Admissions & Documents'] === 'VE' && ADMIN.roleCaps[CR]['Roles & Capabilities'] === '' && ADMIN.audit.some(a => a.action === 'Role created' && a.entity === CR));
+    ACT.addUser(); const box = [...document.querySelectorAll('#modal-root .nu-role')]; ok('S5a (5) Add user offers the active custom roles, not the retired one', box.some(x => x.value === CR) && box.some(x => x.value === 'Admissions Officer (custom)') && !box.some(x => x.value === 'Marketing Assistant (custom)'));
+    fill({ '#nu-n': 'Dana Whitlock', '#nu-e': 'dana.whitlock@illumin-academy.example' }); nuPick([CR]); prim(); closeModal();
+    const dn = ADMIN.staff.find(x => x.email === 'dana.whitlock@illumin-academy.example'); go('a-staff', { id: dn.id, tab: 'roles' }); ok('S5a (5) the new account holds the custom role, shown on the account', !!dn && dn.roles.join() === CR && main().includes(CR));
+    const op = ADMIN.staff.find(x => x.id === 'ST-010'); go('a-staff', { id: op.id, tab: 'roles' }); ok('S5a the grant list offers the custom role', [...document.querySelectorAll('#gr option')].some(o => o.value === CR));
+    document.querySelector('#gr').value = CR; ACT.grantRole({ dataset: { id: op.id } }); reason('Helps with admissions'); ok('S5a (6) a custom role is granted to an existing user (audited)', op.roles.includes(CR) && ADMIN.audit[0].action === 'Role granted' && ADMIN.audit[0].after === CR);
+    go('a-staff'); ok('S5a the staff list shows it', main().includes(CR));
+    ACT.revokeRole({ dataset: { id: op.id, r: CR } }); reason('No longer needed'); ok('S5a (6) and revoked (audited); other roles kept', !op.roles.includes(CR) && op.roles.includes('Teacher') && ADMIN.audit[0].action === 'Role revoked');
+    go('a-roles'); ACT.retireRole({ dataset: { r: CR } }); reason('Merged into Admissions Officer'); ok('S5a a custom role is retired (audited)', s5RoleRec(CR).status === 'Retired' && ADMIN.audit[0].action === 'Retired');
+    go('a-staff', { id: op.id, tab: 'roles' }); ok('S5a (7) a retired role is no longer offered for grant', ![...document.querySelectorAll('#gr option')].some(o => o.textContent === CR));
+    const sel = document.querySelector('#gr'); sel.innerHTML = `<option>${CR}</option>`; sel.value = CR; ACT.grantRole({ dataset: { id: op.id } }); ok('S5a (7) a crafted grant of a retired role is refused and logged', !op.roles.includes(CR) && !MODAL && /retired/.test(ADMIN.audit[0].reason));
+    ACT.addUser(); ok('S5a (7) Add user doesn\'t offer it', ![...document.querySelectorAll('#modal-root .nu-role')].some(x => x.value === CR)); closeModal();
+    go('a-staff', { id: dn.id, tab: 'roles' }); ok('S5a an existing holder keeps a retired role, flagged as an open lifecycle rule', dn.roles.includes(CR) && /Retired role kept/.test(main()));
+    ACT.retireRole({ dataset: { r: 'Teacher' } }); ok('S5a built-in roles can\'t be retired (direct call)', s5RoleRec('Teacher').status === 'Active' && !MODAL);
+    ACT.newRole(); fill({ '#cr-n': 'Super Admin' }); const rr = prim(); ok('S5a a custom role can\'t take a built-in role\'s name', rr === false && /reserved/.test(mroot().textContent)); closeModal();
+    INP.adminVariant({ value: 'B' }); INP.adminVariant({ value: 'A' }); SA();
+    ok('S5a custom roles, their capabilities and status survive an admin rebuild', !!s5RoleRec(CR) && s5RoleRec(CR).status === 'Retired' && ADMIN.roleCaps[CR]['Admissions & Documents'] === 'VE');
+  });
+
+  await T('S5-02 custom-role access: capabilities control navigation, screens and direct actions; the union keeps the reserved limits', async () => {
+    fresh(); SYS(); ACT.addUser(); fill({ '#nu-n': 'Dana Whitlock', '#nu-e': 'dana.whitlock@illumin-academy.example' }); nuPick(['Admissions Officer (custom)']); prim(); closeModal();
+    const dn = ADMIN.staff.find(x => x.email === 'dana.whitlock@illumin-academy.example');
+    signOut(); S.portal = 'admin'; staffSignin(dn.email); ok('S5a a custom-role-only account signs in to custom-role access', s5Ctx() && S.signedIn && ADMIN.me.name === 'Dana Whitlock' && !isSA() && !isSys() && /Your access/.test(main()));
+    let nav = navR(); ok('S5a (8) navigation shows only the modules the roles can view', nav.includes('a-admissions') && nav.includes('a-learners') && !nav.includes('a-staff') && !nav.includes('a-roles') && !nav.includes('a-finance') && !nav.includes('a-queue') && !nav.includes('a-audit'));
+    const n0 = sec0(); go('a-finance'); ok('S5a (8) a module outside the roles is refused by URL (lock page, logged)', /Not available with your roles/.test(main()) && ADMIN.security.length === n0 + 1);
+    go('a-roles', { id: 'Super_Administrator' }); ok('S5a (12) … and so is the Super Administrator role', /Not available with your roles/.test(main()));
+    go('a-admissions', { tab: 'docs' }); ok('S5a (8) an allowed module opens', /Admissions & Documents/.test(main()) && !/Not available with your roles/.test(main()));
+    const ap = allApplications().find(a => !a.v && a.docs.some(d => d.status !== 'Approved')), d = ap.docs.find(x => x.status !== 'Approved');
+    ACT.docDec({ dataset: { a: ap.id, d: d.id, s: 'Approved' } }); ok('S5a (9) an action the roles allow works (Admissions & Documents: Edit — document decision)', d.status === 'Approved' && ADMIN.audit[0].actor === 'Dana Whitlock');
+    const n1 = sec0(), st1 = ap.status; ACT.appApprove({ dataset: { id: ap.id } }); ok('S5a (9) an action outside the mapped capabilities is refused by a direct call (logged)', !MODAL && ap.status === st1 && ADMIN.security.length === n1 + 1 && /appApprove/.test(ADMIN.security[0].detail));
+    go('a-admissions', { id: ap.id }); const btn = document.querySelector('main [data-act="appApprove"]'); ok('S5a (8) buttons outside the roles are disabled on the screen', !btn || btn.disabled);
+    ACT.addUser(); ok('S5a (9) account administration is refused', !MODAL);
+    SUBMIT.saveCaps({ dataset: { r: 'Admissions Officer (custom)' } }); ok('S5a (7) the holder can\'t change their own role\'s capabilities', ADMIN.roleCaps['Admissions Officer (custom)']['Roles & Capabilities'] === '' && /^Blocked/.test(ADMIN.audit[0].action));
+    ACT.grantRole({ dataset: { id: dn.id } }); ok('S5a (7) … nor grant themselves a role', dn.roles.length === 1);
+    SYS(); ok('S5a leaving custom-role access restores the demo identity', !s5Ctx() && isSys());
+    const R2 = newCustom('Staff Records Officer', ['Staff & Users:V', 'Staff & Users:E', 'Roles & Capabilities:V', 'Reports:V']);
+    go('a-staff', { id: dn.id, tab: 'roles' }); document.querySelector('#gr').value = R2; ACT.grantRole({ dataset: { id: dn.id } }); reason('Second role');
+    ADMIN.roleCaps[R2]['Roles & Capabilities'] = 'VCED'; ADMIN.roleCaps[R2]['Marking & Verification'] = 'VCE'; // crafted state
+    signOut(); S.portal = 'admin'; staffSignin(dn.email); const eff = s5Eff(ADMIN.me.roles);
+    ok('S5a (10) multi-role union: modules of both roles; reserved capabilities capped even with crafted role state', eff['Admissions & Documents'] === 'VE' && eff['Staff & Users'] === 'VE' && eff.Reports === 'V' && eff['Roles & Capabilities'] === 'V' && eff['Marking & Verification'] === 'V');
+    nav = navR(); ok('S5a (8)(10) the second role adds Staff & Users, Roles (view) and Reports to the navigation', nav.includes('a-staff') && nav.includes('a-roles') && nav.includes('a-reports') && nav.includes('a-admissions'));
+    go('a-roles', { id: 'Teacher' }); ok('S5a (10) Roles & Capabilities is view-only, even with crafted edit capabilities', !document.querySelector('main form[data-submit="saveCaps"] button[type="submit"]') && /View only/.test(main()));
+    const t0 = JSON.stringify(ADMIN.roleCaps.Teacher); SUBMIT.saveCaps(document.querySelector('main form[data-submit="saveCaps"]')); ok('S5a (10) … and a direct save is refused', JSON.stringify(ADMIN.roleCaps.Teacher) === t0 && !MODAL);
+    ACT.newRole(); ACT.retireRole({ dataset: { r: R2 } }); ok('S5a (10) no role creation or retirement', !MODAL && s5RoleRec(R2).status === 'Active');
+    const tw = ADMIN.staff.find(x => x.id === 'ST-010'); go('a-staff', { id: tw.id }); ok('S5a (9) Staff & Users: Edit — "Edit profile" is offered', !!document.querySelector('main [data-act="s5EditStaff"]'));
+    const rp = s5SaveProfile(tw.id, { name: tw.name, email: tw.email, mobile: '+44 7700 900 111', quals: tw.quals }, 'New phone'); ok('S5a (9) … and saves (audited as the holder)', rp.ok && tw.mobile === '+44 7700 900 111' && ADMIN.audit[0].actor === 'Dana Whitlock');
+    const ow = ADMIN.staff.find(x => x.id === 'ST-003'), ro = s5SaveProfile(ow.id, { name: ow.name, email: 'o@x.example', mobile: ow.mobile, quals: '' }, 'x'); ok('S5a (10) … but not on an administrator account', !ro.ok && ow.email === 'owen.price@illumin-academy.example');
+    go('a-staff', { id: tw.id, tab: 'roles' }); const gb = document.querySelector('main [data-act="grantRole"]'); ACT.revokeRole({ dataset: { id: tw.id, r: 'Teacher' } }); ok('S5a (10) role assignment stays reserved (button disabled; direct call refused)', (!gb || gb.disabled) && tw.roles.includes('Teacher') && !MODAL);
+    const q = ADMIN.queue.find(i => isOpen(i)), qs = q.status; ACT.qDo({ dataset: { id: q.id, a: 'approve' } }); ok('S5a (10) approvals stay reserved', q.status === qs && !MODAL);
+    SYS(); ACT.addUser(); fill({ '#nu-n': 'Lena Ford', '#nu-e': 'lena.ford@illumin-academy.example' }); nuPick(['Business Admin', R2]); prim(); closeModal();
+    const lf = ADMIN.staff.find(x => x.email === 'lena.ford@illumin-academy.example'); signOut(); S.portal = 'admin'; staffSignin(lf.email);
+    ok('S5a a built-in admin with a custom role gets "Custom role access" in the role switcher', !!S.multiRoles && S.multiRoles.includes('Custom role access') && !s5Ctx() && isBiz());
+    INP.mCtx({ value: 'Custom role access' }); const e2 = s5Eff(ADMIN.me.roles); ok('S5a (10) … which opens custom-role access with the union of all their roles', s5Ctx() && e2['Agencies & Bundles'].includes('V') && e2['Staff & Users'] === 'VE' && e2['Roles & Capabilities'] === 'V');
+    SA(); ok('S5a the Super Admin view is restored afterwards', !s5Ctx() && isSA() && ADMIN.me.name === 'Nadia Qureshi');
+  });
+
+  await T('S5a allocation saves re-check role eligibility; CH-17 / P-33 kept; persona reconciliation', async () => {
+    fresh(); SA(); const b = ADMIN.batches.find(x => x.code === 'L3AC-NOV26-LEI'), t0 = b.teachers.slice(), c0 = b.coord;
+    const crafted = (sel, name) => { const e = document.querySelector('#modal-root ' + sel); e.innerHTML += `<option>${name}</option>`; e.value = name; document.querySelector('#rsn').value = 'x'; const r = prim(); closeModal(); return r; };
+    go('a-batches', { id: b.code, tab: 'staff' }); ACT.batchStaff({ dataset: { id: b.code } }); const r1 = crafted('#bs-t', 'Leila Haddad');
+    ok('S5a (17) batch staff: a teacher without the Teacher role is refused (crafted option), nothing changes', r1 === false && JSON.stringify(b.teachers) === JSON.stringify(t0) && ADMIN.audit[0].action === 'Blocked: staff allocation');
+    ACT.batchStaff({ dataset: { id: b.code } }); crafted('#bs-c', 'Marcus Bell'); ok('S5a (17) … and a Coordinator without the Academic Coordinator role', b.coord === c0 && /Academic Coordinator role/.test(ADMIN.audit[0].reason));
+    ACT.batchStaff({ dataset: { id: b.code } }); crafted('#bs-t', 'Hannah Lewis'); ok('S5a (17) … and a suspended teacher', !b.teachers.includes('Hannah Lewis') && /suspended/.test(ADMIN.audit[0].reason));
+    ACT.batchStaff({ dataset: { id: b.code } }); document.querySelector('#modal-root #bs-t').value = 'Tom Whitfield'; reason('Cover'); ok('S5a an eligible teacher is saved as before', b.teachers.join() === 'Tom Whitfield');
+    go('a-batches', { id: b.code, tab: 'staff' }); const as = document.querySelector('#ch-as-asg'), a0 = JSON.stringify(chAllocOf(b)); as.innerHTML += '<option>Marcus Bell</option>'; as.value = 'Marcus Bell'; ACT.chAssessSave({ dataset: { b: b.code } });
+    ok('S5a (17) assessor save: someone without the Assessor role is refused', JSON.stringify(chAllocOf(b)) === a0 && !MODAL && ADMIN.audit[0].action === 'Blocked: assessor allocation');
+    const b2 = ADMIN.batches.find(x => x.code === 'L2DC-MAR26'); go('a-batches', { id: b2.code, tab: 'staff' }); const a2 = JSON.stringify(chAllocOf(b2)); const ob = document.querySelector('#ch-as-obs'); if (![...ob.options].some(o => o.value === 'Michael Osei')) ob.innerHTML += '<option>Michael Osei</option>'; ob.value = 'Michael Osei'; ACT.chAssessSave({ dataset: { b: b2.code } });
+    ok('S5a (18) P-33 still refuses the batch Coordinator as an assessor', JSON.stringify(chAllocOf(b2)) === a2 && ADMIN.audit[0].action === 'Blocked: Coordinator as assessor');
+    go('a-batches', { id: b2.code, tab: 'staff' }); document.querySelector('#ch-as-pd').value = 'James Pryce'; ACT.chAssessSave({ dataset: { b: b2.code } }); reason('PD cover'); ok('S5a (18) CH-17 separate assessors still save for an eligible assessor', chAllocOf(b2).pd === 'James Pryce' && chAllocOf(b2).asg === 'James Pryce');
+    ACT.realloc({ dataset: { id: 'ST-004' } }); const ra = document.querySelector('#modal-root #ra-to'); ra.innerHTML += '<option>Marcus Bell</option>'; ra.value = 'Marcus Bell'; document.querySelector('#modal-root #ra-r').value = 'x'; const rr = prim();
+    ok('S5a (17) staff record re-allocation: the new assessor must hold the Assessor role', rr === false && /doesn't hold the Assessor role/.test(mroot().textContent)); closeModal();
+    acaEnter('KA'); ACT.kAlloc(); const ks = document.querySelector('#modal-root #ka-s'); ks.innerHTML += '<option>Leila Haddad</option>'; ks.value = 'Leila Haddad'; document.querySelector('#modal-root #ka-r').value = 'x'; const na = STORE.aca.alloc.length, kr = prim();
+    ok('S5a (17) Academic Admin allocation refuses someone who is neither Teacher nor Assessor', kr === false && STORE.aca.alloc.length === na); closeModal();
+    ACT.kRealloc(); document.querySelector('#modal-root .kr-n').checked = true; prim(); const kt = document.querySelector('#modal-root #kr-t'); kt.innerHTML += '<option>Tom Whitfield</option>'; kt.value = 'Tom Whitfield'; const k2 = prim();
+    ok('S5a (17) re-allocation wizard: the new assessor must hold the Assessor role', k2 === false && /step 2 of 3/.test(MODAL.title)); closeModal();
+    const sa = ADMIN.staff.find(s => s.id === 'ST-004'), mo = ADMIN.staff.find(s => s.id === 'ST-017');
+    ok('S5a persona reconciliation: Sarah Okonkwo\'s staff record now holds Teacher and Assessor like her persona (same email, qualifications, registration)', sa.roles.includes('Teacher') && sa.roles.includes('Assessor') && sa.email === TAS_USERS.A.email && sa.reg === TAS_USERS.A.reg);
+    ok('S5a Michael Osei is not reconciled: his staff record and persona have different emails (documented, unchanged)', mo.roles.join() === 'Academic Coordinator' && TAS_USERS.M.email !== mo.email);
+  });
+
+  await T('S5a keeps the N2 / N3 System Admin rights and the S4c approvals', async () => {
+    fresh(); SYS(); ok('S5a (19) the System Admin can still create and edit batches and schedule classes', n2CanCreate() && s4bCanBatch() && s4bSched());
+    const p0 = JSON.stringify(STORE.agy.purchases); bizEnter('BA'); rates(); document.querySelector('#dr-std').value = '7'; document.querySelector('#dr-r').value = 'S5a check'; SUBMIT.discSave(); const q = ADMIN.queue[0];
+    SA(); go('a-index'); const ix = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('S5a Admin index: one Setup fixes entry for S5a', !!ix && ix.querySelectorAll('[data-t="a-roles"]').length === 1 && /S5a — Super Administrator lock/.test(ix.textContent));
+    applyDecision(q, 'approve', 'Agreed'); applyDecision(q, 'approve', 'Again'); ok('S5a (20) S4c: a discount-rate request is still applied once by the Super Admin; purchases unchanged', q.status === 'Approved' && discNow().std === 7 && JSON.stringify(STORE.agy.purchases) === p0);
+  });
+  await T('S5a persistence: created accounts, role grants / revokes, status and profiles survive admin rebuilds and identity switches', async () => {
+    fresh(); SA(); const other = Object.keys(ADMIN_VARIANTS).find(k => k !== 'A'), rebuild = () => { INP.adminVariant({ value: other }); INP.adminVariant({ value: 'A' }); SA(); }, byId = id => ADMIN.staff.find(x => x.id === id);
+    const R2 = newCustom('Records Clerk', ['Admissions & Documents:V', 'Admissions & Documents:E']);
+    go('a-staff'); ACT.addUser(); fill({ '#nu-n': 'Nia Roberts', '#nu-e': 'nia.roberts@illumin-academy.example', '#nu-m': '+44 7700 900 321' }); nuPick(['Teacher']); prim(); closeModal();
+    const nu = ADMIN.staff.find(x => x.email === 'nia.roberts@illumin-academy.example'), id = nu.id, n0 = ADMIN.staff.length;
+    rebuild(); ok('S5a (1) a new staff account survives a variant switch: same ID, details and roles', !!byId(id) && byId(id).name === 'Nia Roberts' && byId(id).roles.join() === 'Teacher' && byId(id).mobile === '+44 7700 900 321' && ADMIN.staff.length === n0);
+    SYS(); ok('S5a (2) … and an identity switch (System Admin)', !!byId(id)); acaEnter('KA'); bizEnter('BA'); SA(); ok('S5a (2) … and further identity switches', !!byId(id) && ADMIN.staff.filter(x => x.id === id).length === 1);
+    INP.adminVariant({ value: 'B' }); ok('S5a (2) … and a Super Admin identity change that rebuilds the admin view', !!byId(id)); INP.adminVariant({ value: 'A' }); SA();
+    go('a-staff', { id: 'ST-006', tab: 'roles' }); document.querySelector('#gr').value = 'Assessor'; ACT.grantRole({ dataset: { id: 'ST-006' } }); reason('Qualified assessor');
+    go('a-staff', { id: 'ST-010', tab: 'roles' }); ACT.revokeRole({ dataset: { id: 'ST-010', r: 'Teacher' } }); reason('Left teaching');
+    rebuild(); ok('S5a (3) a granted built-in role survives the rebuild', byId('ST-006').roles.includes('Assessor') && byId('ST-006').roles.includes('Teacher'));
+    ok('S5a (4) a revoked built-in role stays revoked after the rebuild (not regained from the seed)', !byId('ST-010').roles.includes('Teacher'));
+    SYS(); SA(); ok('S5a (3)(4) … and after identity switches', byId('ST-006').roles.includes('Assessor') && !byId('ST-010').roles.includes('Teacher'));
+    ok('S5a (6) access checks read the same record: assessor and teacher lists follow the grants', chAssessorNames().includes('Marcus Bell') && !activeStaff('Teacher').includes('Tom Whitfield'));
+    go('a-staff', { id, tab: 'roles' }); document.querySelector('#gr').value = R2; ACT.grantRole({ dataset: { id } }); reason('Admissions help');
+    go('a-staff', { id: 'ST-007', tab: 'roles' }); document.querySelector('#gr').value = R2; ACT.grantRole({ dataset: { id: 'ST-007' } }); reason('Cover'); rebuild();
+    ok('S5a (5) custom-role grants survive (created and seeded accounts)', byId(id).roles.includes(R2) && byId('ST-007').roles.includes(R2));
+    go('a-staff', { id: 'ST-007', tab: 'roles' }); ACT.revokeRole({ dataset: { id: 'ST-007', r: R2 } }); reason('Done'); go('a-staff', { id, tab: 'roles' }); ACT.revokeRole({ dataset: { id, r: 'Teacher' } }); reason('Admissions only'); rebuild();
+    ok('S5a (5) custom-role revocations survive too', !byId('ST-007').roles.includes(R2) && byId(id).roles.join() === R2);
+    go('a-roles'); ok('S5a (6) the roles list counts the persisted holders', ADMIN.roles.find(r => r.name === R2).holders === 1 && ADMIN.roles.find(r => r.name === 'Teacher').holders === ADMIN.staff.filter(s => s.roles.includes('Teacher')).length);
+    signOut(); S.portal = 'admin'; staffSignin('nia.roberts@illumin-academy.example'); const eff = s5Eff(ADMIN.me.roles);
+    ok('S5a (6) the person\'s actual permissions follow the persisted roles (custom-role access, no Teacher)', s5Ctx() && ADMIN.me.roles.join() === R2 && eff['Admissions & Documents'] === 'VE' && !eff['Batches & Scheduling']);
+    SA(); go('a-staff', { id: 'ST-005' }); ACT.staffSt({ dataset: { id: 'ST-005', a: 'Suspended' } }); reason('Leave'); ACT.staffSt({ dataset: { id, a: 'Suspended' } }); reason('Pending checks'); rebuild();
+    ok('S5a (7) suspension survives a rebuild (seeded and created accounts)', byId('ST-005').status === 'Suspended' && byId(id).status === 'Suspended');
+    signOut(); S.portal = 'admin'; staffSignin('nia.roberts@illumin-academy.example'); ok('S5a (7) a suspended account can\'t sign in', !s5Ctx() && /suspended or deactivated/.test(JSON.stringify(S.authMsg)));
+    SA(); ACT.staffSt({ dataset: { id: 'ST-005', a: 'Active' } }); reason('Back'); ACT.staffSt({ dataset: { id, a: 'Active' } }); reason('Cleared'); rebuild(); SYS(); SA();
+    ok('S5a (7) reactivation survives too', byId('ST-005').status === 'Active' && byId(id).status === 'Active');
+    const rp = s5SaveProfile(id, { name: 'Nia Roberts', email: 'nia.roberts@illumin-academy.example', mobile: '+44 7700 900 999', quals: 'Level 3 Business Administration' }, 'Update'); s5SaveProfile('ST-006', { name: 'Marcus Bell', email: 'marcus.bell@illumin-academy.example', mobile: '+44 7700 900 444', quals: byId('ST-006').quals }, 'New phone'); rebuild();
+    ok('S5a (8) profile edits still persist (created and seeded accounts)', rp.ok && byId(id).mobile === '+44 7700 900 999' && byId(id).quals === 'Level 3 Business Administration' && byId('ST-006').mobile === '+44 7700 900 444' && byId('ST-006').roles.includes('Assessor'));
+    const ids = ADMIN.staff.map(s => s.id), ems = ADMIN.staff.map(s => s.email.toLowerCase());
+    ok('S5a (9) staff IDs and emails are unique after repeated rebuilds; the created account kept its ID', new Set(ids).size === ids.length && new Set(ems).size === ems.length && byId(id).email === 'nia.roberts@illumin-academy.example');
+    ACT.addUser(); fill({ '#nu-n': 'Owain Hale', '#nu-e': 'owain.hale@illumin-academy.example' }); nuPick(['Teacher']); prim(); closeModal(); const id2 = ADMIN.staff.find(x => x.email === 'owain.hale@illumin-academy.example').id; rebuild();
+    ok('S5a (9) a second account gets a new ID, never a collision with the first', id2 !== id && ADMIN.staff.filter(x => x.id === id2).length === 1 && ADMIN.staff.filter(x => x.id === id).length === 1);
+    ok('S5a (9) the set-password email still points at the right account', STORE.agy.lmails.some(m => m.kind === 'staff' && m.staffId === id2 && m.email === 'owain.hale@illumin-academy.example'));
+    const lm = STORE.agy.lmails.find(m => m.kind === 'staff' && m.staffId === id2); ACT.lmSet({ dataset: { id: lm.id } }); SUBMIT.sysStaffSet(); ok('S5a the new account can still set its password and sign in after the rebuild (link used once)', S.signedIn && S.portal === 'staff' && lm.used); SA();
+    const au = ADMIN.audit, has = (act, ent) => au.some(x => x.action === act && x.entity === ent), aids = au.map(x => x.id);
+    ok('S5a the audit history of creation, role, status and profile changes survives the rebuilds (no duplicate rows)', has('User created', 'Nia Roberts') && has('Role granted', 'Marcus Bell') && has('Role revoked', 'Tom Whitfield') && has('Suspended', 'James Pryce') && has('Reactivated', 'Nia Roberts') && has('Profile updated', 'Nia Roberts') && has('Role created', R2) && new Set(aids).size === aids.length);
+    SYS(); const ns = ADMIN.security.length; go('a-staff', { id, tab: 'roles' }); const sl = document.querySelector('#gr'); sl.innerHTML = '<option>Super Administrator</option>'; sl.value = 'Super Administrator'; ACT.grantRole({ dataset: { id } });
+    go('a-roles', { id: 'Super_Administrator' }); ok('S5a (11) after the rebuilds, a System Admin still can\'t grant Super Administrator or open its role', !byId(id).roles.includes('Super Administrator') && /Only a Super Administrator can do this/.test(main()) && ADMIN.security.length >= ns + 2);
+    ACT.revokeRole({ dataset: { id: 'ST-002', r: 'Super Administrator' } }); ok('S5a (11) … nor remove it', byId('ST-002').roles.includes('Super Administrator') && !MODAL);
+    go('a-staff', { id, tab: 'roles' }); const rt = document.querySelector('#gr'); ok('S5a (11) System Administrator stays Super-Admin-only to grant', [...rt.options].some(o => /^System Administrator/.test(o.textContent) && o.disabled));
+    SA(); go('a-roles'); ACT.retireRole({ dataset: { r: R2 } }); reason('Merged'); rebuild(); go('a-staff', { id: 'ST-007', tab: 'roles' });
+    ok('S5a retired custom roles: kept by holders after a rebuild, not offered for new grants', byId(id).roles.includes(R2) && ![...document.querySelectorAll('#gr option')].some(o => o.textContent === R2));
+    ACT.resetDemo(); SA(); const seedIds = ADMIN.staff.map(s => s.id);
+    ok('S5a (10) the deliberate demo reset restores the seed: created accounts, grants, revokes, status and profile edits gone', !byId(id) && !byId(id2) && !byId('ST-006').roles.includes('Assessor') && byId('ST-010').roles.includes('Teacher') && byId('ST-005').status === 'Active' && byId('ST-006').mobile !== '+44 7700 900 444' && !s5RoleRec(R2) && JSON.stringify(STORE.s5a.made) === '{}' && new Set(seedIds).size === seedIds.length);
+  });
+
+  await T('S5a variant fixtures keep their deliberate state; user changes are reapplied around them', async () => {
+    fresh(); SA(); const byId = id => ADMIN.staff.find(x => x.id === id);
+    go('a-staff', { id: 'ST-022' }); ACT.staffSt({ dataset: { id: 'ST-022', a: 'Suspended' } }); reason('Leave'); SYS(); SA();
+    ok('S5a a user change to a fixture account (Rhys Talbot suspended) survives identity switches', byId('ST-022').status === 'Suspended');
+    setAdminIdentity('SC'); ok('S5a … while the "Only one System Admin" variant still deactivates him', byId('ST-022').status === 'Deactivated'); SA(); ok('S5a … and the user\'s status returns afterwards', byId('ST-022').status === 'Suspended');
+    go('a-staff', { id: 'ST-003', tab: 'roles' }); setAdminIdentity('SD'); ok('S5a the System Admin + Finance variant still adds Finance Admin to Owen Price', byId('ST-003').roles.includes('Finance Admin')); SA(); ok('S5a … and removes it again afterwards', !byId('ST-003').roles.includes('Finance Admin'));
+  });
+
+  await T('S5a custom-role capability settings show which permissions are enforced', async () => {
+    fresh(); SA(); go('a-roles', { id: 'Admissions_Officer_(custom)' });
+    ok('S5a the custom role editor says which capabilities work as actions and which are saved for later', /Custom-role access in this prototype/.test(main()) && /Edit = document decisions/.test(main()) && /Edit = staff profiles/.test(main()) && /saved but not yet available as actions/.test(main()));
+    go('a-roles', { id: 'Teacher' }); ok('S5a built-in role editors are unchanged (no custom-role note)', !/Custom-role access in this prototype/.test(main()));
+    ACT.newRole(); fill({ '#cr-n': 'Quality Clerk' }); prim(); closeModal(); go('a-roles', { id: 'new' }); ok('S5a the new-role editor shows the same note', /Custom-role access in this prototype/.test(main()));
+    S.roleDraft = null; SYS(); ACT.addUser(); fill({ '#nu-n': 'Tess Grey', '#nu-e': 'tess.grey@illumin-academy.example' }); nuPick(['Admissions Officer (custom)']); prim(); closeModal();
+    ADMIN.roleCaps['Admissions Officer (custom)'].Learners = 'VCE'; signOut(); S.portal = 'admin'; staffSignin('tess.grey@illumin-academy.example');
+    ok('S5a the custom-role dashboard separates available permissions from configured-but-unsupported ones', /Available to you/.test(main()) && /configured, not yet available here: Create, Edit/.test(main()));
+    const L = allLearners()[0]; go('a-learner', { id: L.id }); const n = ADMIN.security.length; ACT.lAct && ACT.lAct({ dataset: { id: L.id, a: 'suspend' } }); ok('S5a a configured-but-unsupported Learners: Edit stays refused', !MODAL && ADMIN.security.length === n + 1);
+    SA();
+  });
   fresh();
   const out = document.createElement('pre'); out.id = 'ft-out'; out.textContent = R.join('\n') + '\n' + R.filter(x => x.startsWith('PASS')).length + '/' + R.length; document.body.appendChild(out);
 })();
