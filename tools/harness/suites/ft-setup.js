@@ -231,7 +231,7 @@
     ok('Scenario #27 "Create and publish an assignment": 7 steps, ends with the Coordinator\'s release', !!s && s[1] === 'Create and publish an assignment' && s[3].length === 7 && /submits/.test(s[3][4].text) && /releases/.test(s[3][6].text));
     ACT.s2Sc27Pub(); reason('Go'); ok('Scenario #27 demo assignment published to Aisha', STORE.worlds.C.assignments.some(a => a.id === 'a27'));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S2 entry', /Setup fixes — assignments/.test(main()));
-    go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
+    go('demo-scenarios'); ok('Demo Scenarios: 30 (S4a: #29; R5: #30 added)', app().querySelectorAll('main section[id^="sc-"]').length === 30);
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1, S5d: 1, S5c: 1, S5e: 1 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 28);
   });
 
@@ -383,7 +383,7 @@
     ACT.s3Sc28Edit(); ACT.s3Sc28Pub(); reason('Go'); ok('Scenario #28 demo: Version 3 published with U308', s3Pr('NV-L3').version === 3 && STORE.s3.trees['NV-L3'].some(u => u.code === 'U308') && !STORE.worlds.C.tree.some(u => u.code === 'U308'));
     ACT.s3Sc28Obs(); ok('Scenario #28 demo: IA-5 on the observation form', /IA-5/.test((mroot().querySelector('#op-ia') || {}).textContent || '')); closeModal();
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S3 entry', /Setup fixes — NVQ programmes/.test(main()));
-    go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
+    go('demo-scenarios'); ok('Demo Scenarios: 30 (S4a: #29; R5: #30 added)', app().querySelectorAll('main section[id^="sc-"]').length === 30);
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
     ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 28 /* S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1, S5d: 1, S5c: 1, S5e: 1 entries added */);
     SA(); go('a-assignments', { id: 'a9' }); ok('S2 / CH-17: "Marked by: … set in the batch\'s Assessors panel" — read-only, no input', /Marked by: .+, set in the batch's Assessors panel/.test(main()) && !app().querySelector('#ae-m') && !app().querySelector('.s2-marker input, .s2-marker select'));
@@ -531,7 +531,8 @@
 
   await T('S3 end to end — create, isolate, publish, keep learners, batches, keys, library scope, access', async () => {
     fresh(); acaEnter('KA'); S.signedIn = true; go('a-programmes'); ACT.chProgNew();
-    fill({ '#np-t': 'Level 3 Certificate in Dementia Care', '#np-l': 'Level 3', '#np-r': 'QN 610/7777/1', '#np-d': '9 months', '#np-p': '1500', '#np-ds': 'Dementia care.' }); prim();
+    // R1 (final review): a new Level 3 programme is created with fee options instead of a single price — one option at the same £1,500
+    fill({ '#np-t': 'Level 3 Certificate in Dementia Care', '#np-l': 'Level 3', '#np-r': 'QN 610/7777/1', '#np-d': '9 months', '#np-ds': 'Dementia care.' }); fill({ '#modal-root .r1-np-l': 'Standard', '#modal-root .r1-np-f': '1500', '#modal-root .r1-np-m': 'Fully Assisted' }); prim();
     const pr = (STORE.chNewProgs || []).slice(-1)[0], id = pr.id; go('a-programmes', { id, tab: 'structure' });
     const a8 = (act, ds, o) => { ACT[act]({ dataset: { id, ...ds } }); fill(o); return prim(); };
     a8('ch8AddUnit', {}, { '#u-c': 'U350', '#u-t': 'Dementia awareness' }); a8('ch8AddMod', { u: 0 }, { '#m-t': 'Understanding dementia', '#m-ab': 'B/652/3501' });
@@ -1154,7 +1155,7 @@
     ok('N2 the choice is audited when the batch is created', ADMIN.audit.some(a => a.action === 'Delivery mode set' && a.entity.includes('L3SP-MAR27') && a.after === 'Self-Paced'));
     go('a-batches'); const row = [...app().querySelectorAll('main tr')].find(r => r.textContent.includes('L3SP-MAR27'));
     ok('N2 batch list: Delivery mode column', !!row && /Self-Paced/.test(row.textContent));
-    go('a-batches', { id: 'L3SP-MAR27' }); ok('N2 batch detail: delivery mode and the Self-Paced support wording', /Delivery mode: Self-Paced/.test(main()) && /academic support is through LMS messages/i.test(main()) && /not routine phone calls/.test(main()));
+    go('a-batches', { id: 'L3SP-MAR27' }); ok('N2 batch detail: delivery mode and the Self-Paced support wording', /Delivery mode for standard-fee learners: Self-Paced/.test(main()) && /academic support is through LMS messages/i.test(main()) && /not routine phone calls/.test(main()));
     COO('A'); setUi('cbTab', 'planned'); go('c-batches'); const crow = [...app().querySelectorAll('main tr')].find(r => r.textContent.includes('L3SP-MAR27'));
     ok('N2 Coordinator batch list shows it', !!crow && /Self-Paced/.test(crow.textContent));
     go('c-batches', { id: 'L3SP-MAR27' }); ok('N2 Coordinator overview: channel and mode separate; no "weekly live classes" claim for Self-Paced', /Delivery channel/.test(main()) && /Self-Paced/.test(app().querySelector('.n2-mode').textContent) && !/Online delivery with weekly live classes/.test(main()) && /not routine phone calls/.test(main()));
@@ -1196,7 +1197,7 @@
     ok('N2 historical learners, plans, fees, versions and assessments unchanged', JSON.stringify([STORE.worlds.C.plans, STORE.worlds.C.nvq, STORE.worlds.C.tree, STORE.worlds.D.plans, STORE.chFees, STORE.worlds.B.signup]) === keep);
     const f = chFeeRaise(d.me.id, T3, D(5), 'A', true); ok('N2 CH-38 not changed in N2 (transitional until N5): a fee for a Self-Paced batch learner still follows the programme setting (£70)', !!f && f.amount === 70 && f.support === 'Fully assisted' && sp.dmode === 'Self-Paced');
     // P-31 wording
-    go('a-programmes', { id: 'NV-L3D', tab: 'support' }); ok('N2 programme Support type = default for new batches (not the mode of enrolled batches); P-31 tag kept', /default delivery mode for new batches/.test(main()) && /never changes an existing batch/.test(main()) && /Transitional until N5/.test(main()) && !!app().querySelector('.tbd') && !!document.querySelector('input[name="ch-sup"][value="Self-paced"]:checked'));
+    go('a-programmes', { id: 'NV-L3D', tab: 'support' }); ok('N2 programme Support type = default for new batches (not the mode of enrolled batches); P-31 tag kept', /Observation fee rate/.test(main()) && /doesn't set anyone's delivery mode/.test(main()) && !!app().querySelector('.tbd') && !!document.querySelector('input[name="ch-sup"][value="Self-paced"]:checked')); // R2 final review (Level 3): observation-fee rate only
     acaEnter('KA'); S.signedIn = true; go('a-programmes', { id: 'NV-N1', tab: 'details' }); ok('N2 wizard Details: "Default delivery mode for new batches"', /Default delivery mode for new batches/.test(main()) && !/<legend class="lbl">Support type<\/legend>/.test(html()));
     go('a-programmes', { id: 'NV-N1', tab: 'review' }); ok('N2 wizard Review: the same label', /Default delivery mode for new batches/.test(main()));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: N2 entry; N4 limitations stated', /NVQ batch-level delivery mode/.test(main()) && /NOT client-approved academic eligibility policies/.test(main()) && /Thresholds tab is not functional yet/.test(main()) && /unverified demo data/.test(main()) && /Grace Mensah/.test(main()));
@@ -1208,8 +1209,8 @@
   await T('N3 class planning: weekly plan, limited plan, sharing, history, conflicts, permissions', async () => {
     fresh(); const keep = JSON.stringify([STORE.worlds.C.plans, STORE.worlds.C.assignments.map(a => a.due), STORE.worlds.B.signup, STORE.chFees]), janN = s4bSessFor('L3AC-JAN26').length;
     SA(); go('a-batches'); const fa = mkBatchN2('L3FA-W27', T3, 'Fully Assisted', 'Online', 'Dr Helen Carter'), sp = mkBatchN2('L3SP-W27', T3, 'Self-Paced', 'Online', 'Dr Helen Carter'), sp2 = mkBatchN2('L3SP-X27', T3, 'Self-Paced', 'Online', 'Dr Helen Carter');
-    go('a-batches', { id: 'L3FA-W27', tab: 'schedule' }); ok('N3 Fully Assisted batch → weekly class plan on the Schedule tab (not configured yet)', /Class plan — Fully Assisted \(weekly\)/.test(main()) && /hasn't been configured/.test(main()) && !!app().querySelector('[data-act="n3Weekly"]'));
-    go('a-batches', { id: 'L3SP-W27', tab: 'schedule' }); ok('N3 Self-Paced batch → limited class plan', /Class plan — Self-Paced \(limited classes\)/.test(main()) && !!app().querySelector('[data-act="n3Target"]') && !app().querySelector('[data-act="n3Weekly"]'));
+    go('a-batches', { id: 'L3FA-W27', tab: 'schedule' }); ok('N3 Fully Assisted batch → weekly class plan on the Schedule tab (not configured yet)', /Weekly recurring classes/.test(main()) && /No weekly recurring classes yet/.test(main()) && !!app().querySelector('[data-act="n3Weekly"]')); // R2 final review: Level 3 weekly plans
+    go('a-batches', { id: 'L3SP-W27', tab: 'schedule' }); ok('N3 Self-Paced batch → limited class plan (and, for Level 3, weekly plans by fee option too)', /Limited classes \(Self-Paced\)/.test(main()) && !!app().querySelector('[data-act="n3Target"]') && !!app().querySelector('[data-act="n3Weekly"]')); // R2 final review: the batch's mode no longer gates weekly plans
     const f = fa.start.slice(0, 10), t4 = dayAdd(fa.start, 27), exp = n3Dates({ weekday: 'Tuesday', time: '17:00', from: f, to: t4 }, fa);
     const r1 = n3Save('L3FA-W27', { f, to: t4 }), occ = n3Plan('L3FA-W27').occ, ids = Object.values(occ), ss = ids.map(s4bSessById);
     ok('N3 weekly plan: preview first, then saved', /Preview — nothing is saved yet/.test(r1.pv) && new RegExp(exp.length + ' new class').test(r1.pv) && n3Plan('L3FA-W27').weeklyStatus === 'Saved' && ADMIN.audit.some(a => a.action === 'Class plan saved'));
@@ -1284,7 +1285,7 @@
     FA4(); ACT.n3Weekly({ dataset: { b: 'L3FA-W27' } }); ok('N3 (negative) Finance can\'t configure a class plan (refused, logged)', !MODAL && ADMIN.audit[0].action === 'Blocked: configure the class plan');
     COO('A'); S.portal = 'coord'; ACT.n3Target({ dataset: { b: 'L3SP-W27' } }); ok('N3 (negative) a Coordinator can\'t configure a class plan', !MODAL && n3Plan('L3SP-W27').target === 2);
     // Preservation
-    SA(); go('a-batches', { id: 'L3AC-JAN26', tab: 'schedule' }); ok('N3 existing batches: timetable unchanged, plan shown as not configured', /hasn't been configured/.test(main()) && !n3Plan('L3AC-JAN26') && s4bSessFor('L3AC-JAN26').length === janN + 1);
+    SA(); go('a-batches', { id: 'L3AC-JAN26', tab: 'schedule' }); ok('N3 existing batches: timetable unchanged, plan shown as not configured', /No weekly recurring classes yet/.test(main()) /* R2 unified Schedule area: Level 3 weekly recurring classes */ && !n3Plan('L3AC-JAN26') && s4bSessFor('L3AC-JAN26').length === janN + 1);
     go('a-batches', { id: 'L3SP-W27', tab: 'staff' }); ok('N3 CH-17 / P-33 unchanged', main().includes(CH_P33) && !Object.values(chAllocOf(sp)).includes(sp.coord));
     ok('N3 N2 modes unchanged; learner plans, S2 deadlines, sign-up and fees unchanged', fa.dmode === 'Fully Assisted' && sp.dmode === 'Self-Paced' && JSON.stringify(d.plans) === plan0 && JSON.stringify([STORE.worlds.C.plans, STORE.worlds.C.assignments.map(a => a.due), STORE.worlds.B.signup, STORE.chFees]) === keep);
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: N3 entry', /NVQ class planning: weekly Fully Assisted classes/.test(main()));

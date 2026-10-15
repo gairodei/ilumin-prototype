@@ -1,0 +1,118 @@
+// UI check (R1–R5 review): clickable journeys at one real viewport width (this page runs inside an iframe of that width).
+// Checks what a person sees — elements displayed or not, no horizontal overflow of the page or an open dialog, wording — and
+// reports to the parent page (uicheck.sh) with postMessage.
+(function () {
+  const W = window.innerWidth, R = [], ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + `[${W}] ` + n + (i ? ' — ' + i : ''));
+  const $1 = s => document.querySelector(s), all = s => [...document.querySelectorAll(s)];
+  const shown = el => !!el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
+  const click = el => { if (!el) return false; el.click(); return true; };
+  const main = () => ($1('main') || $1('#app')).textContent;
+  const appOver = () => { const a = $1('#app'); return a ? a.scrollWidth - a.clientWidth : 0; };
+  const modalFits = () => { const m = $1('#modal-root .modal'); if (!m) return 'no dialog'; const r = m.getBoundingClientRect(); const wide = [...m.querySelectorAll('input, select, textarea, button')].filter(e => shown(e) && e.getBoundingClientRect().right > r.right + 1); return r.left >= -1 && r.right <= W + 1 && m.scrollWidth <= m.clientWidth + 1 && !wide.length ? '' : `dialog ${Math.round(r.left)}–${Math.round(r.right)} of ${W}, scroll ${m.scrollWidth}/${m.clientWidth}, ${wide.length} controls past its edge`; };
+  const nav = r => click($1(`.adm-side [data-go="${r}"], .side [data-go="${r}"], [data-go="${r}"]`)) || (go(r), true);
+  const errs = []; window.addEventListener('error', e => errs.push(e.message));
+  try {
+    closeModal(); S.ui = {}; initStore();
+    // 1. New NVQ programme wizard (Super Admin): Level 3 fee options, then Level 4 single price
+    setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-dashboard'); nav('a-programmes');
+    ok('wizard: "New NVQ programme" button opens the dialog', click($1('main [data-act="chProgNew"]')) && !!$1('#modal-root #np-t'));
+    click($1('#modal-root [data-act="r1NpAdd"]')); click($1('#modal-root [data-act="r1NpAdd"]'));
+    ok('wizard (Level 3): Price (GBP) is not displayed', !shown($1('#np-p')));
+    ok('wizard (Level 3): three fee-option rows displayed, each with label, fee and mode', all('#modal-root .r1-np-row').filter(shown).length === 3 && all('#modal-root .r1-np-row').every(r => shown(r.querySelector('.r1-np-l')) && shown(r.querySelector('.r1-np-f')) && shown(r.querySelector('.r1-np-m'))));
+    ok('wizard (Level 3): no delivery-mode or class-pattern selector; the mode comes from the fee option; no Pending label displayed', !shown($1('#modal-root .r1-np-sup')) && !all('#modal-root input[name="np-s"]').some(shown) && shown($1('#modal-root .r1-np-modes')) && /comes from the fee option/.test($1('#modal-root .r1-np-modes').textContent) && !all('#modal-root .tbd').some(shown));
+    ok('wizard (Level 3): the dialog fits the viewport', !modalFits(), modalFits());
+    ok('wizard: every fee-option control has an accessible name', all('#modal-root .r1-np-row input, #modal-root .r1-np-row select, #modal-root .r1-np-row button').every(e => (e.getAttribute('aria-label') || '').trim()));
+    const lv = $1('#np-l'); lv.value = 'Level 4'; lv.dispatchEvent(new Event('change', { bubbles: true }));
+    ok('wizard (Level 4): single Price displayed, fee options and the Level 3 text hidden, P-31 wording shown', shown($1('#np-p')) && !shown($1('#modal-root .r1-np-l3')) && !shown($1('#modal-root span.small.r1-np-m3')) && all('#modal-root .tbd').some(shown));
+    ok('wizard (Level 4): the dialog fits the viewport', !modalFits(), modalFits()); closeModal();
+    // 2. Finance → Instalment plans → Add fee option (dialog)
+    go('a-finance', { tab: 'plans' }); ok('fee options: card displayed with Add fee option', shown($1('main .r1-opts [data-act="r1OptAdd"]')));
+    click($1('main .r1-opts [data-act="r1OptAdd"]')); ok('fee options: Add fee option dialog fits the viewport', !!$1('#modal-root #fo-l') && !modalFits(), modalFits()); closeModal();
+    // 3. Coordinator: Submissions & Feedback → Review → criterion assessment (draft, publish)
+    S.coo.v = 'A'; cooEnter(); S.signedIn = true; nav('c-submissions');
+    ok('submissions: new wording; no "plain written feedback"', /evaluate individual criteria and publish feedback directly to learners/.test(main()) && /Pass\/Fail is declared by the authorized Assessor/.test(main()) && !/plain written|Marking is done by Teachers/.test(main()));
+    ok('submissions: worklist summary is concise', shown($1('main .r4-wl')) && $1('main .r4-wl').getBoundingClientRect().height < (W < 700 ? 200 : 110), Math.round(($1('main .r4-wl') || { getBoundingClientRect: () => ({}) }).getBoundingClientRect().height));
+    ok('submissions: no horizontal page overflow', appOver() <= 1, appOver());
+    if (W >= 900) { const f = $1('main .dt-filt'), t = $1('main .tbl-wrap');
+      ok('submissions: filters form a compact grid (not a vertical stack)', !!f && getComputedStyle(f).display === 'grid' && f.getBoundingClientRect().height < 130, f && Math.round(f.getBoundingClientRect().height));
+      ok('submissions: the table fits without horizontal scrolling', !!t && t.scrollWidth <= t.clientWidth + 2, t && `${t.scrollWidth}/${t.clientWidth}`);
+      const hd = all('main .tbl thead th').map(th => th.textContent.replace(/[^A-Za-z ]/g, '').trim().toLowerCase()).filter(Boolean);
+      ok('submissions: leading columns are learner, mode, assignment, submitted, status, days waiting', hd.slice(0, 6).join() === 'learner,mode,assignment,submitted,status,days waiting', hd.join('|')); }
+    const sub = mySubmissions(true).find(x => x.live && x.status === 'Submitted'); go('c-sub', { id: sub.key });
+    const q = synthAsg(sub).qs[0];
+    ok('review: no "plain written feedback only" panel; criterion assessment beside each answer', !/plain written feedback only/.test(main()) && all('main .r3-cq').length === synthAsg(sub).qs.length && all('main .r3-cq').every(c => shown(c.querySelector('.r3-cq-ans')) && shown(c.querySelector('.r3-cq-crit'))));
+    ok('review: no text saying Coordinators can\'t evaluate', !/Marking (and verification )?(is|are) done by (Teachers|the Teacher)/.test(main()));
+    $1('#r3-cv-' + q.id).value = 'Partially Met'; $1('#r3-ct-' + q.id).value = 'Add a second workplace example.'; click($1(`main [data-act="r3CooDraft"][data-q="${q.id}"]`));
+    ok('review: Save draft — draft shown, not published', shown($1('main .r3-draft')) && !(r3Latest(sub.key, q.crit, 'Academic Coordinator', true)));
+    click($1(`main [data-act="r3CooJudge"][data-q="${q.id}"]`));
+    ok('review: Publish — shown as published to the learner with evaluator and date', /Published to the learner[\s\S]*Partially Met[\s\S]*Coordinator · Dr Helen Carter/.test($1(`main .r3-cq[data-q="${q.id}"] .r3-cq-crit`).textContent) && !$1('main .r3-draft'));
+    ok('review: no horizontal page overflow', appOver() <= 1, appOver());
+    ok('review: the final Pass / Fail control is not offered to the Coordinator', !$1('[data-act="r3Declare"]'));
+    // 4. Learner sees it at once
+    S.variant = sub.L.v; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; go('assignment', { id: sub.a.id });
+    ok('learner: the Coordinator\'s criterion feedback is displayed', shown($1('main .r3-learner')) && /Add a second workplace example/.test($1('main .r3-learner').textContent));
+    ok('learner: no horizontal page overflow', appOver() <= 1, appOver());
+    // 5. Assessor: Marking Queue → Mark → final outcome → Declare (dialog)
+    S.tas.v = 'A'; S.tas.dirty = false; tasEnter(); S.signedIn = true; nav('t-queue');
+    ok('marking queue: worklist summary and Self-Paced view', shown($1('main .r4-wl')) && !!all('main [data-act="mqTab"]').find(b => /Self-Paced/.test(b.textContent)));
+    ok('marking queue: no horizontal page overflow', appOver() <= 1, appOver());
+    go('t-mark', { id: sub.key });
+    ok('workspace: Met / Partially Met / Not Met and the Coordinator\'s published judgement', all('main [data-act="mkMet"]').map(b => b.dataset.v).join() === 'Met,Partially Met,Not Met' && shown($1('main .r3-cooj')));
+    ok('workspace: final outcome card with Declare (allocated Assessor)', shown($1('main .r3-out [data-act="r3Declare"]')));
+    click($1('main .r3-out [data-act="r3Declare"]')); ok('workspace: Declare dialog fits the viewport', !!$1('#modal-root input[name="r3-res"]') && !modalFits(), modalFits()); closeModal();
+    // 6. Batch → Schedule → Add session (audience) dialog
+    setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-batches', { id: 'L3AC-NOV26-LEI', tab: 'schedule' });
+    ok('batch: the batch\'s mode is shown only for standard-fee learners; learners by mode shown', /Delivery mode for standard-fee learners/.test(main()) && !/Default delivery mode|class pattern/.test(main()) && shown($1('main .r2-mix')));
+    click(all('main [data-act="addSession"]').find(b => !b.closest('.n3-plan'))); ok('Add session: audience choice displayed; dialog fits the viewport', shown($1('#modal-root .r2-aud')) && !modalFits(), modalFits()); closeModal();
+    // 6b. Fee options (dialog) → programme page tab → Add session audience (labels, groups, selection) → Edit session
+    setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-finance', { tab: 'plans' });
+    const addOpt = (l, f, m) => { click($1('main .r1-opts[data-pid="NV-L3"] [data-act="r1OptAdd"]')); $1('#fo-l').value = l; $1('#fo-f').value = String(f); $1('#fo-m').value = m; $1('#rsn').value = 'UI check'; const a = MODAL.actions.find(x => /primary/.test(x.cls || '')); a.fn(); closeModal(); render(); };
+    addOpt('Self-Paced Basic', 600, 'Self-Paced'); addOpt('Self-Paced Plus', 900, 'Self-Paced'); addOpt('Fully Assisted', 1800, 'Fully Assisted');
+    ok('fee options: three added through the dialog', r1Opts('NV-L3').filter(o => !o.legacy).length === 3);
+    go('a-programmes', { id: 'NV-L3' }); ok('programme page (Level 3 Diploma): "Fee options" tab', click($1('main [data-tab="fees"]')) && shown($1('main .r1-opts')) && /Self-Paced Plus/.test(main()));
+    ok('programme page: no horizontal page overflow', appOver() <= 1, appOver());
+    go('a-batches', { id: 'L3AC-NOV26-LEI', tab: 'schedule' }); click(all('main [data-act="addSession"]').find(b => !b.closest('.n3-plan')));
+    const grp = all('#modal-root .r2-grp').map(g => g.querySelector('.r2-gh').textContent + ': ' + [...g.querySelectorAll('.r2-opt strong')].map(x => x.textContent).join(' | '));
+    ok('Add session: every fee option is its own checkbox, grouped under Self-Paced / Fully Assisted (plus the standard fee)', grp.join(' ; ') === 'Self-Paced: £600.00 — Self-Paced Basic | £900.00 — Self-Paced Plus ; Fully Assisted: £1,800.00 — Fully Assisted ; Standard fee (legacy): £2,400.00 — Standard programme fee', grp.join(' ; '));
+    ok('Add session: no whole-mode checkbox; headings not selectable', !$1('#modal-root .r2-g[value^="mode:"]') && !$1('#modal-root .r2-gh input') && all('#modal-root .r2-g').length === 4);
+    const tickBy = name => { const lab = all('#modal-root .r2-opt').find(l => l.querySelector('strong').textContent.endsWith(name)); const x = lab.querySelector('input'); click(x); return x.value; };
+    // unified selector (old: an "All learners / Only these" radio choice): a new session starts with every option ticked
+    ok('Add session: "Who should attend?", every option ticked by default; no radio choice', /Who should attend\?/.test($1('#modal-root').textContent) && all('#modal-root .r2-g:checked').length === 4 && !$1('#modal-root input[name="r2-aud"]'));
+    click($1('#modal-root [data-act="r2AudNone"]')); const ids = ['Self-Paced Basic', 'Self-Paced Plus', 'Fully Assisted'].map(tickBy);
+    ok('Add session: Clear selection, then ticking two Self-Paced options and one Fully Assisted shows the summary', /^3 fee options selected · 0 learners/.test($1('#modal-root .r2-sum').textContent), $1('#modal-root .r2-sum').textContent);
+    ok('Add session: the dialog fits the viewport with the audience open', !modalFits(), modalFits());
+    $1('#se-n').value = 'UI audience class'; let res = MODAL.actions.find(x => /primary/.test(x.cls || '')).fn(), n = 0; while (res === false && MODAL && n++ < 3) res = MODAL.actions.find(x => /primary/.test(x.cls || '')).fn(); closeModal(); render();
+    const ss = s4bAllSess().find(x => x.title === 'UI audience class');
+    ok('Add session: saved with exactly the three option IDs', !!ss && r2Same(ss.aud, ids), ss && JSON.stringify(ss.aud));
+    click(all('main [data-act="s4bSessEdit"]').find(b => b.dataset.id === ss.id) || null) || ACT.s4bSessEdit({ dataset: { id: ss.id } });
+    ok('Edit session: the same grouped selector with the three options ticked', all('#modal-root .r2-g:checked').map(x => x.value).sort().join() === ids.slice().sort().join() && all('#modal-root .r2-grp').length === 3);
+    ok('Edit session: the dialog fits the viewport', !modalFits(), modalFits()); closeModal();
+    // 6b2. Weekly class plan: the same grouped fee-option selector; several plans per batch
+    go('a-batches', { id: 'L3AC-NOV26-LEI', tab: 'schedule' }); const addW = $1('main [data-act="n3Weekly"][data-w="new"]');
+    ok('Schedule area: "Add one session" and "Add weekly recurring classes" side by side; no Fully Assisted / Self-Paced class-pattern wording', shown(addW) && shown($1('main .r2-sched [data-act="addSession"]')) && addW.closest('.r2-sched-acts') === $1('main .r2-sched [data-act="addSession"]').closest('.r2-sched-acts') && /Weekly recurring classes/.test(main()) && !/Class plan — Fully Assisted|separate batch/i.test(main()));
+    ok('Schedule area: no horizontal page overflow; each class row shows its kind and audience', appOver() <= 1 && all('main .r2-sched tbody tr').filter(tr => /Class \/ session/.test(tr.textContent)).every(tr => shown(tr.querySelector('.r2-kind')) && shown(tr.querySelector('.r2-for'))), appOver());
+    const ttE = all('main .r2-sched [data-act="kEditEv"]')[0]; click(ttE);
+    ok('Batch timetable class: its Edit shows the common selector (every option ticked) and fits the viewport', !!ttE && /Who should attend\?/.test($1('#modal-root').textContent) && all('#modal-root .r2-g:checked').length === all('#modal-root .r2-g').length && !$1('#modal-root input[name="r2-aud"]') && !modalFits(), modalFits()); closeModal();
+    click(addW); const grpW = all('#modal-root .r2-grp').map(g => g.querySelector('.r2-gh').textContent + ': ' + [...g.querySelectorAll('.r2-opt strong')].map(x => x.textContent).join(' | '));
+    ok('Weekly plan dialog: "Who should attend?" with the same grouped options as Add session', /Who should attend\?/.test($1('#modal-root').textContent) && grpW.join(' ; ') === grp.join(' ; '), grpW.join(' ; '));
+    ok('Weekly plan dialog: Select all / Clear selection and a summary; no whole-mode choice', shown($1('#modal-root [data-act="r2AudAll"]')) && shown($1('#modal-root [data-act="r2AudNone"]')) && /fee options? selected/.test($1('#modal-root .r2-sum').textContent) && !$1('#modal-root input[name="r2-aud"]') && !$1('#modal-root .r2-g[value^="mode:"]'));
+    click($1('#modal-root [data-act="r2AudNone"]')); ok('Weekly plan dialog: Clear selection unticks every option', !all('#modal-root .r2-g:checked').length);
+    click($1('#modal-root [data-act="r2AudAll"]')); ok('Weekly plan dialog: Select all ticks every option', all('#modal-root .r2-g:checked').length === all('#modal-root .r2-g').length);
+    ok('Weekly plan dialog: fits the viewport', !modalFits(), modalFits()); closeModal();
+    // 6c. Learner sign-up: options grouped the same way
+    S.variant = 'A'; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; go('browse');
+    click(all('main [data-act="applyNvq"]').find(b => (CATALOGUE.find(c => c.id === b.dataset.id) || {}).title === 'Level 3 Diploma in Adult Care (England)'));
+    ok('sign-up: fee options grouped under Self-Paced / Fully Assisted / Standard fee', all('#modal-root #r1-opts .r2-gh').map(x => x.textContent).join() === 'Self-Paced,Fully Assisted,Standard fee' && all('#modal-root input[name="r1-opt"]').length === 4);
+    ok('sign-up: the dialog fits the viewport', !modalFits(), modalFits()); closeModal();
+    // 6d. Scenario #30 — every step button opens its screen with the control the step talks about
+    ACT.scOpen(); go('demo-scenarios');
+    const steps = [['r5Sc30Opts', () => S.route === 'a-finance' && !!$1('main [data-act="r1OptAdd"]')], ['r5Sc30Staff', () => S.route === 'a-batches' && /staff|Staff/.test(S.params.tab || '') ], ['r5Sc30Apply', () => !!$1('#modal-root input[name="r1-opt"]') || S.route === 'admission'], ['r5Sc30Sign', () => S.route === 'admission'],
+      ['r5Sc30Sched', () => S.route === 'a-batches' && !!$1('main [data-act="addSession"]')], ['r5Sc30Cal', () => S.route === 'calendar'], ['r5Sc30Pub', () => S.route === 'a-assignments'], ['r5Sc30Sub', () => S.route === 'assignments'], ['r5Sc30Coo', () => S.route === 'c-submissions' && !!$1('main .r4-wl')], ['r5Sc30Asr', () => S.route === 't-queue' && !!$1('main .r4-wl')]];
+    const bad = steps.filter(([act, chk]) => { closeModal(); ACT.scOpen(); go('demo-scenarios'); const b = $1(`#sc-30 [data-act="${act}"]`); if (!click(b)) return true; return !chk(); }).map(x => x[0]); closeModal();
+    ok('Scenario #30: all ten step buttons open the right screen', !bad.length, bad.join(', '));
+    // 7. Demo controls: the scenarios button at once
+    S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));
+    ok('no script errors', !errs.length, errs.join(' | '));
+  } catch (e) { R.push(`FAIL [${W}] threw ${e.message} ${(e.stack || '').split('\n')[1] || ''}`); }
+  parent.postMessage({ uicheck: R }, '*');
+})();

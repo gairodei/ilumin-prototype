@@ -13,10 +13,16 @@
 /* ---------- Store ---------- */
 const N3 = () => (STORE.n3 = STORE.n3 || { plans: {} });
 const _isN3 = initStore; initStore = function () { STORE.n3 = null; return _isN3.apply(this, arguments); };
-const n3Plan = code => N3().plans[code] || null;
+// R2 (final review): a Level 3 batch can have several weekly plans. N3_SLOT names the plan being edited (null = the batch's first plan,
+// stored under the batch code exactly as before); the others are stored as "<batch code>#<n>". Everything else in N3 is unchanged.
+let N3_SLOT = null;
+const n3PK = code => (N3_SLOT ? code + '#' + N3_SLOT : code);
+const n3Plan = code => N3().plans[n3PK(code)] || null;
 const N3_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const n3Batch = code => ADMIN.batches.find(b => b.code === code);
 const n3Kind = b => n2ModeOf(b) === 'Self-Paced' ? 'limited' : n2ModeOf(b) === 'Fully Assisted' ? 'weekly' : null;
+// The plan patterns a batch uses (R2: a mixed Level 3 batch has both the weekly and the limited pattern)
+let n3Kinds = b => { const k = n3Kind(b); return k ? [k] : []; };
 const n3CanConfig = () => s4bCanBatch();         // batch-edit right (client-confirmed matrix)
 const n3CanSchedule = () => s4bSched();          // S4b session right — unchanged
 const n3Refuse = (b, what, why) => { logA('Scheduling', b ? `${b.label} (${b.code})` : 'Class plan', 'Blocked: ' + what, '—', '—', why); toast(why, 'err'); return false; };
@@ -77,7 +83,7 @@ function n3ReadWeekly(b) {
 }
 ACT.n3Weekly = el => {
   const b = n3Batch(el.dataset.b); if (!b) return; if (!n3CanConfig()) return n3Refuse(b, 'configure the class plan', 'Only the Super Admin, System Admin or Academic Admin can configure a class plan.');
-  if (n3Kind(b) !== 'weekly') { toast('The weekly plan is for Fully Assisted batches.', 'err'); return; }
+  if (!n3Kinds(b).includes('weekly')) { toast('The weekly plan is for Fully Assisted batches.', 'err'); return; }
   const cur = n3Plan(b.code), p0 = cur && cur.weekly || { weekday: 'Tuesday', time: '17:00', mins: 90, teacher: (b.teachers || [])[0] || s4bTeachers()[0], where: b.mode === 'Classroom' ? 'room' : 'zoom', from: b.start.slice(0, 10), to: b.end.slice(0, 10), title: 'Weekly class' };
   S.n3Ok = '';
   openModal({ title: 'Weekly class plan — ' + b.code, size: 'lg', body: `${n3Fields(b, p0)}<div id="n3-pv"></div><div class="field"><label for="n3-r">Reason (required)</label><textarea class="textarea" id="n3-r"></textarea></div>`,
@@ -96,14 +102,14 @@ ACT.n3Weekly = el => {
       closeModal(); render(); toast(`Weekly plan saved: ${d.add.length} classes added, ${d.upd.length} updated, ${d.cancel.length} cancelled, ${d.keep.length} kept unchanged.`);
     } }] });
 };
-function n3SavePlan(b, patch, r, what) { const p = N3().plans[b.code] = { ...(n3Plan(b.code) || { code: b.code, hist: [] }), ...patch }; p.hist = p.hist || []; p.hist.unshift([now().toISOString(), ADMIN.me.name, what, r]); logA('Scheduling', `${b.label} (${b.code})`, 'Class plan saved', '—', what, r); return p; }
+function n3SavePlan(b, patch, r, what) { const p = N3().plans[n3PK(b.code)] = { ...(n3Plan(b.code) || { code: b.code, hist: [] }), ...patch }; p.hist = p.hist || []; p.hist.unshift([now().toISOString(), ADMIN.me.name, what, r]); logA('Scheduling', `${b.label} (${b.code})`, 'Class plan saved', '—', what, r); return p; }
 
 /* ---------- Self-Paced: a planned number of classes (own sessions + joined shared classes) ---------- */
-const n3SpClasses = code => s4bSessFor(code).filter(n3Live);
+let n3SpClasses = code => s4bSessFor(code).filter(n3Live);
 const n3SpState = b => { const p = n3Plan(b.code) || {}, n = n3SpClasses(b.code).length; if (!p.target) return { label: 'Not configured', tone: 'grey', n, p }; const st = n < p.target ? `Incomplete — ${n} of ${p.target} planned` : n > p.target ? `Over-allocated — ${n} planned, ${p.target} intended` : `${n} of ${p.target} planned`; return { label: p.complete && n === p.target ? 'Complete — ' + st : p.complete ? 'Needs review — ' + st : 'Draft — ' + st, tone: n === p.target ? (p.complete ? 'green' : 'amber') : 'red', n, p }; };
 ACT.n3Target = el => {
   const b = n3Batch(el.dataset.b); if (!b) return; if (!n3CanConfig()) return n3Refuse(b, 'configure the class plan', 'Only the Super Admin, System Admin or Academic Admin can configure a class plan.');
-  if (n3Kind(b) !== 'limited') { toast('The planned number of classes is for Self-Paced batches.', 'err'); return; }
+  if (!n3Kinds(b).includes('limited')) { toast('The planned number of classes is for Self-Paced batches.', 'err'); return; }
   const p = n3Plan(b.code) || {};
   reasonDlg({ title: 'Planned number of classes — ' + b.code, ok: 'Save', label: 'Reason (required)', extra: `<div class="field"><label for="n3-c">Number of classes intended for this batch</label><input class="input num" type="number" min="1" step="1" id="n3-c" value="${p.target || ''}"><span class="hint">Set per batch — no fixed packages. Classes can be the batch's own or shared classes it joins.</span></div>`,
     onOk: r => { const n = +$('#n3-c').value; if (!(Number.isInteger(n) && n >= 1)) { fieldErr('#n3-c', 'Enter a whole number of classes'); return false; } n3SavePlan(b, { target: n, complete: false }, r, `Planned classes set to ${n}`); render(); toast('Saved. Add or join classes until the plan matches, then mark it complete.'); } });
@@ -137,8 +143,9 @@ ACT.n3Remove = el => {
 };
 
 /* ---------- Screens: batch Schedule tab, batch header, Coordinator overview ---------- */
-function n3Card(b) {
-  const k = n3Kind(b), cfg = n3CanConfig(), sch = n3CanSchedule(), p = n3Plan(b.code);
+function n3Card(b) { return n3Kinds(b).map(k => n3CardOf(b, k)).join(''); }
+function n3CardOf(b, k) {
+  const cfg = n3CanConfig(), sch = n3CanSchedule(), p = n3Plan(b.code);
   if (!k) return '';
   if (k === 'weekly') { const w = p && p.weekly, occ = (p && p.occ) || {}, live = Object.values(occ).map(s4bSessById).filter(s => s && n3Live(s)).length;
     return `<section class="card n3-plan"><div class="row-b"><h2>Class plan — Fully Assisted (weekly)</h2>${cfg ? `<button class="btn btn-sm btn-primary" data-act="n3Weekly" data-b="${b.code}">${w ? 'Edit weekly plan' : 'Set up weekly plan'}</button>` : ''}</div>
@@ -150,16 +157,16 @@ function n3Card(b) {
     ${cls.length ? `<ul class="list small n3-cls">${cls.map(s => `<li class="li" data-sid="${s.id}"><div class="li-b"><strong>${esc(s.title)}</strong><span class="xs muted">${fdt(s.start)} · ${esc(s.teacher || '—')} · ${s.batch === b.code ? 'this batch\'s class' : 'shared — organised by ' + esc(s.batch)}</span></div>${sch && new Date(s.start) > now() ? `<button class="btn btn-sm btn-ghost" data-act="n3Remove" data-b="${b.code}" data-s="${s.id}">Remove</button>` : ''}</li>`).join('')}</ul>` : '<p class="small muted">No classes yet.</p>'}
     ${!p || !p.target ? `<p class="small n3-none">${ic('info', 14)} The structured class plan hasn't been configured for this batch.</p>` : ''}</section>`;
 }
-const n3Summary = b => { const k = n3Kind(b); if (!k) return ''; if (k === 'weekly') { const p = n3Plan(b.code); return p && p.weekly ? `Weekly: ${p.weekly.weekday}s ${p.weekly.time}${p.weeklyStatus === 'Saved' ? '' : ' (draft)'}` : 'Class plan not configured'; } return n3SpState(b).label; };
+const n3Summary = b => n3Kinds(b).map(k => { if (k === 'weekly') { const p = n3Plan(b.code); return p && p.weekly ? `Weekly: ${p.weekly.weekday}s ${p.weekly.time}${p.weeklyStatus === 'Saved' ? '' : ' (draft)'}` : 'Class plan not configured'; } return n3SpState(b).label; }).join(' · ');
 const _bdN3 = batchDetail;
 batchDetail = function (code, t) {
-  let h = _bdN3.apply(this, arguments); const b = n3Batch(code); if (!b || !n3Kind(b)) return h;
+  let h = _bdN3.apply(this, arguments); const b = n3Batch(code); if (!b || !n3Kinds(b).length) return h;
   h = h.replace('<p class="small s4b-bdates">', `<p class="small n3-sum">Class plan: <strong>${esc(n3Summary(b))}</strong> <button class="linklike small" data-go="a-batches" data-id="${b.code}" data-tab="schedule">Open Schedule</button></p><p class="small s4b-bdates">`);
   if (t === 'schedule') h = h.replace('<section class="card"><div class="row-b"><h2>Schedule</h2>', n3Card(b) + '<section class="card"><div class="row-b"><h2>Schedule</h2>');
   return h;
 };
 const _cBatchN3 = SCREENS['c-batches'];
-SCREENS['c-batches'] = p => { const h = _cBatchN3(p), b = p && p.id && n3Batch(p.id); if (!b || !n3Kind(b)) return h; return h.replace('<dd class="n2-mode">', `<dd class="n2-mode" data-n3="${esc(n3Summary(b))}">`).replace('</dl>', `<dt>Class plan</dt><dd class="n3-sum">${esc(n3Summary(b))}</dd></dl>`); };
+SCREENS['c-batches'] = p => { const h = _cBatchN3(p), b = p && p.id && n3Batch(p.id); if (!b || !n3Kinds(b).length) return h; return h.replace('<dd class="n2-mode">', `<dd class="n2-mode" data-n3="${esc(n3Summary(b))}">`).replace('</dl>', `<dt>Class plan</dt><dd class="n3-sum">${esc(n3Summary(b))}</dd></dl>`); };
 
 /* ---------- Records ---------- */
 UXC.push(['N3', 'NVQ class planning: weekly Fully Assisted classes, limited Self-Paced classes (SRS v1.3.2)', [

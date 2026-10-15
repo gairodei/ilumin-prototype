@@ -339,7 +339,7 @@ SCREENS['c-dashboard'] = () => {
   risk.forEach(l => attn.push(['red', `At risk: ${l.name}`, `${l.batch.label} · progress ${l.progress}%`, 'c-learner.' + l.lid]));
   L.filter(l => l.flags.includes('Stalled')).forEach(l => attn.push(['amber', `Stalled: ${l.name}`, `No activity for ${-daysTo(l.last)} days · ${l.batch.label}`, 'c-learner.' + l.lid]));
   L.filter(l => l.flags.includes('Projected late')).forEach(l => attn.push(['red', `Projected to miss the end date: ${l.name}`, `${l.batch.label} ends ${fd(l.batch.end)}`, 'c-learner.' + l.lid]));
-  awaiting.filter(s => s.waiting > N).slice(0, 4).forEach(s => attn.push(['amber', `Awaiting marking ${s.waiting} days: ${s.L.name}`, `${s.a.title} · marker ${s.marker}`, 'c-sub.' + s.key]));
+  awaiting.filter(s => s.waiting > N && !(typeof r4IsSP === 'function' && r4IsSP(s))).slice(0, 4).forEach(s => attn.push(['amber', `Awaiting marking ${s.waiting} days: ${s.L.name}`, `${s.a.title} · marker ${s.marker}`, 'c-sub.' + s.key]));
   subs.filter(s => s.live && s.live.limit).forEach(s => attn.push(['blue', `Resubmission limit reached: ${s.L.name}`, `${s.a.title} — With the Academy`, 'c-sub.' + s.key]));
   bs.forEach(b => (b.coh || []).forEach(e => { if (e.v === 'C' && STORE.worlds.C.observations.some(o => o.status === 'Proposed')) attn.push(['blue', 'Observation not yet confirmed: ' + VNAME('C'), fdt(STORE.worlds.C.observations.find(o => o.status === 'Proposed').at), 'c-obs']); }));
   bs.filter(b => b.status === 'In Progress').forEach(b => { const n = (b.coh || []).length, sub = Math.round(n * 0.35); attn.push(['amber', `Assignment 3 due in ${daysTo(D(9))} days — ${sub} of ${n} submitted`, b.label, 'c-submissions']); });
@@ -415,7 +415,7 @@ function rosterTable(ls, id) {
 function pipelineFor(b, subs) {
   if (!subs.some(s => s.at)) return `<div class="card"><div class="empty"><p>No submissions yet.</p></div></div>`;
   const cols = ['Not Started', 'Submitted', 'Feedback Received', 'Resubmission Required', 'Completed'];
-  const aged = subs.filter(s => s.waiting > 5);
+  const aged = subs.filter(s => s.waiting > 5 && !(typeof r4IsSP === 'function' && r4IsSP(s))); // R4: Self-Paced work has no marking turnaround
   const markers = [...new Set(subs.map(s => s.marker))];
   return `<section class="card"><h2>Pipeline by assignment</h2><div class="tbl-wrap"><table class="tbl dense"><thead><tr><th>Assignment</th>${cols.map(c => `<th class="r">${c}</th>`).join('')}<th class="r">Added to PD</th></tr></thead><tbody>${BASE_ASGS().map(a => { const r = subs.filter(s => s.a.id === a.id); return `<tr><td>${esc(a.title)}</td>${cols.map(c => `<td class="r">${r.filter(s => s.status === c).length || '·'}</td>`).join('')}<td class="r">${r.filter(s => s.pd).length || '·'}</td></tr>`; }).join('')}</tbody></table></div></section>
   <div class="grid-2"><section class="card"><h2>Aged items (waiting &gt; 5 days)</h2><ul class="list small">${aged.map(s => `<li class="li"><div class="li-b">${esc(s.L.name)} · ${esc(s.a.title)}<span class="xs muted">Marker: ${esc(s.marker)}</span></div>${daysChip(s.waiting)}</li>`).join('') || '<li class="small muted">None.</li>'}</ul></section><section class="card"><h2>Marking turnaround</h2><table class="tbl dense"><tbody>${markers.map((m, k) => `<tr><td>${esc(m)}</td><td class="r">${(3.4 + k * 1.3).toFixed(1)} days average</td></tr>`).join('')}</tbody></table>${lockNote()}</section></div>`;

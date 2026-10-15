@@ -26,7 +26,8 @@ function n4BatchLids(code) {
   const ws = Object.values(STORE.worlds || {}).filter(w => w.me && w.flags && w.flags.admitted && s4bBatchOfW(w) === code && (BATCH_WORLD[code] === w.v || (w.signup && w.signup.done))).map(w => w.me.id);
   return chCohLids(b).concat((b.roster || []).map(r => r[1]).filter(Boolean), ws);
 }
-const n4Eligible = s => Array.from(new Set(s4bCodesOf(s).flatMap(n4BatchLids)));
+// R2: a Level 3 session can be targeted at fee-option groups / delivery modes — only learners in its audience take part
+const n4Eligible = s => Array.from(new Set(s4bCodesOf(s).flatMap(c => n4BatchLids(c).filter(l => typeof r2LidOk !== 'function' || r2LidOk(s, l, c)))));
 const n4World = lid => Object.values(STORE.worlds || {}).find(w => w.me && w.me.id === lid) || null;
 const n4Name = lid => { const w = n4World(lid); return w ? chFullName(w) : (learnerById(lid) || {}).name || chLidName(lid) || lid; };
 const n4Email = lid => { const w = n4World(lid); return (w ? w.me.email : (learnerById(lid) || {}).email) || ''; };

@@ -1191,3 +1191,63 @@ body.frame-mobile .modal.cs-sheet { top: 0; bottom: 0; left: 50%; transform: tra
 .s1-add { white-space: normal; text-align: left; max-width: 100%; }
 .s1-qh { margin-top: 8px; flex-wrap: wrap; gap: 8px; }
 .s1-qs li { margin-bottom: 6px; }
+
+/* R1–R5 UI (client clarifications) */
+/* Elements switched by the wizard's Level select really disappear (.field and friends set their own display) */
+.r1-np-price[hidden], .r1-np-l3[hidden], .r1-np-o3[hidden], .r1-np-m3[hidden] { display: none !important; }
+/* Level 3 fee options: one compact row per option (label · fee · mode · remove); stacked on a phone */
+.r1-np-head, .r1-np-row { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr) minmax(0, 1.4fr) 36px; gap: 8px; align-items: center; }
+.r1-np-head { margin: 4px 0 2px; }
+.r1-np-head span { font-size: .78rem; font-weight: 600; }
+.r1-np-list { display: grid; gap: 6px; }
+.r1-np-row .input, .r1-np-row .select { width: 100%; min-width: 0; }
+.r1-np-del { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; }
+.r1-np-add { margin-top: 6px; }
+@media (max-width: 640px) { .r1-np-head { display: none; } .r1-np-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 36px; padding: 8px 0; border-bottom: 1px solid var(--line); } .r1-np-row .r1-np-l { grid-column: 1 / -1; } }
+body.frame-mobile .r1-np-head { display: none; }
+body.frame-mobile .r1-np-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 36px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+body.frame-mobile .r1-np-row .r1-np-l { grid-column: 1 / -1; }
+/* Worklists (Marking Queue, Submissions & Feedback): views wrap; filters form a compact grid row on wide screens */
+@container app (min-width: 861px) { .r4-wlp .tabs { flex-wrap: wrap; overflow-x: visible; } }
+@container app (min-width: 861px) { .r4-wlp .dt-filt { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; flex: 1 1 100%; order: 5; } .r4-wlp .dt-filt .dt-sel { max-width: none; width: 100%; } }
+.r4-wl { padding-top: 12px; padding-bottom: 12px; }
+.r4-wl .row-b { flex-wrap: wrap; gap: 6px 12px; }
+/* Coordinator assignment review: each answer beside its criterion assessment */
+.r3-cq-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@container app (max-width: 980px) { .r3-cq-grid { grid-template-columns: minmax(0, 1fr); } }
+.r3-cq-crit { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--surface-2); }
+.r3-cq-crit h3 { margin: 0 0 6px; font-size: .95rem; }
+.r3-pub { display: grid; gap: 6px; margin: 8px 0; }
+.r3-pub .r3-pubrow { border-left: 3px solid var(--line-2); padding-left: 8px; }
+.r3-cform .row { flex-wrap: wrap; gap: 8px; }
+.r3-csum { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px 16px; align-items: start; }
+.r3-csum dt { font-size: .78rem; color: var(--muted, inherit); }
+.r3-csum dd { margin: 2px 0 0; }
+.r3-draft { color: var(--amber, #8a5a00); }
+.r4-wlp .tbl th, .r4-wlp .tbl td { padding-left: 8px; padding-right: 8px; }
+@container app (min-width: 1101px) { .r4-wlp .tbl td .chip { white-space: nowrap; } }
+@container app (max-width: 1100px) { .r4-wlp .tbl td .chip { white-space: normal; height: auto; line-height: 1.25; padding-top: 3px; padding-bottom: 3px; } .r4-wlp .tbl td { word-break: normal; } }
+/* Session audience: fee options grouped by delivery mode (headings only group; each option is its own checkbox) */
+.r2-groups { display: grid; gap: 10px; padding: 8px 0 0 26px; }
+.r2-grp { display: grid; gap: 4px; }
+.r2-gh { font-size: .74rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.r2-opt { align-items: flex-start; }
+.r2-audbar { flex-wrap: wrap; gap: 6px; align-items: center; padding-left: 26px; }
+@media (max-width: 640px) { .r2-groups, .r2-audbar { padding-left: 0; } }
+.r2-audbar .btn { white-space: nowrap; }
+@media (max-width: 640px) { .r2-wplan { flex-wrap: wrap; align-items: center; } .r2-wplan .li-b { flex-basis: 100%; } }
+@media (max-width: 480px) { .r2-audbar .r2-sum { flex-basis: 100%; } .r2-audbar .spacer { display: none; } .r2-audbar .btn { padding-left: 0; } }
+.r1-np-sup[hidden] { display: none !important; }
+/* R2 unified Schedule area: below tablet-landscape width each timetable row stacks (when, kind, item and audience, teacher, meeting, actions) */
+@media (max-width: 900px) {
+  .r2-sched .tbl-wrap { overflow: visible; }
+  .r2-sched table.s4b-sched, .r2-sched table.s4b-sched tbody { display: block; width: 100%; }
+  .r2-sched table.s4b-sched thead { display: none; }
+  .r2-sched table.s4b-sched tr { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .r2-sched table.s4b-sched td { display: block; border: 0; padding: 0; min-width: 0; }
+  .r2-sched table.s4b-sched td:nth-child(1) { flex-basis: 100%; font-weight: 600; white-space: normal; }
+  .r2-sched table.s4b-sched td:nth-child(3) { flex-basis: 100%; order: -1; font-weight: 600; }
+  .r2-sched table.s4b-sched td:nth-child(5) { overflow-wrap: anywhere; }
+  .r2-sched table.s4b-sched td:nth-child(6) { flex-basis: 100%; padding-top: 4px; }
+  .r2-sched table.s4b-sched td:nth-child(2) .r2-kind { display: inline; margin-left: 6px; }
+}
