@@ -232,7 +232,7 @@
     ACT.s2Sc27Pub(); reason('Go'); ok('Scenario #27 demo assignment published to Aisha', STORE.worlds.C.assignments.some(a => a.id === 'a27'));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S2 entry', /Setup fixes — assignments/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
-    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1, S5d: 1, S5c: 1 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 27);
+    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1, S5d: 1, S5c: 1, S5e: 1 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 28);
   });
 
   /* ================= S3 — NVQ programmes ================= */
@@ -385,7 +385,7 @@
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S3 entry', /Setup fixes — NVQ programmes/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 27 /* S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1, S5d: 1, S5c: 1 entries added */);
+    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 28 /* S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1, S5d: 1, S5c: 1, S5e: 1 entries added */);
     SA(); go('a-assignments', { id: 'a9' }); ok('S2 / CH-17: "Marked by: … set in the batch\'s Assessors panel" — read-only, no input', /Marked by: .+, set in the batch's Assessors panel/.test(main()) && !app().querySelector('#ae-m') && !app().querySelector('.s2-marker input, .s2-marker select'));
   });
 
@@ -743,7 +743,7 @@
     const s29 = SC_LIST().find(x => x[0] === '29'); ok('Scenario #29: 6 steps, set-up then a new learner\'s sign-up', !!s29 && s29[3].length === 6 && /Daniel Okafor/.test(s29[3][3].text));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S4a entry', /Setup fixes — admission and money/.test(main()));
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 27 /* S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1, S5d: 1, S5c: 1 entries added */);
+    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 28 /* S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1, S5d: 1, S5c: 1, S5e: 1 entries added */);
     fresh(); const z = apply4('F', T2); ACT.suNext(); ok('E2E (negative): the country rule still applies — no Level 2 batch for a UAE applicant (CH-42)', z.signup.step === 1 && !z.signup.batch);
   });
 
@@ -2270,6 +2270,117 @@
     ACT.csvSample(); const dk = s5cCounts(S.s5c.c); ok('S5c … and its preview reports exactly those errors (1 duplicate, 2 invalid; the other 3 valid)', dk.valid === 3 && dk.dup === 1 && dk.invalid === 2 && /Email is not a valid address/.test(rowN(5).errs.join()) && /Mobile is required/.test(rowN(6).errs.join())); closeModal();
   });
   HTMLAnchorElement.prototype.click = _aClickS5c;
+
+  /* ================= S5e — cross-stage integration, security and the final setup audit ================= */
+  const openB = () => ADMIN.batches.find(x => x.status === 'Open' && x.enrolled < x.cap);
+  const freeL = (skip = []) => { const busy = new Set(ADMIN.batches.filter(x => ['Open', 'In Progress'].includes(x.status)).flatMap(x => batchRoster(x).map(r => r[1]))); return ADMIN.learners.find(l => l.acct === 'Active' && l.rec === 'Active' && !busy.has(l.id) && !skip.includes(l.id)); };
+  const rosterSnap = b => JSON.stringify([b.roster, b.enrolled, b.wait]);
+  const addVia = (b, l) => { ACT.addToBatch({ dataset: { id: b.code } }); if (!MODAL) return 'refused'; document.querySelector('#ab-l').value = l.id; const r = prim(); closeModal(); return r; };
+
+  await T('S5e (1)–(4) adding a learner to a batch checks the actor in the action and on confirmation', async () => {
+    fresh(); SA(); const b = openB(), l1 = freeL();
+    ok('S5e (1) the Super Admin adds a learner to a batch', addVia(b, l1) !== 'refused' && b.roster.some(r => r[1] === l1.id));
+    for (const [lbl, enter] of [['Business Admin', () => BIZ()], ['Finance Admin', () => FA4()], ['IQA', () => iqaEnter('QA')], ['an Agency Administrator', () => agyEnter('AG-02', true)]]) {
+      enter(); const s0 = rosterSnap(b), n = secN(); ACT.addToBatch({ dataset: { id: b.code } }); const o = !!MODAL; closeModal(); ACT.kOffer({ dataset: { id: b.code, n: 'Crafted Person' } }); const o2 = !!MODAL; closeModal(); ACT.kNextIntake({ dataset: { id: b.code, n: 'Crafted Person' } }); const o3 = !!MODAL; closeModal();
+      ok(`S5e (2) ${lbl}: add learner, offer a waitlist place and move to the next intake are refused by direct calls; nothing changes; each is logged`, !o && !o2 && !o3 && rosterSnap(b) === s0 && secN() === n + 3 && /^Blocked: (add a learner to|offer a waitlist place in|move a waitlisted learner on from)/.test(ADMIN.audit[0].action), String(secN() - n));
+    }
+    SA(); const R = newCustom('Batch Clerk', ['Batches & Scheduling:V', 'Batches & Scheduling:E']); ACT.addUser(); fill({ '#nu-n': 'Bea Clerk', '#nu-e': 'bea.clerk@illumin-academy.example' }); nuPick([R]); prim(); closeModal();
+    signOut(); S.portal = 'admin'; staffSignin('bea.clerk@illumin-academy.example'); const sc = rosterSnap(b); ACT.addToBatch({ dataset: { id: b.code } }); closeModal();
+    ok('S5e (2) custom-role access with Batches & Scheduling: Edit can\'t add learners to a batch (S5a limits hold)', s5Ctx() && rosterSnap(b) === sc);
+    role('sysA'); const l2 = freeL([l1.id]); ok('S5e the System Admin adds a learner', addVia(b, l2) !== 'refused' && b.roster.some(r => r[1] === l2.id));
+    acaEnter('KA'); S.signedIn = true; const l3 = freeL([l1.id, l2.id]); ok('S5e the Academic Admin adds a learner', addVia(b, l3) !== 'refused' && b.roster.some(r => r[1] === l3.id));
+    const l4 = freeL([l1.id, l2.id, l3.id]); ACT.addToBatch({ dataset: { id: b.code } }); document.querySelector('#ab-l').value = l4.id; const fn = MODAL.actions.find(a => a.cls && /primary/.test(a.cls)).fn, s4 = rosterSnap(b); BIZ(); const rr = fn(); closeModal();
+    ok('S5e (3) the actor is checked again when the dialog is confirmed: refused after switching to the Business Admin', rr === false && rosterSnap(b) === s4 && /^Blocked: add a learner to/.test(ADMIN.audit[0].action));
+    const ip = ADMIN.batches.find(x => x.status === 'In Progress'); acaEnter('KA'); S.signedIn = true; ACT.addToBatch({ dataset: { id: ip.code } }); document.querySelector('#ab-l').value = l4.id; document.querySelector('#rsn').value = 'Late joiner'; const fn2 = MODAL.actions.find(a => a.cls && /primary|danger/.test(a.cls)).fn, s5 = rosterSnap(ip); FA4(); const r2 = fn2(); closeModal();
+    ok('S5e (3) … and on the after-start override dialog', r2 === false && rosterSnap(ip) === s5);
+    SA(); b.enrolled = b.cap; const w0 = b.wait, l5 = freeL([l1.id, l2.id, l3.id]); addVia(b, l5);
+    ok('S5e (4) capacity → waitlist is unchanged', b.wait === w0 + 1 && b.enrolled === b.cap);
+    const other = ADMIN.batches.find(x => x !== b && x.status === 'Open'); if (other) { ACT.addToBatch({ dataset: { id: other.code } }); document.querySelector('#ab-l').value = l1.id; prim(); }
+    ok('S5e (4) a learner already in an active batch still can\'t be added to another', !other || (/already in/.test(mroot().textContent) && !other.roster.some(r => r[1] === l1.id))); closeModal();
+    ok('S5e (9) adding to a batch creates no payment or enrolment record', !STORE.fin.tx.some(t => [l1.id, l2.id, l3.id].includes(t.lid)));
+  });
+
+  await T('S5e (5)–(9) learners added one at a time and imported learners survive rebuilds, once, with stable IDs', async () => {
+    fresh(); SA(); const seed = lrnN(), fin0 = JSON.stringify(STORE.fin.tx.length);
+    go('a-learners'); ACT.addLearner(); fill({ '#nl-name': 'Manual Person', '#nl-email': 'manual.person@example.co.uk', '#nl-mob': '+44 7700 912001' }); prim(); closeModal();
+    const m = ADMIN.learners.find(l => l.email === 'manual.person@example.co.uk');
+    await pickCsv('s5e.csv', CSVH + 'Csv Person,csv.person@example.co.uk,+44 7700 912002,United Arab Emirates\r\n'); prim(); closeModal(); const cid = s5cStore().imports[0].created[0];
+    rebuildA(); SYS(); bizEnter('BB'); acaEnter('KA'); SA(); ACT.aJump({ dataset: { t: 'av:B' } }); INP.adminVariant({ value: 'C' }); INP.adminVariant({ value: 'A' }); SA();
+    const m2 = learnerById(m.id), c2 = learnerById(cid);
+    ok('S5e (5)(7) a learner added one at a time survives admin rebuilds, identity switches and index jumps — same ID, status and details', !!m2 && m2.id === m.id && m2.acct === 'Pending Verification' && m2.name === 'Manual Person' && m2.country === m.country);
+    ok('S5e (6)(7) an imported learner survives too (UAE data region kept)', !!c2 && c2.region === 'UAE');
+    ok('S5e (8) no duplicate learners', ADMIN.learners.filter(l => l.id === m.id).length === 1 && ADMIN.learners.filter(l => l.id === cid).length === 1 && lrnN() === seed + 2 && new Set(allLearners().map(l => l.id)).size === allLearners().length);
+    go('a-learners'); ok('S5e both appear in the Learners list after the rebuilds', main().includes('Manual Person') && main().includes(cid));
+    ACT.addLearner(); fill({ '#nl-name': 'Manual Again', '#nl-email': 'MANUAL.person@example.co.uk' }); const d = prim(); closeModal();
+    ok('S5e duplicate checks still apply after the rebuild', d === false && lrnN() === seed + 2);
+    ok('S5e (9) creating accounts made no enrolment, batch place or payment', !m2.courses.length && !ADMIN.batches.some(b => batchRoster(b).some(r => [m.id, cid].includes(r[1]))) && JSON.stringify(STORE.fin.tx.length) === fin0);
+    ACT.resetDemo(); SA(); ok('S5e (23) the demo reset removes them and restores the seeded learners', !learnerById(m.id) && !learnerById(cid) && lrnN() === seed);
+  });
+
+  await T('S5e (10)–(12) purchases, seats, ledgers, transactions and approvals are kept across rebuilds, never duplicated', async () => {
+    fresh(); agyEnter('AG-10', true); const p = buyAg('CAT-2', 10), bn = ADMIN.bundles.find(b => b.id === p.bundle);
+    agyEnter('AG-02', true); ACT.agBuy({ dataset: { id: 'CAT-1' } }); const inv = document.querySelector('#modal-root input[name="gpm"][value="inv"]'); if (inv) inv.checked = true; prim(); const po = document.querySelector('#modal-root #gi-po'); if (po) po.value = 'PO-S5E-1'; prim(); closeModal();
+    const q = ADMIN.queue.find(i => i.type.startsWith('Agency invoice') && JSON.stringify(i).includes('PO-S5E-1')) || ADMIN.queue[0];
+    SA(); rates(); document.querySelector('#dr-std').value = '4'; document.querySelector('#dr-r').value = 'S5e check'; SUBMIT.discSave(); const dv = discNow().v;
+    const snap = () => JSON.stringify([STORE.agy.purchases, STORE.agy.assign, STORE.agy.ledger, ADMIN.bundles.filter(b => b.agency), STORE.fin.tx, ADMIN.ledger, STORE.fin.od, STORE.fin.deposits]), s0 = snap(), qs = q && JSON.stringify([q.id, q.status, q.amount, q.history]);
+    rebuildA(); SYS(); FA4(); SA(); ACT.aJump({ dataset: { t: 'av:B' } }); INP.adminVariant({ value: 'A' }); SA();
+    ok('S5e (10)(11) purchases, seat assignments, the agency ledger, credited bundles, Finance transactions and ledgers are identical after rebuilds (nothing lost, duplicated or re-priced)', snap() === s0 && STORE.agy.purchases.filter(x => x.ref === p.ref).length === 1 && STORE.fin.tx.filter(t => t.ref === p.ref).length === 1);
+    ok('S5e (10) the credited bundle keeps its seats and use (a consumed seat isn\'t restored)', !!bn && JSON.stringify(ADMIN.bundles.find(b => b.id === p.bundle)) === JSON.stringify(bn));
+    const q2 = q && ADMIN.queue.find(i => i.id === q.id); ok('S5e (10) a pending invoice purchase stays in the queue unchanged for Finance', !!q2 && JSON.stringify([q2.id, q2.status, q2.amount, q2.history]) === qs);
+    ok('S5e (12) discount rate versions and requests are kept', discNow().v === dv && discNow().std === 4);
+    agyEnter('AG-10', true); go('g-purchases'); ok('S5e the agency still sees its purchase after the rebuilds', main().includes(p.ref));
+  });
+
+  await T('S5e (13)(14)(15)(16)(17) security log, demo clock, setup links and scheduled announcements across rebuilds', async () => {
+    fresh(); BIZ(); const b = openB(); ACT.addToBatch({ dataset: { id: b.code } }); const ev = ADMIN.security[0], seeded = ADMIN.security.filter(s => !/S5|^SE-9|^SE-6/.test(s.id)).length;
+    rebuildA(); SYS(); acaEnter('KA'); SA(); ACT.aJump({ dataset: { t: 'av:B' } }); INP.adminVariant({ value: 'A' }); SA();
+    ok('S5e (13)(14) a refused action stays in the security log after rebuilds and identity switches — same ID, actor and reason', ADMIN.security.filter(s => s.id === ev.id).length === 1 && ADMIN.security.find(s => s.id === ev.id).detail === ev.detail && /Business Admin Sophie Turner attempted: add a learner to/.test(ev.detail));
+    ok('S5e (13) seeded security events aren\'t duplicated', ADMIN.security.filter(s => !/S5|^SE-9|^SE-6/.test(s.id)).length === seeded && new Set(ADMIN.security.map(s => s.id)).size === ADMIN.security.length);
+    go('a-security'); ok('S5e (14) the refusal is visible on the security screen', /attempted: add a learner to/.test(main()) || ADMIN.security.some(s => s.id === ev.id));
+    STORE.agy.offset = 5; rebuildA(); ok('S5e (15) the agency demo clock survives an admin rebuild', STORE.agy.offset === 5);
+    STORE.agy.offset = 0; BIZ(); ACT.bLogin({ dataset: { id: 'AG-08', a: 'resend' } }); const m = linkOf('AG-08'), e0 = m.expires;
+    STORE.agy.offset = 8; rebuildA(); const tryM = () => { S.agy.id = 'AG-08'; S.s5bLink = m.id; S.auth = 'agyFirst'; S.portal = 'agency'; S.signedIn = false; S.route = 'signin'; render(); fill({ '#ag-new': 'Agency!Pass2026', '#ag-conf': 'Agency!Pass2026' }); return SUBMIT.agyFirstSet(); };
+    ok('S5e (16) after a rebuild, an expired link stays refused with its original expiry', STORE.agy.offset === 8 && tryM() === false && linkOf('AG-08') && linkOf('AG-08').expires === e0 && agOf('AG-08').loginStatus === 'Not activated');
+    STORE.agy.offset = 0; BIZ(); ACT.bLogin({ dataset: { id: 'AG-08', a: 'resend' } }); const m2 = linkOf('AG-08'); setPw(m2); rebuildA(); ACT.lmSet({ dataset: { id: m2.id } });
+    ok('S5e (16) a used link stays refused after a rebuild; the activation isn\'t repeated', S.auth === 'agyLinkBad' && ADMIN.audit.filter(x => x.action === 'Agency activated' && x.entity.includes('AG-08')).length === 1);
+    SA(); const L3b = ADMIN.batches.find(x => x.code === 'L3AC-JAN26'), a = s5dSave('academy', null, { title: 'S5e timed notice', spec: { t: 'batches', ids: [L3b.code] }, ch: ['In-app', 'Email'], at: new Date(now().getTime() + 1500).toISOString() }, 'schedule').a;
+    await wait(2200); render(); const n1 = logOf('academy:' + a.id).length; rebuildA(); rebuildA(); render(); SYS(); SA(); render();
+    ok('S5e (17) a scheduled announcement is published and logged once, also across rebuilds', ADMIN.announcements.find(x => x.id === a.id).status === 'Published' && n1 === a.recipients * 2 && logOf('academy:' + a.id).length === n1 && ADMIN.audit.filter(x => x.action === 'Published (scheduled)' && x.entity.includes(a.id)).length === 1);
+    ok('S5e (18) communications stay segregated after the rebuilds', !/Agency reporting portal update/.test(feedOf('AG-02')) && /Academy closed 25–26 December/.test(feedOf('AG-02')));
+  });
+
+  await T('S5e (19)–(23) S5a–S5d records persist together across rebuilds; the demo reset restores the fixtures', async () => {
+    fresh(); SA(); ACT.addUser(); fill({ '#nu-n': 'Ren Staff', '#nu-e': 'ren.staff@illumin-academy.example' }); nuPick(['Teacher']); prim(); closeModal();
+    BIZ(); const ag = onboard('Elm Tree Care', 'office@elmtreecare.co.uk', '88776655'); SA();
+    await pickCsv('s5e2.csv', CSVH + 'Ivy Import,ivy.import@example.co.uk,+44 7700 912010,United Kingdom\r\n'); prim(); closeModal(); const iid = s5cStore().imports[0].created[0];
+    const an = s5dSave('academy', null, { title: 'S5e persisted notice', spec: { t: 'staff' }, ch: ['In-app'] }, 'publish').a; const rc = s5dRefOp('create', null, { code: 'S5E-CODE', type: 'Agent', owner: 'S5e Agent', valid: D(100).slice(0, 10) }, '').r;
+    ACT.tplEdit({ dataset: { e: 'Announcement' } }); fill({ '#tp-s': 'S5e subject' }); prim(); closeModal();
+    rebuildA(); SYS(); bizEnter('BA'); acaEnter('KA'); SA(); ACT.aJump({ dataset: { t: 'av:C' } }); INP.adminVariant({ value: 'A' }); SA();
+    ok('S5e (19) S5a: the created staff account persists, once', ADMIN.staff.filter(s => s.email === 'ren.staff@illumin-academy.example').length === 1);
+    ok('S5e (20) S5b: the onboarded agency persists, once, with its login and link', ADMIN.agencies.filter(x => x.id === ag.id).length === 1 && links(ag.id).length === 1);
+    ok('S5e (21) S5c: the imported learner and its import record persist', ADMIN.learners.filter(l => l.id === iid).length === 1 && s5cStore().imports.length === 1);
+    ok('S5e (22) S5d: the announcement, template and referral code persist, once', ADMIN.announcements.filter(x => x.id === an.id).length === 1 && s5dTpl('Announcement').subject === 'S5e subject' && ADMIN.referrals.filter(r => r.code === rc.code).length === 1);
+    ok('S5e audit rows of all stages survive without duplicates', ['User created', 'Agency onboarded', 'Bulk import (CSV)', 'Code created'].every(x => ADMIN.audit.some(a => a.action === x)) && new Set(ADMIN.audit.map(a => `${a.id}|${a.at}|${a.action}|${a.entity}`)).size === ADMIN.audit.length);
+    ok('S5e the variant\'s identity is still rebuilt (Super Admin variant A: Nadia Qureshi, Super Admin + System Admin)', ADMIN.me.name === 'Nadia Qureshi' && ADMIN.staff.find(s => s.id === 'ST-001').roles.join() === 'Super Administrator,System Administrator');
+    ACT.resetDemo(); SA();
+    ok('S5e (23) the deliberate demo reset restores the fixtures of every stage', !ADMIN.staff.some(s => s.email === 'ren.staff@illumin-academy.example') && !agOf(ag.id) && !learnerById(iid) && !ADMIN.announcements.some(x => x.id === an.id) && !s5dRef('S5E-CODE') && s5dTpl('Announcement').v === 1 && STORE.agy.offset === 0);
+  });
+
+  await T('S5e cross-stage journeys and records', async () => {
+    fresh(); SYS(); ok('S5e the System Admin keeps batch creation, scheduling and CSV account import', n2CanCreate() && s4bCanBatch() && s4bSched() && !s5cWhy());
+    go('a-roles', { id: 'Super_Administrator' }); ok('S5e the System Admin still can\'t edit the Super Administrator role', /Only a Super Administrator can do this/.test(main()));
+    acaEnter('KA'); S.signedIn = true; ok('S5e the Academic Admin keeps academy-wide announcements and batch rosters, not CSV account import', s5dRole('academy') === 'aca' && s5dTypes('academy').includes('all') && !s5eBatchWhy() && !!s5cWhy());
+    BIZ(); ok('S5e the Business Admin manages agencies and agency announcements, not academy-wide announcements or batch rosters', !s5bWhy('edit') && s5dRole('biz') === 'admin' && !s5dRole('academy') && !!s5eBatchWhy());
+    SA(); const cb = ADMIN.batches.find(x => x.code === 'L2DC-MAR26'), al0 = JSON.stringify(chAllocOf(cb)); n4RegW('S5E-SESSION').log.push('kept'); N3().plans['S5E'] = { kept: true };
+    rebuildA(); SYS(); SA();
+    ok('S5e CH-17 assessor allocations, N3 plans and N4 registers are kept across rebuilds (unchanged by S5e)', JSON.stringify(chAllocOf(ADMIN.batches.find(x => x.code === 'L2DC-MAR26'))) === al0 && N4().regs['S5E-SESSION'].log[0] === 'kept' && N3().plans['S5E'].kept === true);
+    const ent = l => (UXC.find(x => x[0] === l) || [, , []])[2].join(' ');
+    ok('S5e corrected statements: S5d Academic Admin boundary pending client confirmation; S5b wording resolved in S5d; S5c add-to-batch check (S5e)', /internal implementation boundary pending client confirmation/.test(ent('Setup S5d')) && /Resolved in S5e/.test(ent('Setup S5b')) && /resolved in S5d/i.test(ent('Setup S5b')) && /now checks the actor \(S5e\)/.test(ent('Setup S5c')) && /formal CSV-template confirmation pending/.test(ent('Setup S5c')) && !/tracked for S5e/i.test(ent('Setup S5c')));
+    ok('S5e final status separates client requirements, internal decisions, limitations, open defects and client decisions', /Client-documented requirements|client-documented requirements/.test(ent('Setup S5e')) && /internal implementation decisions/.test(ent('Setup S5e')) && /Prototype limitations/.test(ent('Setup S5e')) && /Open defects/.test(ent('Setup S5e')) && /Client decisions still required/.test(ent('Setup S5e')) && /SRS v1\.3\.2 remains pending/.test(ent('Setup S5e')));
+    SA(); go('a-index'); const ix = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
+    ok('S5e Admin index: one Setup fixes entry for S5e', !!ix && ix.querySelectorAll('[data-t="a-batches"]').length === 1 && /S5e — add-to-batch role check/.test(ix.textContent));
+    ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: S5e entry', /cross-stage integration, security and the final setup audit/.test(main()));
+  });
   fresh();
   const out = document.createElement('pre'); out.id = 'ft-out'; out.textContent = R.join('\n') + '\n' + R.filter(x => x.startsWith('PASS')).length + '/' + R.length; document.body.appendChild(out);
 })();
