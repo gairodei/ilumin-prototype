@@ -232,7 +232,7 @@
     ACT.s2Sc27Pub(); reason('Go'); ok('Scenario #27 demo assignment published to Aisha', STORE.worlds.C.assignments.some(a => a.id === 'a27'));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S2 entry', /Setup fixes — assignments/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
-    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 24);
+    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 25);
   });
 
   /* ================= S3 — NVQ programmes ================= */
@@ -385,7 +385,7 @@
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S3 entry', /Setup fixes — NVQ programmes/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 24 /* S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1 entries added */);
+    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 25 /* S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1 entries added */);
     SA(); go('a-assignments', { id: 'a9' }); ok('S2 / CH-17: "Marked by: … set in the batch\'s Assessors panel" — read-only, no input', /Marked by: .+, set in the batch's Assessors panel/.test(main()) && !app().querySelector('#ae-m') && !app().querySelector('.s2-marker input, .s2-marker select'));
   });
 
@@ -743,7 +743,7 @@
     const s29 = SC_LIST().find(x => x[0] === '29'); ok('Scenario #29: 6 steps, set-up then a new learner\'s sign-up', !!s29 && s29[3].length === 6 && /Daniel Okafor/.test(s29[3][3].text));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S4a entry', /Setup fixes — admission and money/.test(main()));
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 24 /* S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1 entries added */);
+    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 25 /* S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1 entries added */);
     fresh(); const z = apply4('F', T2); ACT.suNext(); ok('E2E (negative): the country rule still applies — no Level 2 batch for a UAE applicant (CH-42)', z.signup.step === 1 && !z.signup.batch);
   });
 
@@ -1604,6 +1604,259 @@
     ok('S5a the custom-role dashboard separates available permissions from configured-but-unsupported ones', /Available to you/.test(main()) && /configured, not yet available here: Create, Edit/.test(main()));
     const L = allLearners()[0]; go('a-learner', { id: L.id }); const n = ADMIN.security.length; ACT.lAct && ACT.lAct({ dataset: { id: L.id, a: 'suspend' } }); ok('S5a a configured-but-unsupported Learners: Edit stays refused', !MODAL && ADMIN.security.length === n + 1);
     SA();
+  });
+
+  /* ================= S5b — agency administration, activation and access security ================= */
+  const BIZ = () => { bizEnter('BA'); S.ui = {}; };
+  const agOf = id => ADMIN.agencies.find(a => a.id === id);
+  const rebuildA = () => { INP.adminVariant({ value: Object.keys(ADMIN_VARIANTS).find(k => k !== 'A') }); INP.adminVariant({ value: 'A' }); SA(); };
+  const links = id => STORE.agy.lmails.filter(m => m.kind === 'agency' && m.agencyId === id);
+  const linkOf = id => links(id).find(m => !m.used);
+  const onboard = (name, login, reg) => { ACT.newAgency(); fill({ '#oa-n': name, '#oa-l': name + ' Ltd', '#oa-r': reg, '#oa-a': '4 Mill Lane, Leeds LS1 4AB' }); prim(); fill({ '#oa-pc': 'Ana Reyes (Operations)', '#oa-pe': login, '#oa-bc': 'Accounts team' }); prim(); fill({ '#oa-li': login }); prim(); prim(); prim(); prim(); const r = prim(); if (r !== false) closeModal(); return ADMIN.agencies.find(a => a.name === name); };
+  const setPw = (m, pw = 'Agency!Pass2026') => { ACT.lmSet({ dataset: { id: m.id } }); if (S.auth !== 'agyFirst') return 'refused'; fill({ '#ag-new': pw, '#ag-conf': pw }); return SUBMIT.agyFirstSet(); };
+  const kpiOf = l => { const k = [...app().querySelectorAll('main .kpi')].find(x => x.querySelector('.xs') && x.querySelector('.xs').textContent === l); return k ? +k.querySelector('.big-num').textContent : NaN; };
+  const discRow = id => { const r = app().querySelector(`main tr[data-ag="${id}"]`); return r ? r.textContent : ''; };
+  const listRow = name => { const r = [...app().querySelectorAll('main tr')].find(x => x.textContent.includes(name)); return r ? r.textContent : ''; };
+  const EA = { name: '#ea-n', legal: '#ea-l', reg: '#ea-g', region: '#ea-rg', address: '#ea-a', contact: '#ea-c', email: '#ea-e', billing: '#ea-b' };
+  const editAg = (id, o, r = 'Records update', keep) => { go('a-agencies', { id, tab: 'profile' }); ACT.bEditAgency({ dataset: { id } }); if (!MODAL) return 'refused'; Object.entries(o).forEach(([k, v]) => { document.querySelector('#modal-root ' + EA[k]).value = v; }); document.querySelector('#modal-root #ea-r').value = r; const res = prim(); if (res !== false || !keep) closeModal(); return res; };
+  const loginOp = (id, a, r = 'Setup test', ne) => { ACT.bLogin({ dataset: { id, a } }); if (!MODAL) return 'refused'; if (ne) document.querySelector('#ne').value = ne; return reason(r); };
+
+  await T('S5b onboarding and activation: one record and one login; the first set-password activates the agency once (S5-06)', async () => {
+    fresh(); BIZ(); go('b-dashboard'); const on0 = kpiOf('Agencies in onboarding'), ac0 = kpiOf('Active agencies'), n0 = ADMIN.agencies.length;
+    const a = onboard('Brookside Care Services', 'admin@brooksidecare.co.uk', '11223344'), id = a && a.id;
+    ok('S5b (1) onboarding creates one agency record with a new stable ID and one login', !!a && ADMIN.agencies.length === n0 + 1 && ADMIN.agencies.filter(x => x.id === id).length === 1 && /^AG-\d+$/.test(id) && a.login === 'admin@brooksidecare.co.uk' && ADMIN.agencies.filter(x => x.login === a.login).length === 1 && new Set(ADMIN.agencies.map(x => x.id)).size === ADMIN.agencies.length);
+    ok('S5b (1) … and exactly one set-password email for that login, audited', links(id).length === 1 && links(id)[0].email === a.login && !links(id)[0].used && ADMIN.audit.some(x => x.action === 'Agency onboarded' && x.entity === 'Brookside Care Services'));
+    ok('S5b (2) pending first-login set-up is not activation: Onboarding / Not activated, no activation time', a.status === 'Onboarding' && a.loginStatus === 'Not activated' && !a.activatedAt && agStatus(a) === 'Onboarding');
+    go('b-dashboard'); ok('S5b (2) the Business dashboard counts it as onboarding', kpiOf('Agencies in onboarding') === on0 + 1 && kpiOf('Active agencies') === ac0, `${kpiOf('Agencies in onboarding')} / ${kpiOf('Active agencies')}`);
+    SA(); saveRates(null, { ag: { 'Brookside Care Services': 5 }, r: 'Prepared terms' }); rates();
+    ok('S5b (2) appearing in the S4c discount list, even with a rate, doesn\'t activate it', /Onboarding/.test(discRow(id)) && discNow().agency['Brookside Care Services'] === 5 && a.status === 'Onboarding' && a.loginStatus === 'Not activated');
+    signOut(); S.portal = 'agency'; staffSignin(a.login); ok('S5b (2) the login can\'t sign in before its set-up', !S.signedIn && /not activated yet/.test(JSON.stringify(S.authMsg)));
+    const m = linkOf(id); ACT.lmSet({ dataset: { id: m.id } }); fill({ '#ag-new': 'short', '#ag-conf': 'short' }); const rw = SUBMIT.agyFirstSet();
+    ok('S5b (3) a password that breaks the rules is refused inside the submit (not only by the disabled button)', rw === false && a.loginStatus === 'Not activated' && !m.used);
+    const r1 = setPw(m), au = ADMIN.audit.find(x => x.action === 'Agency activated' && x.entity.includes(id));
+    ok('S5b (3) the first set-password activates the agency and its login together', r1 !== false && a.status === 'Active' && a.loginStatus === 'Active' && !!a.activatedAt && agStatus(a) === 'Active' && m.used && S.auth === 'agyWelcome');
+    ok('S5b (4) the activation is audited: agency actor, before → after, time and the link used', !!au && au.role === 'Agency Administrator' && /Ana Reyes/.test(au.actor) && au.before === 'Onboarding · Not activated' && au.after === 'Active · Active' && !!au.at && au.reason.includes(m.id));
+    ok('S5b (4) the Business Admin is notified', STORE.biz.notifs.some(n => n.t === 'Agency login activated' && n.b.includes('Brookside')));
+    const at0 = a.activatedAt, nAct = () => ADMIN.audit.filter(x => x.action === 'Agency activated' && x.entity.includes(id)).length;
+    S.auth = 'agyFirst'; render(); const r2 = SUBMIT.agyFirstSet(); ok('S5b (3) resubmitting the set-password activates nothing again', r2 === false && nAct() === 1 && a.activatedAt === at0);
+    ACT.lmSet({ dataset: { id: m.id } }); ok('S5b (3) reopening the used link is refused, changes nothing and is logged', S.auth === 'agyLinkBad' && /already been used/.test(app().textContent) && nAct() === 1 && ADMIN.security[0].type === 'Set-password link refused');
+    signOut(); S.portal = 'agency'; staffSignin(a.login); ok('S5b the activated login goes on to two-step sign-in (email code)', S.auth === 'tfa-code' && !!S.tfa && S.tfa.agency === id);
+    BIZ(); go('b-dashboard'); ok('S5b (5) the Business dashboard now counts it as active', kpiOf('Agencies in onboarding') === on0 && kpiOf('Active agencies') === ac0 + 1);
+    go('a-agencies'); ok('S5b (5) the agency list shows it Active (agency and login)', /Active/.test(listRow('Brookside Care Services')) && !/Onboarding|Not activated/.test(listRow('Brookside Care Services')));
+    go('a-agencies', { id, tab: 'profile' }); ok('S5b (5) the detail shows Active, the agency ID and the activation time', /Active/.test(main()) && main().includes(id) && /Activated/.test(main()) && !/Not yet/.test(main()));
+    SA(); rates(); ok('S5b (5) the S4c per-agency discount list shows it Active; its rate is unchanged', /Active/.test(discRow(id)) && !/Onboarding/.test(discRow(id)) && discNow().agency['Brookside Care Services'] === 5);
+    BIZ(); const n1 = ADMIN.agencies.length; ACT.newAgency(); fill({ '#oa-n': 'Brookside  care services', '#oa-r': '99' }); const rd = prim(); closeModal();
+    ok('S5b (1) a second agency with the same name is refused (case and spacing ignored)', rd === false && ADMIN.agencies.length === n1);
+    const st = onboard('Staff Mailbox Agency', 'owen.price@illumin-academy.example', '77'); ok('S5b (1) a staff email can\'t become an agency login (identity uniqueness)', !st && ADMIN.agencies.length === n1 && ADMIN.audit[0].action === 'Blocked: onboard agency');
+  });
+
+  await T('S5b agency details: validated edits with real versions and before → after audit; history and purchases kept', async () => {
+    fresh(); BIZ(); const a = agOf('AG-08'), hist0 = JSON.stringify([STORE.agy.purchases, STORE.fin.tx, STORE.agy.ledger, ADMIN.bundles]), L0 = agyRoster(a.name).length;
+    go('a-agencies', { id: 'AG-08', tab: 'profile' }); ok('S5b the profile shows the agency ID, address, login status, activation and the real version', main().includes('AG-08') && /Address/.test(main()) && /Version 1 of these details/.test(main()) && /Not yet/.test(main()) && !/Edits are versioned/.test(main()));
+    const r = editAg('AG-08', { legal: 'Riverside Care Partners Limited', address: '12 Quay Street, Bristol BS1 4DJ', region: 'UAE', billing: 'Accounts Payable (accounts@riversidecare.co.uk)' }, 'Companies House update'), au = ADMIN.audit[0];
+    ok('S5b (6) legal name, address, region and billing contact are saved', r !== false && a.legal === 'Riverside Care Partners Limited' && a.address === '12 Quay Street, Bristol BS1 4DJ' && a.region === 'UAE' && a.billing === 'Accounts Payable (accounts@riversidecare.co.uk)');
+    ok('S5b (7) audit: actor, before → after for each changed field, reason and the version', au.action === 'Details edited — version 2' && au.actor === 'Sophie Turner' && au.entity === 'Riverside Care Partners (AG-08)' && au.before === 'Legal name: Riverside Care Partners Ltd; Region: UK; Address: —; Billing contact: —' && au.after === 'Legal name: Riverside Care Partners Limited; Region: UAE; Address: 12 Quay Street, Bristol BS1 4DJ; Billing contact: Accounts Payable (accounts@riversidecare.co.uk)' && au.reason === 'Companies House update', au.before + ' → ' + au.after);
+    ok('S5b (7) the version is recorded on the agency (so "version" is true)', a.versions.length === 2 && a.versions[1].v === 2 && a.versions[1].changes.length === 4 && a.versions[1].by === 'Sophie Turner');
+    go('a-agencies', { id: 'AG-08', tab: 'profile' }); ok('S5b (6) the profile shows the new details and the version history', main().includes('12 Quay Street') && main().includes('Riverside Care Partners Limited') && /Version 2 of these details/.test(main()) && /Versions of these details/.test(main()) && main().includes('Companies House update'));
+    go('a-agencies'); ok('S5b (6) the agency list shows the new region', /UAE/.test(listRow('Riverside Care Partners')));
+    const reg0 = a.reg; let x = editAg('AG-08', { reg: '' }, 'x', true); ok('S5b (6) required fields are checked (registration number); nothing changes', x === false && a.reg === reg0 && /Enter the registration number/.test(mroot().textContent)); closeModal();
+    x = editAg('AG-08', { email: 'not-an-email' }, 'x', true); ok('S5b (6) the contact email is validated', x === false && a.email === 'helen.moss@riversidecare.co.uk'); closeModal();
+    x = editAg('AG-08', { name: 'meridian home support' }, 'x', true); ok('S5b (6) the name must be unique — another agency is never matched or renamed', x === false && a.name === 'Riverside Care Partners' && agOf('AG-10').name === 'Meridian Home Support' && /Another agency already has this name/.test(mroot().textContent)); closeModal();
+    x = editAg('AG-08', { name: 'Riverside Care Group' }, 'Rebrand', true); ok('S5b (6) renaming an agency that records refer to by name is refused with the reason', x === false && a.name === 'Riverside Care Partners' && /refer to this agency by its trading name/.test(mroot().textContent)); closeModal();
+    x = editAg('AG-08', {}, 'Nothing'); ok('S5b (6) a save with no changes adds no version', x === false && a.versions.length === 2);
+    ok('S5b (8) purchases, Finance records, ledger and bundles are unchanged; learners kept', JSON.stringify([STORE.agy.purchases, STORE.fin.tx, STORE.agy.ledger, ADMIN.bundles]) === hist0 && agyRoster(a.name).length === L0);
+    agyEnter('AG-02', true); go('g-purchases'); const gp0 = main(), cp0 = JSON.stringify(agyPurchases('CarePlus Recruitment'));
+    BIZ(); editAg('AG-02', { legal: 'CarePlus Recruitment Limited', address: '1 Station Road, Reading RG1 1LG', billing: 'CarePlus Accounts' }, 'Billing details');
+    agyEnter('AG-02', true); go('g-purchases'); ok('S5b (8) a purchasing agency\'s historical purchases and receipts are unchanged by a details edit', main() === gp0 && JSON.stringify(agyPurchases('CarePlus Recruitment')) === cp0);
+    BIZ(); const n = onboard('Ashgrove Home Care', 'office@ashgrovehomecare.co.uk', '55667788'); const y = editAg(n.id, { name: 'Ashgrove Homecare' }, 'Trading name registered');
+    ok('S5b (6) a new agency nothing refers to can be renamed; the earlier name is kept', y !== false && n.name === 'Ashgrove Homecare' && n.prevNames.includes('Ashgrove Home Care') && n.login === 'office@ashgrovehomecare.co.uk');
+    go('a-agencies', { id: n.id, tab: 'audit' }); ok('S5b (7) its history includes entries under the earlier name', /Agency onboarded/.test(main()) && /Details edited — version 2/.test(main()));
+  });
+
+  await T('S5b login administration: resend, email change, deactivate / reactivate keep the first-login requirement', async () => {
+    fresh(); BIZ(); const a = agOf('AG-08'), m0 = linkOf('AG-08');
+    ok('S5b seeded: Riverside has one unused set-password link', !!m0 && m0.id === 'LM-A1');
+    ACT.bLogin({ dataset: { id: 'AG-08', a: 'resend' } }); const m1 = linkOf('AG-08');
+    ok('S5b (9) resend: a new link to the login email; the earlier one stops working; audited', !!m1 && m1.id !== m0.id && m1.email === a.login && m0.used && /newer link/.test(m0.void) && links('AG-08').filter(x => !x.used).length === 1 && ADMIN.audit[0].action === 'Set-password link resent' && a.loginStatus === 'Not activated');
+    go('m-inbox', { id: m0.id }); ok('S5b (9) the demo inbox shows the earlier link as Superseded', /Superseded/.test(app().textContent));
+    ACT.lmSet({ dataset: { id: m0.id } }); ok('S5b (9) the superseded link can\'t be used', S.auth === 'agyLinkBad' && a.loginStatus === 'Not activated' && /replaced/.test(app().textContent));
+    BIZ(); go('a-agencies', { id: 'AG-08', tab: 'login' }); ok('S5b (9) the Login tab shows the outstanding set-up and the latest link', /Outstanding/.test(main()) && main().includes('not used yet'));
+    loginOp('AG-08', 'deactivate', 'Paused'); ok('S5b deactivate: Inactive / Deactivated; the unused link stops working', a.loginStatus === 'Deactivated' && a.status === 'Inactive' && m1.used && /deactivated/.test(m1.void));
+    ACT.lmSet({ dataset: { id: m1.id } }); ok('S5b … so a deactivated login can\'t be set up through its old link', S.auth === 'agyLinkBad' && a.loginStatus === 'Deactivated');
+    BIZ(); ACT.bLogin({ dataset: { id: 'AG-08', a: 'resend' } }); ok('S5b a deactivated login gets no new link (refused, logged)', !linkOf('AG-08') && ADMIN.audit[0].action === 'Blocked: resend the set-password link of Riverside Care Partners');
+    ok('S5b deactivating twice is refused', loginOp('AG-08', 'deactivate') === 'refused' && /already deactivated/.test(ADMIN.audit[0].reason));
+    loginOp('AG-08', 'reactivate', 'Contract signed');
+    ok('S5b (10) reactivating a never-activated login keeps the set-password requirement (it used to become Active)', a.loginStatus === 'Not activated' && a.status === 'Onboarding' && !a.activatedAt && agStatus(a) === 'Onboarding' && ADMIN.audit[0].after === 'Onboarding · Not activated');
+    signOut(); S.portal = 'agency'; staffSignin(a.login); ok('S5b (10) … so it still can\'t sign in', !S.signedIn && /not activated yet/.test(JSON.stringify(S.authMsg)));
+    BIZ(); ACT.bLogin({ dataset: { id: 'AG-08', a: 'resend' } }); setPw(linkOf('AG-08'));
+    ok('S5b (10) … until the set-password is completed with a new link — then the agency is activated', a.status === 'Active' && a.loginStatus === 'Active' && !!a.activatedAt);
+    BIZ(); loginOp('AG-08', 'deactivate', 'Hold'); loginOp('AG-08', 'reactivate', 'Resume'); ok('S5b (10) an activated login returns to Active when reactivated', a.loginStatus === 'Active' && a.status === 'Active');
+    loginOp('AG-11', 'reactivate', 'Renewed'); ok('S5b (10) a seeded login that was in use (Kingsway) still reactivates to Active', agOf('AG-11').loginStatus === 'Active' && agOf('AG-11').status === 'Active');
+    const g = agOf('AG-10'), gp = JSON.stringify(agyPurchases(g.name)), gr = agyRoster(g.name).length, ga = ADMIN.audit.filter(x => x.entity.includes('Meridian')).length;
+    ok('S5b (11) a login email used by another agency is refused', loginOp('AG-10', 'email', 'x', 'paul@kingswaystaffing.co.uk') === false && g.login === 'clare@meridianhs.co.uk' && /already an agency login/.test(mroot().textContent)); closeModal();
+    ok('S5b (11) … and so is a staff email', loginOp('AG-10', 'email', 'x', 'owen.price@illumin-academy.example') === false && g.login === 'clare@meridianhs.co.uk'); closeModal();
+    loginOp('AG-10', 'email', 'New mailbox', 'training@meridianhs.co.uk'); const e = ADMIN.audit[0];
+    ok('S5b (11) email change: same agency ID and status; the login waits for confirmation; one new link to the new address', g.id === 'AG-10' && g.login === 'training@meridianhs.co.uk' && g.status === 'Active' && g.loginStatus === 'Pending email confirmation' && agStatus(g) === 'Active' && linkOf('AG-10').email === 'training@meridianhs.co.uk' && links('AG-10').filter(x => !x.used).length === 1);
+    ok('S5b (11) audited with the old and new address', e.action === 'Login email changed' && e.before.startsWith('clare@meridianhs.co.uk') && e.after.startsWith('training@meridianhs.co.uk') && e.reason === 'New mailbox');
+    ok('S5b (11) identity and history kept: purchases, learners and earlier audit rows', JSON.stringify(agyPurchases(g.name)) === gp && agyRoster(g.name).length === gr && ADMIN.audit.filter(x => x.entity.includes('Meridian')).length === ga + 1);
+    signOut(); S.portal = 'agency'; staffSignin('training@meridianhs.co.uk'); ok('S5b (11) the new address can\'t sign in before it is confirmed', !S.signedIn && S.auth !== 'tfa-code' && /login email was changed/.test(JSON.stringify(S.authMsg)));
+    setPw(linkOf('AG-10')); ok('S5b (11) confirming the new address returns the login to Active — no second activation', g.loginStatus === 'Active' && g.status === 'Active' && ADMIN.audit[0].action === 'Login email confirmed' && !ADMIN.audit.some(x => x.action === 'Agency activated' && x.entity.includes('AG-10')));
+    BIZ(); loginOp('AG-01', 'deactivate', 'Paused'); ok('S5b (11) a deactivated login\'s email can\'t be changed until it is reactivated', loginOp('AG-01', 'email') === 'refused' && /reactivate it first/.test(ADMIN.audit[0].reason));
+    go('a-agencies', { id: 'AG-01', tab: 'login' }); ok('S5b the Login tab of a deactivated login offers only Reactivate', !app().querySelector('main [data-act="bLogin"][data-a="resend"]') && !app().querySelector('main [data-act="bLogin"][data-a="email"]') && !!app().querySelector('main [data-act="bLogin"][data-a="reactivate"]'));
+  });
+
+  await T('S5b correction — set-password link expiry: 7 days from issue, enforced in the action; used and superseded links stay refused', async () => {
+    // The agency clock is agNow() = now() + STORE.agy.offset days (the demo "Advance 30 days" control); clockAt sets it to a moment
+    const clockAt = ms => { STORE.agy.offset = (ms - now().getTime()) / DAY; }, ml = id => STORE.agy.lmails.find(m => m.id === id);
+    const tryLink = m => { S.agy.id = m.agencyId; S.s5bLink = m.id; S.auth = 'agyFirst'; S.portal = 'agency'; S.signedIn = false; S.route = 'signin'; render(); fill({ '#ag-new': 'Agency!Pass2026', '#ag-conf': 'Agency!Pass2026' }); return SUBMIT.agyFirstSet(); };
+    fresh(); BIZ(); const a = agOf('AG-09'), m0 = linkOf('AG-09');
+    ok('S5b expiry period: 7 days — the agency email and System Configuration agree', s5bLinkDays() === 7 && ADMIN.config.some(c => c.name === 'Set-password / reset / workplace link expiry' && c.value === '7 days'));
+    ACT.bLogin({ dataset: { id: 'AG-09', a: 'resend' } }); const m = linkOf('AG-09'), exp = new Date(m.expires).getTime();
+    ok('S5b resend issues a new link that expires 7 days after it was issued (audited with the expiry)', m.id !== m0.id && exp - new Date(m.sent).getTime() === 7 * DAY && m0.void && /expires/.test(ADMIN.audit[0].after));
+    clockAt(exp - 60000); ACT.lmSet({ dataset: { id: m.id } }); ok('S5b just before expiry the link opens the set-password screen', S.auth === 'agyFirst' && S.s5bLink === m.id);
+    go('m-inbox', { id: m.id }); ok('S5b reopening the email doesn\'t move the expiry; the email states its expiry date', m.expires === new Date(exp).toISOString() && /The link expires on/.test(app().textContent) && !/expires in 7 days/.test(app().textContent));
+    const b0 = JSON.stringify(a), ns = ADMIN.security.length; clockAt(exp); const r1 = tryLink(m);
+    ok('S5b at the expiry moment the action refuses the link (direct submit, not only the button)', r1 === false && S.auth === 'agyLinkBad' && /expired on/.test(app().textContent) && /Contact:/.test(app().textContent));
+    ok('S5b an expired link leaves the agency and its login unchanged and the link unused; the attempt is logged', JSON.stringify(a) === b0 && a.status === 'Onboarding' && a.loginStatus === 'Not activated' && !a.activatedAt && !m.used && ADMIN.security.length === ns + 1 && ADMIN.security[0].type === 'Set-password link refused' && /expired/.test(ADMIN.security[0].detail) && ADMIN.audit[0].action === 'Blocked: set-password link');
+    clockAt(exp + 3 * DAY); ACT.lmSet({ dataset: { id: m.id } }); ok('S5b after expiry the link stays refused', S.auth === 'agyLinkBad' && a.loginStatus === 'Not activated');
+    go('m-inbox'); ok('S5b the demo inbox shows the link as Expired', /Expired/.test(app().textContent)); BIZ(); go('a-agencies', { id: 'AG-09', tab: 'login' }); ok('S5b the Login tab says the latest link expired', /Expired .* send a new link/.test(main()));
+    for (const [lbl, enter] of [['System Admin', () => role('sysA')], ['Finance Admin', () => FA4()], ['an Agency Administrator', () => agyEnter('AG-03', true)]]) {
+      enter(); const n = links('AG-09').length; ['resend', 'email', 'reactivate'].forEach(k => { ACT.bLogin({ dataset: { id: 'AG-09', a: k } }); closeModal(); });
+      ok(`S5b ${lbl} can't resend a link or use other login actions to get round the expiry (refused, logged)`, links('AG-09').length === n && linkOf('AG-09') === m && a.loginStatus === 'Not activated' && /^Blocked: /.test(ADMIN.audit[0].action));
+    }
+    BIZ(); ACT.bLogin({ dataset: { id: 'AG-09', a: 'resend' } }); const m2 = linkOf('AG-09');
+    ok('S5b an authorised resend issues a fresh link with a new 7-day expiry (from the agency clock) and supersedes the expired one', m2.id !== m.id && new Date(m2.expires).getTime() - agNow().getTime() > 7 * DAY - 60000 && new Date(m2.expires).getTime() > exp && m.void && links('AG-09').filter(x => !x.used).length === 1);
+    ACT.lmSet({ dataset: { id: m.id } }); ok('S5b the old link is not revived by the resend', S.auth === 'agyLinkBad' && /replaced/.test(app().textContent));
+    const r2 = setPw(m2); ok('S5b the new link works before its expiry — the agency is activated once', r2 !== false && a.status === 'Active' && a.loginStatus === 'Active' && m2.used && ADMIN.audit.filter(x => x.action === 'Agency activated' && x.entity.includes('AG-09')).length === 1);
+    ok('S5b a used link can\'t be used again, even before its expiry', setPw(m2) === 'refused' && /already been used/.test(app().textContent));
+    // The same links confirm a changed login email and reset a password: the same expiry applies
+    fresh(); BIZ(); loginOp('AG-10', 'email', 'Mailbox', 'training@meridianhs.co.uk'); const g = agOf('AG-10'), me = linkOf('AG-10'); clockAt(new Date(me.expires).getTime() + 1000);
+    ok('S5b an expired email-confirmation link confirms nothing', tryLink(me) === false && g.loginStatus === 'Pending email confirmation' && !me.used && !ADMIN.audit.some(x => x.action === 'Login email confirmed'));
+    fresh(); BIZ(); ACT.bLogin({ dataset: { id: 'AG-01', a: 'resend' } }); const mr = linkOf('AG-01'); clockAt(new Date(mr.expires).getTime() + 1000);
+    ok('S5b an expired password-reset link resets nothing', tryLink(mr) === false && agOf('AG-01').loginStatus === 'Active' && !mr.used && !ADMIN.audit.some(x => x.action === 'Password set with a set-password link'));
+    fresh(); ACT.lmSet({ dataset: { id: 'LM-A1' } }); ok('S5b Riverside\'s seeded link (sent 9 days ago) is expired and refused; Riverside unchanged', S.auth === 'agyLinkBad' && /expired on/.test(app().textContent) && agOf('AG-08').loginStatus === 'Not activated' && !ml('LM-A1').used);
+    // Validity survives admin rebuilds: the stored expiry is kept
+    fresh(); BIZ(); ACT.bLogin({ dataset: { id: 'AG-08', a: 'resend' } }); const m3 = linkOf('AG-08'), e3 = m3.expires; rebuildA(); rebuildA(); SYS(); SA();
+    ok('S5b after admin rebuilds and identity switches the link is still there with the same expiry; the expired seed link stays superseded', !!ml(m3.id) && ml(m3.id).expires === e3 && !ml(m3.id).used && ml('LM-A1').void);
+    clockAt(new Date(e3).getTime() + 1000); ok('S5b … still refused after its expiry', tryLink(ml(m3.id)) === false && agOf('AG-08').loginStatus === 'Not activated');
+    clockAt(new Date(e3).getTime() - 60000); const r3 = tryLink(ml(m3.id)); ok('S5b … and still works before it', r3 !== false && agOf('AG-08').status === 'Active' && agOf('AG-08').loginStatus === 'Active');
+    // Other links keep their own rules: an agency-created learner's set-password link doesn't get this expiry
+    fresh(); const lm = STORE.agy.lmails.find(x => !x.kind && x.lid && !x.used); STORE.agy.offset = 30; ACT.lmSet({ dataset: { id: lm.id } });
+    ok('S5b learner set-password links are unchanged (no new expiry)', S.auth === 'agyLearnerFirst');
+    STORE.agy.offset = 0;
+  });
+
+  await T('S5b authorisation: only the Business Admin and Super Admin administer agencies; refusals change nothing and are logged', async () => {
+    // Baselines are taken after a render (the first render after a rebuild adds the seeded data-sharing terms — fu-apply.js)
+    const snap = (id = 'AG-02') => JSON.stringify([agOf(id), links(id)]), base = () => { render(); return snap(); };
+    const tryAll = id => {
+      const n = ADMIN.security.length, opened = [];
+      ACT.bEditAgency({ dataset: { id } }); opened.push(!!MODAL); closeModal();
+      const r = s5bSaveAgency(id, { name: agOf(id).name, legal: 'Changed Ltd', reg: '1', region: 'UK', address: '', contact: agOf(id).contact, email: agOf(id).email, billing: '' }, 'x');
+      ['deactivate', 'email', 'resend'].forEach(k => { ACT.bLogin({ dataset: { id, a: k } }); opened.push(!!MODAL); closeModal(); });
+      ACT.bPerm({ dataset: { id, v: agOf(id).perms === 'Full' ? 'Receive-only' : 'Full' } }); opened.push(!!MODAL); closeModal();
+      INP.agVis({ dataset: { id, k: 'assessment' }, checked: !agOf(id).vis.assessment });
+      ACT.newAgency(); opened.push(!!MODAL); closeModal();
+      return { none: !opened.some(Boolean) && !r.ok, logged: ADMIN.security.length - n };
+    };
+    for (const [lbl, enter] of [['System Admin', () => role('sysA')], ['Finance Admin', () => FA4()], ['Academic Admin', () => { acaEnter('KA'); S.signedIn = true; }], ['Business Admin in the Finance role context', () => { bizEnter('BD'); S.bizCtx = 'Finance Admin'; }]]) {
+      fresh(); enter(); const s0 = base(), t = tryAll('AG-02');
+      ok(`S5b (12)(13) ${lbl}: agency edit, login, visibility, permission and onboarding calls are refused; nothing changes; each is logged`, t.none && snap() === s0 && t.logged === 8 && ADMIN.audit.some(x => /^Blocked: edit agency details of CarePlus/.test(x.action)), JSON.stringify(t));
+    }
+    fresh(); role('sysA'); const ns = ADMIN.security.length; ACT.bLogin({ dataset: { id: 'AG-02', a: 'deactivate' } });
+    ok('S5b (12) the System Admin refusal is in the security log and the agency\'s audit', !MODAL && ADMIN.security.length === ns + 1 && /System Administrator Owen Price attempted: deactivate the login of CarePlus Recruitment/.test(ADMIN.security[0].detail) && ADMIN.audit[0].module === 'Agencies' && ADMIN.audit[0].action === 'Blocked: deactivate the login of CarePlus Recruitment');
+    go('a-agencies', { id: 'AG-02', tab: 'profile' }); ok('S5b the interface follows the same decision: no Edit details for the System Admin', !app().querySelector('main [data-act="bEditAgency"]') && /edited by the Business Admin/.test(main()));
+    go('a-agencies', { id: 'AG-02', tab: 'visibility' }); ok('S5b … permission and visibility controls are read-only with the reason', [...app().querySelectorAll('main [data-act="bPerm"]')].every(b => b.disabled && b.title) && [...app().querySelectorAll('main [data-onchange="agVis"]')].every(i => i.disabled) && /Read only/.test(main()));
+    // Agency Administrators never administer an agency — their own or another one
+    fresh(); agyEnter('AG-03', true); const s2 = base(), s3 = snap('AG-03'), t3 = tryAll('AG-02'), t4 = tryAll('AG-03');
+    ok('S5b (14) an Agency Administrator (Gulf Care) can\'t change another agency by direct calls', t3.none && snap() === s2 && t3.logged === 8 && /Agency Administrator Huda Al Marri \(Gulf Care Recruitment\) attempted/.test(ADMIN.security[0].detail));
+    ok('S5b (14) … nor its own agency account', t4.none && snap('AG-03') === s3 && t4.logged === 8);
+    const cpL = agyRoster('CarePlus Recruitment')[0], nd = ADMIN.security.length; go('g-learner', { id: cpL.id });
+    ok('S5b (14) cross-agency reads stay refused (another agency\'s learner is "Not found" and logged)', !main().includes(cpL.email) && ADMIN.security.length === nd + 1 && ADMIN.security[0].type === 'Denied cross-agency access');
+    go('a-agencies', { id: 'AG-02' }); ok('S5b (14) an admin route doesn\'t open in the agency portal', S.route === 'g-dashboard' && !main().includes('CarePlus Recruitment'));
+    // Custom-role access with Agencies & Bundles: Edit is refused too (S5a reserved limits)
+    fresh(); SA(); const R = newCustom('Agency Clerk', ['Agencies & Bundles:V', 'Agencies & Bundles:E']); ACT.addUser(); fill({ '#nu-n': 'Ivy Lane', '#nu-e': 'ivy.lane@illumin-academy.example' }); nuPick([R]); prim(); closeModal();
+    signOut(); S.portal = 'admin'; staffSignin('ivy.lane@illumin-academy.example'); const sc = base(), tc = tryAll('AG-02');
+    ok('S5b (13) custom-role access with Agencies & Bundles: Edit can\'t administer agencies either', s5Ctx() && tc.none && snap() === sc && tc.logged >= 8);
+    // Authorised roles keep working; the permission is checked again when a dialog is confirmed
+    fresh(); BIZ(); ACT.bPerm({ dataset: { id: 'AG-02', v: 'Receive-only' } }); reason('Policy'); INP.agVis({ dataset: { id: 'AG-02', k: 'assessment' }, checked: true });
+    ok('S5b the Business Admin changes communication permission and report visibility (audited)', agOf('AG-02').perms === 'Receive-only' && agOf('AG-02').vis.assessment === true && ADMIN.audit.some(x => x.action === 'Communication permission') && ADMIN.audit[0].action === 'Report visibility');
+    SA(); ACT.bPerm({ dataset: { id: 'AG-02', v: 'Full' } }); reason('Back'); ok('S5b the Super Admin can too', agOf('AG-02').perms === 'Full');
+    BIZ(); ACT.bLogin({ dataset: { id: 'AG-10', a: 'deactivate' } }); const dlg = MODAL; S.bizCtx = 'Finance Admin'; document.querySelector('#rsn').value = 'later'; const rr = dlg.actions[1].fn(); S.bizCtx = 'Business Admin'; closeModal();
+    ok('S5b the actor is checked again when the dialog is confirmed (not when it opened)', rr === false && agOf('AG-10').loginStatus === 'Active' && ADMIN.audit[0].action === 'Blocked: deactivate the login of Meridian Home Support');
+    ACT.bEditAgency({ dataset: { id: 'AG-10' } }); document.querySelector('#modal-root #ea-l').value = 'Meridian HS Ltd'; document.querySelector('#modal-root #ea-r').value = 'x'; S.bizCtx = 'Finance Admin'; const re = prim(); S.bizCtx = 'Business Admin'; closeModal();
+    ok('S5b … the details save too', re === false && agOf('AG-10').legal !== 'Meridian HS Ltd' && /^Blocked: edit agency details/.test(ADMIN.audit[0].action));
+    ACT.bLogin({ dataset: { id: 'AG-99', a: 'deactivate' } }); ok('S5b an unknown agency ID is refused (never matched by name)', !MODAL && ADMIN.audit[0].action === 'Blocked: deactivate the login');
+  });
+
+  await T('S5b purchases: a login that can\'t sign in can\'t buy by calling the purchase directly', async () => {
+    fresh(); const n0 = STORE.agy.purchases.length; agyEnter('AG-10', true); const ok1 = buyAg('CAT-2', 10);
+    ok('S5b an active agency still buys as before', STORE.agy.purchases.length === n0 + 1 && ok1.agency === 'Meridian Home Support' && ok1.status === 'Paid');
+    const mh = JSON.stringify(agyPurchases('Meridian Home Support')), bn = ADMIN.bundles.filter(b => b.agency === 'Meridian Home Support').length;
+    BIZ(); loginOp('AG-10', 'deactivate', 'Contract ended'); agyEnter('AG-10', true); const n1 = STORE.agy.purchases.length, q1 = ADMIN.queue.length, ns = ADMIN.security.length;
+    ACT.agBuy({ dataset: { id: 'CAT-2' } }); ok('S5b (15) a login deactivated while signed in can\'t open a purchase', !MODAL && /attempted: buy bundles — This agency account is inactive/.test(ADMIN.security[0].detail));
+    S.agy.buy = { c: AGY_CATALOGUE().find(c => c.id === 'CAT-2'), qty: 10 }; agPayResult('success'); ok('S5b (15) … nor complete a card payment by a direct call', STORE.agy.purchases.length === n1 && !MODAL);
+    S.agy.buy = { c: AGY_CATALOGUE().find(c => c.id === 'CAT-2'), qty: 10 }; agInvoiceForm(); ok('S5b (15) … nor request seats by bank transfer', ADMIN.queue.length === q1 && !MODAL && ADMIN.security.length === ns + 3);
+    ok('S5b (15) its earlier purchases and bundles are unchanged', JSON.stringify(agyPurchases('Meridian Home Support')) === mh && ADMIN.bundles.filter(b => b.agency === 'Meridian Home Support').length === bn);
+    SA(); saveRates(null, { ag: { 'Riverside Care Partners': 7 }, r: 'Prepared terms' }); agyEnter('AG-08', true); ACT.agBuy({ dataset: { id: 'CAT-2' } }); S.agy.buy = { c: AGY_CATALOGUE().find(c => c.id === 'CAT-2'), qty: 5 }; agPayResult('success');
+    ok('S5b (15) a login that never completed set-up can\'t buy, even with a discount rate set', STORE.agy.purchases.length === n1 && /not activated yet/.test(ADMIN.security[0].detail));
+    BIZ(); loginOp('AG-01', 'email', 'Mailbox', 'ops@brightcare-staff.co.uk'); agyEnter('AG-01', true); S.agy.buy = { c: AGY_CATALOGUE().find(c => c.id === 'CAT-2'), qty: 5 }; agPayResult('success');
+    ok('S5b (15) … nor one waiting for its new login email to be confirmed', STORE.agy.purchases.length === n1 && /login email was changed/.test(ADMIN.security[0].detail));
+    BIZ(); loginOp('AG-10', 'reactivate', 'Renewed'); agyEnter('AG-10', true); const ok2 = buyAg('CAT-2', 10);
+    ok('S5b once reactivated it buys again, at the same price', STORE.agy.purchases.length === n1 + 1 && ok2.amount === ok1.amount);
+    S.portal = 'admin'; S.agy.buy = { c: AGY_CATALOGUE().find(c => c.id === 'CAT-2'), qty: 10 }; const n2 = STORE.agy.purchases.length; agPayResult('success'); ok('S5b a purchase can only be made from a signed-in agency portal', STORE.agy.purchases.length === n2);
+  });
+
+  await T('S5b persistence: agencies, status, details, logins, links and audit survive admin rebuilds; the demo reset restores the seed', async () => {
+    fresh(); BIZ(); const seedN = ADMIN.agencies.length, a = onboard('Ashgrove Home Care', 'office@ashgrovehomecare.co.uk', '55667788'), id = a.id, nA = ADMIN.agencies.length;
+    editAg('AG-08', { address: '9 Harbour Road, Bristol BS1 5TT', billing: 'Finance Office' }, 'Update');
+    loginOp('AG-10', 'email', 'Mailbox', 'team@meridianhs.co.uk'); loginOp('AG-01', 'deactivate', 'Contract paused');
+    ACT.bPerm({ dataset: { id: 'AG-02', v: 'Receive-only' } }); reason('Policy'); INP.agVis({ dataset: { id: 'AG-02', k: 'assessment' }, checked: true });
+    ACT.bLogin({ dataset: { id: 'AG-09', a: 'resend' } }); const used = linkOf(id); setPw(used); const at0 = a.activatedAt;
+    const pend = linkOf('AG-10').id, a09 = linkOf('AG-09').id;
+    rebuildA(); const b = agOf(id);
+    ok('S5b (16) a new agency survives a rebuild: same ID, details, login and Active status', !!b && b.name === 'Ashgrove Home Care' && b.login === 'office@ashgrovehomecare.co.uk' && b.status === 'Active' && b.loginStatus === 'Active' && b.activatedAt === at0 && b.address === '4 Mill Lane, Leeds LS1 4AB' && ADMIN.agencies.length === nA);
+    ok('S5b (16) details edits, login email changes and statuses survive; a deactivated login isn\'t restored from the seed', agOf('AG-08').address === '9 Harbour Road, Bristol BS1 5TT' && agOf('AG-08').versions.length === 2 && agOf('AG-10').login === 'team@meridianhs.co.uk' && agOf('AG-10').loginStatus === 'Pending email confirmation' && agOf('AG-01').loginStatus === 'Deactivated' && agOf('AG-01').status === 'Inactive');
+    ok('S5b (16) permission and visibility changes survive', agOf('AG-02').perms === 'Receive-only' && agOf('AG-02').vis.assessment === true);
+    const ml = id2 => STORE.agy.lmails.find(m => m.id === id2);
+    ok('S5b (17) set-password emails and their state survive: used, pending, superseded', !!ml(used.id) && ml(used.id).used && !!ml(pend) && !ml(pend).used && ml('LM-A2').void && !!ml(a09) && !ml(a09).used && ml('LM-A1') && !ml('LM-A1').used);
+    go('m-inbox', { id: pend }); ok('S5b (17) the demo inbox still lists them', app().textContent.includes('team@meridianhs.co.uk') && /Superseded/.test(app().textContent));
+    setPw(ml(pend)); ok('S5b (17) a pending link still works once after the rebuild', agOf('AG-10').loginStatus === 'Active' && ml(pend).used); ACT.lmSet({ dataset: { id: pend } }); ok('S5b (17) … and only once', S.auth === 'agyLinkBad');
+    SA(); rebuildA(); rebuildA(); SYS(); bizEnter('BB'); SA(); INP.adminVariant({ value: 'B' }); INP.adminVariant({ value: 'A' }); SA();
+    const ids = ADMIN.agencies.map(x => x.id), lg = ADMIN.agencies.map(x => x.login.toLowerCase()), mids = STORE.agy.lmails.map(m => m.id), aids = ADMIN.audit.map(x => x.id);
+    ok('S5b (18) no duplicate agencies, logins, emails or audit rows after repeated rebuilds and identity switches', ADMIN.agencies.length === nA && new Set(ids).size === ids.length && new Set(lg).size === lg.length && new Set(mids).size === mids.length && new Set(aids).size === aids.length);
+    ok('S5b (18) the used link stays used and the activation stays single', ml(used.id).used && ADMIN.audit.filter(x => x.action === 'Agency activated' && x.entity.includes(id)).length === 1 && agOf(id).activatedAt === at0);
+    const has = (act, ent) => ADMIN.audit.some(x => x.action === act && x.entity.includes(ent));
+    ok('S5b (16) the agency audit history survives', has('Agency onboarded', 'Ashgrove') && has('Agency activated', id) && has('Details edited — version 2', 'AG-08') && has('Login email changed', 'AG-10') && has('Login email confirmed', 'AG-10') && has('Login deactivated', 'AG-01') && has('Communication permission', 'CarePlus') && has('Report visibility', 'CarePlus') && has('Set-password link resent', 'AG-09'));
+    BIZ(); go('b-dashboard'); ok('S5b (16) the Business dashboard reads the kept statuses', kpiOf('Active agencies') === ADMIN.agencies.filter(x => agStatus(x) === 'Active').length && kpiOf('Agencies in onboarding') === ADMIN.agencies.filter(x => agStatus(x) === 'Onboarding').length && agStatus(agOf(id)) === 'Active' && agStatus(agOf('AG-01')) === 'Inactive');
+    SA(); rates(); ok('S5b (16) the S4c discount list lists the new agency with its status', /Active/.test(discRow(id)) && /Inactive/.test(discRow('AG-01')));
+    BIZ(); const c2 = onboard('Cedar Lodge Care', 'hello@cedarlodgecare.co.uk', '31415926'); rebuildA();
+    ok('S5b (18) a second new agency gets its own ID — no collision', !!c2 && c2.id !== id && ADMIN.agencies.filter(x => x.id === c2.id).length === 1 && ADMIN.agencies.filter(x => x.id === id).length === 1 && links(c2.id).length === 1);
+    ACT.resetDemo(); SA(); const lm = id2 => STORE.agy.lmails.find(m => m.id === id2);
+    ok('S5b (19) the deliberate demo reset restores the seed agencies, logins and links', ADMIN.agencies.length === seedN && !agOf(id) && !agOf(c2.id) && !agOf('AG-08').address && agOf('AG-10').login === 'clare@meridianhs.co.uk' && agOf('AG-10').loginStatus === 'Active' && agOf('AG-01').loginStatus === 'Active' && agOf('AG-02').perms === 'Full' && !lm('LM-A1').used && !lm('LM-A2').used && !lm('LM-A2').void && JSON.stringify(STORE.s5b.recs) === '{}' && !ADMIN.audit.some(x => /^AU-S5B-/.test(x.id)));
+  });
+
+  await T('S5b keeps agency consent, course-specific visibility, S4c pricing and the S5a protections', async () => {
+    // Baselines after the agency portal has rendered once and the consent requests exist (both are created lazily)
+    fresh(); agyEnter('AG-02', true); BIZ(); go('a-agencies', { id: 'AG-02' }); agyEnter('AG-02', true);
+    const c0 = JSON.stringify(agyConsents()), cp = 'CarePlus Recruitment', r0 = agyRoster(cp).map(l => l.id).join(), v0 = JSON.stringify(agOf('AG-02').vis), linked0 = JSON.stringify(STORE.agy.linked);
+    const pr0 = JSON.stringify(AGY_CATALOGUE().map(c => [c.id, priceFor(c, 30)])), d0 = JSON.stringify(discData()), hist0 = JSON.stringify([STORE.agy.purchases, STORE.fin.tx, STORE.agy.ledger]);
+    BIZ(); editAg('AG-02', { region: 'UAE', legal: 'CarePlus Recruitment Ltd', billing: 'CarePlus Accounts' }, 'Records'); loginOp('AG-02', 'deactivate', 'Hold'); loginOp('AG-02', 'reactivate', 'Resume'); loginOp('AG-02', 'email', 'Mailbox', 'ops@careplus-recruit.co.uk'); setPw(linkOf('AG-02'));
+    ok('S5b (20) the agency\'s learners, links and consent requests are unchanged by edits and login changes', agyRoster(cp).map(l => l.id).join() === r0 && JSON.stringify(agyConsents()) === c0 && JSON.stringify(STORE.agy.linked) === linked0);
+    ok('S5b (20) its report visibility is unchanged unless deliberately changed', JSON.stringify(agOf('AG-02').vis) === v0);
+    agyEnter('AG-02', true); ok('S5b (21) prices, discounts and VAT for the agency are unchanged (region and details edits don\'t reprice)', JSON.stringify(AGY_CATALOGUE().map(c => [c.id, priceFor(c, 30)])) === pr0 && JSON.stringify(discData()) === d0);
+    ok('S5b (21) purchases, Finance transactions and the licence ledger are unchanged', JSON.stringify([STORE.agy.purchases, STORE.fin.tx, STORE.agy.ledger]) === hist0);
+    const L = agyRoster('Hartwell Home Care')[0]; agyEnter('AG-02', true); const nd = ADMIN.security.length; go('g-learner', { id: L.id }); ok('S5b (20) agencies still only see their own learners', !main().includes(L.email) && ADMIN.security.length === nd + 1);
+    const c = agyConsents().find(x => x.agency === 'Hartwell Home Care' && x.status === 'Awaiting learner consent'); learner('A'); ACT.consentDo({ dataset: { id: c.id, y: '1' } });
+    ok('S5b (20) learner consent still decides a new-course link (no queue item)', c.status === 'Linked' && agyRoster('Hartwell Home Care').some(l => l.id === STORE.worlds.A.me.id));
+    BIZ(); rates(); document.querySelector('#dr-std').value = '6'; document.querySelector('#dr-r').value = 'S5b check'; SUBMIT.discSave(); const q = ADMIN.queue[0];
+    SA(); applyDecision(q, 'approve', 'OK'); applyDecision(q, 'approve', 'Again'); ok('S5b (21) S4c discount-rate requests are still decided once by the Super Admin', q.type === 'Discount rate change' && q.status === 'Approved' && discNow().std === 6 && ADMIN.audit.some(x => x.action === 'Blocked: decision repeated'));
+    fresh(); SA(); ACT.addUser(); fill({ '#nu-n': 'Rosa Diaz', '#nu-e': 'rosa.diaz@illumin-academy.example' }); nuPick(['Teacher']); prim(); closeModal(); BIZ(); const ag = onboard('Fernhill Care', 'desk@fernhillcare.co.uk', '27182818'); SA(); rebuildA();
+    ok('S5b (22) S5a staff accounts and S5b agencies both survive the same rebuild', ADMIN.staff.some(s => s.email === 'rosa.diaz@illumin-academy.example') && !!agOf(ag.id));
+    SYS(); go('a-roles', { id: 'Super_Administrator' }); ok('S5b (22) the S5a Super Administrator lock still applies', /Only a Super Administrator can do this/.test(main()));
+    SA(); go('a-index'); const ix = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
+    ok('S5b Admin index: one Setup fixes entry for S5b', !!ix && ix.querySelectorAll('[data-t="a-agencies.AG-08.login"]').length === 1 && /S5b — first set-password activates/.test(ix.textContent));
+    ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: S5b entry', /agency administration, activation and access security/.test(main()));
   });
   fresh();
   const out = document.createElement('pre'); out.id = 'ft-out'; out.textContent = R.join('\n') + '\n' + R.filter(x => x.startsWith('PASS')).length + '/' + R.length; document.body.appendChild(out);
