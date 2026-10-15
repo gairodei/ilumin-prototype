@@ -232,7 +232,7 @@
     ACT.s2Sc27Pub(); reason('Go'); ok('Scenario #27 demo assignment published to Aisha', STORE.worlds.C.assignments.some(a => a.id === 'a27'));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S2 entry', /Setup fixes — assignments/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
-    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1, S5d: 1 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 26);
+    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1, S5d: 1, S5c: 1 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 27);
   });
 
   /* ================= S3 — NVQ programmes ================= */
@@ -385,7 +385,7 @@
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S3 entry', /Setup fixes — NVQ programmes/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 26 /* S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1, S5d: 1 entries added */);
+    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 27 /* S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1, S5d: 1, S5c: 1 entries added */);
     SA(); go('a-assignments', { id: 'a9' }); ok('S2 / CH-17: "Marked by: … set in the batch\'s Assessors panel" — read-only, no input', /Marked by: .+, set in the batch's Assessors panel/.test(main()) && !app().querySelector('#ae-m') && !app().querySelector('.s2-marker input, .s2-marker select'));
   });
 
@@ -743,7 +743,7 @@
     const s29 = SC_LIST().find(x => x[0] === '29'); ok('Scenario #29: 6 steps, set-up then a new learner\'s sign-up', !!s29 && s29[3].length === 6 && /Daniel Okafor/.test(s29[3][3].text));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S4a entry', /Setup fixes — admission and money/.test(main()));
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 26 /* S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1, S5d: 1 entries added */);
+    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 27 /* S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1, S5d: 1, S5c: 1 entries added */);
     fresh(); const z = apply4('F', T2); ACT.suNext(); ok('E2E (negative): the country rule still applies — no Level 2 batch for a UAE applicant (CH-42)', z.signup.step === 1 && !z.signup.batch);
   });
 
@@ -2112,6 +2112,164 @@
     ok('S5d Admin index: one Setup fixes entry for S5d', !!ix && ix.querySelectorAll('[data-t="a-announcements"]').length === 1 && /S5d — agency and teacher visibility fixed/.test(ix.textContent));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: S5d entry', /announcements, notification templates and referral codes/.test(main()));
   });
+
+  /* ================= S5c — CSV learner-account import, validation and error reports ================= */
+  const CSVH = 'Full name,Email,Mobile,Country\r\n';
+  // Choose a real file through the import screen's file input (FileReader, as in the browser)
+  const pickCsv = async (name, text) => { S.s5c = null; ACT.importCsv(); const inp = document.querySelector('#modal-root #csvf'); if (!inp) return false; const tr = new DataTransfer(); tr.items.add(new File([text], name, { type: 'text/csv' })); inp.files = tr.files; INP.csvPicked(inp); for (let i = 0; i < 40 && !(S.s5c && S.s5c.file === name && S.s5c.checked); i++) await wait(25); return !!(S.s5c && S.s5c.file === name); };
+  const rowN = n => S.s5c.c.rows.find(r => r.n === n);
+  const lrnN = () => ADMIN.learners.length;
+  const dlRows = () => s5cParse(S5C_LAST.file.text).rows.map(r => r.cells);
+  // Headless Edge never completes a real file download, so the page would never go idle; during these tests a download link's
+  // click is skipped and the generated file is read back from S5C_LAST (the same content the browser would save)
+  const _aClickS5c = HTMLAnchorElement.prototype.click;
+  HTMLAnchorElement.prototype.click = function () { if (this.download) return; return _aClickS5c.apply(this, arguments); };
+
+  await T('S5c (1)(2)(3)(11)(12) the chosen file is read and checked; quoted values; the preview changes nothing', async () => {
+    fresh(); SA(); go('a-learners'); const n0 = lrnN(), au0 = ADMIN.audit.length, lg0 = s5dStore().log.length;
+    const text = CSVH + '"Evans, Lucy",lucy.evans2@example.co.uk,+44 7700 911801,United Kingdom\r\n\r\n"Mary ""May"" Jones",mary.jones@example.co.uk,+44 7700 911802,United Kingdom\n  Tom Hart  ,tom.hart@example.ae, +971 50 555 0101 ,United Arab Emirates\r\n';
+    ok('S5c (1) the import reads the file that was chosen', await pickCsv('october-starters.csv', text) && S.s5c.c.rows.length === 3);
+    ok('S5c (3) quoted values with commas and doubled quotes, blank lines, mixed line endings and spaces are read correctly', rowN(2).v.name === 'Evans, Lucy' && rowN(3).v.name === 'Mary "May" Jones' && rowN(4).v.name === 'Tom Hart' && rowN(4).v.mobile === '+971 50 555 0101' && rowN(4).region === 'UAE');
+    ok('S5c (2) the old fixed sample is no longer substituted for the chosen file', !S.s5c.c.rows.some(r => /Imran Sheikh|learners_october/.test(r.v.name + r.v.email)) && !/learners_october\.csv/.test(mroot().textContent) && /october-starters\.csv/.test(mroot().textContent));
+    const kp = [...mroot().querySelectorAll('.kpi')].map(k => k.textContent);
+    ok('S5c (12) the preview shows rows, valid, invalid and duplicate counts and each row', kp.join('|').includes('Rows3') && kp.join('|').includes('Valid3') && /Create valid rows only \(3\)/.test(mroot().textContent) && /Evans, Lucy/.test(mroot().textContent));
+    ok('S5c (11) the preview creates nothing, audits nothing and sends nothing', lrnN() === n0 && ADMIN.audit.length === au0 && s5dStore().log.length === lg0); closeModal();
+    ACT.importCsv(); ok('S5c the template and the demonstration file are real downloads; the demonstration file is labelled', /Download template/.test(mroot().textContent) && /demonstration file/.test(mroot().textContent) && (ACT.s5cTemplate(), S5C_LAST.file.name === 'learner-import-template.csv' && /^Full name,Email,Mobile,Country/.test(S5C_LAST.file.text))); closeModal();
+    ACT.csvSample(); ok('S5c the demonstration file is checked by the same rules (its duplicate and errors are found, not hard-coded)', S.s5c.file === 'demo-learners-6-rows.csv' && S.s5c.c.rows.length === 6 && rowN(4).status === 'Duplicate' && rowN(5).status === 'Invalid' && rowN(6).status === 'Invalid' && /Mobile is required/.test(rowN(6).errs.join()));
+  });
+
+  await T('S5c (4)(5)(6)(7)(8)(9)(10)(12) malformed files, missing columns, row errors and duplicates', async () => {
+    fresh(); SA(); const n0 = lrnN();
+    await pickCsv('broken.csv', CSVH + '"Unclosed,amy@example.co.uk,+44 7700 911803,United Kingdom\r\n');
+    ok('S5c (4) a malformed file is refused with the line and nothing is created', S.s5c.c.fileError && /isn't valid CSV/.test(mroot().textContent) && /Line 2/.test(mroot().textContent) && !/Create valid rows/.test(mroot().textContent) && lrnN() === n0); closeModal();
+    await pickCsv('stray.csv', CSVH + 'Ann "Annie" Lee,ann@example.co.uk,+44 7700 911804,United Kingdom\r\n'); ok('S5c (4) a stray quote is reported too', /quote appears inside an unquoted value/.test(S.s5c.c.fileError)); closeModal();
+    await pickCsv('nocountry.csv', 'Full name,Email,Mobile\r\nAnn Lee,ann@example.co.uk,+44 7700 911804\r\n');
+    ok('S5c (5) a missing required column is reported by name', /Missing required column: Country/.test(S.s5c.c.fileError) && lrnN() === n0); closeModal();
+    await pickCsv('empty.csv', CSVH); ok('S5c a header with no rows is reported', /no learner rows/.test(S.s5c.c.fileError)); closeModal();
+    const ex = ADMIN.learners.find(l => s5cDigits(l.mobile).length >= 8 && l.email), ex2 = ADMIN.learners.find(l => l !== ex && s5cDigits(l.mobile).length >= 8);
+    const text = CSVH + [',noname@example.co.uk,+44 7700 911810,United Kingdom', 'Bad Email,bad.email@,+44 7700 911811,United Kingdom', 'Local Mobile,local.mobile@example.co.uk,07700 911812,United Kingdom', 'No Country,no.country@example.co.uk,+44 7700 911813,', 'Mars Person,mars@example.co.uk,+44 7700 911814,Mars', `Existing Email,${ex.email.toUpperCase()},+44 7700 911815,United Kingdom`, `Existing Mobile,existing.mobile@example.co.uk,${ex2.mobile},United Kingdom`, 'First Copy,twin@example.co.uk,+44 7700 911816,United Kingdom', 'Second Copy,TWIN@example.co.uk,+44 7700 911817,United Kingdom', 'Phone Twin,phone.twin@example.co.uk,+44 (7700) 911-816,United Kingdom', 'Good Row,good.row@example.co.uk,+44 7700 911818,India', 'Too,many@example.co.uk,+44 7700 911819,United Kingdom,extra'].join('\r\n');
+    await pickCsv('checks.csv', text); const R = n => rowN(n);
+    ok('S5c (6) missing values are row errors', R(2).status === 'Invalid' && /Full name is required/.test(R(2).errs.join()) && R(5).status === 'Invalid' && /Country is required/.test(R(5).errs.join()));
+    ok('S5c (7) invalid email and mobile formats (international form required); unknown country', /Email is not a valid address/.test(R(3).errs.join()) && /international form/.test(R(4).errs.join()) && /isn't one of the registration countries/.test(R(6).errs.join()));
+    ok('S5c (8) an email that already belongs to a learner is refused (case ignored), naming the learner ID', R(7).status === 'Duplicate' && R(7).dup.join().includes(ex.id));
+    ok('S5c (9) a mobile that already belongs to a learner is refused (compared by digits)', R(8).status === 'Duplicate' && R(8).dup.join().includes(ex2.id));
+    ok('S5c (10) duplicates within the file: the later rows are refused (email without case, mobile by digits); the first is kept', R(9).ok && R(10).status === 'Duplicate' && /Same email as row 9/.test(R(10).dup.join()) && R(11).status === 'Duplicate' && /Same mobile as row 9/.test(R(11).dup.join()));
+    ok('S5c a row with more values than the header is refused; a valid row (India → UK data region) passes', /header has 4 columns/.test(R(13).errs.join()) && R(12).ok && R(12).region === 'UK');
+    const k = s5cCounts(S.s5c.c); ok('S5c (12) counts are accurate (12 rows: 2 valid, 6 invalid, 4 duplicates) and every reason is shown', k.total === 12 && k.valid === 2 && k.invalid === 6 && k.dup === 4 && /Same mobile as row 9/.test(mroot().textContent) && /Download error report \(10\)/.test(mroot().textContent));
+    ACT.s5cErrors(); const d = dlRows();
+    ok('S5c (19) the downloaded error report lists exactly this attempt\'s rejected rows with their reasons', S5C_LAST.file.name === 'checks-errors.csv' && d[0].join() === 'Row,Full name,Email,Result,Reasons' && d.length === 11 && d.slice(1).map(r => r[0]).join() === '2,3,4,5,6,7,8,10,11,13' && d.find(r => r[0] === '7')[4].includes(ex.id) && !d.some(r => r.join().includes('Good Row')));
+    ok('S5c (19) the report has no mobile numbers or countries', !/9118\d\d/.test(S5C_LAST.file.text) && !/United Kingdom|India|Mars"?\s*$/m.test(S5C_LAST.file.text)); closeModal();
+    ok('S5c (11) checking never created anything', lrnN() === n0);
+  });
+
+  await T('S5c (13)–(16)(21) import: re-checked, stable IDs, invalid rows skipped, never twice, audited', async () => {
+    fresh(); SA(); const n0 = lrnN(), fin0 = JSON.stringify([STORE.fin.tx, STORE.agy.purchases]);
+    const text = CSVH + 'Lucy Evans,lucy.evans2@example.co.uk,+44 7700 911901,United Kingdom\r\nImran Sheikh,imran.sheikh2@example.co.uk,+44 7700 911902,United Kingdom\r\nLate Comer,late.comer@example.co.uk,+44 7700 911903,United Kingdom\r\nBroken Row,broken@,+44 7700 911904,United Kingdom\r\nTariq Aziz,tariq.aziz2@mail.ae,+971 50 555 0299,United Arab Emirates\r\n';
+    await pickCsv('batch-a.csv', text); ok('S5c four rows pass the preview', s5cCounts(S.s5c.c).valid === 4); const pv = S.s5c;
+    ACT.addLearner(); fill({ '#nl-name': 'Late Comer', '#nl-email': 'late.comer@example.co.uk', '#nl-mob': '+44 7700 911999' }); prim(); closeModal(); const lc = ADMIN.learners.find(l => l.email === 'late.comer@example.co.uk'); S.s5c = pv;
+    S.s5c = pv; s5cPreview(); prim();
+    const rec = s5cStore().imports[0], ids = rec.created;
+    ok('S5c (13) valid rows are created with new stable IDs (IA-L-33001 onwards), Pending Verification, no course, batch or agency', ids.length === 3 && ids.join() === 'IA-L-33001,IA-L-33002,IA-L-33003' && ids.every(id => { const l = learnerById(id); return l && l.acct === 'Pending Verification' && !l.courses.length && l.agency === null && l.referral === 'Bulk import (CSV)'; }) && learnerById('IA-L-33003').region === 'UAE');
+    ok('S5c (14) invalid rows are not created', !ADMIN.learners.some(l => l.email === 'broken@') && lrnN() === n0 + 1 + 3);
+    ok('S5c (15) a row that passed the preview but was registered meanwhile is rejected on import (re-checked), not duplicated', ADMIN.learners.filter(l => l.email === 'late.comer@example.co.uk').length === 1 && rowN(4).late && /changed since/.test(rowN(4).late[0]) && lc.name === 'Late Comer');
+    ok('S5c the result screen lists each row with its new ID or its reasons', /3 learner accounts created/.test(mroot().textContent) && mroot().textContent.includes('IA-L-33002') && /Passed the preview, but changed since/.test(mroot().textContent)); closeModal();
+    go('a-learners'); ok('S5c the new learners appear in the Learners list', main().includes('IA-L-33001') && main().includes('Lucy Evans'));
+    const au = ADMIN.audit.find(a => a.action === 'Bulk import (CSV)');
+    ok('S5c (21) the import is audited: actor, file, counts, IDs and a reason summary (not the file)', !!au && au.actor === 'Nadia Qureshi' && au.entity === `${rec.id} · batch-a.csv` && au.after === '5 rows · 3 created · 2 rejected' && /IA-L-33001, IA-L-33002, IA-L-33003/.test(au.reason) && !au.reason.includes('911901') && ADMIN.audit.filter(a => a.action === 'Learner created (CSV import)').length === 3);
+    ok('S5c each new account gets the activation email as one simulated record — no other notification, announcement or payment', ids.every(id => s5dStore().log.filter(x => x.src === 'import:' + id).length === 1 && /^Simulated/.test(s5dStore().log.find(x => x.src === 'import:' + id).result)) && JSON.stringify([STORE.fin.tx, STORE.agy.purchases]) === fin0 && !Object.values(STORE.worlds).some(w => w.announcements.some(a => /Lucy Evans/.test(a.title))));
+    const again = s5cImport(); ok('S5c (16) the same check can\'t be imported twice', !again.ok && /already imported/.test(again.why) && lrnN() === n0 + 4);
+    await pickCsv('batch-a.csv', text); prim(); const r2 = s5cStore().imports[0];
+    ok('S5c (16) importing the same file again creates nothing (each row is now a duplicate)', r2.created.length === 0 && r2.rejected.length === 5 && lrnN() === n0 + 4 && /0 learner accounts created/.test(mroot().textContent)); closeModal();
+    await pickCsv('batch-b.csv', CSVH + 'New Person,new.person@example.co.uk,+44 7700 911905,United Kingdom\r\n'); prim(); closeModal();
+    ok('S5c a later import continues the IDs (never reused)', s5cStore().imports[0].created.join() === 'IA-L-33004');
+    ACT.s5cErrors(); ok('S5c (19) all rows imported: no error report, and it says so', S5C_LAST.file.name !== 'batch-b-errors.csv');
+  });
+
+  await T('S5c (19)(20) error-report escaping', async () => {
+    fresh(); SA(); await pickCsv('escape.csv', CSVH + '"=HYPERLINK(""x"")",bad@,+44 7700 911950,United Kingdom\r\n"Smith, ""JJ""",also@bad,+44 7700 911951,United Kingdom\r\n"Line\nBreak",x@,+44 7700 911952,United Kingdom\r\n');
+    ACT.s5cErrors(); const t = S5C_LAST.file.text, d = dlRows();
+    ok('S5c (20) commas, quotes and line breaks are escaped so the report reads back exactly', d.length === 4 && d[2][1] === 'Smith, "JJ"' && d[3][1] === 'Line\nBreak' && t.includes('"Smith, ""JJ"""'));
+    ok('S5c (20) a value starting with = is prefixed with an apostrophe (no formula runs)', d[1][1] === '\'=HYPERLINK("x")' && !/(^|,)=HYPERLINK/m.test(t)); closeModal();
+  });
+
+  await T('S5c (17)(18) only the Super Admin and System Admins bulk-create accounts; refusals change nothing and are logged', async () => {
+    fresh(); SA(); await pickCsv('auth.csv', CSVH + 'Auth Person,auth.person@example.co.uk,+44 7700 911960,United Kingdom\r\n'); const pv = S.s5c; closeModal(); const n0 = lrnN();
+    for (const [lbl, enter] of [['Academic Admin (batch rosters, a different capability)', () => { acaEnter('KA'); S.signedIn = true; }], ['Business Admin', () => BIZ()], ['Finance Admin', () => FA4()], ['an Agency Administrator', () => agyEnter('AG-02', true)]]) {
+      enter(); S.s5c = pv; const n = secN(); ACT.importCsv(); const o1 = !!MODAL; closeModal(); ACT.csvSample(); const o2 = !!MODAL; closeModal(); S.s5c = pv; const r = s5cImport(); ACT.s5cErrors();
+      ok(`S5c (18) ${lbl}: opening, previewing, importing and downloading are refused and logged; nothing is created`, !o1 && !o2 && !r.ok && lrnN() === n0 && secN() === n + 4 && /^Blocked: /.test(ADMIN.audit[0].action), String(secN() - n));
+    }
+    acaEnter('KA'); S.signedIn = true; go('a-learners'); const ka = app().querySelector('main [data-act="importCsv"]'); BIZ(); go('a-learners'); const b = app().querySelector('main [data-act="importCsv"]');
+    ok('S5c the screen follows the same rule: no usable import button for the Academic Admin or the Business Admin', (!ka || ka.disabled) && (!b || (b.disabled && /Super Administrator and System Administrators/.test(b.title))));
+    SA(); go('a-learners'); const sb = app().querySelector('main [data-act="importCsv"]'); ok('S5c … while the Super Admin\'s is enabled', !!sb && !sb.disabled);
+    role('sysA'); await pickCsv('sys.csv', CSVH + 'Sys Person,sys.person@example.co.uk,+44 7700 911961,United Kingdom\r\n'); prim(); closeModal();
+    ok('S5c (17) the System Admin imports', s5cStore().imports[0].created.length === 1 && learnerById(s5cStore().imports[0].created[0]).name === 'Sys Person');
+    SA(); S.s5c = pv; pv.done = null; const rs = s5cImport(); ok('S5c (17) the Super Admin imports', rs.ok && rs.rec.created.length === 1);
+  });
+
+  await T('S5c (22)(23) imported accounts survive rebuilds, identity switches and index jumps; the demo reset restores the seed', async () => {
+    fresh(); SA(); const seed = lrnN(); await pickCsv('keep.csv', CSVH + 'Keep One,keep.one@example.co.uk,+44 7700 911970,United Kingdom\r\nKeep Two,keep.two@example.co.uk,+44 7700 911971,United Arab Emirates\r\n'); prim(); closeModal();
+    const ids = s5cStore().imports[0].created; render(); render();
+    rebuildA(); SYS(); bizEnter('BB'); acaEnter('KA'); SA(); ACT.aJump({ dataset: { t: 'av:B' } }); INP.adminVariant({ value: 'A' }); SA(); rebuildA();
+    ok('S5c (22) imported accounts survive admin rebuilds, identity switches and index jumps — once each, same details', ids.every(id => ADMIN.learners.filter(l => l.id === id).length === 1) && learnerById(ids[1]).region === 'UAE' && lrnN() === seed + 2);
+    ok('S5c (22) their audit rows survive, without duplicates', ADMIN.audit.filter(a => a.action === 'Bulk import (CSV)').length === 1 && new Set(ADMIN.audit.map(a => a.id)).size === ADMIN.audit.length);
+    await pickCsv('keep.csv', CSVH + 'Keep One,keep.one@example.co.uk,+44 7700 911970,United Kingdom\r\n'); prim(); closeModal(); rebuildA();
+    ok('S5c (22) after a rebuild, importing the same rows again still creates nothing', s5cStore().imports[0].created.length === 0 && lrnN() === seed + 2);
+    ACT.resetDemo(); SA(); ok('S5c (23) the demo reset removes imported accounts and restores the seeded learners', !ids.some(id => learnerById(id)) && lrnN() === seed && !s5cStore().imports.length);
+  });
+
+  await T('S5c (24)(25) batch roster: CSV adding is truthfully unavailable; Add learner keeps capacity and active-batch rules', async () => {
+    fresh(); SA(); const b = ADMIN.batches.find(x => x.status === 'Open' && x.enrolled < x.cap) || ADMIN.batches.find(x => x.status === 'Open'), r0 = JSON.stringify([b.roster, b.enrolled, b.wait]), n0 = lrnN();
+    go('a-batches', { id: b.code, tab: 'roster' }); const bt = app().querySelector('main [data-act="s5cBatchCsv"]');
+    ok('S5c (24) the roster\'s "Bulk CSV" is shown as not available with the reason (it no longer opens the account import)', bt && bt.disabled && /isn't available yet/.test(bt.title) && !app().querySelector('main .row [data-act="importCsv"]'));
+    ACT.s5cBatchCsv(); ok('S5c (24) a direct call explains and changes nothing — no roster change, no account, no enrolment', /not available/.test(mroot().textContent) && JSON.stringify([b.roster, b.enrolled, b.wait]) === r0 && lrnN() === n0); closeModal();
+    ACT.addToBatch({ dataset: { id: b.code } }); ok('S5c Add learner no longer lists "bulk CSV" as a method', !/bulk CSV, multi-select/.test(mroot().textContent) && /Adding by CSV isn't available yet/.test(mroot().textContent)); closeModal();
+    const busy = new Set(ADMIN.batches.filter(x => ['Open', 'In Progress'].includes(x.status)).flatMap(x => batchRoster(x).map(r => r[1]))), free = ADMIN.learners.find(l => l.acct === 'Active' && l.rec === 'Active' && !busy.has(l.id));
+    ACT.addToBatch({ dataset: { id: b.code, pre: free.id } }); document.querySelector('#ab-l').value = free.id; const e0 = b.enrolled; prim(); closeModal();
+    ok('S5c (25) Add learner (one at a time) still works', b.enrolled === e0 + 1 && b.roster.some(r => r[1] === free.id));
+    b.enrolled = b.cap; const w0 = b.wait, free2 = ADMIN.learners.find(l => l !== free && l.acct === 'Active' && l.rec === 'Active' && !busy.has(l.id));
+    ACT.addToBatch({ dataset: { id: b.code } }); document.querySelector('#ab-l').value = free2.id; prim(); closeModal();
+    ok('S5c (25) a full batch still sends the learner to the waitlist', b.wait === w0 + 1 && b.enrolled === b.cap);
+    const other = ADMIN.batches.find(x => x !== b && x.status === 'Open'); if (other) { ACT.addToBatch({ dataset: { id: other.code } }); document.querySelector('#ab-l').value = free.id; prim(); }
+    ok('S5c (25) a learner in another active batch still can\'t be added', !other || (/already in/.test(mroot().textContent) && !other.roster.some(r => r[1] === free.id))); closeModal();
+  });
+
+  await T('S5c (26)–(30) imported accounts are separate from enrolment; earlier stages intact', async () => {
+    fresh(); SA(); const hist0 = JSON.stringify([STORE.fin.tx, STORE.agy.purchases, STORE.agy.ledger, discData(), CATALOGUE.map(c => [c.id, c.price])]), b0 = JSON.stringify(ADMIN.batches.map(b => [b.code, b.enrolled, b.wait, (b.roster || []).length]));
+    await pickCsv('sep.csv', CSVH + 'Sep One,sep.one@example.co.uk,+44 7700 911980,United Kingdom\r\n'); prim(); closeModal(); const id = s5cStore().imports[0].created[0];
+    ok('S5c (26) an imported account is in no batch, course or agency roster, and batches are unchanged', !ADMIN.batches.some(b => batchRoster(b).some(r => r[1] === id)) && !learnerById(id).courses.length && !ADMIN.agencies.some(g => agyRoster(g.name).some(l => l.id === id)) && JSON.stringify(ADMIN.batches.map(b => [b.code, b.enrolled, b.wait, (b.roster || []).length])) === b0);
+    ok('S5c (30) prices, discount rates, purchases, the ledger and Finance records are unchanged', JSON.stringify([STORE.fin.tx, STORE.agy.purchases, STORE.agy.ledger, discData(), CATALOGUE.map(c => [c.id, c.price])]) === hist0);
+    SYS(); go('a-roles', { id: 'Super_Administrator' }); ok('S5c (27) the S5a Super Administrator lock still applies', /Only a Super Administrator can do this/.test(main()));
+    agyEnter('AG-03', true); const n = secN(); ACT.bLogin({ dataset: { id: 'AG-02', a: 'deactivate' } }); ok('S5c (28) S5b: an Agency Administrator still can\'t administer agency logins', !MODAL && agOf('AG-02').loginStatus === 'Active' && secN() === n + 1);
+    ok('S5c (29) S5d: agency feeds still show only what is addressed to them', !/Agency reporting portal update/.test(feedOf('AG-02')) && /Academy closed 25–26 December/.test(feedOf('AG-02')));
+    SA(); go('a-index'); const ix = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
+    ok('S5c Admin index: one Setup fixes entry for S5c', !!ix && ix.querySelectorAll('[data-t="a-learners"]').length === 1 && /S5c — reads the chosen file/.test(ix.textContent));
+    ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: S5c entry', /CSV learner import, validation and error reports/.test(main()));
+  });
+  await T('S5c correction: the "Bulk (CSV)" batch intake rule is shown as not available and refused when saving; the template and demonstration file match the importer', async () => {
+    fresh(); SA(); const n0 = lrnN(), keep = JSON.stringify(ADMIN.batches.map(b => [b.code, b.intake, b.enrolled, b.wait, (b.roster || []).length])), imp0 = s5cStore().imports.length;
+    go('a-batches'); ACT.newBatch(); const dm = document.querySelector('#modal-root #nb-dm'); if (dm) dm.value = N2_MODES[0]; fill({ '#nb-c': 'CSVTEST-JAN27' }); prim();
+    const ac = document.querySelector('#modal-root #nb-ac'); ac.value = [...ac.options].find(o => o.value).value; prim(); prim();
+    const bulk = document.querySelector('#modal-root input[name="nb-in"][value="Bulk (CSV)"]');
+    ok('S5c (1) the intake step marks "Bulk (CSV)" as not available, with the reason, and disables it', /Create batch — step 4 of 5/.test(MODAL.title) && bulk && bulk.disabled && /Bulk \(CSV\) — not available/.test(mroot().textContent) && /batch-eligibility rule/.test(mroot().textContent) && !/You upload a spreadsheet/.test(mroot().textContent));
+    bulk.disabled = false; bulk.checked = true; const r = prim();
+    ok('S5c (2) choosing it anyway (a re-enabled option) is refused when saving the step, and audited', r === false && /step 4 of 5/.test(MODAL.title) && ADMIN.audit[0].action === 'Blocked: unsupported intake rule');
+    let made = false; openModal({ title: 'Create batch — step 5 of 5', body: '<dl class="kv"><dt>Intake rule</dt><dd>Bulk (CSV)</dd></dl>', actions: [{ label: 'Create batch', cls: 'btn-primary', fn: () => { made = true; } }] }); const r5 = prim(); closeModal();
+    ok('S5c (2) "Create batch" with a "Bulk (CSV)" intake is refused too (save-time check)', r5 === false && !made);
+    go('a-batches'); ACT.newBatch(); const dm2 = document.querySelector('#modal-root #nb-dm'); if (dm2) dm2.value = N2_MODES[0]; fill({ '#nb-c': 'CSVTEST-JAN27' }); prim(); const ac2 = document.querySelector('#modal-root #nb-ac'); ac2.value = [...ac2.options].find(o => o.value).value; prim(); prim();
+    document.querySelector('#modal-root input[name="nb-in"][value="Manual"]').checked = true; prim(); ok('S5c (4) Manual is accepted and shown in the review', /step 5 of 5/.test(MODAL.title) && /<dt>Intake rule<\/dt><dd>Manual<\/dd>/.test(MODAL.body)); prim(); closeModal();
+    const nb = ADMIN.batches.find(b => b.code === 'CSVTEST-JAN27');
+    ok('S5c (4)(6) the batch is created with Manual intake; creating it imported and enrolled no one', !!nb && nb.intake === 'Manual' && nb.enrolled === 0 && !nb.roster.length && lrnN() === n0 && s5cStore().imports.length === imp0);
+    ok('S5c (3) existing batches and their stored intake values are unchanged', JSON.stringify(ADMIN.batches.filter(b => b !== nb).map(b => [b.code, b.intake, b.enrolled, b.wait, (b.roster || []).length])) === keep);
+    const busy = new Set(ADMIN.batches.filter(x => ['Open', 'In Progress'].includes(x.status)).flatMap(x => batchRoster(x).map(rr => rr[1]))), fr = ADMIN.learners.find(l => l.acct === 'Active' && l.rec === 'Active' && !busy.has(l.id));
+    ACT.addToBatch({ dataset: { id: nb.code } }); document.querySelector('#ab-l').value = fr.id; prim(); closeModal();
+    ok('S5c (4) manual assignment to the new batch still works (one learner, Add learner)', nb.enrolled === 1 && nb.roster.some(x => x[1] === fr.id));
+    const head = t => s5cParse(t).rows[0].cells.join(), cols = S5C_COLS.map(c => c[1]).join();
+    ok('S5c (5) the template and the demonstration file have exactly the importer\'s columns (Full name, Email, Mobile, Country)', head(S5C_TEMPLATE) === cols && head(S5C_DEMO.text) === cols && cols === 'Full name,Email,Mobile,Country');
+    ok('S5c (5) the template\'s example row uses the international mobile form and passes the checks', /\+44 /.test(S5C_TEMPLATE) && s5cCheck(s5cParse(S5C_TEMPLATE)).rows[0].ok);
+    ACT.importCsv(); ok('S5c the demonstration file\'s failing rows are labelled on the import screen', /deliberately includes 3 rows that fail/.test(mroot().textContent)); closeModal();
+    ACT.csvSample(); const dk = s5cCounts(S.s5c.c); ok('S5c … and its preview reports exactly those errors (1 duplicate, 2 invalid; the other 3 valid)', dk.valid === 3 && dk.dup === 1 && dk.invalid === 2 && /Email is not a valid address/.test(rowN(5).errs.join()) && /Mobile is required/.test(rowN(6).errs.join())); closeModal();
+  });
+  HTMLAnchorElement.prototype.click = _aClickS5c;
   fresh();
   const out = document.createElement('pre'); out.id = 'ft-out'; out.textContent = R.join('\n') + '\n' + R.filter(x => x.startsWith('PASS')).length + '/' + R.length; document.body.appendChild(out);
 })();
