@@ -232,7 +232,7 @@
     ACT.s2Sc27Pub(); reason('Go'); ok('Scenario #27 demo assignment published to Aisha', STORE.worlds.C.assignments.some(a => a.id === 'a27'));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S2 entry', /Setup fixes — assignments/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
-    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 22);
+    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 23);
   });
 
   /* ================= S3 — NVQ programmes ================= */
@@ -385,7 +385,7 @@
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S3 entry', /Setup fixes — NVQ programmes/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 22 /* S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1 entries added */);
+    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 23 /* S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1 entries added */);
     SA(); go('a-assignments', { id: 'a9' }); ok('S2 / CH-17: "Marked by: … set in the batch\'s Assessors panel" — read-only, no input', /Marked by: .+, set in the batch's Assessors panel/.test(main()) && !app().querySelector('#ae-m') && !app().querySelector('.s2-marker input, .s2-marker select'));
   });
 
@@ -743,7 +743,7 @@
     const s29 = SC_LIST().find(x => x[0] === '29'); ok('Scenario #29: 6 steps, set-up then a new learner\'s sign-up', !!s29 && s29[3].length === 6 && /Daniel Okafor/.test(s29[3][3].text));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S4a entry', /Setup fixes — admission and money/.test(main()));
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 22 /* S4b: 3, N4: 1, N2: 1, N3: 1 entries added */);
+    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 23 /* S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1 entries added */);
     fresh(); const z = apply4('F', T2); ACT.suNext(); ok('E2E (negative): the country rule still applies — no Level 2 batch for a UAE applicant (CH-42)', z.signup.step === 1 && !z.signup.batch);
   });
 
@@ -1288,6 +1288,90 @@
     go('a-batches', { id: 'L3SP-W27', tab: 'staff' }); ok('N3 CH-17 / P-33 unchanged', main().includes(CH_P33) && !Object.values(chAllocOf(sp)).includes(sp.coord));
     ok('N3 N2 modes unchanged; learner plans, S2 deadlines, sign-up and fees unchanged', fa.dmode === 'Fully Assisted' && sp.dmode === 'Self-Paced' && JSON.stringify(d.plans) === plan0 && JSON.stringify([STORE.worlds.C.plans, STORE.worlds.C.assignments.map(a => a.due), STORE.worlds.B.signup, STORE.chFees]) === keep);
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: N3 entry', /NVQ class planning: weekly Fully Assisted classes/.test(main()));
+  });
+
+  /* ================= S4c — agency bundle discount slabs ================= */
+  const rates = () => { go('a-bundles', { tab: 'rates' }); };
+  const setRows = rows => { const tb = document.querySelector('#dr-rows'); tb.innerHTML = ''; rows.forEach(() => ACT.discAddRow()); [...tb.querySelectorAll('tr')].forEach((tr, k) => { tr.querySelector('.dr-from').value = rows[k][0]; tr.querySelector('.dr-to').value = rows[k][1] == null ? '' : rows[k][1]; tr.querySelector('.dr-pct').value = rows[k][2]; }); };
+  const saveRates = (rows, o = {}) => { rates(); if (rows) setRows(rows); if (o.std != null) document.querySelector('#dr-std').value = o.std; Object.entries(o.ag || {}).forEach(([a, v]) => { document.querySelector(`.dr-ag[data-a="${a}"]`).value = v; }); document.querySelector('#dr-r').value = o.r || 'Rate review'; SUBMIT.discSave(); };
+  const AGY = id => { ACT.switchRole({ dataset: { r: 'agyA' } }); S.signedIn = true; S.agy.id = id || null; };
+  const buyAg = (id, qty) => { ACT.agBuy({ dataset: { id } }); document.querySelector('#gq').value = qty; INP.agBuyQty(document.querySelector('#gq')); prim(); agPayResult('success'); closeModal(); return STORE.agy.purchases[0]; };
+  await T('S4c discount slabs: edit, validate, precedence, purchases, approvals, versions', async () => {
+    fresh(); const fees0 = JSON.stringify([STORE.chFees, NVQ_FEES]);
+    SA(); rates(); ok('S4c rates tab: Add slab, Remove per slab, Preview', !!app().querySelector('[data-act="discAddRow"]') && app().querySelectorAll('[data-act="discDelRow"]').length === 3 && !!app().querySelector('[data-act="discPreview"]'));
+    ok('S4c per-agency list: every agency with its real status — AG-08 / AG-09 onboarding, AG-11 inactive included', ['AG-08', 'AG-09', 'AG-11'].every(id => !!app().querySelector(`tr[data-ag="${id}"]`)) && /Onboarding/.test(app().querySelector('tr[data-ag="AG-08"]').textContent) && /Inactive/.test(app().querySelector('tr[data-ag="AG-11"]').textContent) && /doesn't let an agency buy/.test(main()));
+    setRows([[10, 24, 5], [25, 49, 10], [50, 99, 15], [100, null, 20]]); ACT.discPreview(); ok('S4c preview shows now vs proposed per quantity; nothing saved', /Preview — new automatic-price purchases/.test(app().querySelector('#dr-pv').textContent) && /−20%/.test(app().querySelector('#dr-pv').textContent) && discNow().v === 2);
+    saveRates([[10, 24, 5], [25, 49, 10], [50, 99, 15], [100, null, 20]]);
+    ok('S4c add / edit a slab: new version 3 with the four slabs, audited', discNow().v === 3 && discNow().slabs.length === 4 && discNow().slabs[3].join() === '100,,20' && ADMIN.audit[0].action === 'New version 3');
+    ok('S4c boundaries: 9 → 0%, 10 → 5%, 24 → 5%, 25 → 10%, 49 → 10%, 50 → 15%, 99 → 15%, 100 → 20%, 500 → 20% (open last slab)', [[9, 0], [10, 5], [24, 5], [25, 10], [49, 10], [50, 15], [99, 15], [100, 20], [500, 20]].every(([q, p]) => discPct(q).pct === p));
+    ok('S4c the upper bound is respected: with the last slab closed at 99, 100 seats get the standard %', discPct(100, { std: 3, slabs: [[10, 24, 5], [25, 49, 10], [50, 99, 15]] }).pct === 3 && discPct(99, { std: 3, slabs: [[10, 24, 5], [25, 49, 10], [50, 99, 15]] }).pct === 15);
+    const v3 = discNow().v, bad = (rows, std, why) => { saveRates(rows, { std }); return discNow().v === v3 && ADMIN.audit[0].action === 'Rejected: invalid discount rates' && why.test(ADMIN.audit[0].reason); };
+    ok('S4c (negative) a gap between slabs is refused', bad([[10, 24, 5], [26, 49, 10], [50, null, 15]], 0, /Gap between slab 1 and slab 2/));
+    ok('S4c (negative) overlapping slabs are refused', bad([[10, 25, 5], [25, 49, 10], [50, null, 15]], 0, /overlaps/));
+    ok('S4c (negative) only the last slab can be open', bad([[10, null, 5], [25, 49, 10]], 0, /only the last slab can be open/));
+    ok('S4c (negative) invalid boundaries and percentages are refused', bad([[0, 24, 5], [25, null, 10]], 0, /whole number of seats, 1 or more/) && bad([[10, 24, 70], [25, null, 10]], 0, /0–60%/) && bad([[10, 9, 5], [10, null, 10]], 0, /at least "from"/) && bad([[10, 24, 5], [25, null, 10]], 55, /standard discount must be 0–50%/));
+    // Agency catalogue → quantity dialog → checkout → purchase → Finance
+    AGY(); go('g-buy'); const c1 = AGY_CATALOGUE().find(c => c.id === 'CAT-1'), c2 = AGY_CATALOGUE().find(c => c.id === 'CAT-2');
+    ACT.agBuy({ dataset: { id: 'CAT-1' } }); document.querySelector('#gq').value = 100; INP.agBuyQty(document.querySelector('#gq'));
+    ok('S4c quantity dialog: the new slab applies (100 seats −20%), VAT on top; the hint shows the current rates', /Volume price: 100\+ seats −20%/.test(mroot().textContent) && mroot().textContent.includes(money(priceFor(c1, 100).total, 'GBP')) && /100\+ seats −20%/.test(mroot().querySelector('.xs.muted') ? mroot().textContent : '') && !/50\+ −15%/.test(mroot().textContent)); closeModal();
+    const p1 = buyAg('CAT-1', 25), pr1 = { net: Math.round(c1.unit * 25 * 0.9) };
+    ok('S4c purchase (VAT bundle): net = list −10%, VAT 20% on top; discount, basis and rate version recorded', p1.net === pr1.net && p1.vatPct === 20 && Math.abs(p1.vat - p1.net * 0.2) < 0.005 && p1.amount === p1.net + p1.vat && p1.discPct === 10 && p1.discBasis === 'Volume slab' && p1.rateV === 3);
+    const t1 = STORE.fin.tx.find(t => t.ref === p1.ref), bn1 = ADMIN.bundles.find(b => b.id === p1.bundle);
+    ok('S4c Finance transaction and credited bundle carry the same amounts and discount', t1 && t1.amount === p1.amount && t1.net === p1.net && t1.discPct === 10 && bn1 && bn1.price === p1.amount && bn1.discPct === 10 && bn1.mode === 'Automatic (−10%)');
+    FA4(); go('f-ledger'); ok('S4c Finance ledger shows the purchase amount', main().includes(p1.ref) || main().includes(money(p1.amount, 'GBP')));
+    const p2 = (AGY(), buyAg('CAT-2', 100)); ok('S4c purchase (no-VAT bundle) at 100 seats: −20% (open-ended slab)', p2.discPct === 20 && p2.amount === Math.round(c2.unit * 100 * 0.8) && p2.vat === 0);
+    const hist0 = JSON.stringify([STORE.agy.purchases, STORE.agy.ledger, STORE.fin.tx.filter(t => [p1.ref, p2.ref].includes(t.ref)), ADMIN.bundles.filter(b => [p1.bundle, p2.bundle].includes(b.id))]);
+    SA(); saveRates([[10, 24, 8], [25, 49, 12], [50, null, 25]], { r: 'New price list' });
+    ok('S4c removing a slab (4 → 3) is a new version; version 3 keeps its four slabs in history', discNow().v === 4 && discNow().slabs.length === 3 && discData().versions.find(v => v.v === 3).slabs.length === 4);
+    ok('S4c a later rate change leaves completed purchases, ledger, Finance and bundles unchanged', JSON.stringify([STORE.agy.purchases, STORE.agy.ledger, STORE.fin.tx.filter(t => [p1.ref, p2.ref].includes(t.ref)), ADMIN.bundles.filter(b => [p1.bundle, p2.bundle].includes(b.id))]) === hist0);
+    ok('S4c new purchases use the new rates', (AGY(), priceFor(c2, 25).pct === 12));
+    // Admin catalogue reads the same rule
+    SA(); const prod = STORE.biz.products.find(p => p.id === 'CAT-2'); ok('S4c admin catalogue pricing uses the same slab rule as the agency portal', priceOf(prod, 'GBP', 25).pct === 12 && priceOf(prod, 'GBP', 25).final === (AGY(), priceFor(c2, 25).net));
+    // Negotiated and fixed-% prices; per-agency (no stacking)
+    SA(); saveRates(null, { ag: { 'BrightCare Staffing Ltd': 40, 'CarePlus Recruitment': 10 }, r: 'Agency terms' });
+    AGY('AG-01'); const neg = AGY_CATALOGUE().find(c => c.customTotal), autoB = AGY_CATALOGUE().find(c => discAuto(c));
+    ok('S4c a negotiated price is not overridden by a higher per-agency discount (40%)', !!neg && Math.round(priceFor(neg, neg.seats).net) === Math.round(neg.customTotal) && /negotiated/.test(priceFor(neg, neg.seats).label));
+    ok('S4c per-agency 40% on an automatic bundle: the better of per-agency and slab, never both', priceFor(autoB, 50).pct === 40 && priceFor(autoB, 50).basis === 'Per-agency discount' && priceFor(autoB, 50).net === Math.round(autoB.unit * 50 * 0.6));
+    AGY(); const fix = AGY_CATALOGUE().find(c => c.fixedPct != null); ok('S4c a fixed-% bundle keeps its own %; CarePlus\'s 10% only beats a lower slab', priceFor(fix, 25).pct === fix.fixedPct && priceFor(c2, 9).pct === 10 && priceFor(c2, 50).pct === 25);
+    ok('S4c setting a rate for an onboarding agency doesn\'t activate it or let it buy', (() => { SA(); saveRates(null, { ag: { 'Riverside Care Partners': 7 }, r: 'Prepared terms' }); const a = ADMIN.agencies.find(x => x.id === 'AG-08'); return discNow().agency['Riverside Care Partners'] === 7 && a.status === 'Onboarding' && a.loginStatus === 'Not activated' && agStatus(a) === 'Onboarding'; })());
+    // Approvals and role boundaries (G5.6 / D11)
+    const vA = discNow().v; bizEnter('BA'); rates(); document.querySelector('#dr-std').value = '4'; document.querySelector('#dr-r').value = 'Proposal'; SUBMIT.discSave(); const req = ADMIN.queue[0];
+    ok('S4c capability holder (Business Admin A): a request for the Super Admin; rates unchanged', req.type === 'Discount rate change' && req.first === 'Super Administrator' && discNow().v === vA && discNow().std === 0);
+    ACT.qDo({ dataset: { id: req.id, a: 'approve' } }); ok('S4c (negative) the requester can\'t approve their own request', discNow().v === vA && isOpen(req));
+    SA(); applyDecision(req, 'approve', 'OK'); ok('S4c approved → a new version with the proposed rates', discNow().v === vA + 1 && discNow().std === 4);
+    bizEnter('BA'); rates(); document.querySelector('#dr-std').value = '9'; document.querySelector('#dr-r').value = 'Another'; SUBMIT.discSave(); const req2 = ADMIN.queue[0]; SA(); applyDecision(req2, 'reject', 'No'); ok('S4c rejected → rates unchanged', discNow().v === vA + 1 && discNow().std === 4);
+    const vB = discNow().v; FA4(); rates(); const nq = ADMIN.queue.length; SUBMIT.discSave(); ok('S4c (negative) Finance can\'t change rates by a direct save (refused, logged, no request)', discNow().v === vB && ADMIN.queue.length === nq && ADMIN.audit[0].action === 'Blocked: change discount rates');
+    role('sysA'); SUBMIT.discSave(); ok('S4c (negative) the System Admin can\'t either', discNow().v === vB && ADMIN.audit[0].action === 'Blocked: change discount rates');
+    bizEnter('BB'); rates(); ok('S4c Business Admin B stays read-only', document.querySelector('#dr-std').readOnly);
+    // Versions survive admin rebuilds / identity switches; only the demo reset restores the seed
+    ok('S4c observation fees and programme fees untouched by the rate changes and purchases', JSON.stringify([STORE.chFees, NVQ_FEES]) === fees0, JSON.stringify(STORE.chFees).length + ' vs ' + fees0.length);
+    SA(); const av0 = Object.keys(ADMIN_VARIANTS).find(k => k !== ADMIN.av); INP.adminVariant({ value: av0 }); INP.adminVariant({ value: 'A' }); SA(); ok('S4c versions survive admin variant switches (rebuilds) and an identity switch', discNow().v === vB && discData().versions.length === vB && (rates(), new RegExp('Current rates — version ' + vB).test(main())));
+    fresh(); ok('S4c the demo reset restores the seeded versions 1 and 2', discNow().v === 2 && discData().versions.length === 2);
+    ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: S4c entry', /agency bundle discount slabs/.test(main()));
+  });
+
+  await T('S4c discount-rate change requests survive navigation; applied exactly once', async () => {
+    fresh(); const otherV = Object.keys(ADMIN_VARIANTS).find(k => k !== 'A'), hist0 = JSON.stringify([STORE.agy.purchases, STORE.fin.tx, STORE.agy.ledger]);
+    bizEnter('BA'); rates(); document.querySelector('#dr-std').value = '6'; document.querySelector('#dr-r').value = 'Market review'; SUBMIT.discSave();
+    const req = ADMIN.queue[0], id = req.id, snap = JSON.stringify({ id: req.id, raisedBy: req.raisedBy, raised: req.raised, data: req.data, status: req.status, history: req.history });
+    ok('S4c Business Admin A submits a discount-rate change request (pending; rates unchanged)', req.type === 'Discount rate change' && req.status === 'Pending' && req.raisedBy === 'Sophie Turner' && discNow().std === 0 && discData().requests.includes(req));
+    SA(); INP.adminVariant({ value: otherV }); INP.adminVariant({ value: 'A' }); SA();
+    const q1 = ADMIN.queue.find(i => i.id === id);
+    ok('S4c the pending request survives admin variant switches: same ID, requester, proposed rates, submission details and status', !!q1 && JSON.stringify({ id: q1.id, raisedBy: q1.raisedBy, raised: q1.raised, data: q1.data, status: q1.status, history: q1.history }) === snap && ADMIN.queue.filter(i => i.id === id).length === 1);
+    bizEnter('BB'); setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-queue', { id }); ok('S4c it survives identity switches and is visible to the Super Admin', !!ADMIN.queue.find(i => i.id === id) && /Discount rate change/.test(main()) && main().includes(id));
+    bizEnter('BA'); ACT.qDo({ dataset: { id, a: 'approve' } }); ok('S4c (negative) the requester can\'t approve their own request', isOpen(q1) && discNow().std === 0);
+    FA4(); applyDecision(q1, 'approve', 'Finance tries'); ok('S4c (negative) an unauthorised user can\'t decide it (refused, logged)', isOpen(q1) && discNow().std === 0 && ADMIN.audit[0].action === 'Blocked: decide discount rate change');
+    SA(); const v0 = discNow().v, n0 = discData().versions.length; applyDecision(q1, 'approve', 'Agreed');
+    ok('S4c the Super Admin approves the original request: applied once, as a new version', q1.status === 'Approved' && discNow().std === 6 && discNow().v === v0 + 1 && discData().versions.length === n0 + 1 && q1.data.appliedV === v0 + 1);
+    applyDecision(q1, 'approve', 'Again'); go('a-queue', { id }); INP.adminVariant({ value: otherV }); INP.adminVariant({ value: 'A' }); SA(); const q1b = ADMIN.queue.find(i => i.id === id); applyDecision(q1b, 'approve', 'Third time');
+    ok('S4c repeating the approval (also after reopening and a variant switch) adds no version', discData().versions.length === n0 + 1 && discNow().std === 6 && q1b === q1 && q1b.status === 'Approved' && ADMIN.audit.some(a => a.action === 'Blocked: decision repeated'));
+    bizEnter('BA'); rates(); document.querySelector('#dr-std').value = '11'; document.querySelector('#dr-r').value = 'Bigger cut'; SUBMIT.discSave(); const rq2 = ADMIN.queue[0];
+    ok('S4c a second request gets a new, unique ID', rq2.id !== id && ADMIN.queue.filter(i => i.id === rq2.id).length === 1);
+    SA(); applyDecision(rq2, 'reject', 'Too high'); const nR = discData().versions.length; INP.adminVariant({ value: otherV }); INP.adminVariant({ value: 'A' }); SA(); const rq2b = ADMIN.queue.find(i => i.id === rq2.id); applyDecision(rq2b, 'approve', 'Changed my mind');
+    ok('S4c a rejected request stays rejected across switches and never changes the rates', rq2b.status === 'Rejected' && discNow().std === 6 && discData().versions.length === nR);
+    ok('S4c approved and rejected request history is kept', q1.history.length >= 2 && rq2b.history.length >= 2 && discData().requests.length === 2);
+    ok('S4c purchases and Finance records unchanged by the requests and switches', JSON.stringify([STORE.agy.purchases, STORE.fin.tx, STORE.agy.ledger]) === hist0);
+    fresh(); ok('S4c the demo reset clears the requests and restores the seeded rates', discData().requests.length === 0 && !ADMIN.queue.some(i => i.id === id) && discNow().v === 2);
   });
 
   fresh();
