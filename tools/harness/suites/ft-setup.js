@@ -232,7 +232,7 @@
     ACT.s2Sc27Pub(); reason('Go'); ok('Scenario #27 demo assignment published to Aisha', STORE.worlds.C.assignments.some(a => a.id === 'a27'));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S2 entry', /Setup fixes — assignments/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
-    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 25);
+    SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent)); ok('Admin index: S2 entries with purposes (S3: 6, S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1, S5d: 1 entries added)', !!sec && !!sec.querySelector('[data-t="a-assignments.a8.questions"]') && sec.querySelectorAll('li').length === 26);
   });
 
   /* ================= S3 — NVQ programmes ================= */
@@ -385,7 +385,7 @@
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S3 entry', /Setup fixes — NVQ programmes/.test(main()));
     go('demo-scenarios'); ok('Demo Scenarios: 29 (S4a: #29 added)', app().querySelectorAll('main section[id^="sc-"]').length === 29);
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 25 /* S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1 entries added */);
+    ok('Admin index: S3 entries with purposes', !!sec && ['a-programmes.NV-L4.tree', 'a-programmes.NV-L3.versions', 'a-programmes.NV-L3D.tree', 'k-obslib', 'a-programmes.NV-L3.types'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 26 /* S4a: 5, S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1, S5d: 1 entries added */);
     SA(); go('a-assignments', { id: 'a9' }); ok('S2 / CH-17: "Marked by: … set in the batch\'s Assessors panel" — read-only, no input', /Marked by: .+, set in the batch's Assessors panel/.test(main()) && !app().querySelector('#ae-m') && !app().querySelector('.s2-marker input, .s2-marker select'));
   });
 
@@ -743,7 +743,7 @@
     const s29 = SC_LIST().find(x => x[0] === '29'); ok('Scenario #29: 6 steps, set-up then a new learner\'s sign-up', !!s29 && s29[3].length === 6 && /Daniel Okafor/.test(s29[3][3].text));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S4a entry', /Setup fixes — admission and money/.test(main()));
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
-    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 25 /* S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1 entries added */);
+    ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 26 /* S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1, S5d: 1 entries added */);
     fresh(); const z = apply4('F', T2); ACT.suNext(); ok('E2E (negative): the country rule still applies — no Level 2 batch for a UAE applicant (CH-42)', z.signup.step === 1 && !z.signup.batch);
   });
 
@@ -1857,6 +1857,260 @@
     SA(); go('a-index'); const ix = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
     ok('S5b Admin index: one Setup fixes entry for S5b', !!ix && ix.querySelectorAll('[data-t="a-agencies.AG-08.login"]').length === 1 && /S5b — first set-password activates/.test(ix.textContent));
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: S5b entry', /agency administration, activation and access security/.test(main()));
+  });
+
+  /* ================= S5d — announcements, notification templates, delivery log and referral codes ================= */
+  const feedOf = id => { agyEnter(id, true); go('g-anns', { tab: 'academy' }); return main(); };
+  const learnerSees = (v, title) => STORE.worlds[v].announcements.some(x => x.title === title);
+  const L3 = () => ADMIN.batches.find(b => b.code === 'L3AC-JAN26');
+  const inOut = b => { const ids = s5dBatchLids(b), all = [...'ABCDEF']; return [all.filter(v => ids.includes(STORE.worlds[v].me.id)), all.filter(v => !ids.includes(STORE.worlds[v].me.id))]; };
+  const pickAud = (t, ids) => { const s = document.querySelector('#modal-root #s5d-a'); if (s) { s.value = t; INP.s5dAud(s); } const m = document.querySelector('#modal-root #s5d-ids-s'); if (m) { [...m.options].forEach(o => { o.selected = ids.includes(o.value); }); INP.s5dAudIds(m); } };
+  const edAct = l => { const a = MODAL.actions.find(x => x.label === l); const r = a.fn(); if (r !== false) closeModal(); return r; };
+  const secN = () => ADMIN.security.length;
+  const logOf = src => s5dStore().log.filter(x => x.src === src);
+
+  await T('S5d (7)(8) agency feed: only published announcements addressed to that agency, read by agency ID', async () => {
+    fresh(); let f = feedOf('AG-02');
+    ok('S5d (8) the Draft "Agency reporting portal update" (AN-04) no longer reaches agencies', !/Agency reporting portal update/.test(f));
+    ok('S5d (8) withdrawn, expired and future-scheduled announcements never appear', !/Fee reminder for Dubai cohort|Planned maintenance|New CPD course: Oral Health/.test(f));
+    ok('S5d published announcements to everyone and to all agencies still appear', /Academy closed 25–26 December/.test(f) && /New Care Certificate cohort pricing/.test(f));
+    BIZ(); ACT.bAnn(); fill({ '#s5d-t': 'Gulf Care rota pilot', '#s5d-b': 'Only for Gulf Care.' }); pickAud('agencies', ['AG-03']); prim(); closeModal();
+    const ba = STORE.biz.anns.find(a => a.title === 'Gulf Care rota pilot');
+    ok('S5d an announcement to one agency is stored with that agency ID and one recipient', ba.status === 'Published' && ba.spec.t === 'agencies' && ba.spec.ids.join() === 'AG-03' && ba.recipients === 1 && ADMIN.announcements.some(m => m.id === 'AN-' + ba.id && m.srcId === ba.id));
+    ok('S5d (7) Agency A (CarePlus) does not see Agency B\'s announcement — screen and read function', !/Gulf Care rota pilot/.test(feedOf('AG-02')) && !s5dAgencyFeed(agOf('AG-02')).some(a => a.title === 'Gulf Care rota pilot'));
+    ok('S5d (7) Agency B (Gulf Care) sees it', /Gulf Care rota pilot/.test(feedOf('AG-03')) && STORE.agy.notifs.some(n => n.agency === 'Gulf Care Recruitment' && /Gulf Care rota pilot/.test(n.b)) && !STORE.agy.notifs.some(n => n.agency !== 'Gulf Care Recruitment' && /Gulf Care rota pilot/.test(n.b)));
+    BIZ(); ACT.bAnn(); fill({ '#s5d-t': 'Draft for all agencies' }); edAct('Save draft');
+    ok('S5d (8) a draft to agencies is not visible to any agency', !/Draft for all agencies/.test(feedOf('AG-02')) && !/Draft for all agencies/.test(feedOf('AG-03')));
+    SA(); s5dSave('academy', null, { title: 'BrightCare learners only', body: 'x', spec: { t: 'agencyLearners', ids: ['AG-01'] }, ch: ['In-app'] }, 'publish');
+    ok('S5d an announcement to an agency\'s learners is not shown to agencies as an agency announcement', !s5dAgencyFeed(agOf('AG-01')).some(a => a.title === 'BrightCare learners only') && !/BrightCare learners only/.test(feedOf('AG-02')));
+    BIZ(); ACT.bAnnWd({ dataset: { id: ba.id } }); reason('Pilot cancelled');
+    ok('S5d (6) withdrawing it removes it from Gulf Care\'s feed; its copy follows', ba.status === 'Withdrawn' && ADMIN.announcements.find(m => m.id === 'AN-' + ba.id).status === 'Withdrawn' && !/Gulf Care rota pilot/.test(feedOf('AG-03')));
+  });
+
+  await T('S5d (10) Business Admin seeded announcement: the copy is AN-BA-1 and withdrawal reaches it', async () => {
+    fresh(); const m = ADMIN.announcements.find(a => a.id === 'AN-BA-1');
+    ok('S5d (10) the seeded copy of BA-1 is AN-BA-1 (no AN-BA1), linked to BA-1, with the correction in its history', !!m && !ADMIN.announcements.some(a => a.id === 'AN-BA1') && m.srcK === 'biz' && m.srcId === 'BA-1' && m.title === 'New Care Certificate cohort pricing' && m.by === 'Sophie Turner' && /AN-BA1 → AN-BA-1/.test(m.hist[0][3]));
+    ok('S5d agencies see BA-1 before it is withdrawn', /New Care Certificate cohort pricing/.test(feedOf('AG-02')));
+    BIZ(); go('b-anns'); ACT.bAnnWd({ dataset: { id: 'BA-1' } }); reason('Pricing changed');
+    ok('S5d (10) withdrawing BA-1 withdraws AN-BA-1 and removes it from agency feeds', STORE.biz.anns.find(a => a.id === 'BA-1').status === 'Withdrawn' && m.status === 'Withdrawn' && !/New Care Certificate cohort pricing/.test(feedOf('AG-02')) && !/New Care Certificate cohort pricing/.test(feedOf('AG-10')));
+    SA(); go('a-announcements'); ok('S5d the academy list shows AN-BA-1 as Withdrawn', /AN-BA-1/.test(main()) && /Withdrawn/.test(main()));
+  });
+
+  await T('S5d (9) teachers see and manage only their own announcements', async () => {
+    fresh(); S.tas.v = 'A'; tasEnter(); go('t-announcements');
+    ok('S5d (9) Sarah Okonkwo no longer sees Marcus Bell\'s announcement (TA-1); she sees her own', !main().includes('Unit 306 class recording uploaded') && main().includes('Bring evidence for Unit 301 observations'));
+    const n = secN(); ACT.tasAnnSt({ dataset: { id: 'TA-1', s: 'Withdrawn' } });
+    ok('S5d (9) her direct call to withdraw TA-1 is refused, logged, nothing changes', !MODAL && STORE.tas.anns.find(a => a.id === 'TA-1').status === 'Published' && secN() === n + 1 && /You can only manage your own announcements/.test(ADMIN.audit[0].reason));
+    ACT.s5dView({ dataset: { k: 'teacher', id: 'TA-1' } }); ok('S5d (9) … nor can she open it', !MODAL);
+    ACT.s5dEdit({ dataset: { k: 'teacher', id: 'TA-4' } }); ok('S5d she can open her own draft TA-4 with its content', !!MODAL && document.querySelector('#s5d-t').value === 'Half-term revision session'); closeModal();
+    S.tas.v = 'T'; tasEnter(); go('t-announcements');
+    ok('S5d (9) after an identity change, Marcus Bell sees only his own (TA-1)', main().includes('Unit 306 class recording uploaded') && !main().includes('Bring evidence for Unit 301 observations'));
+    const r = s5dSave('teacher', 'TA-4', { title: 'Hijacked', spec: { t: 'tbatches', ids: ['L3AC-JAN26'] }, ch: ['In-app'] }, 'publish'); ACT.tasAnnSt({ dataset: { id: 'TA-2', s: 'Withdrawn' } });
+    ok('S5d (9) Marcus can\'t edit Sarah\'s draft or withdraw her announcement by direct calls', !r.ok && STORE.tas.anns.find(a => a.id === 'TA-4').title === 'Half-term revision session' && STORE.tas.anns.find(a => a.id === 'TA-2').status === 'Published');
+    const bad = s5dSave('teacher', null, { title: 'Wrong cohort', spec: { t: 'tbatches', ids: ['L2DC-MAR26'] }, ch: ['In-app'] }, 'publish');
+    ok('S5d a teacher can\'t address a cohort they don\'t teach', !bad.ok && /Outside the audiences/.test(bad.errs.aud) && !STORE.tas.anns.some(a => a.title === 'Wrong cohort'));
+    const [inV] = inOut(L3()), v0 = inV.find(v => learnerSees(v, 'Unit 306 class recording uploaded'));
+    go('t-announcements'); ACT.tasAnnSt({ dataset: { id: 'TA-1', s: 'Withdrawn' } }); reason('Wrong recording');
+    ok('S5d (6) Marcus withdraws his own TA-1: its academy copy AN-02 is withdrawn and learners no longer see it (kept in their archive)', STORE.tas.anns.find(a => a.id === 'TA-1').status === 'Withdrawn' && ADMIN.announcements.find(a => a.id === 'AN-02').status === 'Withdrawn' && !!v0 && !learnerSees(v0, 'Unit 306 class recording uploaded') && STORE.worlds[v0].annArchive.some(x => x.title === 'Unit 306 class recording uploaded'));
+    learner(v0); go('messages', { tab: 'announcements' }); ok('S5d … in the learner\'s Announcements screen too', !main().includes('Unit 306 class recording uploaded'));
+    S.coo.v = 'B'; cooEnter(); const nc = secN(); ACT.cooAnnSt({ dataset: { id: 'CA-1', s: 'Withdrawn' } });
+    ok('S5d a Coordinator can\'t withdraw another Coordinator\'s announcement', !MODAL && STORE.coo.anns.find(a => a.id === 'CA-1').status === 'Published' && secN() === nc + 1);
+  });
+
+  await T('S5d (1)(2)(3)(6) lifecycle: draft edited in place, published to eligible learners only, withdrawn with history', async () => {
+    fresh(); SA(); const b = L3(), [inV, outV] = inOut(b), n0 = ADMIN.announcements.length;
+    go('a-announcements'); ACT.composeAnn(); fill({ '#s5d-t': 'Reflective log reminder', '#s5d-b': 'Bring your reflective log on Thursday.' }); pickAud('batches', [b.code]); ACT.s5dAttSample(); edAct('Save draft');
+    const a = ADMIN.announcements.find(x => x.title === 'Reflective log reminder'), id = a.id;
+    ok('S5d (1) Save draft creates one Draft with a stable ID', ADMIN.announcements.length === n0 + 1 && a.status === 'Draft' && /^AN-\d+$/.test(id) && a.att.length === 1 && a.by === 'Nadia Qureshi');
+    go('a-announcements'); ok('S5d the list offers Edit on the draft', !!app().querySelector(`main [data-act="s5dEdit"][data-id="${id}"]`));
+    ACT.s5dEdit({ dataset: { k: 'academy', id } }); const sel = document.querySelector('#s5d-ids-s');
+    ok('S5d (2) reopening shows the saved content: title, message, audience, attachment', document.querySelector('#s5d-t').value === 'Reflective log reminder' && document.querySelector('#s5d-b').value === 'Bring your reflective log on Thursday.' && document.querySelector('#s5d-a').value === 'batches' && [...sel.selectedOptions].map(o => o.value).join() === b.code && /Announcement attachment 1\.pdf/.test(mroot().textContent));
+    fill({ '#s5d-t': 'Reflective log reminder — Thursday' }); edAct('Save draft');
+    ok('S5d (1) saving again updates the same announcement (no duplicate)', ADMIN.announcements.length === n0 + 1 && ADMIN.announcements.filter(x => x.id === id).length === 1 && a.title === 'Reflective log reminder — Thursday' && a.hist.some(h => h[2] === 'Draft saved'));
+    ACT.s5dEdit({ dataset: { k: 'academy', id } }); prim(); closeModal();
+    const R = s5dResolve('academy', { t: 'batches', ids: [b.code] }, a);
+    ok('S5d (3) publishing sends it to the batch\'s learners only', a.status === 'Published' && a.recipients === R.length && inV.length > 0 && inV.every(v => learnerSees(v, a.title)) && outV.every(v => !learnerSees(v, a.title)));
+    learner(inV[0]); go('messages', { tab: 'announcements' }); ok('S5d (3)(18) the learner sees it with its attachment', main().includes(a.title) && main().includes('Announcement attachment 1.pdf'));
+    learner(outV[0]); go('messages', { tab: 'announcements' }); ok('S5d (12) a learner outside the batch doesn\'t', !main().includes(a.title));
+    const logN = logOf('academy:' + id).length;
+    SA(); go('a-announcements'); ACT.annSt({ dataset: { id, s: 'Withdrawn' } }); reason('Class moved');
+    ok('S5d (6) withdrawal: status, history and audit; learners no longer see it; delivery records kept', a.status === 'Withdrawn' && a.hist.some(h => h[2] === 'Withdrawn' && h[3] === 'Class moved') && ADMIN.audit.some(x => x.action === 'Withdrawn' && x.entity.includes(id)) && inV.every(v => !learnerSees(v, a.title) && STORE.worlds[v].annArchive.some(x => x.title === a.title)) && logOf('academy:' + id).length === logN && logN > 0);
+    ACT.s5dView({ dataset: { k: 'academy', id } }); ok('S5d "Open" shows status, audience, recipients and history', /Withdrawn/.test(mroot().textContent) && /History/.test(mroot().textContent) && /Class moved/.test(mroot().textContent) && /Delivery records/.test(mroot().textContent)); closeModal();
+    ACT.annSt({ dataset: { id, s: 'Withdrawn' } }); ok('S5d a withdrawn announcement can\'t be withdrawn again', !MODAL && /can't be withdrawn/.test(ADMIN.audit[0].reason));
+    ACT.annSt({ dataset: { id: 'AN-01', s: 'Withdrawn' } }); reason('Dates changed'); learner('A'); go('dashboard');
+    ok('S5d (6) withdrawing the seeded AN-01 removes it from learners\' dashboards too', !main().includes('Academy closed 25–26 December') && !learnerSees('A', 'Academy closed 25–26 December'));
+  });
+
+  await T('S5d (15) announcement authority is checked in the action; refusals change nothing and are logged', async () => {
+    fresh(); const an = ADMIN.announcements.length, an1 = ADMIN.announcements.find(a => a.id === 'AN-01');
+    for (const [lbl, enter] of [['Finance Admin', () => FA4()], ['Business Admin (academy-wide)', () => BIZ()], ['an Agency Administrator', () => agyEnter('AG-02', true)], ['a learner', () => learner('A')]]) {
+      enter(); const n = secN(); ACT.composeAnn(); const opened = !!MODAL; closeModal();
+      const r = s5dSave('academy', null, { title: 'Crafted', spec: { t: 'all' }, ch: ['In-app'] }, 'publish'); ACT.annSt({ dataset: { id: 'AN-01', s: 'Withdrawn' } }); const o2 = !!MODAL; closeModal();
+      ok(`S5d (15) ${lbl}: academy compose, save and withdraw are refused and logged`, !opened && !o2 && !r.ok && ADMIN.announcements.length === an && an1.status === 'Published' && secN() === n + 3, String(secN() - n));
+    }
+    role('sysA'); const rs = s5dSave('academy', null, { title: 'System notice', spec: { t: 'staff' }, ch: ['In-app'] }, 'publish');
+    ok('S5d the System Admin publishes academy-wide (Announcements: all capabilities)', rs.ok && rs.a.status === 'Published' && rs.a.recipients === ADMIN.staff.filter(s => s.status === 'Active').length);
+    // Correction (roles document: Academic Admin → Communications → "Academy-wide announcements" ticked)
+    acaEnter('KA'); S.signedIn = true; go('a-announcements'); ok('S5d Academic Admin: "New announcement" is offered on Announcements', !!app().querySelector('main [data-act="composeAnn"]'));
+    ACT.composeAnn(); ok('S5d Academic Admin: every academy audience is offered, academy-wide included', [...document.querySelectorAll('#modal-root #s5d-a option')].map(o => o.value).join() === 'all,learners,staff,roles,batches,agencies,allAgencies,agencyLearners');
+    fill({ '#s5d-t': 'Academy closed for training day', '#s5d-b': 'The Academy is closed on Friday.' }); pickAud('all', []); edAct('Save draft');
+    const ka = ADMIN.announcements.find(x => x.title === 'Academy closed for training day'), kn = ADMIN.me.name;
+    ok('S5d Academic Admin creates an academy-wide draft (theirs)', !!ka && ka.status === 'Draft' && ka.by === kn && ka.spec.t === 'all');
+    ACT.s5dEdit({ dataset: { k: 'academy', id: ka.id } }); fill({ '#s5d-b': 'The Academy is closed on Friday 30 October.' }); document.querySelector('#s5d-w').value = 'sched'; document.querySelector('#s5d-at').value = new Date(now().getTime() + 3 * DAY).toISOString().slice(0, 16); prim(); closeModal();
+    ok('S5d … edits it in place and schedules it', ka.status === 'Scheduled' && ka.body === 'The Academy is closed on Friday 30 October.' && ADMIN.announcements.filter(x => x.id === ka.id).length === 1);
+    ACT.s5dSt({ dataset: { k: 'academy', id: ka.id, s: 'Draft' } }); reason('Publish now instead'); ACT.s5dEdit({ dataset: { k: 'academy', id: ka.id } }); document.querySelector('#s5d-w').value = 'now'; prim(); closeModal();
+    const allN = new Set(allLearners().filter(l => l.rec !== 'Archived').map(l => l.id)).size + ADMIN.staff.filter(s => s.status === 'Active').length + ADMIN.agencies.filter(g => agStatus(g) === 'Active').length;
+    ok('S5d … publishes it academy-wide: learners, staff and agencies, one copy each', ka.status === 'Published' && ka.recipients === allN && learnerSees('A', 'Academy closed for training day') && /Academy closed for training day/.test(feedOf('AG-02')));
+    acaEnter('KA'); S.signedIn = true; ACT.annSt({ dataset: { id: ka.id, s: 'Withdrawn' } }); reason('Training day cancelled');
+    ok('S5d … and withdraws it (learners and agencies no longer see it)', ka.status === 'Withdrawn' && !learnerSees('A', 'Academy closed for training day') && !/Academy closed for training day/.test(feedOf('AG-02')));
+    acaEnter('KA'); S.signedIn = true; const nk = secN(), ed1 = s5dSave('academy', 'AN-04', { title: 'Changed', spec: { t: 'all' }, ch: ['In-app'] }, 'publish');
+    ACT.annSt({ dataset: { id: 'AN-01', s: 'Withdrawn' } }); const o1 = !!MODAL; closeModal(); ACT.annSt({ dataset: { id: 'AN-02', s: 'Withdrawn' } }); const o2 = !!MODAL; closeModal(); ACT.annSt({ dataset: { id: 'AN-BA-1', s: 'Withdrawn' } }); const o3 = !!MODAL; closeModal();
+    ok('S5d Academic Admin can\'t edit or withdraw someone else\'s academy announcement, the teacher-originated AN-02 or the Business Admin\'s AN-BA-1 (refused, logged)', !ed1.ok && !o1 && !o2 && !o3 && ADMIN.announcements.find(x => x.id === 'AN-04').title === 'Agency reporting portal update' && an1.status === 'Published' && ADMIN.announcements.find(x => x.id === 'AN-02').status === 'Published' && ADMIN.announcements.find(x => x.id === 'AN-BA-1').status === 'Published' && secN() === nk + 4);
+    const nt = secN(); ACT.tasAnnSt({ dataset: { id: 'TA-2', s: 'Withdrawn' } }); ACT.cooAnnSt({ dataset: { id: 'CA-1', s: 'Withdrawn' } }); ACT.agAnnWd({ dataset: { id: 'GA-1' } }); ACT.bAnnWd({ dataset: { id: 'BA-1' } }); const e2 = s5dSave('agency', 'GA-3', { title: 'x', spec: { t: 'agyAll' }, ch: ['In-app'] }, 'publish');
+    ok('S5d … nor teacher, Coordinator, agency or Business Admin announcements by direct calls', !MODAL && !e2.ok && STORE.tas.anns.find(x => x.id === 'TA-2').status === 'Published' && STORE.coo.anns.find(x => x.id === 'CA-1').status === 'Published' && STORE.agy.anns.find(x => x.id === 'GA-1').status === 'Published' && STORE.biz.anns.find(x => x.id === 'BA-1').status === 'Published' && secN() === nt + 5);
+    ACT.s5dView({ dataset: { k: 'teacher', id: 'TA-2' } }); ok('S5d … nor open a teacher\'s announcement', !MODAL);
+    BIZ(); go('a-announcements'); const nb = secN(), bz = s5dSave('academy', null, { title: 'Business to everyone', spec: { t: 'all' }, ch: ['In-app'] }, 'publish');
+    ok('S5d (6 of the correction) the Business Admin still can\'t create academy-wide announcements', !bz.ok && !ADMIN.announcements.some(x => x.title === 'Business to everyone') && secN() === nb + 1 && !app().querySelector('main [data-act="composeAnn"]'));
+    const bo = s5dSave('biz', null, { title: 'Still to agencies', spec: { t: 'allAgencies' }, ch: ['In-app'] }, 'publish'); ok('S5d … and keeps announcements to agencies', bo.ok && bo.a.status === 'Published');
+    BIZ(); loginOp('AG-02', 'deactivate', 'Hold'); agyEnter('AG-02', true); const rg = s5dSave('agency', null, { title: 'From a deactivated login', spec: { t: 'agyAll' }, ch: ['In-app'] }, 'publish');
+    ok('S5d an agency whose login was deactivated can\'t announce (S5b login rule)', !rg.ok && !STORE.agy.anns.some(a => a.title === 'From a deactivated login'));
+    agyEnter('AG-03', true); const rr = s5dSave('agency', null, { title: 'Receive-only send', spec: { t: 'agyAll' }, ch: ['In-app'] }, 'publish');
+    ok('S5d a receive-only agency can\'t announce', !rr.ok && /receive-only/.test(rr.why));
+  });
+
+  await T('S5d (4)(5) scheduled announcements stay hidden until their time, then publish exactly once', async () => {
+    fresh(); SA(); const b = L3(), [inV] = inOut(b), at = new Date(now().getTime() + 1500).toISOString();
+    const past = s5dSave('academy', null, { title: 'In the past', spec: { t: 'batches', ids: [b.code] }, ch: ['In-app'], at: new Date(now().getTime() - 60000).toISOString() }, 'schedule');
+    ok('S5d a schedule time in the past is refused', !past.ok && /future/.test(past.errs.at));
+    const r = s5dSave('academy', null, { title: 'Timed notice', spec: { t: 'batches', ids: [b.code] }, ch: ['In-app', 'Email'], at }, 'schedule'), a = r.a;
+    render(); go('a-announcements');
+    ok('S5d (4) before its time it stays Scheduled and hidden from learners', a.status === 'Scheduled' && inV.every(v => !learnerSees(v, 'Timed notice')) && !logOf('academy:' + a.id).length);
+    const c2 = s5dSave('academy', null, { title: 'Cancelled notice', spec: { t: 'batches', ids: [b.code] }, ch: ['In-app'], at }, 'schedule').a; ACT.s5dSt({ dataset: { k: 'academy', id: c2.id, s: 'Draft' } }); reason('Not needed');
+    await wait(2200); const nN = STORE.worlds[inV[0]].notifs.length; render();
+    ok('S5d (5) once its time is reached it is published, with its recipients and delivery records', a.status === 'Published' && !!a.delivered && inV.every(v => learnerSees(v, 'Timed notice')) && logOf('academy:' + a.id).length === a.recipients * 2);
+    const logN = logOf('academy:' + a.id).length, nN2 = STORE.worlds[inV[0]].notifs.length; render(); go('a-announcements'); go('a-dashboard'); render(); s5dTick();
+    ok('S5d (5) evaluating again (reopening screens) publishes nothing twice', logOf('academy:' + a.id).length === logN && STORE.worlds[inV[0]].notifs.length === nN2 && STORE.worlds[inV[0]].announcements.filter(x => x.title === 'Timed notice').length === 1 && ADMIN.audit.filter(x => x.action === 'Published (scheduled)' && x.entity.includes(a.id)).length === 1 && nN2 === nN + 1);
+    ok('S5d a cancelled schedule (back to draft) is never published', c2.status === 'Draft' && inV.every(v => !learnerSees(v, 'Cancelled notice')));
+    agyEnter('AG-02', true); const g = s5dSave('agency', null, { title: 'Training day moved', spec: { t: 'agyAll' }, ch: ['In-app'], at: new Date(agNow().getTime() + DAY).toISOString() }, 'schedule').a;
+    render(); ok('S5d agency announcements follow the agency clock: still scheduled', g.status === 'Scheduled');
+    STORE.agy.offset += 2; render(); ok('S5d … published once the agency clock passes its time', g.status === 'Published' && g.recipients === agyRoster('CarePlus Recruitment').length); STORE.agy.offset = 0;
+  });
+
+  await T('S5d (11)(13)(14) audiences resolve to real people by ID, one copy each; counts match', async () => {
+    fresh(); SA(); const act = ADMIN.staff.filter(s => s.status === 'Active');
+    const ra = s5dSave('academy', null, { title: 'Assessor standardisation', spec: { t: 'roles', ids: ['Assessor'] }, ch: ['In-app', 'Email'] }, 'publish').a, exp = act.filter(s => s.roles.includes('Assessor')).map(s => 'S:' + s.id).sort();
+    ok('S5d (11) "Assessors" reaches exactly the active staff who hold the Assessor role', ra.recips.slice().sort().join() === exp.join() && exp.length > 0 && ra.recipients === exp.length, ra.recips.join());
+    const rm = s5dSave('academy', null, { title: 'Teaching and assessing', spec: { t: 'roles', ids: ['Teacher', 'Assessor'] }, ch: ['In-app', 'Email'] }, 'publish').a, both = act.filter(s => s.roles.includes('Teacher') && s.roles.includes('Assessor'));
+    ok('S5d (13) someone with both roles (Sarah Okonkwo) receives one copy per channel', both.some(s => s.id === 'ST-004') && rm.recips.filter(k => k === 'S:ST-004').length === 1 && logOf('academy:' + rm.id).filter(x => x.to === 'S:ST-004').length === 2);
+    ok('S5d (14) the count is the number of distinct people', rm.recipients === new Set(rm.recips).size && rm.recipients === act.filter(s => s.roles.some(r => ['Teacher', 'Assessor'].includes(r))).length);
+    const bs = ADMIN.batches.filter(b => s5dBatchLids(b).length), pair = bs.flatMap(x => bs.filter(y => y !== x && s5dBatchLids(y).some(l => s5dBatchLids(x).includes(l))).map(y => [x, y]))[0];
+    const two = pair || [bs[0], bs[0]], rb = s5dSave('academy', null, { title: 'Two batches', spec: { t: 'batches', ids: [...new Set(two.map(b => b.code))] }, ch: ['In-app'] }, 'publish').a, u = new Set(two.flatMap(s5dBatchLids).filter(id => { const l = learnerById(id); return l ? l.rec !== 'Archived' : !!s5dWorldOf(id); }));
+    ok('S5d (13)(14) learners in several chosen batches get one copy; count = distinct learners', rb.recipients === u.size && new Set(rb.recips).size === rb.recips.length && Object.values(STORE.worlds).every(w => w.announcements.filter(x => x.title === 'Two batches').length <= 1));
+    const rw = s5dSave('academy', null, { title: 'Everyone', spec: { t: 'all' }, ch: ['In-app'] }, 'publish').a;
+    ok('S5d (14) "All users" = distinct learners + active staff + active agencies', rw.recipients === new Set(allLearners().filter(l => l.rec !== 'Archived').map(l => l.id)).size + act.length + ADMIN.agencies.filter(g => agStatus(g) === 'Active').length);
+    ACT.composeAnn(); pickAud('roles', ['Assessor']); ok('S5d the editor shows the resolved count before sending', new RegExp('Resolved recipients: ' + exp.length).test(document.querySelector('#s5d-c').textContent)); closeModal();
+  });
+
+  await T('S5d (16)(17)(18) templates are stored, versioned and actually govern the wired sends', async () => {
+    fresh(); SA(); go('a-notifsettings'); ACT.tplEdit({ dataset: { e: 'Announcement' } }); fill({ '#tp-s': 'Academy news', '#tp-b': '{{title}} — read it in the portal.' }); prim(); closeModal();
+    ok('S5d (16) a template edit is saved as version 2 and audited', s5dTpl('Announcement').subject === 'Academy news' && s5dTpl('Announcement').v === 2 && ADMIN.audit[0].action === 'Template saved — version 2');
+    rebuildA(); SYS(); SA(); go('a-notifsettings'); ok('S5d (16) it survives admin rebuilds and identity switches', s5dTpl('Announcement').subject === 'Academy news' && /v2/.test(main()));
+    const b = L3(), [inV] = inOut(b), w = STORE.worlds[inV[0]], n0 = w.notifs.length;
+    s5dSave('academy', null, { title: 'Subject check', spec: { t: 'batches', ids: [b.code] }, ch: ['In-app'] }, 'publish').a;
+    ok('S5d (17) the stored subject and body are what the learner\'s notification says', w.notifs.length === n0 + 1 && w.notifs[0].title === 'Academy news' && w.notifs[0].body === 'Subject check — read it in the portal.');
+    const tog = document.querySelector('main input[data-onchange="evToggle"][data-e="Announcement"]'); tog.checked = false; INP.evToggle(tog);
+    const n1 = w.notifs.length, a2 = s5dSave('academy', null, { title: 'While off', spec: { t: 'batches', ids: [b.code] }, ch: ['In-app', 'Email'] }, 'publish').a;
+    ok('S5d (17) turned off: no notification is generated; every send is recorded as Suppressed (the announcement itself is still published)', s5dTpl('Announcement').enabled === false && w.notifs.length === n1 && logOf('academy:' + a2.id).every(x => /^Suppressed — template turned off/.test(x.result)) && learnerSees(inV[0], 'While off'));
+    tog.checked = true; INP.evToggle(tog); go('a-notifsettings'); const em2 = document.querySelector('main input[data-onchange="s5dTplCh"][data-e="Announcement"][data-c="Email"]'); em2.checked = false; INP.s5dTplCh(em2);
+    const a3 = s5dSave('academy', null, { title: 'Email off', spec: { t: 'batches', ids: [b.code] }, ch: ['In-app', 'Email'] }, 'publish').a, L = logOf('academy:' + a3.id);
+    ok('S5d (17) a channel turned off is suppressed; the others are simulated', L.filter(x => x.ch === 'Email').every(x => /channel off/.test(x.result)) && L.filter(x => x.ch === 'In-app').every(x => /^Simulated/.test(x.result)) && L.some(x => x.ch === 'Email'));
+    const ns = secN(), lock = document.querySelector('main input[data-onchange="evToggle"][data-e="Set-password / reset"]');
+    ok('S5d sign-in and account-recovery messages can\'t be turned off (toggle disabled with the reason)', lock.disabled && /account recovery/.test(lock.title));
+    lock.disabled = false; lock.checked = false; INP.evToggle(lock); const rx = s5dTplSet('Set-password / reset', { enabled: false });
+    ok('S5d … and a crafted change is refused too', s5dTpl('Set-password / reset').enabled === true && !rx.ok && /account recovery/.test(rx.errs.enabled) && secN() === ns);
+    FA4(); const nf = secN(), rf = s5dTplSet('Announcement', { subject: 'Hacked' }); const tf = { dataset: { e: 'Announcement' }, checked: false }; INP.evToggle(tf); ACT.tplAttSample({ dataset: { e: 'Observation proposed' } });
+    ok('S5d template changes by Finance are refused and logged', !rf.ok && s5dTpl('Announcement').subject === 'Academy news' && s5dTpl('Announcement').enabled === true && secN() === nf + 3);
+    SA(); ACT.tplEdit({ dataset: { e: 'Observation proposed' } }); ACT.tplAttSample({ dataset: { e: 'Observation proposed' } }); closeModal(); const na = tplAtt('Observation proposed').length; rebuildA();
+    ok('S5d (18) template attachments are kept with the templates (survive a rebuild)', tplAtt('Observation proposed').length === na && na === 4);
+  });
+
+  await T('S5d (19) agency set-password emails state their own link\'s expiry; the configured period affects new links only', async () => {
+    fresh(); BIZ(); ACT.bLogin({ dataset: { id: 'AG-08', a: 'resend' } }); const m1 = linkOf('AG-08');
+    go('m-inbox', { id: m1.id }); const t1 = app().textContent;
+    ok('S5d (19) at the default period the email states the link\'s expiry date and "7 days"', m1.subj === 'Set up your Illumin Academy agency portal' && t1.includes(fdt(m1.expires)) && /\(7 days after it was sent\)/.test(t1) && !/expires in 7 days/.test(t1) && new Date(m1.expires) - new Date(m1.sent) === 7 * DAY);
+    SA(); const cf = ADMIN.config.find(c => c.name === 'Set-password / reset / workplace link expiry'); ACT.cfgEdit({ dataset: { id: cf.id } }); document.querySelector('#cv').value = '10 days'; reason('Longer set-up window');
+    const e1 = m1.expires, h1 = m1.html; BIZ(); ACT.bLogin({ dataset: { id: 'AG-09', a: 'resend' } }); const m2 = linkOf('AG-09');
+    go('m-inbox', { id: m2.id }); const t2 = app().textContent;
+    ok('S5d (19) after changing the period, a new link\'s email states 10 days and its own date', new Date(m2.expires) - new Date(m2.sent) === 10 * DAY && t2.includes(fdt(m2.expires)) && /\(10 days after it was sent\)/.test(t2));
+    go('m-inbox', { id: m1.id }); ok('S5d (19) the earlier link keeps its original expiry and wording', m1.expires === e1 && m1.html === h1 && /\(7 days after it was sent\)/.test(app().textContent));
+    SA(); ACT.tplEdit({ dataset: { e: 'Set-password / reset' } }); fill({ '#tp-b': 'Hello {{name}}, set your password for {{agency}}. This link works until {{expiry}}.' }); prim(); closeModal();
+    ok('S5d editing the template never moves an issued link\'s expiry or rewrites a sent email', m2.expires === linkOf('AG-09').expires && /10 days after it was sent/.test(m2.html));
+    BIZ(); ACT.bLogin({ dataset: { id: 'AG-08', a: 'resend' } }); const m3 = linkOf('AG-08'); ok('S5d a link issued after the edit uses the new wording with its own expiry', /This link works until/.test(m3.html) && m3.html.includes(fdt(m3.expires)) && m1.void);
+    ok('S5d (19) S5b link checks unchanged: the new link activates once; the superseded one stays refused', setPw(m3) !== 'refused' && agOf('AG-08').status === 'Active' && setPw(m1) === 'refused');
+    ok('S5d (20) each set-password email is one simulated delivery record', s5dStore().log.filter(x => x.src === 'link:' + m2.id).length === 1 && /^Simulated — not sent/.test(s5dStore().log.find(x => x.src === 'link:' + m2.id).result));
+  });
+
+  await T('S5d (20)(21) delivery log and persistence: real records, never duplicated; state survives rebuilds; reset restores the seed', async () => {
+    fresh(); SA(); const b = L3(), a = s5dSave('academy', null, { title: 'Log check', spec: { t: 'batches', ids: [b.code] }, ch: ['In-app', 'Email', 'SMS'] }, 'publish').a, L = logOf('academy:' + a.id);
+    ok('S5d (20) one record per recipient and channel, with source, recipient ID, channel, template version and result (email simulated; SMS suppressed — off in the default template)', L.length === a.recipients * 3 && L.every(x => /^L:/.test(x.to) && x.tpl === 'Announcement v1' && x.srcLabel === `Log check (${a.id})`) && L.filter(x => x.ch === 'Email').every(x => x.result === 'Simulated — not sent (prototype)') && L.filter(x => x.ch === 'SMS').every(x => x.result === 'Suppressed — channel off in the template') /* SMS is off in the default Announcement template */, `${L.length} vs ${a.recipients}×3 · ${[...new Set(L.map(x => x.tpl + '|' + x.result + '|' + x.to.slice(0, 2)))].join(' ; ')}`);
+    go('a-notifsettings', { tab: 'log' }); ok('S5d (20) the Notification log shows them and labels the seeded rows as demo records; nothing says Delivered for this session', main().includes('Log check') && /Demo record \(seeded\)/.test(main()) && !L.some(x => /Delivered/.test(x.result)));
+    const d = s5dSave('academy', null, { title: 'Kept draft', body: 'Draft body', spec: { t: 'learners' }, ch: ['In-app'] }, 'draft').a;
+    BIZ(); const ba = s5dSave('biz', null, { title: 'Kept to agencies', spec: { t: 'allAgencies' }, ch: ['In-app'] }, 'publish').a; ACT.bAnnWd({ dataset: { id: 'BA-1' } }); reason('Replaced');
+    S.tas.v = 'A'; tasEnter(); const ta = s5dSave('teacher', 'TA-4', { title: 'Half-term revision session', body: 'Edited by Sarah', spec: { t: 'tbatches', ids: ['L3AC-JAN26'] }, ch: ['In-app'] }, 'draft').a;
+    SA(); ACT.tplEdit({ dataset: { e: 'Announcement' } }); fill({ '#tp-s': 'Persisted subject' }); prim(); closeModal();
+    const logN = s5dStore().log.length, ids0 = ADMIN.announcements.map(x => x.id).join();
+    rebuildA(); rebuildA(); SYS(); bizEnter('BB'); SA();
+    ok('S5d (21) drafts, published and withdrawn announcements survive admin rebuilds with the same IDs (academy, to agencies, teacher)', ADMIN.announcements.find(x => x.id === d.id).body === 'Draft body' && ADMIN.announcements.find(x => x.id === a.id).status === 'Published' && STORE.biz.anns.find(x => x.id === ba.id).status === 'Published' && STORE.biz.anns.find(x => x.id === 'BA-1').status === 'Withdrawn' && ADMIN.announcements.find(x => x.id === 'AN-BA-1').status === 'Withdrawn' && STORE.tas.anns.find(x => x.id === 'TA-4').body === 'Edited by Sarah' && ta.id === 'TA-4');
+    const ids = ADMIN.announcements.map(x => x.id);
+    ok('S5d (21) no duplicate announcements after repeated rebuilds', new Set(ids).size === ids.length && ids.slice().sort().join() === ids0.split(',').sort().join() && new Set(STORE.biz.anns.map(x => x.id)).size === STORE.biz.anns.length);
+    ok('S5d (21) templates and the delivery log survive; the log isn\'t duplicated', s5dTpl('Announcement').subject === 'Persisted subject' && s5dStore().log.length === logN);
+    ok('S5d (21) agency feeds after the rebuild still follow the rules', /Kept to agencies/.test(feedOf('AG-02')) && !/New Care Certificate cohort pricing/.test(feedOf('AG-02')));
+    ACT.resetDemo(); SA();
+    ok('S5d the demo reset restores the seed (announcements, templates, log)', !ADMIN.announcements.some(x => x.id === d.id) && ADMIN.announcements.find(x => x.id === 'AN-BA-1').status === 'Published' && s5dTpl('Announcement').v === 1 && s5dStore().log.filter(x => x.event === 'Announcement').length === 0 && STORE.tas.anns.find(x => x.id === 'TA-4').body !== 'Edited by Sarah');
+  });
+
+  await T('S5d (22)–(28) referral codes: create, disable, re-enable, extend, edit while unused — checked in the action, audited, never a discount', async () => {
+    fresh(); SA(); const money0 = JSON.stringify([CATALOGUE.map(c => [c.id, c.price]), discData(), STORE.agy.purchases, STORE.fin.tx, NVQ_FEES]);
+    go('a-referrals'); ok('S5d (23) the Super Admin view offers Extend (and the D1 wording is kept)', !!app().querySelector('main [data-act="bRefExtend"]') && /receive no payment/.test(main()));
+    ACT.newRef(); fill({ '#rf-c': 'care-partner-1', '#rf-t': 'Agent', '#rf-o': 'Jo Bloggs (agent)', '#rf-v': D(200).slice(0, 10) }); prim(); closeModal(); const c = s5dRef('CARE-PARTNER-1');
+    ok('S5d (22) a code is created (unique, upper-case), Active and unused', !!c && c.status === 'Active' && c.regs === 0 && !s5dRefUsed(c) && ADMIN.audit[0].action === 'Code created');
+    ACT.newRef(); fill({ '#rf-c': 'Care-Partner-1', '#rf-o': 'Someone' }); const dup = prim(); ok('S5d (25) a duplicate code is refused (case ignored)', dup === false && ADMIN.referrals.filter(r => r.code.toUpperCase() === 'CARE-PARTNER-1').length === 1); closeModal();
+    const g1 = s5dRefOp('create', null, { type: 'Welfare Buddy', owner: 'Amy Lee (learner)', valid: D(100).slice(0, 10) }, ''), g2 = s5dRefOp('create', null, { type: 'Welfare Buddy', owner: 'Amy Lee (learner)', valid: D(100).slice(0, 10) }, '');
+    ok('S5d (25) generated codes are unique', g1.ok && g2.ok && g1.r.code !== g2.r.code);
+    ok('S5d a past end date and an unknown agency owner are refused', !s5dRefOp('create', null, { type: 'Agent', owner: 'X', valid: D(-1).slice(0, 10) }, '').ok && !s5dRefOp('create', null, { type: 'Agency', owner: 'No Such Agency', valid: D(10).slice(0, 10) }, '').ok);
+    go('a-referrals'); ACT.disableRef({ dataset: { c: c.code } }); reason('Paused'); ok('S5d (22) disable', c.status === 'Disabled' && s5dRefSt(c) === 'Disabled' && regRefState(c.code).st === 'expired');
+    ACT.s5dRefEnable({ dataset: { c: c.code } }); reason('Back on'); ok('S5d (22) re-enable a disabled code while it is valid', c.status === 'Active' && regRefState(c.code).st === 'valid');
+    const me = s5dRef('MERIDIAN-01'); ACT.disableRef({ dataset: { c: me.code } }); reason('Contract ended'); const re = s5dRefOp('enable', me.code, {}, 'Try');
+    ok('S5d a disabled code whose validity has ended can\'t be re-enabled — extend first', !re.ok && /extend it first/.test(re.why) && me.status === 'Disabled');
+    ACT.bRefExtend({ dataset: { c: me.code } }); document.querySelector('#re-v').value = D(120).slice(0, 10); reason('Renewed'); ok('S5d (23) extend keeps it disabled; then it can be re-enabled', me.status === 'Disabled' && new Date(me.valid) > now() && s5dRefOp('enable', me.code, {}, 'Renewed').ok && me.status === 'Active');
+    const eh = s5dRef('EHHS-AGENT-02'); ACT.bRefExtend({ dataset: { c: eh.code } }); document.querySelector('#re-v').value = D(-5).slice(0, 10); const bad = press(); ok('S5d an extension must be later than today', bad === false && s5dRefSt(eh) === 'Expired'); closeModal();
+    ACT.bRefExtend({ dataset: { c: eh.code } }); document.querySelector('#re-v').value = D(90).slice(0, 10); reason('Renewal'); ok('S5d (23) extending an expired code makes it Active again', s5dRefSt(eh) === 'Active' && regRefState(eh.code).st === 'valid');
+    ACT.s5dRefEdit({ dataset: { c: c.code } }); document.querySelector('#rf-t').value = 'Welfare Buddy'; document.querySelector('#rf-o').value = 'Jo Bloggs (learner)'; reason('Wrong type');
+    ok('S5d (22) an unused code\'s type and owner can be edited', c.type === 'Welfare Buddy' && c.owner === 'Jo Bloggs (learner)');
+    const wf = s5dRef('WB-FATIMA07'), ed = s5dRefOp('edit', wf.code, { type: 'Agent', owner: 'Someone else' }, 'Reassign'); go('a-referrals');
+    ok('S5d (24) a used code\'s type and owner can\'t change (no Edit offered; a direct call is refused)', !ed.ok && wf.type === 'Welfare Buddy' && /Fatima/.test(wf.owner) && !app().querySelector('main [data-act="s5dRefEdit"][data-c="WB-FATIMA07"]'));
+    const acts = ADMIN.audit.filter(a => a.module === 'Referrals').map(a => a.action);
+    ok('S5d (26) every change is audited', ['Code created', 'Disabled', 'Re-enabled', 'Validity extended', 'Type / owner edited (unused code)', 'Blocked: edit WB-FATIMA07'].every(x => acts.includes(x)));
+    ACT.s5dRefHist({ dataset: { c: c.code } }); ok('S5d (26) the code\'s History shows its changes', /Code created/.test(mroot().textContent) && /Re-enabled/.test(mroot().textContent)); closeModal();
+    for (const [lbl, enter] of [['Finance Admin', () => FA4()], ['Academic Admin', () => { acaEnter('KA'); S.signedIn = true; }], ['an Agency Administrator', () => agyEnter('AG-02', true)]]) {
+      enter(); const n = secN(), nr = ADMIN.referrals.length; ACT.newRef(); const op = !!MODAL; closeModal(); ACT.disableRef({ dataset: { c: 'GCR-118' } }); const op2 = !!MODAL; closeModal(); const x = s5dRefOp('extend', 'GCR-118', { valid: D(900).slice(0, 10) }, 'x');
+      ok(`S5d (28) ${lbl}: referral changes are refused and logged`, !op && !op2 && !x.ok && ADMIN.referrals.length === nr && s5dRef('GCR-118').status === 'Active' && secN() === n + 3);
+    }
+    BIZ(); const bx = s5dRefOp('extend', 'BRIGHT-2026', { valid: D(500).slice(0, 10) }, 'Annual renewal'); role('sysA'); const sx = s5dRefOp('disable', 'WB-HASSAN22', {}, 'Left');
+    ok('S5d the Business Admin and the System Admin keep their referral rights (D1)', bx.ok && sx.ok);
+    SA(); rebuildA(); ok('S5d referral changes survive an admin rebuild', s5dRef('CARE-PARTNER-1').type === 'Welfare Buddy' && s5dRefSt(s5dRef('EHHS-AGENT-02')) === 'Active' && s5dRef('WB-HASSAN22').status === 'Disabled');
+    ok('S5d (27)(30) referral codes changed no price, discount rate, purchase, Finance record or fee', JSON.stringify([CATALOGUE.map(c => [c.id, c.price]), discData(), STORE.agy.purchases, STORE.fin.tx, NVQ_FEES]) === money0);
+  });
+
+  await T('S5d (29)(30) S5a, S5b and S4c protections are intact', async () => {
+    fresh(); const hist0 = JSON.stringify([STORE.agy.purchases, STORE.fin.tx, STORE.agy.ledger, discData()]);
+    SA(); s5dSave('academy', null, { title: 'Everyone again', spec: { t: 'all' }, ch: ['In-app', 'Email'] }, 'publish'); BIZ(); s5dSave('biz', null, { title: 'Agencies again', spec: { t: 'allAgencies' }, ch: ['In-app'] }, 'publish');
+    ok('S5d (30) announcements leave purchases, Finance, the ledger and discount rates unchanged', JSON.stringify([STORE.agy.purchases, STORE.fin.tx, STORE.agy.ledger, discData()]) === hist0);
+    SYS(); go('a-roles', { id: 'Super_Administrator' }); ok('S5d (29) the S5a Super Administrator lock still applies', /Only a Super Administrator can do this/.test(main()));
+    agyEnter('AG-03', true); const n = secN(); ACT.bLogin({ dataset: { id: 'AG-02', a: 'deactivate' } }); ok('S5d (29) S5b: an Agency Administrator still can\'t administer agency logins', !MODAL && agOf('AG-02').loginStatus === 'Active' && secN() === n + 1);
+    SA(); go('a-index'); const ix = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
+    ok('S5d Admin index: one Setup fixes entry for S5d', !!ix && ix.querySelectorAll('[data-t="a-announcements"]').length === 1 && /S5d — agency and teacher visibility fixed/.test(ix.textContent));
+    ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: S5d entry', /announcements, notification templates and referral codes/.test(main()));
   });
   fresh();
   const out = document.createElement('pre'); out.id = 'ft-out'; out.textContent = R.join('\n') + '\n' + R.filter(x => x.startsWith('PASS')).length + '/' + R.length; document.body.appendChild(out);
