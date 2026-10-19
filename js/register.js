@@ -38,7 +38,7 @@ function regForm() {
       <label class="check small"><input type="checkbox" id="rg-priv" ${d.priv ? 'checked' : ''}> <span>I consent to Illumin Academy processing my data as described in the <button type="button" class="linklike" data-act="regDoc" data-d="Privacy notice">Privacy notice</button></span></label>
       <button class="btn btn-primary btn-block" type="submit">Create account</button>
     </form>
-    <div class="demo-hint"><strong>Prototype:</strong> use an email already in the system (e.g. <code>aisha.rahman@gmail.com</code>) to see the duplicate block. Referral codes to try: <code>WB-FATIMA07</code> (valid), <code>EHHS-AGENT-02</code> (expired), <code>XYZ-000</code> (not found).</div>`);
+    <div class="demo-hint"><strong>Prototype:</strong> use an email already in the system (e.g. <code>aisha.rahman@gmail.example</code>) to see the duplicate block. Referral codes to try: <code>WB-FATIMA07</code> (valid), <code>EHHS-AGENT-02</code> (expired), <code>XYZ-000</code> (not found).</div>`);
 }
 const regRefMsg = rs => `<span style="color:var(${rs.st === 'valid' ? '--green' : '--amber'})">${rs.st === 'valid' ? '✓' : '!'} ${esc(rs.msg)}</span>`;
 function regVerifyView() {

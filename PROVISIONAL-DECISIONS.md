@@ -127,3 +127,13 @@ Status values:
 - Should new sessions and weekly plans start with every active fee option ticked, or with nothing ticked (PD-R2-08, PD-R2-13)?
 - The Level 3 observation-fee rate still comes from the programme's stored support value until learner-level fees exist (PD-R2-12).
 - The Coordinator's timeline editor changes dates only and has no audience selector. Audiences are set in the batch Schedule area by staff with the existing scheduling rights (PD-R2-16, PD-R2-17).
+
+## Release decisions: public deployment (Cloudflare Pages)
+
+Every file in `dist/` is served to anyone who can reach the site. The site is intended to be reachable only by the team and the client through Cloudflare Access. Approving the Academy's contact details (RD-01) does **not** authorise removing that restriction.
+
+| ID | Decision | Status |
+|---|---|---|
+| RD-01 | The Academy's own contact details and offices appear in public demo material: `info@welfarehs.co.uk`, `020 3983 0282`, `https://welfarehs.co.uk/privacy-policy`, `lms.welfarehs.co.uk` (settings, offer letters, client-sheet records), and the office addresses "Luton office — 60 Park Street, Luton LU1 3ET", "Milton Keynes office — 12 Silbury Boulevard, Milton Keynes MK9 2AF" and "Illumin Academy Leicester, Room 2, 5 Charles Street, Leicester LE1 1FB". They have not been changed. | **Approved** (19 Oct 2026): the user authorised these contact details, official links and office addresses for display in the prototype |
+| RD-02 | Seeded demonstration data was sanitised for publication. Emails moved to reserved `.example` domains. UK mobiles are in Ofcom's drama range (07700 900xxx); UAE and Indian numbers use subscriber numbers that are not issued (no official fictional range exists). Learner and workplace street addresses are fictional ("Example Road" etc.) with NHS `ZZ99` pseudo-postcodes; Indian PINs are area-level codes and are kept. Agency and care-home names carry a "(demo)" label. Zoom and Vimeo links point at the reserved `zoom.example` / `vimeo.example` hosts; joining stays simulated. | Done; internal IDs, cross-record links and the 30 demo scenarios are unchanged |
+| RD-03 | Persona and staff names and dates of birth are kept because the workflows use them. The data file declares them fictional; this has **not** been independently verified, and no client-provided personal records were knowingly included. The UAE and Indian demonstration phone numbers can't be guaranteed unassigned, because those countries publish no fictional ranges. | Open: replace if any is found to be a real person or a live number |

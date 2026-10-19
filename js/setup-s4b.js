@@ -17,11 +17,11 @@ function s4bSeed() {
   const fx = n => Array.from({ length: n }, (_, k) => ({ v: k + 1, fixture: true }));
   const R = (id, title, type, ref, unit, mod, rel, status, version, seedItem, desc) => ({ id, title, desc, type, kind: S4B_KIND[type], ref, pid: 'NV-L3', unit, mod, rel, status, version, rev: 0, versions: fx(version), seedItem, tags: [type === 'Vimeo video' ? 'Recording' : 'Reference'] });
   const res = [
-    R('RS-01', 'Class recording: safeguarding workshop', 'Vimeo video', 'https://vimeo.com/870112233', 'U306', 'M1', { k: 'now' }, 'Published', 2, 'r1', 'Recording from 29 Sep class (1h 32m).'),
+    R('RS-01', 'Class recording: safeguarding workshop', 'Vimeo video', 'https://vimeo.example/870112233', 'U306', 'M1', { k: 'now' }, 'Published', 2, 'r1', 'Recording from 29 Sep class (1h 32m).'),
     R('RS-02', 'Slides: types of harm and abuse', 'PDF', 'types_of_harm_slides.pdf', 'U306', 'M1', { k: 'now' }, 'Published', 1, 'r2', 'PDF slides from the workshop.'),
     R('RS-03', 'Scenario: responding to a disclosure', 'SCORM', 'scorm_disclosure_v3.zip', 'U306', 'M1', { k: 'now' }, 'Published', 3, 'r3', 'Interactive branching scenario with scoring.'),
     R('RS-04', 'Duty of candour factsheet', 'PDF', 'duty_of_candour.pdf', 'U305', 'M1', { k: 'now' }, 'Published', 1, 'r4', 'CQC Regulation 20 summary.'),
-    R('RS-05', 'COSHH in care settings', 'Vimeo video', 'https://vimeo.com/870114455', 'U307', 'M1', { k: 'date', date: D(12) }, 'Published', 1, 'r6', 'Unlocks with Module 2.'),
+    R('RS-05', 'COSHH in care settings', 'Vimeo video', 'https://vimeo.example/870114455', 'U307', 'M1', { k: 'date', date: D(12) }, 'Published', 1, 'r6', 'Unlocks with Module 2.'),
     // Learners already see this one (locked until Module 1 is complete); the old admin row said Draft — reconciled to Published
     R('RS-06', 'Fire evacuation plans', 'PPT', 'fire_evacuation_plans.pptx', 'U307', 'M1', { k: 'after', after: 'U307 M1' }, 'Published', 1, 'r7', 'Unlocks after you complete Module 1.'),
     // Learners already see this template; it had no admin row

@@ -1,0 +1,8 @@
+# Cloudflare Pages response headers for the prototype (static; no backend).
+# The prototype is a client demonstration, not a public service: keep it out of search engines and out of other sites' frames.
+/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()

@@ -614,7 +614,7 @@ const IDX_P = {
     "Edge states (§7)|bEdge:e=duplogin#1": "Onboarding stops when the login email is already in use.",
     "Edge states (§7)|bLogin:a=deactivate#1": "What happens to active bundles when an agency is deactivated.",
     "Edge states (§7)|bRetire:#1": "Retiring a bundle that agencies still hold.",
-    "Edge states (§7)|newBundle:agency=Kingsway Staffing#1": "Trying to make a bundle for an agency that isn't active.",
+    "Edge states (§7)|newBundle:agency=Kingsway Staffing (demo)#1": "Trying to make a bundle for an agency that isn't active.",
     "Edge states (§7)|bEdge:e=deactlink#1": "A link request for a learner whose account is deactivated.",
     "Edge states (§7)|bAdvance:#1": "Moves demo time forward a week so unanswered items escalate.",
     "Final decisions — new screens|a-bundles..rates#1": "Propose a new discount rate for approval.",

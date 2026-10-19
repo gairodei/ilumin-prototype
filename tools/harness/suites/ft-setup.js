@@ -1329,12 +1329,12 @@
     // Admin catalogue reads the same rule
     SA(); const prod = STORE.biz.products.find(p => p.id === 'CAT-2'); ok('S4c admin catalogue pricing uses the same slab rule as the agency portal', priceOf(prod, 'GBP', 25).pct === 12 && priceOf(prod, 'GBP', 25).final === (AGY(), priceFor(c2, 25).net));
     // Negotiated and fixed-% prices; per-agency (no stacking)
-    SA(); saveRates(null, { ag: { 'BrightCare Staffing Ltd': 40, 'CarePlus Recruitment': 10 }, r: 'Agency terms' });
+    SA(); saveRates(null, { ag: { 'BrightCare Staffing Ltd (demo)': 40, 'CarePlus Recruitment (demo)': 10 }, r: 'Agency terms' });
     AGY('AG-01'); const neg = AGY_CATALOGUE().find(c => c.customTotal), autoB = AGY_CATALOGUE().find(c => discAuto(c));
     ok('S4c a negotiated price is not overridden by a higher per-agency discount (40%)', !!neg && Math.round(priceFor(neg, neg.seats).net) === Math.round(neg.customTotal) && /negotiated/.test(priceFor(neg, neg.seats).label));
     ok('S4c per-agency 40% on an automatic bundle: the better of per-agency and slab, never both', priceFor(autoB, 50).pct === 40 && priceFor(autoB, 50).basis === 'Per-agency discount' && priceFor(autoB, 50).net === Math.round(autoB.unit * 50 * 0.6));
     AGY(); const fix = AGY_CATALOGUE().find(c => c.fixedPct != null); ok('S4c a fixed-% bundle keeps its own %; CarePlus\'s 10% only beats a lower slab', priceFor(fix, 25).pct === fix.fixedPct && priceFor(c2, 9).pct === 10 && priceFor(c2, 50).pct === 25);
-    ok('S4c setting a rate for an onboarding agency doesn\'t activate it or let it buy', (() => { SA(); saveRates(null, { ag: { 'Riverside Care Partners': 7 }, r: 'Prepared terms' }); const a = ADMIN.agencies.find(x => x.id === 'AG-08'); return discNow().agency['Riverside Care Partners'] === 7 && a.status === 'Onboarding' && a.loginStatus === 'Not activated' && agStatus(a) === 'Onboarding'; })());
+    ok('S4c setting a rate for an onboarding agency doesn\'t activate it or let it buy', (() => { SA(); saveRates(null, { ag: { 'Riverside Care Partners (demo)': 7 }, r: 'Prepared terms' }); const a = ADMIN.agencies.find(x => x.id === 'AG-08'); return discNow().agency['Riverside Care Partners (demo)'] === 7 && a.status === 'Onboarding' && a.loginStatus === 'Not activated' && agStatus(a) === 'Onboarding'; })());
     // Approvals and role boundaries (G5.6 / D11)
     const vA = discNow().v; bizEnter('BA'); rates(); document.querySelector('#dr-std').value = '4'; document.querySelector('#dr-r').value = 'Proposal'; SUBMIT.discSave(); const req = ADMIN.queue[0];
     ok('S4c capability holder (Business Admin A): a request for the Super Admin; rates unchanged', req.type === 'Discount rate change' && req.first === 'Super Administrator' && discNow().v === vA && discNow().std === 0);
@@ -1624,8 +1624,8 @@
 
   await T('S5b onboarding and activation: one record and one login; the first set-password activates the agency once (S5-06)', async () => {
     fresh(); BIZ(); go('b-dashboard'); const on0 = kpiOf('Agencies in onboarding'), ac0 = kpiOf('Active agencies'), n0 = ADMIN.agencies.length;
-    const a = onboard('Brookside Care Services', 'admin@brooksidecare.co.uk', '11223344'), id = a && a.id;
-    ok('S5b (1) onboarding creates one agency record with a new stable ID and one login', !!a && ADMIN.agencies.length === n0 + 1 && ADMIN.agencies.filter(x => x.id === id).length === 1 && /^AG-\d+$/.test(id) && a.login === 'admin@brooksidecare.co.uk' && ADMIN.agencies.filter(x => x.login === a.login).length === 1 && new Set(ADMIN.agencies.map(x => x.id)).size === ADMIN.agencies.length);
+    const a = onboard('Brookside Care Services', 'admin@brooksidecare.example', '11223344'), id = a && a.id;
+    ok('S5b (1) onboarding creates one agency record with a new stable ID and one login', !!a && ADMIN.agencies.length === n0 + 1 && ADMIN.agencies.filter(x => x.id === id).length === 1 && /^AG-\d+$/.test(id) && a.login === 'admin@brooksidecare.example' && ADMIN.agencies.filter(x => x.login === a.login).length === 1 && new Set(ADMIN.agencies.map(x => x.id)).size === ADMIN.agencies.length);
     ok('S5b (1) … and exactly one set-password email for that login, audited', links(id).length === 1 && links(id)[0].email === a.login && !links(id)[0].used && ADMIN.audit.some(x => x.action === 'Agency onboarded' && x.entity === 'Brookside Care Services'));
     ok('S5b (2) pending first-login set-up is not activation: Onboarding / Not activated, no activation time', a.status === 'Onboarding' && a.loginStatus === 'Not activated' && !a.activatedAt && agStatus(a) === 'Onboarding');
     go('b-dashboard'); ok('S5b (2) the Business dashboard counts it as onboarding', kpiOf('Agencies in onboarding') === on0 + 1 && kpiOf('Active agencies') === ac0, `${kpiOf('Agencies in onboarding')} / ${kpiOf('Active agencies')}`);
@@ -1654,23 +1654,24 @@
   await T('S5b agency details: validated edits with real versions and before → after audit; history and purchases kept', async () => {
     fresh(); BIZ(); const a = agOf('AG-08'), hist0 = JSON.stringify([STORE.agy.purchases, STORE.fin.tx, STORE.agy.ledger, ADMIN.bundles]), L0 = agyRoster(a.name).length;
     go('a-agencies', { id: 'AG-08', tab: 'profile' }); ok('S5b the profile shows the agency ID, address, login status, activation and the real version', main().includes('AG-08') && /Address/.test(main()) && /Version 1 of these details/.test(main()) && /Not yet/.test(main()) && !/Edits are versioned/.test(main()));
-    const r = editAg('AG-08', { legal: 'Riverside Care Partners Limited', address: '12 Quay Street, Bristol BS1 4DJ', region: 'UAE', billing: 'Accounts Payable (accounts@riversidecare.co.uk)' }, 'Companies House update'), au = ADMIN.audit[0];
-    ok('S5b (6) legal name, address, region and billing contact are saved', r !== false && a.legal === 'Riverside Care Partners Limited' && a.address === '12 Quay Street, Bristol BS1 4DJ' && a.region === 'UAE' && a.billing === 'Accounts Payable (accounts@riversidecare.co.uk)');
-    ok('S5b (7) audit: actor, before → after for each changed field, reason and the version', au.action === 'Details edited — version 2' && au.actor === 'Sophie Turner' && au.entity === 'Riverside Care Partners (AG-08)' && au.before === 'Legal name: Riverside Care Partners Ltd; Region: UK; Address: —; Billing contact: —' && au.after === 'Legal name: Riverside Care Partners Limited; Region: UAE; Address: 12 Quay Street, Bristol BS1 4DJ; Billing contact: Accounts Payable (accounts@riversidecare.co.uk)' && au.reason === 'Companies House update', au.before + ' → ' + au.after);
+    const r = editAg('AG-08', { legal: 'Riverside Care Partners Limited (demo)', address: '12 Quay Street, Bristol BS1 4DJ', region: 'UAE', billing: 'Accounts Payable (accounts@riversidecare.example)' }, 'Companies House update'), au = ADMIN.audit[0];
+    ok('S5b (6) legal name, address, region and billing contact are saved', r !== false && a.legal === 'Riverside Care Partners Limited (demo)' && a.address === '12 Quay Street, Bristol BS1 4DJ' && a.region === 'UAE' && a.billing === 'Accounts Payable (accounts@riversidecare.example)');
+    ok('S5b (7) audit: actor, before → after for each changed field, reason and the version', au.action === 'Details edited — version 2' && au.actor === 'Sophie Turner' && au.entity === 'Riverside Care Partners (demo) (AG-08)' && au.before === 'Legal name: Riverside Care Partners Ltd (demo); Region: UK; Address: —; Billing contact: —' && au.after === 'Legal name: Riverside Care Partners Limited (demo); Region: UAE; Address: 12 Quay Street, Bristol BS1 4DJ; Billing contact: Accounts Payable (accounts@riversidecare.example)' && au.reason === 'Companies House update', au.before + ' → ' + au.after);
     ok('S5b (7) the version is recorded on the agency (so "version" is true)', a.versions.length === 2 && a.versions[1].v === 2 && a.versions[1].changes.length === 4 && a.versions[1].by === 'Sophie Turner');
-    go('a-agencies', { id: 'AG-08', tab: 'profile' }); ok('S5b (6) the profile shows the new details and the version history', main().includes('12 Quay Street') && main().includes('Riverside Care Partners Limited') && /Version 2 of these details/.test(main()) && /Versions of these details/.test(main()) && main().includes('Companies House update'));
-    go('a-agencies'); ok('S5b (6) the agency list shows the new region', /UAE/.test(listRow('Riverside Care Partners')));
+    go('a-agencies', { id: 'AG-08', tab: 'profile' }); ok('S5b (6) the profile shows the new details and the version history', main().includes('12 Quay Street') && main().includes('Riverside Care Partners Limited (demo)') && /Version 2 of these details/.test(main()) && /Versions of these details/.test(main()) && main().includes('Companies House update'));
+    go('a-agencies'); ok('S5b (6) the agency list shows the new region', /UAE/.test(listRow('Riverside Care Partners (demo)')));
     const reg0 = a.reg; let x = editAg('AG-08', { reg: '' }, 'x', true); ok('S5b (6) required fields are checked (registration number); nothing changes', x === false && a.reg === reg0 && /Enter the registration number/.test(mroot().textContent)); closeModal();
-    x = editAg('AG-08', { email: 'not-an-email' }, 'x', true); ok('S5b (6) the contact email is validated', x === false && a.email === 'helen.moss@riversidecare.co.uk'); closeModal();
-    x = editAg('AG-08', { name: 'meridian home support' }, 'x', true); ok('S5b (6) the name must be unique — another agency is never matched or renamed', x === false && a.name === 'Riverside Care Partners' && agOf('AG-10').name === 'Meridian Home Support' && /Another agency already has this name/.test(mroot().textContent)); closeModal();
-    x = editAg('AG-08', { name: 'Riverside Care Group' }, 'Rebrand', true); ok('S5b (6) renaming an agency that records refer to by name is refused with the reason', x === false && a.name === 'Riverside Care Partners' && /refer to this agency by its trading name/.test(mroot().textContent)); closeModal();
+    x = editAg('AG-08', { email: 'not-an-email' }, 'x', true); ok('S5b (6) the contact email is validated', x === false && a.email === 'helen.moss@riversidecare.example'); closeModal();
+    // same name, other case (organisations carry the "(demo)" label)
+    x = editAg('AG-08', { name: 'meridian home support (demo)' }, 'x', true); ok('S5b (6) the name must be unique — another agency is never matched or renamed', x === false && a.name === 'Riverside Care Partners (demo)' && agOf('AG-10').name === 'Meridian Home Support (demo)' && /Another agency already has this name/.test(mroot().textContent)); closeModal();
+    x = editAg('AG-08', { name: 'Riverside Care Group' }, 'Rebrand', true); ok('S5b (6) renaming an agency that records refer to by name is refused with the reason', x === false && a.name === 'Riverside Care Partners (demo)' && /refer to this agency by its trading name/.test(mroot().textContent)); closeModal();
     x = editAg('AG-08', {}, 'Nothing'); ok('S5b (6) a save with no changes adds no version', x === false && a.versions.length === 2);
     ok('S5b (8) purchases, Finance records, ledger and bundles are unchanged; learners kept', JSON.stringify([STORE.agy.purchases, STORE.fin.tx, STORE.agy.ledger, ADMIN.bundles]) === hist0 && agyRoster(a.name).length === L0);
-    agyEnter('AG-02', true); go('g-purchases'); const gp0 = main(), cp0 = JSON.stringify(agyPurchases('CarePlus Recruitment'));
-    BIZ(); editAg('AG-02', { legal: 'CarePlus Recruitment Limited', address: '1 Station Road, Reading RG1 1LG', billing: 'CarePlus Accounts' }, 'Billing details');
-    agyEnter('AG-02', true); go('g-purchases'); ok('S5b (8) a purchasing agency\'s historical purchases and receipts are unchanged by a details edit', main() === gp0 && JSON.stringify(agyPurchases('CarePlus Recruitment')) === cp0);
-    BIZ(); const n = onboard('Ashgrove Home Care', 'office@ashgrovehomecare.co.uk', '55667788'); const y = editAg(n.id, { name: 'Ashgrove Homecare' }, 'Trading name registered');
-    ok('S5b (6) a new agency nothing refers to can be renamed; the earlier name is kept', y !== false && n.name === 'Ashgrove Homecare' && n.prevNames.includes('Ashgrove Home Care') && n.login === 'office@ashgrovehomecare.co.uk');
+    agyEnter('AG-02', true); go('g-purchases'); const gp0 = main(), cp0 = JSON.stringify(agyPurchases('CarePlus Recruitment (demo)'));
+    BIZ(); editAg('AG-02', { legal: 'CarePlus Recruitment Limited (demo)', address: '1 Station Road, Reading RG1 1LG', billing: 'CarePlus Accounts' }, 'Billing details');
+    agyEnter('AG-02', true); go('g-purchases'); ok('S5b (8) a purchasing agency\'s historical purchases and receipts are unchanged by a details edit', main() === gp0 && JSON.stringify(agyPurchases('CarePlus Recruitment (demo)')) === cp0);
+    BIZ(); const n = onboard('Ashgrove Home Care', 'office@ashgrovehomecare.example', '55667788'); const y = editAg(n.id, { name: 'Ashgrove Homecare' }, 'Trading name registered');
+    ok('S5b (6) a new agency nothing refers to can be renamed; the earlier name is kept', y !== false && n.name === 'Ashgrove Homecare' && n.prevNames.includes('Ashgrove Home Care') && n.login === 'office@ashgrovehomecare.example');
     go('a-agencies', { id: n.id, tab: 'audit' }); ok('S5b (7) its history includes entries under the earlier name', /Agency onboarded/.test(main()) && /Details edited — version 2/.test(main()));
   });
 
@@ -1684,7 +1685,7 @@
     BIZ(); go('a-agencies', { id: 'AG-08', tab: 'login' }); ok('S5b (9) the Login tab shows the outstanding set-up and the latest link', /Outstanding/.test(main()) && main().includes('not used yet'));
     loginOp('AG-08', 'deactivate', 'Paused'); ok('S5b deactivate: Inactive / Deactivated; the unused link stops working', a.loginStatus === 'Deactivated' && a.status === 'Inactive' && m1.used && /deactivated/.test(m1.void));
     ACT.lmSet({ dataset: { id: m1.id } }); ok('S5b … so a deactivated login can\'t be set up through its old link', S.auth === 'agyLinkBad' && a.loginStatus === 'Deactivated');
-    BIZ(); ACT.bLogin({ dataset: { id: 'AG-08', a: 'resend' } }); ok('S5b a deactivated login gets no new link (refused, logged)', !linkOf('AG-08') && ADMIN.audit[0].action === 'Blocked: resend the set-password link of Riverside Care Partners');
+    BIZ(); ACT.bLogin({ dataset: { id: 'AG-08', a: 'resend' } }); ok('S5b a deactivated login gets no new link (refused, logged)', !linkOf('AG-08') && ADMIN.audit[0].action === 'Blocked: resend the set-password link of Riverside Care Partners (demo)');
     ok('S5b deactivating twice is refused', loginOp('AG-08', 'deactivate') === 'refused' && /already deactivated/.test(ADMIN.audit[0].reason));
     loginOp('AG-08', 'reactivate', 'Contract signed');
     ok('S5b (10) reactivating a never-activated login keeps the set-password requirement (it used to become Active)', a.loginStatus === 'Not activated' && a.status === 'Onboarding' && !a.activatedAt && agStatus(a) === 'Onboarding' && ADMIN.audit[0].after === 'Onboarding · Not activated');
@@ -1694,13 +1695,13 @@
     BIZ(); loginOp('AG-08', 'deactivate', 'Hold'); loginOp('AG-08', 'reactivate', 'Resume'); ok('S5b (10) an activated login returns to Active when reactivated', a.loginStatus === 'Active' && a.status === 'Active');
     loginOp('AG-11', 'reactivate', 'Renewed'); ok('S5b (10) a seeded login that was in use (Kingsway) still reactivates to Active', agOf('AG-11').loginStatus === 'Active' && agOf('AG-11').status === 'Active');
     const g = agOf('AG-10'), gp = JSON.stringify(agyPurchases(g.name)), gr = agyRoster(g.name).length, ga = ADMIN.audit.filter(x => x.entity.includes('Meridian')).length;
-    ok('S5b (11) a login email used by another agency is refused', loginOp('AG-10', 'email', 'x', 'paul@kingswaystaffing.co.uk') === false && g.login === 'clare@meridianhs.co.uk' && /already an agency login/.test(mroot().textContent)); closeModal();
-    ok('S5b (11) … and so is a staff email', loginOp('AG-10', 'email', 'x', 'owen.price@illumin-academy.example') === false && g.login === 'clare@meridianhs.co.uk'); closeModal();
-    loginOp('AG-10', 'email', 'New mailbox', 'training@meridianhs.co.uk'); const e = ADMIN.audit[0];
-    ok('S5b (11) email change: same agency ID and status; the login waits for confirmation; one new link to the new address', g.id === 'AG-10' && g.login === 'training@meridianhs.co.uk' && g.status === 'Active' && g.loginStatus === 'Pending email confirmation' && agStatus(g) === 'Active' && linkOf('AG-10').email === 'training@meridianhs.co.uk' && links('AG-10').filter(x => !x.used).length === 1);
-    ok('S5b (11) audited with the old and new address', e.action === 'Login email changed' && e.before.startsWith('clare@meridianhs.co.uk') && e.after.startsWith('training@meridianhs.co.uk') && e.reason === 'New mailbox');
+    ok('S5b (11) a login email used by another agency is refused', loginOp('AG-10', 'email', 'x', 'paul@kingswaystaffing.example') === false && g.login === 'clare@meridianhs.example' && /already an agency login/.test(mroot().textContent)); closeModal();
+    ok('S5b (11) … and so is a staff email', loginOp('AG-10', 'email', 'x', 'owen.price@illumin-academy.example') === false && g.login === 'clare@meridianhs.example'); closeModal();
+    loginOp('AG-10', 'email', 'New mailbox', 'training@meridianhs.example'); const e = ADMIN.audit[0];
+    ok('S5b (11) email change: same agency ID and status; the login waits for confirmation; one new link to the new address', g.id === 'AG-10' && g.login === 'training@meridianhs.example' && g.status === 'Active' && g.loginStatus === 'Pending email confirmation' && agStatus(g) === 'Active' && linkOf('AG-10').email === 'training@meridianhs.example' && links('AG-10').filter(x => !x.used).length === 1);
+    ok('S5b (11) audited with the old and new address', e.action === 'Login email changed' && e.before.startsWith('clare@meridianhs.example') && e.after.startsWith('training@meridianhs.example') && e.reason === 'New mailbox');
     ok('S5b (11) identity and history kept: purchases, learners and earlier audit rows', JSON.stringify(agyPurchases(g.name)) === gp && agyRoster(g.name).length === gr && ADMIN.audit.filter(x => x.entity.includes('Meridian')).length === ga + 1);
-    signOut(); S.portal = 'agency'; staffSignin('training@meridianhs.co.uk'); ok('S5b (11) the new address can\'t sign in before it is confirmed', !S.signedIn && S.auth !== 'tfa-code' && /login email was changed/.test(JSON.stringify(S.authMsg)));
+    signOut(); S.portal = 'agency'; staffSignin('training@meridianhs.example'); ok('S5b (11) the new address can\'t sign in before it is confirmed', !S.signedIn && S.auth !== 'tfa-code' && /login email was changed/.test(JSON.stringify(S.authMsg)));
     setPw(linkOf('AG-10')); ok('S5b (11) confirming the new address returns the login to Active — no second activation', g.loginStatus === 'Active' && g.status === 'Active' && ADMIN.audit[0].action === 'Login email confirmed' && !ADMIN.audit.some(x => x.action === 'Agency activated' && x.entity.includes('AG-10')));
     BIZ(); loginOp('AG-01', 'deactivate', 'Paused'); ok('S5b (11) a deactivated login\'s email can\'t be changed until it is reactivated', loginOp('AG-01', 'email') === 'refused' && /reactivate it first/.test(ADMIN.audit[0].reason));
     go('a-agencies', { id: 'AG-01', tab: 'login' }); ok('S5b the Login tab of a deactivated login offers only Reactivate', !app().querySelector('main [data-act="bLogin"][data-a="resend"]') && !app().querySelector('main [data-act="bLogin"][data-a="email"]') && !!app().querySelector('main [data-act="bLogin"][data-a="reactivate"]'));
@@ -1731,7 +1732,7 @@
     const r2 = setPw(m2); ok('S5b the new link works before its expiry — the agency is activated once', r2 !== false && a.status === 'Active' && a.loginStatus === 'Active' && m2.used && ADMIN.audit.filter(x => x.action === 'Agency activated' && x.entity.includes('AG-09')).length === 1);
     ok('S5b a used link can\'t be used again, even before its expiry', setPw(m2) === 'refused' && /already been used/.test(app().textContent));
     // The same links confirm a changed login email and reset a password: the same expiry applies
-    fresh(); BIZ(); loginOp('AG-10', 'email', 'Mailbox', 'training@meridianhs.co.uk'); const g = agOf('AG-10'), me = linkOf('AG-10'); clockAt(new Date(me.expires).getTime() + 1000);
+    fresh(); BIZ(); loginOp('AG-10', 'email', 'Mailbox', 'training@meridianhs.example'); const g = agOf('AG-10'), me = linkOf('AG-10'); clockAt(new Date(me.expires).getTime() + 1000);
     ok('S5b an expired email-confirmation link confirms nothing', tryLink(me) === false && g.loginStatus === 'Pending email confirmation' && !me.used && !ADMIN.audit.some(x => x.action === 'Login email confirmed'));
     fresh(); BIZ(); ACT.bLogin({ dataset: { id: 'AG-01', a: 'resend' } }); const mr = linkOf('AG-01'); clockAt(new Date(mr.expires).getTime() + 1000);
     ok('S5b an expired password-reset link resets nothing', tryLink(mr) === false && agOf('AG-01').loginStatus === 'Active' && !mr.used && !ADMIN.audit.some(x => x.action === 'Password set with a set-password link'));
@@ -1765,16 +1766,16 @@
       ok(`S5b (12)(13) ${lbl}: agency edit, login, visibility, permission and onboarding calls are refused; nothing changes; each is logged`, t.none && snap() === s0 && t.logged === 8 && ADMIN.audit.some(x => /^Blocked: edit agency details of CarePlus/.test(x.action)), JSON.stringify(t));
     }
     fresh(); role('sysA'); const ns = ADMIN.security.length; ACT.bLogin({ dataset: { id: 'AG-02', a: 'deactivate' } });
-    ok('S5b (12) the System Admin refusal is in the security log and the agency\'s audit', !MODAL && ADMIN.security.length === ns + 1 && /System Administrator Owen Price attempted: deactivate the login of CarePlus Recruitment/.test(ADMIN.security[0].detail) && ADMIN.audit[0].module === 'Agencies' && ADMIN.audit[0].action === 'Blocked: deactivate the login of CarePlus Recruitment');
+    ok('S5b (12) the System Admin refusal is in the security log and the agency\'s audit', !MODAL && ADMIN.security.length === ns + 1 && /System Administrator Owen Price attempted: deactivate the login of CarePlus Recruitment \(demo\)/.test(ADMIN.security[0].detail) && ADMIN.audit[0].module === 'Agencies' && ADMIN.audit[0].action === 'Blocked: deactivate the login of CarePlus Recruitment (demo)');
     go('a-agencies', { id: 'AG-02', tab: 'profile' }); ok('S5b the interface follows the same decision: no Edit details for the System Admin', !app().querySelector('main [data-act="bEditAgency"]') && /edited by the Business Admin/.test(main()));
     go('a-agencies', { id: 'AG-02', tab: 'visibility' }); ok('S5b … permission and visibility controls are read-only with the reason', [...app().querySelectorAll('main [data-act="bPerm"]')].every(b => b.disabled && b.title) && [...app().querySelectorAll('main [data-onchange="agVis"]')].every(i => i.disabled) && /Read only/.test(main()));
     // Agency Administrators never administer an agency — their own or another one
     fresh(); agyEnter('AG-03', true); const s2 = base(), s3 = snap('AG-03'), t3 = tryAll('AG-02'), t4 = tryAll('AG-03');
-    ok('S5b (14) an Agency Administrator (Gulf Care) can\'t change another agency by direct calls', t3.none && snap() === s2 && t3.logged === 8 && /Agency Administrator Huda Al Marri \(Gulf Care Recruitment\) attempted/.test(ADMIN.security[0].detail));
+    ok('S5b (14) an Agency Administrator (Gulf Care) can\'t change another agency by direct calls', t3.none && snap() === s2 && t3.logged === 8 && /Agency Administrator Huda Al Marri \(Gulf Care Recruitment \(demo\)\) attempted/.test(ADMIN.security[0].detail));
     ok('S5b (14) … nor its own agency account', t4.none && snap('AG-03') === s3 && t4.logged === 8);
-    const cpL = agyRoster('CarePlus Recruitment')[0], nd = ADMIN.security.length; go('g-learner', { id: cpL.id });
+    const cpL = agyRoster('CarePlus Recruitment (demo)')[0], nd = ADMIN.security.length; go('g-learner', { id: cpL.id });
     ok('S5b (14) cross-agency reads stay refused (another agency\'s learner is "Not found" and logged)', !main().includes(cpL.email) && ADMIN.security.length === nd + 1 && ADMIN.security[0].type === 'Denied cross-agency access');
-    go('a-agencies', { id: 'AG-02' }); ok('S5b (14) an admin route doesn\'t open in the agency portal', S.route === 'g-dashboard' && !main().includes('CarePlus Recruitment'));
+    go('a-agencies', { id: 'AG-02' }); ok('S5b (14) an admin route doesn\'t open in the agency portal', S.route === 'g-dashboard' && !main().includes('CarePlus Recruitment (demo)'));
     // Custom-role access with Agencies & Bundles: Edit is refused too (S5a reserved limits)
     fresh(); SA(); const R = newCustom('Agency Clerk', ['Agencies & Bundles:V', 'Agencies & Bundles:E']); ACT.addUser(); fill({ '#nu-n': 'Ivy Lane', '#nu-e': 'ivy.lane@illumin-academy.example' }); nuPick([R]); prim(); closeModal();
     signOut(); S.portal = 'admin'; staffSignin('ivy.lane@illumin-academy.example'); const sc = base(), tc = tryAll('AG-02');
@@ -1784,7 +1785,7 @@
     ok('S5b the Business Admin changes communication permission and report visibility (audited)', agOf('AG-02').perms === 'Receive-only' && agOf('AG-02').vis.assessment === true && ADMIN.audit.some(x => x.action === 'Communication permission') && ADMIN.audit[0].action === 'Report visibility');
     SA(); ACT.bPerm({ dataset: { id: 'AG-02', v: 'Full' } }); reason('Back'); ok('S5b the Super Admin can too', agOf('AG-02').perms === 'Full');
     BIZ(); ACT.bLogin({ dataset: { id: 'AG-10', a: 'deactivate' } }); const dlg = MODAL; S.bizCtx = 'Finance Admin'; document.querySelector('#rsn').value = 'later'; const rr = dlg.actions[1].fn(); S.bizCtx = 'Business Admin'; closeModal();
-    ok('S5b the actor is checked again when the dialog is confirmed (not when it opened)', rr === false && agOf('AG-10').loginStatus === 'Active' && ADMIN.audit[0].action === 'Blocked: deactivate the login of Meridian Home Support');
+    ok('S5b the actor is checked again when the dialog is confirmed (not when it opened)', rr === false && agOf('AG-10').loginStatus === 'Active' && ADMIN.audit[0].action === 'Blocked: deactivate the login of Meridian Home Support (demo)');
     ACT.bEditAgency({ dataset: { id: 'AG-10' } }); document.querySelector('#modal-root #ea-l').value = 'Meridian HS Ltd'; document.querySelector('#modal-root #ea-r').value = 'x'; S.bizCtx = 'Finance Admin'; const re = prim(); S.bizCtx = 'Business Admin'; closeModal();
     ok('S5b … the details save too', re === false && agOf('AG-10').legal !== 'Meridian HS Ltd' && /^Blocked: edit agency details/.test(ADMIN.audit[0].action));
     ACT.bLogin({ dataset: { id: 'AG-99', a: 'deactivate' } }); ok('S5b an unknown agency ID is refused (never matched by name)', !MODAL && ADMIN.audit[0].action === 'Blocked: deactivate the login');
@@ -1792,16 +1793,16 @@
 
   await T('S5b purchases: a login that can\'t sign in can\'t buy by calling the purchase directly', async () => {
     fresh(); const n0 = STORE.agy.purchases.length; agyEnter('AG-10', true); const ok1 = buyAg('CAT-2', 10);
-    ok('S5b an active agency still buys as before', STORE.agy.purchases.length === n0 + 1 && ok1.agency === 'Meridian Home Support' && ok1.status === 'Paid');
-    const mh = JSON.stringify(agyPurchases('Meridian Home Support')), bn = ADMIN.bundles.filter(b => b.agency === 'Meridian Home Support').length;
+    ok('S5b an active agency still buys as before', STORE.agy.purchases.length === n0 + 1 && ok1.agency === 'Meridian Home Support (demo)' && ok1.status === 'Paid');
+    const mh = JSON.stringify(agyPurchases('Meridian Home Support (demo)')), bn = ADMIN.bundles.filter(b => b.agency === 'Meridian Home Support (demo)').length;
     BIZ(); loginOp('AG-10', 'deactivate', 'Contract ended'); agyEnter('AG-10', true); const n1 = STORE.agy.purchases.length, q1 = ADMIN.queue.length, ns = ADMIN.security.length;
     ACT.agBuy({ dataset: { id: 'CAT-2' } }); ok('S5b (15) a login deactivated while signed in can\'t open a purchase', !MODAL && /attempted: buy bundles — This agency account is inactive/.test(ADMIN.security[0].detail));
     S.agy.buy = { c: AGY_CATALOGUE().find(c => c.id === 'CAT-2'), qty: 10 }; agPayResult('success'); ok('S5b (15) … nor complete a card payment by a direct call', STORE.agy.purchases.length === n1 && !MODAL);
     S.agy.buy = { c: AGY_CATALOGUE().find(c => c.id === 'CAT-2'), qty: 10 }; agInvoiceForm(); ok('S5b (15) … nor request seats by bank transfer', ADMIN.queue.length === q1 && !MODAL && ADMIN.security.length === ns + 3);
-    ok('S5b (15) its earlier purchases and bundles are unchanged', JSON.stringify(agyPurchases('Meridian Home Support')) === mh && ADMIN.bundles.filter(b => b.agency === 'Meridian Home Support').length === bn);
-    SA(); saveRates(null, { ag: { 'Riverside Care Partners': 7 }, r: 'Prepared terms' }); agyEnter('AG-08', true); ACT.agBuy({ dataset: { id: 'CAT-2' } }); S.agy.buy = { c: AGY_CATALOGUE().find(c => c.id === 'CAT-2'), qty: 5 }; agPayResult('success');
+    ok('S5b (15) its earlier purchases and bundles are unchanged', JSON.stringify(agyPurchases('Meridian Home Support (demo)')) === mh && ADMIN.bundles.filter(b => b.agency === 'Meridian Home Support (demo)').length === bn);
+    SA(); saveRates(null, { ag: { 'Riverside Care Partners (demo)': 7 }, r: 'Prepared terms' }); agyEnter('AG-08', true); ACT.agBuy({ dataset: { id: 'CAT-2' } }); S.agy.buy = { c: AGY_CATALOGUE().find(c => c.id === 'CAT-2'), qty: 5 }; agPayResult('success');
     ok('S5b (15) a login that never completed set-up can\'t buy, even with a discount rate set', STORE.agy.purchases.length === n1 && /not activated yet/.test(ADMIN.security[0].detail));
-    BIZ(); loginOp('AG-01', 'email', 'Mailbox', 'ops@brightcare-staff.co.uk'); agyEnter('AG-01', true); S.agy.buy = { c: AGY_CATALOGUE().find(c => c.id === 'CAT-2'), qty: 5 }; agPayResult('success');
+    BIZ(); loginOp('AG-01', 'email', 'Mailbox', 'ops@brightcare-staff.example'); agyEnter('AG-01', true); S.agy.buy = { c: AGY_CATALOGUE().find(c => c.id === 'CAT-2'), qty: 5 }; agPayResult('success');
     ok('S5b (15) … nor one waiting for its new login email to be confirmed', STORE.agy.purchases.length === n1 && /login email was changed/.test(ADMIN.security[0].detail));
     BIZ(); loginOp('AG-10', 'reactivate', 'Renewed'); agyEnter('AG-10', true); const ok2 = buyAg('CAT-2', 10);
     ok('S5b once reactivated it buys again, at the same price', STORE.agy.purchases.length === n1 + 1 && ok2.amount === ok1.amount);
@@ -1809,19 +1810,19 @@
   });
 
   await T('S5b persistence: agencies, status, details, logins, links and audit survive admin rebuilds; the demo reset restores the seed', async () => {
-    fresh(); BIZ(); const seedN = ADMIN.agencies.length, a = onboard('Ashgrove Home Care', 'office@ashgrovehomecare.co.uk', '55667788'), id = a.id, nA = ADMIN.agencies.length;
+    fresh(); BIZ(); const seedN = ADMIN.agencies.length, a = onboard('Ashgrove Home Care', 'office@ashgrovehomecare.example', '55667788'), id = a.id, nA = ADMIN.agencies.length;
     editAg('AG-08', { address: '9 Harbour Road, Bristol BS1 5TT', billing: 'Finance Office' }, 'Update');
-    loginOp('AG-10', 'email', 'Mailbox', 'team@meridianhs.co.uk'); loginOp('AG-01', 'deactivate', 'Contract paused');
+    loginOp('AG-10', 'email', 'Mailbox', 'team@meridianhs.example'); loginOp('AG-01', 'deactivate', 'Contract paused');
     ACT.bPerm({ dataset: { id: 'AG-02', v: 'Receive-only' } }); reason('Policy'); INP.agVis({ dataset: { id: 'AG-02', k: 'assessment' }, checked: true });
     ACT.bLogin({ dataset: { id: 'AG-09', a: 'resend' } }); const used = linkOf(id); setPw(used); const at0 = a.activatedAt;
     const pend = linkOf('AG-10').id, a09 = linkOf('AG-09').id;
     rebuildA(); const b = agOf(id);
-    ok('S5b (16) a new agency survives a rebuild: same ID, details, login and Active status', !!b && b.name === 'Ashgrove Home Care' && b.login === 'office@ashgrovehomecare.co.uk' && b.status === 'Active' && b.loginStatus === 'Active' && b.activatedAt === at0 && b.address === '4 Mill Lane, Leeds LS1 4AB' && ADMIN.agencies.length === nA);
-    ok('S5b (16) details edits, login email changes and statuses survive; a deactivated login isn\'t restored from the seed', agOf('AG-08').address === '9 Harbour Road, Bristol BS1 5TT' && agOf('AG-08').versions.length === 2 && agOf('AG-10').login === 'team@meridianhs.co.uk' && agOf('AG-10').loginStatus === 'Pending email confirmation' && agOf('AG-01').loginStatus === 'Deactivated' && agOf('AG-01').status === 'Inactive');
+    ok('S5b (16) a new agency survives a rebuild: same ID, details, login and Active status', !!b && b.name === 'Ashgrove Home Care' && b.login === 'office@ashgrovehomecare.example' && b.status === 'Active' && b.loginStatus === 'Active' && b.activatedAt === at0 && b.address === '4 Mill Lane, Leeds LS1 4AB' && ADMIN.agencies.length === nA);
+    ok('S5b (16) details edits, login email changes and statuses survive; a deactivated login isn\'t restored from the seed', agOf('AG-08').address === '9 Harbour Road, Bristol BS1 5TT' && agOf('AG-08').versions.length === 2 && agOf('AG-10').login === 'team@meridianhs.example' && agOf('AG-10').loginStatus === 'Pending email confirmation' && agOf('AG-01').loginStatus === 'Deactivated' && agOf('AG-01').status === 'Inactive');
     ok('S5b (16) permission and visibility changes survive', agOf('AG-02').perms === 'Receive-only' && agOf('AG-02').vis.assessment === true);
     const ml = id2 => STORE.agy.lmails.find(m => m.id === id2);
     ok('S5b (17) set-password emails and their state survive: used, pending, superseded', !!ml(used.id) && ml(used.id).used && !!ml(pend) && !ml(pend).used && ml('LM-A2').void && !!ml(a09) && !ml(a09).used && ml('LM-A1') && !ml('LM-A1').used);
-    go('m-inbox', { id: pend }); ok('S5b (17) the demo inbox still lists them', app().textContent.includes('team@meridianhs.co.uk') && /Superseded/.test(app().textContent));
+    go('m-inbox', { id: pend }); ok('S5b (17) the demo inbox still lists them', app().textContent.includes('team@meridianhs.example') && /Superseded/.test(app().textContent));
     setPw(ml(pend)); ok('S5b (17) a pending link still works once after the rebuild', agOf('AG-10').loginStatus === 'Active' && ml(pend).used); ACT.lmSet({ dataset: { id: pend } }); ok('S5b (17) … and only once', S.auth === 'agyLinkBad');
     SA(); rebuildA(); rebuildA(); SYS(); bizEnter('BB'); SA(); INP.adminVariant({ value: 'B' }); INP.adminVariant({ value: 'A' }); SA();
     const ids = ADMIN.agencies.map(x => x.id), lg = ADMIN.agencies.map(x => x.login.toLowerCase()), mids = STORE.agy.lmails.map(m => m.id), aids = ADMIN.audit.map(x => x.id);
@@ -1831,28 +1832,28 @@
     ok('S5b (16) the agency audit history survives', has('Agency onboarded', 'Ashgrove') && has('Agency activated', id) && has('Details edited — version 2', 'AG-08') && has('Login email changed', 'AG-10') && has('Login email confirmed', 'AG-10') && has('Login deactivated', 'AG-01') && has('Communication permission', 'CarePlus') && has('Report visibility', 'CarePlus') && has('Set-password link resent', 'AG-09'));
     BIZ(); go('b-dashboard'); ok('S5b (16) the Business dashboard reads the kept statuses', kpiOf('Active agencies') === ADMIN.agencies.filter(x => agStatus(x) === 'Active').length && kpiOf('Agencies in onboarding') === ADMIN.agencies.filter(x => agStatus(x) === 'Onboarding').length && agStatus(agOf(id)) === 'Active' && agStatus(agOf('AG-01')) === 'Inactive');
     SA(); rates(); ok('S5b (16) the S4c discount list lists the new agency with its status', /Active/.test(discRow(id)) && /Inactive/.test(discRow('AG-01')));
-    BIZ(); const c2 = onboard('Cedar Lodge Care', 'hello@cedarlodgecare.co.uk', '31415926'); rebuildA();
+    BIZ(); const c2 = onboard('Cedar Lodge Care', 'hello@cedarlodgecare.example', '31415926'); rebuildA();
     ok('S5b (18) a second new agency gets its own ID — no collision', !!c2 && c2.id !== id && ADMIN.agencies.filter(x => x.id === c2.id).length === 1 && ADMIN.agencies.filter(x => x.id === id).length === 1 && links(c2.id).length === 1);
     ACT.resetDemo(); SA(); const lm = id2 => STORE.agy.lmails.find(m => m.id === id2);
-    ok('S5b (19) the deliberate demo reset restores the seed agencies, logins and links', ADMIN.agencies.length === seedN && !agOf(id) && !agOf(c2.id) && !agOf('AG-08').address && agOf('AG-10').login === 'clare@meridianhs.co.uk' && agOf('AG-10').loginStatus === 'Active' && agOf('AG-01').loginStatus === 'Active' && agOf('AG-02').perms === 'Full' && !lm('LM-A1').used && !lm('LM-A2').used && !lm('LM-A2').void && JSON.stringify(STORE.s5b.recs) === '{}' && !ADMIN.audit.some(x => /^AU-S5B-/.test(x.id)));
+    ok('S5b (19) the deliberate demo reset restores the seed agencies, logins and links', ADMIN.agencies.length === seedN && !agOf(id) && !agOf(c2.id) && !agOf('AG-08').address && agOf('AG-10').login === 'clare@meridianhs.example' && agOf('AG-10').loginStatus === 'Active' && agOf('AG-01').loginStatus === 'Active' && agOf('AG-02').perms === 'Full' && !lm('LM-A1').used && !lm('LM-A2').used && !lm('LM-A2').void && JSON.stringify(STORE.s5b.recs) === '{}' && !ADMIN.audit.some(x => /^AU-S5B-/.test(x.id)));
   });
 
   await T('S5b keeps agency consent, course-specific visibility, S4c pricing and the S5a protections', async () => {
     // Baselines after the agency portal has rendered once and the consent requests exist (both are created lazily)
     fresh(); agyEnter('AG-02', true); BIZ(); go('a-agencies', { id: 'AG-02' }); agyEnter('AG-02', true);
-    const c0 = JSON.stringify(agyConsents()), cp = 'CarePlus Recruitment', r0 = agyRoster(cp).map(l => l.id).join(), v0 = JSON.stringify(agOf('AG-02').vis), linked0 = JSON.stringify(STORE.agy.linked);
+    const c0 = JSON.stringify(agyConsents()), cp = 'CarePlus Recruitment (demo)', r0 = agyRoster(cp).map(l => l.id).join(), v0 = JSON.stringify(agOf('AG-02').vis), linked0 = JSON.stringify(STORE.agy.linked);
     const pr0 = JSON.stringify(AGY_CATALOGUE().map(c => [c.id, priceFor(c, 30)])), d0 = JSON.stringify(discData()), hist0 = JSON.stringify([STORE.agy.purchases, STORE.fin.tx, STORE.agy.ledger]);
-    BIZ(); editAg('AG-02', { region: 'UAE', legal: 'CarePlus Recruitment Ltd', billing: 'CarePlus Accounts' }, 'Records'); loginOp('AG-02', 'deactivate', 'Hold'); loginOp('AG-02', 'reactivate', 'Resume'); loginOp('AG-02', 'email', 'Mailbox', 'ops@careplus-recruit.co.uk'); setPw(linkOf('AG-02'));
+    BIZ(); editAg('AG-02', { region: 'UAE', legal: 'CarePlus Recruitment Ltd (demo)', billing: 'CarePlus Accounts' }, 'Records'); loginOp('AG-02', 'deactivate', 'Hold'); loginOp('AG-02', 'reactivate', 'Resume'); loginOp('AG-02', 'email', 'Mailbox', 'ops@careplus-recruit.example'); setPw(linkOf('AG-02'));
     ok('S5b (20) the agency\'s learners, links and consent requests are unchanged by edits and login changes', agyRoster(cp).map(l => l.id).join() === r0 && JSON.stringify(agyConsents()) === c0 && JSON.stringify(STORE.agy.linked) === linked0);
     ok('S5b (20) its report visibility is unchanged unless deliberately changed', JSON.stringify(agOf('AG-02').vis) === v0);
     agyEnter('AG-02', true); ok('S5b (21) prices, discounts and VAT for the agency are unchanged (region and details edits don\'t reprice)', JSON.stringify(AGY_CATALOGUE().map(c => [c.id, priceFor(c, 30)])) === pr0 && JSON.stringify(discData()) === d0);
     ok('S5b (21) purchases, Finance transactions and the licence ledger are unchanged', JSON.stringify([STORE.agy.purchases, STORE.fin.tx, STORE.agy.ledger]) === hist0);
-    const L = agyRoster('Hartwell Home Care')[0]; agyEnter('AG-02', true); const nd = ADMIN.security.length; go('g-learner', { id: L.id }); ok('S5b (20) agencies still only see their own learners', !main().includes(L.email) && ADMIN.security.length === nd + 1);
-    const c = agyConsents().find(x => x.agency === 'Hartwell Home Care' && x.status === 'Awaiting learner consent'); learner('A'); ACT.consentDo({ dataset: { id: c.id, y: '1' } });
-    ok('S5b (20) learner consent still decides a new-course link (no queue item)', c.status === 'Linked' && agyRoster('Hartwell Home Care').some(l => l.id === STORE.worlds.A.me.id));
+    const L = agyRoster('Hartwell Home Care (demo)')[0]; agyEnter('AG-02', true); const nd = ADMIN.security.length; go('g-learner', { id: L.id }); ok('S5b (20) agencies still only see their own learners', !main().includes(L.email) && ADMIN.security.length === nd + 1);
+    const c = agyConsents().find(x => x.agency === 'Hartwell Home Care (demo)' && x.status === 'Awaiting learner consent'); learner('A'); ACT.consentDo({ dataset: { id: c.id, y: '1' } });
+    ok('S5b (20) learner consent still decides a new-course link (no queue item)', c.status === 'Linked' && agyRoster('Hartwell Home Care (demo)').some(l => l.id === STORE.worlds.A.me.id));
     BIZ(); rates(); document.querySelector('#dr-std').value = '6'; document.querySelector('#dr-r').value = 'S5b check'; SUBMIT.discSave(); const q = ADMIN.queue[0];
     SA(); applyDecision(q, 'approve', 'OK'); applyDecision(q, 'approve', 'Again'); ok('S5b (21) S4c discount-rate requests are still decided once by the Super Admin', q.type === 'Discount rate change' && q.status === 'Approved' && discNow().std === 6 && ADMIN.audit.some(x => x.action === 'Blocked: decision repeated'));
-    fresh(); SA(); ACT.addUser(); fill({ '#nu-n': 'Rosa Diaz', '#nu-e': 'rosa.diaz@illumin-academy.example' }); nuPick(['Teacher']); prim(); closeModal(); BIZ(); const ag = onboard('Fernhill Care', 'desk@fernhillcare.co.uk', '27182818'); SA(); rebuildA();
+    fresh(); SA(); ACT.addUser(); fill({ '#nu-n': 'Rosa Diaz', '#nu-e': 'rosa.diaz@illumin-academy.example' }); nuPick(['Teacher']); prim(); closeModal(); BIZ(); const ag = onboard('Fernhill Care', 'desk@fernhillcare.example', '27182818'); SA(); rebuildA();
     ok('S5b (22) S5a staff accounts and S5b agencies both survive the same rebuild', ADMIN.staff.some(s => s.email === 'rosa.diaz@illumin-academy.example') && !!agOf(ag.id));
     SYS(); go('a-roles', { id: 'Super_Administrator' }); ok('S5b (22) the S5a Super Administrator lock still applies', /Only a Super Administrator can do this/.test(main()));
     SA(); go('a-index'); const ix = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
@@ -1879,7 +1880,7 @@
     const ba = STORE.biz.anns.find(a => a.title === 'Gulf Care rota pilot');
     ok('S5d an announcement to one agency is stored with that agency ID and one recipient', ba.status === 'Published' && ba.spec.t === 'agencies' && ba.spec.ids.join() === 'AG-03' && ba.recipients === 1 && ADMIN.announcements.some(m => m.id === 'AN-' + ba.id && m.srcId === ba.id));
     ok('S5d (7) Agency A (CarePlus) does not see Agency B\'s announcement — screen and read function', !/Gulf Care rota pilot/.test(feedOf('AG-02')) && !s5dAgencyFeed(agOf('AG-02')).some(a => a.title === 'Gulf Care rota pilot'));
-    ok('S5d (7) Agency B (Gulf Care) sees it', /Gulf Care rota pilot/.test(feedOf('AG-03')) && STORE.agy.notifs.some(n => n.agency === 'Gulf Care Recruitment' && /Gulf Care rota pilot/.test(n.b)) && !STORE.agy.notifs.some(n => n.agency !== 'Gulf Care Recruitment' && /Gulf Care rota pilot/.test(n.b)));
+    ok('S5d (7) Agency B (Gulf Care) sees it', /Gulf Care rota pilot/.test(feedOf('AG-03')) && STORE.agy.notifs.some(n => n.agency === 'Gulf Care Recruitment (demo)' && /Gulf Care rota pilot/.test(n.b)) && !STORE.agy.notifs.some(n => n.agency !== 'Gulf Care Recruitment (demo)' && /Gulf Care rota pilot/.test(n.b)));
     BIZ(); ACT.bAnn(); fill({ '#s5d-t': 'Draft for all agencies' }); edAct('Save draft');
     ok('S5d (8) a draft to agencies is not visible to any agency', !/Draft for all agencies/.test(feedOf('AG-02')) && !/Draft for all agencies/.test(feedOf('AG-03')));
     SA(); s5dSave('academy', null, { title: 'BrightCare learners only', body: 'x', spec: { t: 'agencyLearners', ids: ['AG-01'] }, ch: ['In-app'] }, 'publish');
@@ -1994,7 +1995,7 @@
     ok('S5d a cancelled schedule (back to draft) is never published', c2.status === 'Draft' && inV.every(v => !learnerSees(v, 'Cancelled notice')));
     agyEnter('AG-02', true); const g = s5dSave('agency', null, { title: 'Training day moved', spec: { t: 'agyAll' }, ch: ['In-app'], at: new Date(agNow().getTime() + DAY).toISOString() }, 'schedule').a;
     render(); ok('S5d agency announcements follow the agency clock: still scheduled', g.status === 'Scheduled');
-    STORE.agy.offset += 2; render(); ok('S5d … published once the agency clock passes its time', g.status === 'Published' && g.recipients === agyRoster('CarePlus Recruitment').length); STORE.agy.offset = 0;
+    STORE.agy.offset += 2; render(); ok('S5d … published once the agency clock passes its time', g.status === 'Published' && g.recipients === agyRoster('CarePlus Recruitment (demo)').length); STORE.agy.offset = 0;
   });
 
   await T('S5d (11)(13)(14) audiences resolve to real people by ID, one copy each; counts match', async () => {
@@ -2128,7 +2129,7 @@
 
   await T('S5c (1)(2)(3)(11)(12) the chosen file is read and checked; quoted values; the preview changes nothing', async () => {
     fresh(); SA(); go('a-learners'); const n0 = lrnN(), au0 = ADMIN.audit.length, lg0 = s5dStore().log.length;
-    const text = CSVH + '"Evans, Lucy",lucy.evans2@example.co.uk,+44 7700 911801,United Kingdom\r\n\r\n"Mary ""May"" Jones",mary.jones@example.co.uk,+44 7700 911802,United Kingdom\n  Tom Hart  ,tom.hart@example.ae, +971 50 555 0101 ,United Arab Emirates\r\n';
+    const text = CSVH + '"Evans, Lucy",lucy.evans2@uk.example,+44 7700 911801,United Kingdom\r\n\r\n"Mary ""May"" Jones",mary.jones@uk.example,+44 7700 911802,United Kingdom\n  Tom Hart  ,tom.hart@example.ae, +971 50 555 0101 ,United Arab Emirates\r\n';
     ok('S5c (1) the import reads the file that was chosen', await pickCsv('october-starters.csv', text) && S.s5c.c.rows.length === 3);
     ok('S5c (3) quoted values with commas and doubled quotes, blank lines, mixed line endings and spaces are read correctly', rowN(2).v.name === 'Evans, Lucy' && rowN(3).v.name === 'Mary "May" Jones' && rowN(4).v.name === 'Tom Hart' && rowN(4).v.mobile === '+971 50 555 0101' && rowN(4).region === 'UAE');
     ok('S5c (2) the old fixed sample is no longer substituted for the chosen file', !S.s5c.c.rows.some(r => /Imran Sheikh|learners_october/.test(r.v.name + r.v.email)) && !/learners_october\.csv/.test(mroot().textContent) && /october-starters\.csv/.test(mroot().textContent));
@@ -2141,14 +2142,14 @@
 
   await T('S5c (4)(5)(6)(7)(8)(9)(10)(12) malformed files, missing columns, row errors and duplicates', async () => {
     fresh(); SA(); const n0 = lrnN();
-    await pickCsv('broken.csv', CSVH + '"Unclosed,amy@example.co.uk,+44 7700 911803,United Kingdom\r\n');
+    await pickCsv('broken.csv', CSVH + '"Unclosed,amy@uk.example,+44 7700 911803,United Kingdom\r\n');
     ok('S5c (4) a malformed file is refused with the line and nothing is created', S.s5c.c.fileError && /isn't valid CSV/.test(mroot().textContent) && /Line 2/.test(mroot().textContent) && !/Create valid rows/.test(mroot().textContent) && lrnN() === n0); closeModal();
-    await pickCsv('stray.csv', CSVH + 'Ann "Annie" Lee,ann@example.co.uk,+44 7700 911804,United Kingdom\r\n'); ok('S5c (4) a stray quote is reported too', /quote appears inside an unquoted value/.test(S.s5c.c.fileError)); closeModal();
-    await pickCsv('nocountry.csv', 'Full name,Email,Mobile\r\nAnn Lee,ann@example.co.uk,+44 7700 911804\r\n');
+    await pickCsv('stray.csv', CSVH + 'Ann "Annie" Lee,ann@uk.example,+44 7700 911804,United Kingdom\r\n'); ok('S5c (4) a stray quote is reported too', /quote appears inside an unquoted value/.test(S.s5c.c.fileError)); closeModal();
+    await pickCsv('nocountry.csv', 'Full name,Email,Mobile\r\nAnn Lee,ann@uk.example,+44 7700 911804\r\n');
     ok('S5c (5) a missing required column is reported by name', /Missing required column: Country/.test(S.s5c.c.fileError) && lrnN() === n0); closeModal();
     await pickCsv('empty.csv', CSVH); ok('S5c a header with no rows is reported', /no learner rows/.test(S.s5c.c.fileError)); closeModal();
     const ex = ADMIN.learners.find(l => s5cDigits(l.mobile).length >= 8 && l.email), ex2 = ADMIN.learners.find(l => l !== ex && s5cDigits(l.mobile).length >= 8);
-    const text = CSVH + [',noname@example.co.uk,+44 7700 911810,United Kingdom', 'Bad Email,bad.email@,+44 7700 911811,United Kingdom', 'Local Mobile,local.mobile@example.co.uk,07700 911812,United Kingdom', 'No Country,no.country@example.co.uk,+44 7700 911813,', 'Mars Person,mars@example.co.uk,+44 7700 911814,Mars', `Existing Email,${ex.email.toUpperCase()},+44 7700 911815,United Kingdom`, `Existing Mobile,existing.mobile@example.co.uk,${ex2.mobile},United Kingdom`, 'First Copy,twin@example.co.uk,+44 7700 911816,United Kingdom', 'Second Copy,TWIN@example.co.uk,+44 7700 911817,United Kingdom', 'Phone Twin,phone.twin@example.co.uk,+44 (7700) 911-816,United Kingdom', 'Good Row,good.row@example.co.uk,+44 7700 911818,India', 'Too,many@example.co.uk,+44 7700 911819,United Kingdom,extra'].join('\r\n');
+    const text = CSVH + [',noname@uk.example,+44 7700 911810,United Kingdom', 'Bad Email,bad.email@,+44 7700 911811,United Kingdom', 'Local Mobile,local.mobile@uk.example,07700 911812,United Kingdom', 'No Country,no.country@uk.example,+44 7700 911813,', 'Mars Person,mars@uk.example,+44 7700 911814,Mars', `Existing Email,${ex.email.toUpperCase()},+44 7700 911815,United Kingdom`, `Existing Mobile,existing.mobile@uk.example,${ex2.mobile},United Kingdom`, 'First Copy,twin@uk.example,+44 7700 911816,United Kingdom', 'Second Copy,TWIN@uk.example,+44 7700 911817,United Kingdom', 'Phone Twin,phone.twin@uk.example,+44 (7700) 911-816,United Kingdom', 'Good Row,good.row@uk.example,+44 7700 911818,India', 'Too,many@uk.example,+44 7700 911819,United Kingdom,extra'].join('\r\n');
     await pickCsv('checks.csv', text); const R = n => rowN(n);
     ok('S5c (6) missing values are row errors', R(2).status === 'Invalid' && /Full name is required/.test(R(2).errs.join()) && R(5).status === 'Invalid' && /Country is required/.test(R(5).errs.join()));
     ok('S5c (7) invalid email and mobile formats (international form required); unknown country', /Email is not a valid address/.test(R(3).errs.join()) && /international form/.test(R(4).errs.join()) && /isn't one of the registration countries/.test(R(6).errs.join()));
@@ -2165,14 +2166,14 @@
 
   await T('S5c (13)–(16)(21) import: re-checked, stable IDs, invalid rows skipped, never twice, audited', async () => {
     fresh(); SA(); const n0 = lrnN(), fin0 = JSON.stringify([STORE.fin.tx, STORE.agy.purchases]);
-    const text = CSVH + 'Lucy Evans,lucy.evans2@example.co.uk,+44 7700 911901,United Kingdom\r\nImran Sheikh,imran.sheikh2@example.co.uk,+44 7700 911902,United Kingdom\r\nLate Comer,late.comer@example.co.uk,+44 7700 911903,United Kingdom\r\nBroken Row,broken@,+44 7700 911904,United Kingdom\r\nTariq Aziz,tariq.aziz2@mail.ae,+971 50 555 0299,United Arab Emirates\r\n';
+    const text = CSVH + 'Lucy Evans,lucy.evans2@uk.example,+44 7700 911901,United Kingdom\r\nImran Sheikh,imran.sheikh2@uk.example,+44 7700 911902,United Kingdom\r\nLate Comer,late.comer@uk.example,+44 7700 911903,United Kingdom\r\nBroken Row,broken@,+44 7700 911904,United Kingdom\r\nTariq Aziz,tariq.aziz2@mail.ae.example,+971 50 555 0299,United Arab Emirates\r\n';
     await pickCsv('batch-a.csv', text); ok('S5c four rows pass the preview', s5cCounts(S.s5c.c).valid === 4); const pv = S.s5c;
-    ACT.addLearner(); fill({ '#nl-name': 'Late Comer', '#nl-email': 'late.comer@example.co.uk', '#nl-mob': '+44 7700 911999' }); prim(); closeModal(); const lc = ADMIN.learners.find(l => l.email === 'late.comer@example.co.uk'); S.s5c = pv;
+    ACT.addLearner(); fill({ '#nl-name': 'Late Comer', '#nl-email': 'late.comer@uk.example', '#nl-mob': '+44 7700 911999' }); prim(); closeModal(); const lc = ADMIN.learners.find(l => l.email === 'late.comer@uk.example'); S.s5c = pv;
     S.s5c = pv; s5cPreview(); prim();
     const rec = s5cStore().imports[0], ids = rec.created;
     ok('S5c (13) valid rows are created with new stable IDs (IA-L-33001 onwards), Pending Verification, no course, batch or agency', ids.length === 3 && ids.join() === 'IA-L-33001,IA-L-33002,IA-L-33003' && ids.every(id => { const l = learnerById(id); return l && l.acct === 'Pending Verification' && !l.courses.length && l.agency === null && l.referral === 'Bulk import (CSV)'; }) && learnerById('IA-L-33003').region === 'UAE');
     ok('S5c (14) invalid rows are not created', !ADMIN.learners.some(l => l.email === 'broken@') && lrnN() === n0 + 1 + 3);
-    ok('S5c (15) a row that passed the preview but was registered meanwhile is rejected on import (re-checked), not duplicated', ADMIN.learners.filter(l => l.email === 'late.comer@example.co.uk').length === 1 && rowN(4).late && /changed since/.test(rowN(4).late[0]) && lc.name === 'Late Comer');
+    ok('S5c (15) a row that passed the preview but was registered meanwhile is rejected on import (re-checked), not duplicated', ADMIN.learners.filter(l => l.email === 'late.comer@uk.example').length === 1 && rowN(4).late && /changed since/.test(rowN(4).late[0]) && lc.name === 'Late Comer');
     ok('S5c the result screen lists each row with its new ID or its reasons', /3 learner accounts created/.test(mroot().textContent) && mroot().textContent.includes('IA-L-33002') && /Passed the preview, but changed since/.test(mroot().textContent)); closeModal();
     go('a-learners'); ok('S5c the new learners appear in the Learners list', main().includes('IA-L-33001') && main().includes('Lucy Evans'));
     const au = ADMIN.audit.find(a => a.action === 'Bulk import (CSV)');
@@ -2181,7 +2182,7 @@
     const again = s5cImport(); ok('S5c (16) the same check can\'t be imported twice', !again.ok && /already imported/.test(again.why) && lrnN() === n0 + 4);
     await pickCsv('batch-a.csv', text); prim(); const r2 = s5cStore().imports[0];
     ok('S5c (16) importing the same file again creates nothing (each row is now a duplicate)', r2.created.length === 0 && r2.rejected.length === 5 && lrnN() === n0 + 4 && /0 learner accounts created/.test(mroot().textContent)); closeModal();
-    await pickCsv('batch-b.csv', CSVH + 'New Person,new.person@example.co.uk,+44 7700 911905,United Kingdom\r\n'); prim(); closeModal();
+    await pickCsv('batch-b.csv', CSVH + 'New Person,new.person@uk.example,+44 7700 911905,United Kingdom\r\n'); prim(); closeModal();
     ok('S5c a later import continues the IDs (never reused)', s5cStore().imports[0].created.join() === 'IA-L-33004');
     ACT.s5cErrors(); ok('S5c (19) all rows imported: no error report, and it says so', S5C_LAST.file.name !== 'batch-b-errors.csv');
   });
@@ -2194,7 +2195,7 @@
   });
 
   await T('S5c (17)(18) only the Super Admin and System Admins bulk-create accounts; refusals change nothing and are logged', async () => {
-    fresh(); SA(); await pickCsv('auth.csv', CSVH + 'Auth Person,auth.person@example.co.uk,+44 7700 911960,United Kingdom\r\n'); const pv = S.s5c; closeModal(); const n0 = lrnN();
+    fresh(); SA(); await pickCsv('auth.csv', CSVH + 'Auth Person,auth.person@uk.example,+44 7700 911960,United Kingdom\r\n'); const pv = S.s5c; closeModal(); const n0 = lrnN();
     for (const [lbl, enter] of [['Academic Admin (batch rosters, a different capability)', () => { acaEnter('KA'); S.signedIn = true; }], ['Business Admin', () => BIZ()], ['Finance Admin', () => FA4()], ['an Agency Administrator', () => agyEnter('AG-02', true)]]) {
       enter(); S.s5c = pv; const n = secN(); ACT.importCsv(); const o1 = !!MODAL; closeModal(); ACT.csvSample(); const o2 = !!MODAL; closeModal(); S.s5c = pv; const r = s5cImport(); ACT.s5cErrors();
       ok(`S5c (18) ${lbl}: opening, previewing, importing and downloading are refused and logged; nothing is created`, !o1 && !o2 && !r.ok && lrnN() === n0 && secN() === n + 4 && /^Blocked: /.test(ADMIN.audit[0].action), String(secN() - n));
@@ -2202,18 +2203,18 @@
     acaEnter('KA'); S.signedIn = true; go('a-learners'); const ka = app().querySelector('main [data-act="importCsv"]'); BIZ(); go('a-learners'); const b = app().querySelector('main [data-act="importCsv"]');
     ok('S5c the screen follows the same rule: no usable import button for the Academic Admin or the Business Admin', (!ka || ka.disabled) && (!b || (b.disabled && /Super Administrator and System Administrators/.test(b.title))));
     SA(); go('a-learners'); const sb = app().querySelector('main [data-act="importCsv"]'); ok('S5c … while the Super Admin\'s is enabled', !!sb && !sb.disabled);
-    role('sysA'); await pickCsv('sys.csv', CSVH + 'Sys Person,sys.person@example.co.uk,+44 7700 911961,United Kingdom\r\n'); prim(); closeModal();
+    role('sysA'); await pickCsv('sys.csv', CSVH + 'Sys Person,sys.person@uk.example,+44 7700 911961,United Kingdom\r\n'); prim(); closeModal();
     ok('S5c (17) the System Admin imports', s5cStore().imports[0].created.length === 1 && learnerById(s5cStore().imports[0].created[0]).name === 'Sys Person');
     SA(); S.s5c = pv; pv.done = null; const rs = s5cImport(); ok('S5c (17) the Super Admin imports', rs.ok && rs.rec.created.length === 1);
   });
 
   await T('S5c (22)(23) imported accounts survive rebuilds, identity switches and index jumps; the demo reset restores the seed', async () => {
-    fresh(); SA(); const seed = lrnN(); await pickCsv('keep.csv', CSVH + 'Keep One,keep.one@example.co.uk,+44 7700 911970,United Kingdom\r\nKeep Two,keep.two@example.co.uk,+44 7700 911971,United Arab Emirates\r\n'); prim(); closeModal();
+    fresh(); SA(); const seed = lrnN(); await pickCsv('keep.csv', CSVH + 'Keep One,keep.one@uk.example,+44 7700 911970,United Kingdom\r\nKeep Two,keep.two@uk.example,+44 7700 911971,United Arab Emirates\r\n'); prim(); closeModal();
     const ids = s5cStore().imports[0].created; render(); render();
     rebuildA(); SYS(); bizEnter('BB'); acaEnter('KA'); SA(); ACT.aJump({ dataset: { t: 'av:B' } }); INP.adminVariant({ value: 'A' }); SA(); rebuildA();
     ok('S5c (22) imported accounts survive admin rebuilds, identity switches and index jumps — once each, same details', ids.every(id => ADMIN.learners.filter(l => l.id === id).length === 1) && learnerById(ids[1]).region === 'UAE' && lrnN() === seed + 2);
     ok('S5c (22) their audit rows survive, without duplicates', ADMIN.audit.filter(a => a.action === 'Bulk import (CSV)').length === 1 && new Set(ADMIN.audit.map(a => a.id)).size === ADMIN.audit.length);
-    await pickCsv('keep.csv', CSVH + 'Keep One,keep.one@example.co.uk,+44 7700 911970,United Kingdom\r\n'); prim(); closeModal(); rebuildA();
+    await pickCsv('keep.csv', CSVH + 'Keep One,keep.one@uk.example,+44 7700 911970,United Kingdom\r\n'); prim(); closeModal(); rebuildA();
     ok('S5c (22) after a rebuild, importing the same rows again still creates nothing', s5cStore().imports[0].created.length === 0 && lrnN() === seed + 2);
     ACT.resetDemo(); SA(); ok('S5c (23) the demo reset removes imported accounts and restores the seeded learners', !ids.some(id => learnerById(id)) && lrnN() === seed && !s5cStore().imports.length);
   });
@@ -2236,7 +2237,7 @@
 
   await T('S5c (26)–(30) imported accounts are separate from enrolment; earlier stages intact', async () => {
     fresh(); SA(); const hist0 = JSON.stringify([STORE.fin.tx, STORE.agy.purchases, STORE.agy.ledger, discData(), CATALOGUE.map(c => [c.id, c.price])]), b0 = JSON.stringify(ADMIN.batches.map(b => [b.code, b.enrolled, b.wait, (b.roster || []).length]));
-    await pickCsv('sep.csv', CSVH + 'Sep One,sep.one@example.co.uk,+44 7700 911980,United Kingdom\r\n'); prim(); closeModal(); const id = s5cStore().imports[0].created[0];
+    await pickCsv('sep.csv', CSVH + 'Sep One,sep.one@uk.example,+44 7700 911980,United Kingdom\r\n'); prim(); closeModal(); const id = s5cStore().imports[0].created[0];
     ok('S5c (26) an imported account is in no batch, course or agency roster, and batches are unchanged', !ADMIN.batches.some(b => batchRoster(b).some(r => r[1] === id)) && !learnerById(id).courses.length && !ADMIN.agencies.some(g => agyRoster(g.name).some(l => l.id === id)) && JSON.stringify(ADMIN.batches.map(b => [b.code, b.enrolled, b.wait, (b.roster || []).length])) === b0);
     ok('S5c (30) prices, discount rates, purchases, the ledger and Finance records are unchanged', JSON.stringify([STORE.fin.tx, STORE.agy.purchases, STORE.agy.ledger, discData(), CATALOGUE.map(c => [c.id, c.price])]) === hist0);
     SYS(); go('a-roles', { id: 'Super_Administrator' }); ok('S5c (27) the S5a Super Administrator lock still applies', /Only a Super Administrator can do this/.test(main()));
@@ -2303,16 +2304,16 @@
 
   await T('S5e (5)–(9) learners added one at a time and imported learners survive rebuilds, once, with stable IDs', async () => {
     fresh(); SA(); const seed = lrnN(), fin0 = JSON.stringify(STORE.fin.tx.length);
-    go('a-learners'); ACT.addLearner(); fill({ '#nl-name': 'Manual Person', '#nl-email': 'manual.person@example.co.uk', '#nl-mob': '+44 7700 912001' }); prim(); closeModal();
-    const m = ADMIN.learners.find(l => l.email === 'manual.person@example.co.uk');
-    await pickCsv('s5e.csv', CSVH + 'Csv Person,csv.person@example.co.uk,+44 7700 912002,United Arab Emirates\r\n'); prim(); closeModal(); const cid = s5cStore().imports[0].created[0];
+    go('a-learners'); ACT.addLearner(); fill({ '#nl-name': 'Manual Person', '#nl-email': 'manual.person@uk.example', '#nl-mob': '+44 7700 912001' }); prim(); closeModal();
+    const m = ADMIN.learners.find(l => l.email === 'manual.person@uk.example');
+    await pickCsv('s5e.csv', CSVH + 'Csv Person,csv.person@uk.example,+44 7700 912002,United Arab Emirates\r\n'); prim(); closeModal(); const cid = s5cStore().imports[0].created[0];
     rebuildA(); SYS(); bizEnter('BB'); acaEnter('KA'); SA(); ACT.aJump({ dataset: { t: 'av:B' } }); INP.adminVariant({ value: 'C' }); INP.adminVariant({ value: 'A' }); SA();
     const m2 = learnerById(m.id), c2 = learnerById(cid);
     ok('S5e (5)(7) a learner added one at a time survives admin rebuilds, identity switches and index jumps — same ID, status and details', !!m2 && m2.id === m.id && m2.acct === 'Pending Verification' && m2.name === 'Manual Person' && m2.country === m.country);
     ok('S5e (6)(7) an imported learner survives too (UAE data region kept)', !!c2 && c2.region === 'UAE');
     ok('S5e (8) no duplicate learners', ADMIN.learners.filter(l => l.id === m.id).length === 1 && ADMIN.learners.filter(l => l.id === cid).length === 1 && lrnN() === seed + 2 && new Set(allLearners().map(l => l.id)).size === allLearners().length);
     go('a-learners'); ok('S5e both appear in the Learners list after the rebuilds', main().includes('Manual Person') && main().includes(cid));
-    ACT.addLearner(); fill({ '#nl-name': 'Manual Again', '#nl-email': 'MANUAL.person@example.co.uk' }); const d = prim(); closeModal();
+    ACT.addLearner(); fill({ '#nl-name': 'Manual Again', '#nl-email': 'MANUAL.person@uk.example' }); const d = prim(); closeModal();
     ok('S5e duplicate checks still apply after the rebuild', d === false && lrnN() === seed + 2);
     ok('S5e (9) creating accounts made no enrolment, batch place or payment', !m2.courses.length && !ADMIN.batches.some(b => batchRoster(b).some(r => [m.id, cid].includes(r[1]))) && JSON.stringify(STORE.fin.tx.length) === fin0);
     ACT.resetDemo(); SA(); ok('S5e (23) the demo reset removes them and restores the seeded learners', !learnerById(m.id) && !learnerById(cid) && lrnN() === seed);
@@ -2352,8 +2353,8 @@
 
   await T('S5e (19)–(23) S5a–S5d records persist together across rebuilds; the demo reset restores the fixtures', async () => {
     fresh(); SA(); ACT.addUser(); fill({ '#nu-n': 'Ren Staff', '#nu-e': 'ren.staff@illumin-academy.example' }); nuPick(['Teacher']); prim(); closeModal();
-    BIZ(); const ag = onboard('Elm Tree Care', 'office@elmtreecare.co.uk', '88776655'); SA();
-    await pickCsv('s5e2.csv', CSVH + 'Ivy Import,ivy.import@example.co.uk,+44 7700 912010,United Kingdom\r\n'); prim(); closeModal(); const iid = s5cStore().imports[0].created[0];
+    BIZ(); const ag = onboard('Elm Tree Care', 'office@elmtreecare.example', '88776655'); SA();
+    await pickCsv('s5e2.csv', CSVH + 'Ivy Import,ivy.import@uk.example,+44 7700 912010,United Kingdom\r\n'); prim(); closeModal(); const iid = s5cStore().imports[0].created[0];
     const an = s5dSave('academy', null, { title: 'S5e persisted notice', spec: { t: 'staff' }, ch: ['In-app'] }, 'publish').a; const rc = s5dRefOp('create', null, { code: 'S5E-CODE', type: 'Agent', owner: 'S5e Agent', valid: D(100).slice(0, 10) }, '').r;
     ACT.tplEdit({ dataset: { e: 'Announcement' } }); fill({ '#tp-s': 'S5e subject' }); prim(); closeModal();
     rebuildA(); SYS(); bizEnter('BA'); acaEnter('KA'); SA(); ACT.aJump({ dataset: { t: 'av:C' } }); INP.adminVariant({ value: 'A' }); SA();

@@ -73,7 +73,7 @@
   await T('1b Reset demo data after registering a new learner', async () => {
     fresh(); const errs = []; const onErr = e => errs.push(e.message); window.addEventListener('error', onErr);
     const learners0 = allLearners().length, worlds0 = Object.keys(STORE.worlds).sort().join();
-    ACT.regStart(); const vals = { '#rg-name': 'Reset Tester', '#rg-email': 'reset.tester@example.co.uk', '#rg-mob': '7700 955444', '#rg-country': 'United Kingdom', '#rg-pw': 'Abcdefgh12!x', '#rg-pw2': 'Abcdefgh12!x' };
+    ACT.regStart(); const vals = { '#rg-name': 'Reset Tester', '#rg-email': 'reset.tester@uk.example', '#rg-mob': '7700 955444', '#rg-country': 'United Kingdom', '#rg-pw': 'Abcdefgh12!x', '#rg-pw2': 'Abcdefgh12!x' };
     const fill = () => { Object.entries(vals).forEach(([k, v]) => { $(k).value = v; }); $('#rg-terms').checked = true; $('#rg-priv').checked = true; };
     fill(); SUBMIT.regSubmit(); MODAL.actions.find(a => a.label === 'Confirm').fn(); $$('.otp-i').forEach((b, i) => b.value = '123456'[i]); SUBMIT.regCode(); ACT.finishWelcome();
     ok('Reset fix: signed in as the new learner first', S.variant === 'G' && S.signedIn && W === STORE.worlds.G && allLearners().length === learners0 + 1);
@@ -265,7 +265,7 @@
     const n0 = STORE.agy.lmails.length; ACT.suSign(); const s = W.signup.sig;
     ok('CH-08 signing record: name, date/time, mock IP, letter version', !!s && s.name === 'priya raman' && !!s.at && s.ip === '94.204.18.44' && s.v === 1, JSON.stringify(s));
     const lm = STORE.agy.lmails.slice(0, STORE.agy.lmails.length - n0);
-    ok('CH-08 signed copy emailed to the learner and to the Academy (info@welfarehs.co.uk)', lm.some(m => !m.academy && m.email === 'priya.raman@gmail.com' && /signed offer letter/.test(m.subj)) && lm.some(m => m.academy && m.email === 'info@welfarehs.co.uk' && /Priya Raman/.test(m.subj)));
+    ok('CH-08 signed copy emailed to the learner and to the Academy (info@welfarehs.co.uk)', lm.some(m => !m.academy && m.email === 'priya.raman@gmail.example' && /signed offer letter/.test(m.subj)) && lm.some(m => m.academy && m.email === 'info@welfarehs.co.uk' && /Priya Raman/.test(m.subj)));
     ok('CH-08 signing audited', ADMIN.audit.some(a => a.action === 'Offer letter signed' && /IA-L-31188/.test(a.entity)));
     ok('CH-07 → step 4 Payment', stepCur() === 'Payment');
   });

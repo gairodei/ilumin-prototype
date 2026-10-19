@@ -49,7 +49,7 @@ function chAssessSeed() {
   STORE.chAsgSeed = STORE.chAsgSeed || Object.fromEntries(ADMIN.batches.map(b => [b.code, chAllocOf(b).asg]));
   // an upcoming observation in Croydon Cohort 4, with that batch's observation assessor (Scenario #21)
   const lid = 'IA-L-33100', L = allLearners().find(l => l.id === lid);
-  if (STORE.tas && STORE.tas.obs && L && !STORE.tas.obs.some(o => o.id === 'TO-9')) STORE.tas.obs.push({ id: 'TO-9', lid, learner: L.name, home: 'Addington Court Nursing Home', addr: '118 Addington Road, Croydon CR0 2BX', at: D(4, '10:00'), scope: '301 2.1, 301 2.2', nvqN: 2, iaN: 4, status: 'Confirmed', resp: 'Workplace contact', perm: 'Granted', assessor: 'James Pryce' }); /* P-33 */
+  if (STORE.tas && STORE.tas.obs && L && !STORE.tas.obs.some(o => o.id === 'TO-9')) STORE.tas.obs.push({ id: 'TO-9', lid, learner: L.name, home: 'Addington Court Nursing Home (demo)', addr: '118 Demo Road, Croydon ZZ99 1AD', at: D(4, '10:00'), scope: '301 2.1, 301 2.2', nvqN: 2, iaN: 4, status: 'Confirmed', resp: 'Workplace contact', perm: 'Granted', assessor: 'James Pryce' }); /* P-33 */
   // learners see who their assessors are; upcoming observations name the observation assessor (completed ones keep theirs)
   ['C', 'D'].forEach(v => { const w = STORE.worlds[v]; if (!w || !w.nvq) return; const b = chBatchOfLid(w.me.id); if (!b) return;
     w.nvq.people = w.nvq.people.filter(([r]) => !/^Assessor/.test(r)).concat(CH_AROLES.map(([k, l]) => [l.replace(' assessor', '') === 'Assignment' ? 'Assessor (assignments)' : k === 'pd' ? 'Assessor (PD)' : 'Assessor (observations)', chEff(w.me.id, k, b)]));

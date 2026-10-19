@@ -37,7 +37,7 @@ function agyLinkTo(ag, L, at) { (STORE.agy.linked[ag] = STORE.agy.linked[ag] || 
 function agyConsents() {
   const G = STORE.agy;
   if (!G.consents) {
-    const CP = 'CarePlus Recruitment', byN = n => allLearners().find(l => l.name === n), A = STORE.worlds.A;
+    const CP = 'CarePlus Recruitment (demo)', byN = n => allLearners().find(l => l.name === n), A = STORE.worlds.A;
     const mk = (id, agency, n, course, sent, status, extra = {}) => { const L = typeof n === 'string' ? byN(n) : n; return L ? { id, agency, lid: L.id, learner: L.name, email: L.email, course, sent, status, note: '', ...extra } : null; };
     const aNew = (ADMIN.courses || []).filter(c => c.status === 'Published').map(c => c.title).find(t => !agyEnrolledOn(byN(VNAME('A')) || { v: 'A' }, t)) || 'Fire Safety Awareness';
     G.consents = [
@@ -46,7 +46,7 @@ function agyConsents() {
       mk('CON-03', CP, 'Ruby Clarke', 'Medication Awareness', D(-9, '11:00'), 'Declined', { answered: D(-8, '20:10'), by: 'learner' }),
       mk('CON-04', CP, 'Megan Roberts', 'Moving and Handling People', D(-14, '09:00'), 'Expired', { answered: D(-7, '09:00') }),
       mk('CON-05', CP, 'Sunil Menon', 'Dementia Awareness', D(-20, '12:00'), 'Linked', { answered: D(-19, '08:15'), note: 'Works nights for us as well as for Gulf Care.' }),
-      mk('CON-06', 'Hartwell Home Care', { id: A.me.id, name: VNAME('A'), email: A.me.email }, aNew, D(-1, '14:00'), 'Awaiting learner consent', { v: 'A' }),
+      mk('CON-06', 'Hartwell Home Care (demo)', { id: A.me.id, name: VNAME('A'), email: A.me.email }, aNew, D(-1, '14:00'), 'Awaiting learner consent', { v: 'A' }),
     ].filter(Boolean);
     ADMIN.queue.filter(i => i.type === 'Link existing learner to agency' && i.data && i.data.consentId).forEach(i => G.consents.push({ id: i.data.consentId, agency: i.data.agency, lid: i.data.lid, learner: i.related[0].split(' → ')[0], email: i.data.email, course: i.data.course, sent: new Date(new Date(i.data.consentAt).getTime() - DAY).toISOString(), answered: i.data.consentAt, status: isOpen(i) ? 'Awaiting Academy approval' : i.status === 'Approved' ? 'Linked' : 'Declined', qid: i.id }));
     G.consents.filter(c => c.status === 'Linked').forEach(c => { const L = learnerById(c.lid); if (L) agyLinkTo(c.agency, L, c.answered); });
@@ -129,7 +129,7 @@ allApplications = function () {
 };
 function agyAdmSync() { (ADMIN.apps || []).filter(ap => ap.agySeat && ap.status === 'Rejected').forEach(ap => { const s = STORE.agy.assign.find(x => x.id === ap.agySeat); if (s && ['Admission pending', 'Under review'].includes(s.status)) agySeatReturn(s); }); }
 ACT.appReject = (_ar => el => { _ar(el); const m = MODAL, act = m && m.actions.find(x => x.fn && x.cls && /danger|primary/.test(x.cls)); if (act) { const f = act.fn; act.fn = (...x) => { const r = f(...x); agyAdmSync(); return r; }; } })(ACT.appReject);
-ACT.agySimReject = () => { const ap = allApplications().find(x => x.agySeat && x.status !== 'Rejected' && (STORE.agy.assign.find(s => s.id === x.agySeat) || {}).agency === (S.portal === 'agency' ? AGN() : 'CarePlus Recruitment')); if (!ap) { toast('No NVQ admission in progress.', 'info'); return; } ap.status = 'Rejected'; logA('Admissions', ap.id, 'Application rejected', 'Under Review', 'Rejected', 'Demo'); agyAdmSync(); render(); toast(`Demo only: ${ap.name}'s admission (${ap.id}) was rejected in Admissions. The seat returned to the bundle.`, 'info'); };
+ACT.agySimReject = () => { const ap = allApplications().find(x => x.agySeat && x.status !== 'Rejected' && (STORE.agy.assign.find(s => s.id === x.agySeat) || {}).agency === (S.portal === 'agency' ? AGN() : 'CarePlus Recruitment (demo)')); if (!ap) { toast('No NVQ admission in progress.', 'info'); return; } ap.status = 'Rejected'; logA('Admissions', ap.id, 'Application rejected', 'Under Review', 'Rejected', 'Demo'); agyAdmSync(); render(); toast(`Demo only: ${ap.name}'s admission (${ap.id}) was rejected in Admissions. The seat returned to the bundle.`, 'info'); };
 
 /* ---------- G9.6 bundle expiry → Business Admin and Super Admin notified too ---------- */
 function agyAdminExpiry(t, b, agency, at) {

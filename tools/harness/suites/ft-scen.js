@@ -58,11 +58,11 @@
     step(5, 1); const p = STORE.biz.products.find(x => x.status === 'Draft' && !x.agency); ACT.bPublish({ dataset: { id: p.id } }); rsn('Ready'); prim(); ok('#5.1 bundle published', p.status === 'Published', p.id);
     step(5, 2); ok('#5.2 published bundle offered to the agency', AGY_CATALOGUE().some(c => c.id === p.id) || /Oral/.test(main()));
     const n0 = ADMIN.bundles.length; ACT.agBuy({ dataset: { id: 'CAT-2' } }); prim(); prim(); await wait(3000); closeModal();
-    const b = ADMIN.bundles.slice(n0).find(x => x.agency === 'CarePlus Recruitment') || ADMIN.bundles.find(x => x.agency === 'CarePlus Recruitment' && x.courses.includes('Infection Prevention and Control') && bStatus(x) !== 'Expired' && left(x) > 0);
+    const b = ADMIN.bundles.slice(n0).find(x => x.agency === 'CarePlus Recruitment (demo)') || ADMIN.bundles.find(x => x.agency === 'CarePlus Recruitment (demo)' && x.courses.includes('Infection Prevention and Control') && bStatus(x) !== 'Expired' && left(x) > 0);
     ok('#5.2 bought by card — seats credited', !!b && ADMIN.bundles.length > n0, b && b.id + ' ' + b.seats);
     step(5, 3); const dan = STORE.worlds.A.me.id; S.agy.as = { step: 4, b: b.id, c: 'Infection Prevention and Control', sel: [dan] }; render(); ACT.agAsConfirm(); prim();
     const as = STORE.agy.assign.find(x => x.lid === dan && x.bundle === b.id); ok('#5.3 seat assigned', !!as, as && as.status);
-    step(5, 4); ok('#5.4 learner sees the sponsored course', W.enrolments.some(e => e.sponsor === 'CarePlus Recruitment' && /Infection/.test(e.title)) && /Infection Prevention/.test(main()));
+    step(5, 4); ok('#5.4 learner sees the sponsored course', W.enrolments.some(e => e.sponsor === 'CarePlus Recruitment (demo)' && /Infection/.test(e.title)) && /Infection Prevention/.test(main()));
   });
 
   await S_('#6 Refund', async () => {
@@ -118,17 +118,17 @@
     const before = ADMIN.referrals.find(r => r.code === 'WB-FATIMA07').regs;
     step(10, 1); ok('#10.1 referral code prefilled and locked', $('#rg-ref') && $('#rg-ref').value === 'WB-FATIMA07' && $('#rg-ref').readOnly);
     const fill = v => Object.entries(v).forEach(([k, x]) => { const el = $(k); if (el.type === 'checkbox') el.checked = x; else el.value = x; });
-    fill({ '#rg-name': 'Meera Iyer', '#rg-email': 'meera.iyer@example.in', '#rg-dial': '+91', '#rg-mob': '98200 44556', '#rg-country': 'India', '#rg-pw': 'Abcdefgh12!x', '#rg-pw2': 'Abcdefgh12!x', '#rg-terms': true, '#rg-priv': true }); SUBMIT.regSubmit(); MODAL.actions.find(a => a.label === 'Confirm').fn(); /* CH-01: confirm the country */
+    fill({ '#rg-name': 'Meera Iyer', '#rg-email': 'meera.iyer@in.example', '#rg-dial': '+91', '#rg-mob': '98200 44556', '#rg-country': 'India', '#rg-pw': 'Abcdefgh12!x', '#rg-pw2': 'Abcdefgh12!x', '#rg-terms': true, '#rg-priv': true }); SUBMIT.regSubmit(); MODAL.actions.find(a => a.label === 'Confirm').fn(); /* CH-01: confirm the country */
     ok('#10.2 OTP screen', S.auth === 'regVerify'); $$('.otp-i').forEach((b, k) => b.value = '123456'[k]); SUBMIT.regCode(); ok('#10.2 welcome', S.auth === 'welcome'); ACT.finishWelcome(); ok('#10.2 learner dashboard', S.route === 'dashboard' && S.signedIn);
-    step(10, 3); const L = allLearners().find(l => l.email === 'meera.iyer@example.in'); ok('#10.3 visible in admin with country and data region (CH-02 GBP, CH-03 region UK)', !!L && L.country === 'India' && L.cur === 'GBP' && L.region === 'UK', L && L.cur + ' ' + L.region);
+    step(10, 3); const L = allLearners().find(l => l.email === 'meera.iyer@in.example'); ok('#10.3 visible in admin with country and data region (CH-02 GBP, CH-03 region UK)', !!L && L.country === 'India' && L.cur === 'GBP' && L.region === 'UK', L && L.cur + ' ' + L.region);
     step(10, 4); ok('#10.4 attribution counted', ADMIN.referrals.find(r => r.code === 'WB-FATIMA07').regs === before + 1);
   });
 
   await S_('#11 Agency link with consent', async () => {
     step(11, 1); ok('#11.1 Awaiting learner consent', /Awaiting learner consent/.test(main()));
-    step(11, 2); const c = agyConsents().find(x => x.agency === 'Hartwell Home Care' && x.status === 'Awaiting learner consent'); ok('#11.2 dashboard prompt', /Hartwell Home Care wants to sponsor you/.test(main())); ACT.consentDo({ dataset: { id: c.id, y: '1' } });
+    step(11, 2); const c = agyConsents().find(x => x.agency === 'Hartwell Home Care (demo)' && x.status === 'Awaiting learner consent'); ok('#11.2 dashboard prompt', /Hartwell Home Care \(demo\) wants to sponsor you/.test(main())); ACT.consentDo({ dataset: { id: c.id, y: '1' } });
     step(11, 3); ok('#11.3 Linked, no queue item', c.status === 'Linked' && !c.qid && /Linked/.test(main()));
-    step(11, 4); const c2 = agyConsents()[0]; ok('#11.4 request for an enrolled course', c2.status === 'Awaiting learner consent' && c2.agency === 'Hartwell Home Care', c2.course);
+    step(11, 4); const c2 = agyConsents()[0]; ok('#11.4 request for an enrolled course', c2.status === 'Awaiting learner consent' && c2.agency === 'Hartwell Home Care (demo)', c2.course);
     step(11, 5); ACT.consentDo({ dataset: { id: c2.id, y: '1' } }); ok('#11.5 awaiting Academy approval', c2.status === 'Awaiting Academy approval');
     step(11, 6); go('a-queue', { id: c2.qid }); ACT.qDo({ dataset: { id: c2.qid, a: 'approve' } }); rsn('Consent on file'); prim();
     step(11, 7); ok('#11.7 Linked', c2.status === 'Linked');

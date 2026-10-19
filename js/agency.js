@@ -5,10 +5,10 @@
 
 /* ---------- Identities & variants (§3) ---------- */
 const AGY_VARIANTS = {
-  A: { id: 'AG-02', label: 'A · CarePlus Recruitment (default)', note: 'UK · GBP · full communication · assessment detail hidden' },
-  B: { id: 'AG-03', label: 'B · Gulf Care Recruitment', note: 'UAE · receive-only · every report column visible · segregation test' },
-  C: { id: 'AG-07', label: 'C · Agency with no bundles yet', note: 'Hartwell Home Care · empty states' },
-  D: { id: 'AG-06', label: 'D · Agency login deactivated', note: 'Harbour Healthcare Solutions · sign-in blocked' },
+  A: { id: 'AG-02', label: 'A · CarePlus Recruitment (demo) (default)', note: 'UK · GBP · full communication · assessment detail hidden' },
+  B: { id: 'AG-03', label: 'B · Gulf Care Recruitment (demo)', note: 'UAE · receive-only · every report column visible · segregation test' },
+  C: { id: 'AG-07', label: 'C · Agency with no bundles yet', note: 'Hartwell Home Care (demo) · empty states' },
+  D: { id: 'AG-06', label: 'D · Agency login deactivated', note: 'Harbour Healthcare Solutions (demo) · sign-in blocked' },
 };
 S.agy = { v: 'A', as: null, imp: null, buy: null, q: '', visSeen: null };
 const AG = () => ADMIN.agencies.find(a => a.id === (S.agy.id || AGY_VARIANTS[S.agy.v].id));
@@ -22,17 +22,17 @@ const AGY_TZ = () => AG().region === 'UAE' ? 'Asia/Dubai' : 'Europe/London';
 function agyPatch() {
   if (!ADMIN || ADMIN._agyPatched) return; ADMIN._agyPatched = true;
   const A = ADMIN, G = STORE.agy = { offset: 0, assign: [], certs: [], purchases: [], anns: [], notifs: [], lmails: [], ledger: [], linked: {}, meta: {}, drafts: {} };
-  const CP = 'CarePlus Recruitment', GC = 'Gulf Care Recruitment';
+  const CP = 'CarePlus Recruitment (demo)', GC = 'Gulf Care Recruitment (demo)';
   const gc = A.agencies.find(a => a.id === 'AG-03'); if (gc) gc.vis = { individual: true, consolidated: true, assessment: true, certExpiry: true };
-  if (!A.agencies.some(a => a.id === 'AG-07')) A.agencies.push({ id: 'AG-07', name: 'Hartwell Home Care', region: 'UK', contact: 'Priti Shah (Operations Manager)', email: 'priti@hartwellhomecare.co.uk', status: 'Active', perms: 'Full', vis: { individual: true, consolidated: true, assessment: false, certExpiry: true }, login: 'priti@hartwellhomecare.co.uk', loginStatus: 'Active' });
+  if (!A.agencies.some(a => a.id === 'AG-07')) A.agencies.push({ id: 'AG-07', name: 'Hartwell Home Care (demo)', region: 'UK', contact: 'Priti Shah (Operations Manager)', email: 'priti@hartwellhomecare.example', status: 'Active', perms: 'Full', vis: { individual: true, consolidated: true, assessment: false, certExpiry: true }, login: 'priti@hartwellhomecare.example', loginStatus: 'Active' });
   // Learners: CarePlus 26 new + the 2 existing; Gulf Care 4 new + 3 existing; Hartwell 2
-  const mk = (name, agency, how, k, extra = {}) => { const p = name.toLowerCase().replace(/'/g, '').split(' '), uae = agency === GC; const l = { id: 'IA-L-' + (41000 + A.learners.filter(x => !x.g31).length * 17), name, email: `${p[0]}.${p[p.length - 1]}@${uae ? 'gulfcare-staff.ae' : agency === CP ? 'careplus-staff.co.uk' : 'hartwell-care.co.uk'}`, mobile: uae ? `+971 50 ${410 + k} ${5100 + k * 37}` : `+44 7700 91${String(1000 + k * 47).slice(-4)}`, agency, courses: [], acct: extra.acct || 'Active', rec: 'Active', region: uae ? 'UAE' : 'UK', last: D(-(k % 9), '10:00'), flags: [], dob: '—', address: '—', postcode: '—', country: uae ? 'United Arab Emirates' : 'United Kingdom', joined: fd(D(-120 + k * 3)), referral: 'Created by agency', cur: 'GBP' }; A.learners.push(l); G.meta[l.id] = { how, added: D(-120 + k * 3), staffRef: (uae ? 'GC-' : 'CP-') + String(1040 + k * 3), ...extra.meta }; return l; };
+  const mk = (name, agency, how, k, extra = {}) => { const p = name.toLowerCase().replace(/'/g, '').split(' '), uae = agency === GC; const l = { id: 'IA-L-' + (41000 + A.learners.filter(x => !x.g31).length * 17), name, email: `${p[0]}.${p[p.length - 1]}@${uae ? 'gulfcare-staff.ae.example' : agency === CP ? 'careplus-staff.example' : 'hartwell-care.example'}`, mobile: uae ? `+971 50 000 ${5100 + k * 37}` : `+44 7700 900${300 + k}`, agency, courses: [], acct: extra.acct || 'Active', rec: 'Active', region: uae ? 'UAE' : 'UK', last: D(-(k % 9), '10:00'), flags: [], dob: '—', address: '—', postcode: '—', country: uae ? 'United Arab Emirates' : 'United Kingdom', joined: fd(D(-120 + k * 3)), referral: 'Created by agency', cur: 'GBP' }; A.learners.push(l); G.meta[l.id] = { how, added: D(-120 + k * 3), staffRef: (uae ? 'GC-' : 'CP-') + String(1040 + k * 3), ...extra.meta }; return l; };
   const cpNames = ['Bethany Cole', 'Marcus Reid', 'Hannah Doyle', 'Samuel Okoro', 'Leanne Fisher', 'Rajesh Kumar', 'Natalie Byrne', 'Darren Holt', 'Amira Hassan', 'Jordan Ellis', 'Kirsty Lamb', 'Tomasz Nowak', 'Grace Ibe', 'Ryan McAllister', 'Zoe Patterson', 'Femi Adeyemi', 'Laura Quinn', 'Owen Hughes', 'Priyanka Desai', 'Callum Ward', 'Jasmine Begum', 'Stuart Long', 'Ellie Carter', 'Mateusz Zielinski', 'Abigail Shaw', 'Kwame Mensah'];
   const cp = cpNames.map((n, k) => mk(n, CP, k % 3 === 0 ? 'Bulk import' : k % 7 === 5 ? 'Linked' : 'Created', k, { acct: [4, 15, 22].includes(k) ? 'Pending Verification' : k === 19 ? 'Deactivated' : 'Active' }));
   A.learners.filter(l => l.agency === CP && !G.meta[l.id]).forEach((l, k) => G.meta[l.id] = { how: 'Linked', added: D(-200 + k * 10), staffRef: 'CP-09' + k });
   const gcl = ['Rashid Al Amiri', 'Joy Fernandes', 'Sunil Menon', 'Hessa Al Mazrouei'].map((n, k) => mk(n, GC, k % 2 ? 'Bulk import' : 'Created', 40 + k));
   A.learners.filter(l => l.agency === GC && !G.meta[l.id]).forEach((l, k) => G.meta[l.id] = { how: 'Created', added: D(-180 + k * 9), staffRef: 'GC-08' + k });
-  ['Tariq Bashir', 'Mollie Grant'].forEach((n, k) => mk(n, 'Hartwell Home Care', 'Created', 60 + k, { acct: 'Pending Verification' }));
+  ['Tariq Bashir', 'Mollie Grant'].forEach((n, k) => mk(n, 'Hartwell Home Care (demo)', 'Created', 60 + k, { acct: 'Pending Verification' }));
   // Daniel Okafor (demo learner A) is linked to CarePlus — only CarePlus-sponsored enrolments are visible to the agency
   G.linked[CP] = [STORE.worlds.A.me.id]; G.meta[STORE.worlds.A.me.id] = { how: 'Linked', added: D(-40), staffRef: 'CP-0007' };
   // Bundles (reuse BN-02 Gulf Care, BN-03 CarePlus NVQ; add the rest)
@@ -77,7 +77,7 @@ function agyPatch() {
   pur('TXN-71802', CP, D(-6, '15:10'), null, 1110, 'GBP', 'Failed', { name: 'Fire Safety Awareness — 30 seats', seats: 30 });
   pur('TXN-71950', GC, b15.from, b15, b15.price, 'GBP', 'Paid'); pur('TXN-60331', GC, b02.from, b02, b02.price, 'GBP', 'Paid');
   const q = (id, type, raised, status, extra) => ({ id, type, raisedBy: extra.raisedBy || CP, raised, status, first: extra.first || 'Leila Haddad', related: extra.related, notes: [], history: [[extra.raisedBy || CP, raised, 'Raised', extra.reason || '']], ...extra });
-  const inv = (id, raised, status, name, seats, amount, extra = {}) => q(id, 'Agency invoice (offline) purchase', raised, status, { amount, cur: 'GBP', reason: extra.reason || 'Invoice request from the agency portal.', related: [`${CP} · ${seats} × ${name}`, 'f-agency'], data: { agency: CP, bundle: name, seats, validity: D(365), po: extra.po || 'PO-CPR-' + id.slice(-4), priceMode: 'Automatic', billing: 'Ravi Sandhu — accounts@careplus-recruit.co.uk', courses: extra.courses || ['Moving and Handling People'] }, ...extra });
+  const inv = (id, raised, status, name, seats, amount, extra = {}) => q(id, 'Agency invoice (offline) purchase', raised, status, { amount, cur: 'GBP', reason: extra.reason || 'Invoice request from the agency portal.', related: [`${CP} · ${seats} × ${name}`, 'f-agency'], data: { agency: CP, bundle: name, seats, validity: D(365), po: extra.po || 'PO-CPR-' + id.slice(-4), priceMode: 'Automatic', billing: 'Ravi Sandhu — accounts@careplus-recruit.example', courses: extra.courses || ['Moving and Handling People'] }, ...extra });
   A.queue.push(
     inv('AQ-5001', D(-1, '11:20'), 'Pending', 'Basic Life Support refresher', 20, 702, { courses: ['Basic Life Support and Anaphylaxis'] }),
     inv('AQ-5002', D(-8, '09:40'), 'Approved', 'Medication Awareness seats', 15, 662, { stage: 'awaiting', decidedBy: 'Leila Haddad', decision: 'Approved — awaiting payment.', courses: ['Medication Awareness'], extraHist: [['Leila Haddad', D(-6, '10:00'), 'Approve', 'PO verified']] }),
@@ -91,7 +91,7 @@ function agyPatch() {
   A.threads.push(
     { id: 'MT-20', subject: 'Can we split the Care Certificate cohort?', party: CP, status: 'Open', cat: 'General', msgs: [['Ravi Sandhu', D(-1, '09:10'), 'Six of our new starters begin in November — can we hold their Care Certificate seats until then?']] },
     { id: 'MT-21', subject: 'Learner query: Bethany Cole quiz attempts', party: CP, status: 'Answered', cat: 'Learner query', learner: cp[0].id, msgs: [['Ravi Sandhu', D(-5, '14:00'), 'Bethany says her quiz froze on attempt 2.'], ['Sophie Turner', D(-4, '10:20'), 'We checked the log — the attempt saved correctly. She has one attempt left.']] },
-    { id: 'MT-22', subject: 'Invoice AQ-5002 payment instructions', party: CP, status: 'Answered', cat: 'Purchase', msgs: [['Ravi Sandhu', D(-6, '11:00'), 'Please resend the bank details.'], ['Leila Haddad', D(-6, '11:40'), 'Sent to accounts@careplus-recruit.co.uk.']] },
+    { id: 'MT-22', subject: 'Invoice AQ-5002 payment instructions', party: CP, status: 'Answered', cat: 'Purchase', msgs: [['Ravi Sandhu', D(-6, '11:00'), 'Please resend the bank details.'], ['Leila Haddad', D(-6, '11:40'), 'Sent to accounts@careplus-recruit.example.']] },
     { id: 'MT-23', subject: 'Report columns for our board pack', party: CP, status: 'Closed', cat: 'Report', msgs: [['Ravi Sandhu', D(-30), 'Can we see quiz scores?'], ['Sophie Turner', D(-29), 'Assessment detail isn\'t shared with agencies by default. We\'ve noted your request.']] },
     { id: 'MT-24', subject: 'Name correction: Grace Ibe', party: CP, status: 'Closed', cat: 'Correction request', learner: cp[12].id, msgs: [['Ravi Sandhu', D(-45), 'Grace\'s surname should be "Ibe-Okafor".'], ['Owen Price', D(-44), 'Corrected after we checked her ID.']] },
     { id: 'MT-25', subject: 'Welcome to your agency portal', party: GC, status: 'Answered', cat: 'General', fromAcademy: true, msgs: [['Sophie Turner', D(-15), 'Your portal is ready. Messages from the Academy will appear here.']] });
@@ -116,7 +116,7 @@ function agyPatch() {
   N(GC, 'Learner completed a course', 'Rashid Al Amiri completed The Care Certificate.', D(-3), 'g-reports', false, 'Courses & certificates');
   // Learner demo inbox: set-password emails already sent to pending learners
   A.learners.filter(l => l.acct === 'Pending Verification' && G.meta[l.id]).forEach(l => G.lmails.push({ id: 'LM-' + G.lmails.length, lid: l.id, name: l.name, email: l.email, agency: l.agency, sent: G.meta[l.id].added, used: false }));
-  A.security.unshift({ id: 'SE-480', sev: 'High', at: D(-7, '21:00'), type: 'Denied cross-agency access', detail: 'Agency admin (Gulf Care Recruitment) tried to open a CarePlus Recruitment learner (IA-L-41017) by URL', reviewed: false });
+  A.security.unshift({ id: 'SE-480', sev: 'High', at: D(-7, '21:00'), type: 'Denied cross-agency access', detail: 'Agency admin (Gulf Care Recruitment (demo)) tried to open a CarePlus Recruitment (demo) learner (IA-L-41017) by URL', reviewed: false });
 }
 const _baG = buildAdmin; buildAdmin = function (av) { const r = _baG(av); agyPatch(); return r; };
 const _isG = initStore; initStore = function () { _isG(); agyPatch(); };
@@ -173,8 +173,8 @@ function AGY_CATALOGUE() {
     mk('CAT-3', 'Dementia Awareness seats', ['Dementia Awareness'], 10, 730, null),
     mk('CAT-4', 'Care Certificate cohort', ['The Care Certificate (15 Standards)'], 5, 365, null),
     mk('CAT-5', 'Medication Awareness seats', ['Medication Awareness'], 10, 365, null),
-    mk('CAT-6', 'CarePlus annual refresher', ['Moving and Handling People', 'Fire Safety Awareness', 'Infection Prevention and Control'], 25, 365, 'CarePlus Recruitment', { fixedPct: 18 }),
-    mk('CAT-7', 'Gulf Care induction pack', ['The Care Certificate (15 Standards)', 'Dementia Awareness'], 10, 365, 'Gulf Care Recruitment', { fixedPct: 12 }),
+    mk('CAT-6', 'CarePlus annual refresher', ['Moving and Handling People', 'Fire Safety Awareness', 'Infection Prevention and Control'], 25, 365, 'CarePlus Recruitment (demo)', { fixedPct: 18 }),
+    mk('CAT-7', 'Gulf Care induction pack', ['The Care Certificate (15 Standards)', 'Dementia Awareness'], 10, 365, 'Gulf Care Recruitment (demo)', { fixedPct: 12 }),
   ].filter(c => !c.custom || c.custom === AGN()).map(c => ({ ...c, unit: c.courses.reduce((s, t) => s + cp(t).gbp, 0) }));
 }
 const SLABS = [[50, 15], [25, 10], [10, 5]];
@@ -437,7 +437,7 @@ function agyCreateLearner(n, e, m, how, ref) { const uae = AG().region === 'UAE'
 ACT.agCorrect = el => { if (receiveOnly()) { toast('Your agency is set to receive-only — contact the Academy by email.', 'info'); return; } const L = learnerById(el.dataset.id); ACT.agNewMsg({ dataset: { s: 'Correction request: ' + L.name, c: 'Correction request', l: L.id, b: 'Please correct the following identity details for this learner: ' } }); };
 ACT.agResendPw = el => { const L = learnerById(el.dataset.id); STORE.agy.lmails.unshift({ id: 'LM-' + (100 + STORE.agy.lmails.length), lid: L.id, name: L.name, email: L.email, agency: AGN(), sent: now().toISOString(), used: false }); toast(`Set-password link resent to ${esc(L.email)}.`); };
 // Bulk import wizard (state kept through a session timeout)
-const IMP_ROWS = () => [['Ella Watson', 'ella.watson@example.co.uk', '+44 7700 920101', 'valid'], ['Ben Shaw', 'ben.shaw@example.co.uk', '+44 7700 920102', 'valid'], ['Tia Morgan', 'tia.morgan@example.co.uk', '+44 7700 920103', 'valid'], [agyRoster()[0] ? agyRoster()[0].name : 'Bethany Cole', agyRoster()[0] ? agyRoster()[0].email : 'x@x', '+44 7700 920104', 'dupMine'], ['Aisha Rahman', 'aisha.rahman@gmail.com', '+44 7700 900188', 'elsewhere'], ['Peter Grant', 'peter.grant@', '+44 7700 920106', 'error:Invalid email address'], ['Noura Saeed', 'noura.saeed@example.co.uk', '', 'error:Mobile is required'], ['Kieran Walsh', 'kieran.walsh@careplus-staff.co.uk', '+44 7700 920108', 'valid']];
+const IMP_ROWS = () => [['Ella Watson', 'ella.watson@uk.example', '+44 7700 900901', 'valid'], ['Ben Shaw', 'ben.shaw@uk.example', '+44 7700 900902', 'valid'], ['Tia Morgan', 'tia.morgan@uk.example', '+44 7700 900903', 'valid'], [agyRoster()[0] ? agyRoster()[0].name : 'Bethany Cole', agyRoster()[0] ? agyRoster()[0].email : 'x@x', '+44 7700 900904', 'dupMine'], ['Aisha Rahman', 'aisha.rahman@gmail.example', '+44 7700 900188', 'elsewhere'], ['Peter Grant', 'peter.grant@', '+44 7700 900906', 'error:Invalid email address'], ['Noura Saeed', 'noura.saeed@uk.example', '', 'error:Mobile is required'], ['Kieran Walsh', 'kieran.walsh@careplus-staff.example', '+44 7700 900908', 'valid']];
 ACT.agImport = () => { S.agy.imp = S.agy.imp || { step: 1, map: { name: 'Full name', email: 'Email address', mobile: 'Mobile' }, link: {}, bundle: '', course: '', mode: 'all' }; agImpDraw(); };
 function agImpDraw() {
   const st = S.agy.imp, rows = IMP_ROWS(), valid = rows.filter(r => r[3] === 'valid'), bs = agyBundles().filter(b => bStatus(b) !== 'Expired' && left(b) > 0), b = bs.find(x => x.id === st.bundle);
@@ -623,7 +623,7 @@ ACT.agyEdge = el => {
   if (e === 'expired') { const b = agyBundles().find(x => bStatus(x) === 'Expired'); if (b) go('g-bundle', { id: b.id }); return; }
   if (e === 'full') { const b = agyBundles().find(x => bStatus(x) === 'Fully used'); if (b) go('g-bundle', { id: b.id }); return; }
   if (e === 'unassign') { const a = agyAssign().find(x => x.status === 'Completed' && x.kind === 'short'); ACT.agUnassign({ dataset: { id: a.id } }); return; }
-  if (e === 'dup') { ACT.agAddLearner(); const i = $('#gl-e'); i.value = 'aisha.rahman@gmail.com'; INP.agDup(i); $('#gl-n').value = 'Aisha Rahman'; return; }
+  if (e === 'dup') { ACT.agAddLearner(); const i = $('#gl-e'); i.value = 'aisha.rahman@gmail.example'; INP.agDup(i); $('#gl-n').value = 'Aisha Rahman'; return; }
   if (e === 'linkrej') { go('g-learners'); return; }
 };
 // Demo-only controls
@@ -637,7 +637,7 @@ ACT.agyAdvance = () => {
   render(); toast(`Demo only: advanced 30 days. ${lapsed} seat(s) lapsed; expiring certificates flagged.`, 'info');
 };
 ACT.agySimComplete = () => {
-  const name = S.portal === 'agency' ? AGN() : 'CarePlus Recruitment';
+  const name = S.portal === 'agency' ? AGN() : 'CarePlus Recruitment (demo)';
   const a = agyAssign(name).filter(x => x.status === 'Active' && x.kind === 'short').sort((x, y) => (learnerById(y.lid).v ? 1 : 0) - (learnerById(x.lid).v ? 1 : 0))[0]; if (!a) { toast('No active short-course seat to complete.', 'info'); return; }
   a.status = 'Completed'; a.progress = 100; a.quiz = { used: 1, max: 3, result: 'Pass' };
   const L = learnerById(a.lid), iss = agNow().toISOString(), exp = new Date(agNow().getTime() + 365 * DAY).toISOString(), no = 'WEL-2026-0' + (3500 + STORE.agy.certs.length);
@@ -680,7 +680,7 @@ SCREENS['g-index'] = () => { const L = (l, t) => `<li><button class="linklike" d
   <section class="card idx-sec"><h2>Modals</h2><ul class="idx-list">${A('Add learner (live duplicate check)', 'agAddLearner')}${A('Bulk import wizard', 'agImport')}${A('Assign seats wizard', 'agAssignStart')}${A('Unassign seat', 'agyEdge', 'data-e="unassign"')}${A('Buy bundle (quantity, price, method)', 'agBuy', 'data-id="CAT-1"')}${A('New message', 'agNewMsg')}${A('New announcement', 'agAnn')}</ul></section>
   <section class="card idx-sec"><h2>Edge states (§7)</h2><ul class="idx-list">${['breach|Segregation breach (another agency\'s learner)', 'seats|Not enough seats', 'expired|Bundle expired (lapsed seats)', 'full|Bundle fully used', 'unassign|Unassign blocked (Completed)', 'dup|Learner exists elsewhere (link request)', 'linkrej|Link request rejected', 'ro|Receive-only agency', 'empty|No bundles yet', 'deact|Deactivated login', 'first|First-time set password + welcome', '404|404'].map(x => A(x.split('|')[1], 'agyEdge', `data-e="${x.split('|')[0]}"`)).join('')}${A('Learner demo inbox', 'switchRole', 'data-r="linbox"')}</ul></section>`; };
 const _idxG = SCREENS.index;
-SCREENS.index = p => _idxG(p) + `<section class="card idx-sec"><h2>Agency portal</h2><ul class="idx-list"><li><button class="linklike" data-act="switchRole" data-r="agyA">Sign in as Agency — CarePlus Recruitment (demo)</button></li><li><button class="linklike" data-act="switchRole" data-r="agyB">Sign in as Agency — Gulf Care Recruitment (demo, receive-only)</button></li><li><button class="linklike" data-act="agyEdge" data-e="empty">Agency with no bundles yet</button></li><li><button class="linklike" data-act="agyEdge" data-e="deact">Deactivated agency login</button></li><li><button class="linklike" data-act="switchRole" data-r="linbox">Learner demo inbox (set-password emails)</button></li></ul></section>`;
+SCREENS.index = p => _idxG(p) + `<section class="card idx-sec"><h2>Agency portal</h2><ul class="idx-list"><li><button class="linklike" data-act="switchRole" data-r="agyA">Sign in as Agency — CarePlus Recruitment (demo)</button></li><li><button class="linklike" data-act="switchRole" data-r="agyB">Sign in as Agency — Gulf Care Recruitment (demo) (demo, receive-only)</button></li><li><button class="linklike" data-act="agyEdge" data-e="empty">Agency with no bundles yet</button></li><li><button class="linklike" data-act="agyEdge" data-e="deact">Deactivated agency login</button></li><li><button class="linklike" data-act="switchRole" data-r="linbox">Learner demo inbox (set-password emails)</button></li></ul></section>`;
 AFTER.push(() => { const d = $('.demo-hint .row'); if (d && !S.signedIn && !d.querySelector('[data-r="agyA"]')) d.insertAdjacentHTML('beforeend', '<button type="button" class="btn btn-sm" data-act="switchRole" data-r="agyA">Sign in as Agency — CarePlus (demo)</button><button type="button" class="btn btn-sm" data-act="switchRole" data-r="agyB">Sign in as Agency — Gulf Care (demo)</button>'); });
 
 if (ADMIN) agyPatch();

@@ -22,8 +22,8 @@ function initStore() {
   const F = STORE.worlds.F;
   F.requests.unshift({ id: 'R-1077', type: 'Extra quiz attempts', target: 'Basic Life Support and Anaphylaxis', mid: 'm1', module: 'Basic life support and using an AED', raised: D(-3, '19:40'), status: 'Requested', reason: 'I have re-watched the AED scenario twice and would like another chance.', decision: null });
   const C = STORE.worlds.C;
-  C.requests.unshift({ id: 'R-1080', type: 'Profile change', target: 'Address', raised: D(-2, '08:30'), status: 'Requested', reason: 'I moved house on 28 September.', proposed: '12 Knighton Park Road, Leicester', decision: null });
-  C.profilePending['Address'] = '12 Knighton Park Road, Leicester';
+  C.requests.unshift({ id: 'R-1080', type: 'Profile change', target: 'Address', raised: D(-2, '08:30'), status: 'Requested', reason: 'I moved house on 28 September.', proposed: '12 Sample Street, Leicester', decision: null });
+  C.profilePending['Address'] = '12 Sample Street, Leicester';
   W = STORE.worlds[S.variant];
   applyEdge();
   buildAdmin(S.adminVariant || 'A');
@@ -59,12 +59,12 @@ function buildAdmin(av) {
   /* ---------- Agencies ---------- */
   const ag = (id, name, region, contact, email, status, extra = {}) => ({ id, name, region, contact, email, status, perms: 'Full', vis: { individual: true, consolidated: true, assessment: true, certExpiry: true }, login: email, loginStatus: 'Active', ...extra });
   A.agencies = [
-    ag('AG-01', 'BrightCare Staffing Ltd', 'UK', 'Joanna Price (Training Lead)', 'training@brightcare-staff.co.uk', 'Active'),
-    ag('AG-02', 'CarePlus Recruitment', 'UK', 'Ravi Sandhu', 'ravi@careplus-recruit.co.uk', 'Active'),
-    ag('AG-03', 'Gulf Care Recruitment', 'UAE', 'Huda Al Marri', 'huda@gulfcare.ae', 'Active', { perms: 'Receive-only' }),
-    ag('AG-04', 'Emirates Home Health Staffing', 'UAE', 'Sanjay Pillai', 'sanjay@ehhs.ae', 'Active'),
-    ag('AG-05', 'Northern Lights Care Agency', 'UK', 'Fiona McLeod', 'fiona@northernlightscare.co.uk', 'Active'),
-    ag('AG-06', 'Harbour Healthcare Solutions', 'UK', 'Dean Morris', 'dean@harbourhealth.co.uk', 'Suspended', { loginStatus: 'Deactivated' }),
+    ag('AG-01', 'BrightCare Staffing Ltd (demo)', 'UK', 'Joanna Price (Training Lead)', 'training@brightcare-staff.example', 'Active'),
+    ag('AG-02', 'CarePlus Recruitment (demo)', 'UK', 'Ravi Sandhu', 'ravi@careplus-recruit.example', 'Active'),
+    ag('AG-03', 'Gulf Care Recruitment (demo)', 'UAE', 'Huda Al Marri', 'huda@gulfcare.ae.example', 'Active', { perms: 'Receive-only' }),
+    ag('AG-04', 'Emirates Home Health Staffing (demo)', 'UAE', 'Sanjay Pillai', 'sanjay@ehhs.ae.example', 'Active'),
+    ag('AG-05', 'Northern Lights Care Agency (demo)', 'UK', 'Fiona McLeod', 'fiona@northernlightscare.example', 'Active'),
+    ag('AG-06', 'Harbour Healthcare Solutions (demo)', 'UK', 'Dean Morris', 'dean@harbourhealth.example', 'Suspended', { loginStatus: 'Deactivated' }),
   ];
 
   /* ---------- Extra learners (25–40) ---------- */
@@ -72,7 +72,7 @@ function buildAdmin(av) {
   const pool = ['Moving and Handling People — 2026', 'Basic Life Support and Anaphylaxis', 'Infection Prevention and Control', 'Fire Safety Awareness', 'The Care Certificate (15 Standards)', 'Dementia Awareness', 'Level 2 Diploma in Care (England)', 'Level 3 Diploma in Adult Care (England)', 'Food Hygiene Level 2'];
   A.learners = names.map(([n, region], i) => {
     const parts = n.toLowerCase().replace(/'/g, '').split(' ');
-    const agency = [0, 3, 6, 9, 14].includes(i) ? 'BrightCare Staffing Ltd' : [1, 7].includes(i) ? 'CarePlus Recruitment' : [19, 22, 25].includes(i) ? 'Gulf Care Recruitment' : [23, 27].includes(i) ? 'Emirates Home Health Staffing' : i === 11 ? 'Northern Lights Care Agency' : null;
+    const agency = [0, 3, 6, 9, 14].includes(i) ? 'BrightCare Staffing Ltd (demo)' : [1, 7].includes(i) ? 'CarePlus Recruitment (demo)' : [19, 22, 25].includes(i) ? 'Gulf Care Recruitment (demo)' : [23, 27].includes(i) ? 'Emirates Home Health Staffing (demo)' : i === 11 ? 'Northern Lights Care Agency (demo)' : null;
     const acct = [4, 21, 28].includes(i) ? 'Pending Verification' : [12, 17].includes(i) ? 'Deactivated' : 'Active';
     const rec = [10, 16, 29].includes(i) ? 'Archived' : 'Active';
     const flags = [];
@@ -81,11 +81,11 @@ function buildAdmin(av) {
     if ([8, 15, 20].includes(i)) flags.push('At risk');
     if ([15, 18].includes(i)) flags.push('Discontinued enrolment');
     const courses = [pool[i % pool.length], ...(i % 3 === 0 ? [pool[(i + 4) % pool.length]] : [])];
-    return { id: 'IA-L-' + (30200 + i * 37), name: n, email: `${parts[0]}.${parts[parts.length - 1]}@${region === 'UAE' ? 'mail.ae' : 'example.co.uk'}`, mobile: region === 'UAE' ? `+971 5${i % 6} ${300 + i * 11} ${4000 + i * 37}` : `+44 7700 9${String(10000 + i * 313).slice(-5)}`, agency, courses, acct, rec, region, last: D(-(i * 3 % 40) - (rec === 'Archived' ? 400 : 0), '10:00'), flags, dob: `${1 + i % 27} ${['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov'][i % 6]} ${1980 + i % 20}`, address: region === 'UAE' ? `Villa ${i + 3}, Al Barsha, Dubai` : `${i + 7} Church Lane, ${['Leeds', 'Bristol', 'Nottingham', 'Croydon', 'Leicester', 'Manchester'][i % 6]}`, postcode: region === 'UAE' ? '—' : ['LS6 2AB', 'BS7 8QT', 'NG5 1DB', 'CR0 4XY', 'LE3 9PL', 'M14 6HT'][i % 6], country: region === 'UAE' ? 'United Arab Emirates' : 'United Kingdom', joined: fd(D(-30 - i * 21)), referral: agency ? 'Created by agency' : i % 4 === 0 ? 'Welfare Buddy referral (code WB-FATIMA07)' : 'Self-registration', cur: 'GBP' };
+    return { id: 'IA-L-' + (30200 + i * 37), name: n, email: `${parts[0]}.${parts[parts.length - 1]}@${region === 'UAE' ? 'mail.ae.example' : 'uk.example'}`, mobile: region === 'UAE' ? `+971 5${i % 6} 000 ${4000 + i * 37}` : `+44 7700 900${500 + i * 3}`, agency, courses, acct, rec, region, last: D(-(i * 3 % 40) - (rec === 'Archived' ? 400 : 0), '10:00'), flags, dob: `${1 + i % 27} ${['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov'][i % 6]} ${1980 + i % 20}`, address: region === 'UAE' ? `Villa ${i + 3}, Example Villas, Dubai` : `${i + 7} Example Lane, ${['Leeds', 'Bristol', 'Nottingham', 'Croydon', 'Leicester', 'Manchester'][i % 6]}`, postcode: region === 'UAE' ? '—' : ['ZZ99 4AA', 'ZZ99 4AB', 'ZZ99 4AD', 'ZZ99 4AE', 'ZZ99 4AF', 'ZZ99 4AG'][i % 6], country: region === 'UAE' ? 'United Arab Emirates' : 'United Kingdom', joined: fd(D(-30 - i * 21)), referral: agency ? 'Created by agency' : i % 4 === 0 ? 'Welfare Buddy referral (code WB-FATIMA07)' : 'Self-registration', cur: 'GBP' };
   });
 
   // G3.1: learners from one other country (India) — CH-02: pay in GBP; CH-03: data region UK
-  [['Kavya Iyer', 'kavya.iyer@example.in', '+91 98450 21734', 'Moving and Handling People — 2026', 'Self-registration', 'Level 2 Diploma in Care (England)'], ['Vikram Nair', 'vikram.nair@example.in', '+91 99300 55812', 'The Care Certificate (15 Standards)', 'Welfare Buddy referral (code WB-HASSAN22)']].forEach(([name, email, mobile, course, referral, nvq], k) => A.learners.push({ id: 'IA-L-' + (31900 + k * 41), name, email, mobile, agency: null, courses: nvq ? [course, nvq] : [course], acct: 'Active', rec: 'Active', region: 'UK', last: D(-2 - k, '11:20'), flags: [], dob: ['4 Feb 1993', '19 Oct 1989'][k], address: ['12 Indiranagar 100 Ft Road, Bengaluru', '6 Marine Drive, Kochi'][k], postcode: ['560038', '682031'][k], country: 'India', joined: fd(D(-60 - k * 30)), referral, cur: 'GBP', g31: true }));
+  [['Kavya Iyer', 'kavya.iyer@in.example', '+91 00000 21734', 'Moving and Handling People — 2026', 'Self-registration', 'Level 2 Diploma in Care (England)'], ['Vikram Nair', 'vikram.nair@in.example', '+91 00000 55812', 'The Care Certificate (15 Standards)', 'Welfare Buddy referral (code WB-HASSAN22)']].forEach(([name, email, mobile, course, referral, nvq], k) => A.learners.push({ id: 'IA-L-' + (31900 + k * 41), name, email, mobile, agency: null, courses: nvq ? [course, nvq] : [course], acct: 'Active', rec: 'Active', region: 'UK', last: D(-2 - k, '11:20'), flags: [], dob: ['4 Feb 1993', '19 Oct 1989'][k], address: ['12 Example Road, Bengaluru', '6 Example Drive, Kochi'][k], postcode: ['560038', '682031'][k], country: 'India', joined: fd(D(-60 - k * 30)), referral, cur: 'GBP', g31: true }));
 
   /* ---------- Courses, programmes, batches ---------- */
   A.courses = [
@@ -117,28 +117,28 @@ function buildAdmin(av) {
 
   /* ---------- Bundles & licences ---------- */
   A.bundles = [
-    { id: 'BN-01', name: 'BrightCare mandatory training 2026', agency: 'BrightCare Staffing Ltd', courses: ['Moving and Handling People', 'Basic Life Support and Anaphylaxis', 'Fire Safety Awareness'], seats: 60, used: 47, validity: D(85), mode: 'Automatic (−15%)', price: 9435, cur: 'GBP', avail: 'Specific agencies', status: 'Active' },
-    { id: 'BN-02', name: 'Gulf Care induction pack', agency: 'Gulf Care Recruitment', courses: ['The Care Certificate (15 Standards)', 'Dementia Awareness'], seats: 25, used: 22, validity: D(19), mode: 'Customised', price: 4258.06, cur: 'GBP', avail: 'Specific agencies', status: 'Pending approval', belowFloor: true },
-    { id: 'BN-03', name: 'CarePlus NVQ Level 2 seats', agency: 'CarePlus Recruitment', courses: ['Level 2 Diploma in Care (England)'], seats: 8, used: 5, validity: D(240), mode: 'Customised', price: 13600, cur: 'GBP', avail: 'Specific agencies', status: 'Active' },
+    { id: 'BN-01', name: 'BrightCare mandatory training 2026', agency: 'BrightCare Staffing Ltd (demo)', courses: ['Moving and Handling People', 'Basic Life Support and Anaphylaxis', 'Fire Safety Awareness'], seats: 60, used: 47, validity: D(85), mode: 'Automatic (−15%)', price: 9435, cur: 'GBP', avail: 'Specific agencies', status: 'Active' },
+    { id: 'BN-02', name: 'Gulf Care induction pack', agency: 'Gulf Care Recruitment (demo)', courses: ['The Care Certificate (15 Standards)', 'Dementia Awareness'], seats: 25, used: 22, validity: D(19), mode: 'Customised', price: 4258.06, cur: 'GBP', avail: 'Specific agencies', status: 'Pending approval', belowFloor: true },
+    { id: 'BN-03', name: 'CarePlus NVQ Level 2 seats', agency: 'CarePlus Recruitment (demo)', courses: ['Level 2 Diploma in Care (England)'], seats: 8, used: 5, validity: D(240), mode: 'Customised', price: 13600, cur: 'GBP', avail: 'Specific agencies', status: 'Active' },
     { id: 'BN-04', name: 'Starter bundle (any agency)', agency: '—', courses: ['Moving and Handling People', 'Infection Prevention and Control'], seats: 10, used: 0, validity: null, mode: 'Automatic (volume slab 10+)', price: 680, cur: 'GBP', avail: 'Global', status: 'Active' },
-    { id: 'BN-05', name: 'EHHS clinical skills', agency: 'Emirates Home Health Staffing', courses: ['Basic Life Support and Anaphylaxis', 'Medication Awareness'], seats: 30, used: 29, validity: D(11), mode: 'Automatic (−10%)', price: 2341.94, cur: 'GBP', avail: 'Specific agencies', status: 'Active' },
-    { id: 'BN-06', name: 'Northern Lights 2025 refresh', agency: 'Northern Lights Care Agency', courses: ['Moving and Handling People'], seats: 20, used: 20, validity: D(-20), mode: 'Automatic', price: 900, cur: 'GBP', avail: 'Specific agencies', status: 'Expired' },
-    { id: 'BN-07', name: 'BrightCare NVQ Level 2 seats', agency: 'BrightCare Staffing Ltd', courses: ['Level 2 Diploma in Care (England)'], seats: 10, used: 7, validity: D(300), mode: 'Customised', price: 16200, cur: 'GBP', avail: 'Specific agencies', status: 'Active' },
+    { id: 'BN-05', name: 'EHHS clinical skills', agency: 'Emirates Home Health Staffing (demo)', courses: ['Basic Life Support and Anaphylaxis', 'Medication Awareness'], seats: 30, used: 29, validity: D(11), mode: 'Automatic (−10%)', price: 2341.94, cur: 'GBP', avail: 'Specific agencies', status: 'Active' },
+    { id: 'BN-06', name: 'Northern Lights 2025 refresh', agency: 'Northern Lights Care Agency (demo)', courses: ['Moving and Handling People'], seats: 20, used: 20, validity: D(-20), mode: 'Automatic', price: 900, cur: 'GBP', avail: 'Specific agencies', status: 'Expired' },
+    { id: 'BN-07', name: 'BrightCare NVQ Level 2 seats', agency: 'BrightCare Staffing Ltd (demo)', courses: ['Level 2 Diploma in Care (England)'], seats: 10, used: 7, validity: D(300), mode: 'Customised', price: 16200, cur: 'GBP', avail: 'Specific agencies', status: 'Active' },
   ];
   A.ledger = [
-    ['BrightCare Staffing Ltd', 'BN-01', D(-120), 'Credit', 60, 'Bundle purchased'], ['BrightCare Staffing Ltd', 'BN-01', D(-90), 'Debit', 40, 'Seats assigned (bulk)'], ['BrightCare Staffing Ltd', 'BN-01', D(-40), 'Debit', 8, 'Seats assigned'],
-    ['BrightCare Staffing Ltd', 'BN-01', D(-1), 'Credit', 1, 'Seat returned — unassignment (Grace Mensah, Moving and Handling 2026)'], ['CarePlus Recruitment', 'BN-03', D(-60), 'Credit', 1, 'Seat returned — NVQ admission rejected'],
-    ['Gulf Care Recruitment', 'BN-02', D(-70), 'Debit', 22, 'Seats assigned'], ['Northern Lights Care Agency', 'BN-06', D(-20), 'Debit', 0, 'Bundle lapsed — 0 seats remaining'], ['Emirates Home Health Staffing', 'BN-05', D(-30), 'Debit', 29, 'Seats assigned'],
+    ['BrightCare Staffing Ltd (demo)', 'BN-01', D(-120), 'Credit', 60, 'Bundle purchased'], ['BrightCare Staffing Ltd (demo)', 'BN-01', D(-90), 'Debit', 40, 'Seats assigned (bulk)'], ['BrightCare Staffing Ltd (demo)', 'BN-01', D(-40), 'Debit', 8, 'Seats assigned'],
+    ['BrightCare Staffing Ltd (demo)', 'BN-01', D(-1), 'Credit', 1, 'Seat returned — unassignment (Grace Mensah, Moving and Handling 2026)'], ['CarePlus Recruitment (demo)', 'BN-03', D(-60), 'Credit', 1, 'Seat returned — NVQ admission rejected'],
+    ['Gulf Care Recruitment (demo)', 'BN-02', D(-70), 'Debit', 22, 'Seats assigned'], ['Northern Lights Care Agency (demo)', 'BN-06', D(-20), 'Debit', 0, 'Bundle lapsed — 0 seats remaining'], ['Emirates Home Health Staffing (demo)', 'BN-05', D(-30), 'Debit', 29, 'Seats assigned'],
   ].map(r => ({ agency: r[0], bundle: r[1], at: r[2], kind: r[3], qty: r[4], note: r[5] }));
 
   /* ---------- Referrals ---------- */
   A.referrals = [
     { code: 'WB-FATIMA07', type: 'Welfare Buddy', owner: 'Fatima Al Mansoori (learner)', valid: D(270), status: 'Active', regs: 6 },
     { code: 'WB-HASSAN22', type: 'Welfare Buddy', owner: 'Hassan Rahman (learner)', valid: D(120), status: 'Active', regs: 3 },
-    { code: 'GCR-118', type: 'Agent', owner: 'Gulf Care Recruitment', valid: D(400), status: 'Active', regs: 14 },
-    { code: 'EHHS-AGENT-02', type: 'Agent', owner: 'Emirates Home Health Staffing', valid: D(-10), status: 'Expired', regs: 9 },
-    { code: 'BRIGHT-2026', type: 'Agency', owner: 'BrightCare Staffing Ltd', valid: D(85), status: 'Active', regs: 21 },
-    { code: 'NLC-OLD', type: 'Agency', owner: 'Northern Lights Care Agency', valid: D(30), status: 'Disabled', regs: 2 },
+    { code: 'GCR-118', type: 'Agent', owner: 'Gulf Care Recruitment (demo)', valid: D(400), status: 'Active', regs: 14 },
+    { code: 'EHHS-AGENT-02', type: 'Agent', owner: 'Emirates Home Health Staffing (demo)', valid: D(-10), status: 'Expired', regs: 9 },
+    { code: 'BRIGHT-2026', type: 'Agency', owner: 'BrightCare Staffing Ltd (demo)', valid: D(85), status: 'Active', regs: 21 },
+    { code: 'NLC-OLD', type: 'Agency', owner: 'Northern Lights Care Agency (demo)', valid: D(30), status: 'Disabled', regs: 2 },
   ];
 
   /* ---------- Approvals Queue (static admin items; learner requests/docs/admissions are derived live) ---------- */
@@ -148,15 +148,15 @@ function buildAdmin(av) {
     q('AQ-1002', 'Replace / re-upload document', 'Reem Al Nuaimi', D(-5, '14:20'), 'Pending', 'Rachel Hughes', ['Reem Al Nuaimi · Emirates ID', 'a-admissions'], { reason: 'Replacement Emirates ID uploaded (current one expires in 18 days and stays valid until the replacement is approved).' }),
     q('AQ-1004', 'Data correction', 'Sarah Okonkwo', D(-4, '11:05'), 'Pending', 'Owen Price', ['Aisha Rahman · Full name', 'a-learners.IA-L-18022'], { finalSuper: true, reason: 'Learner\'s passport shows middle name "Noor". Certificate for Food Hygiene Level 2 needs re-issue.', data: { field: 'Full name', current: 'Aisha Rahman', proposed: 'Aisha Noor Rahman', firstReview: 'Owen Price (System Administrator) — first review: Recommend approval. Passport copy checked.', v: 'C', cert: 'c2' } }),
     q('AQ-1005', 'Data correction', 'Rachel Hughes', D(-6, '09:30'), 'Info Requested', 'Owen Price', ['Joseph Mathew · Date of birth', 'a-learners.IA-L-31014'], { finalSuper: true, reason: 'DOB entered as 1999; ID shows 1989.', data: { field: 'Date of birth', current: '24 Sep 1999', proposed: '24 Sep 1989', firstReview: 'Owen Price — first review: Info requested from learner (clear ID scan).' } }),
-    q('AQ-1006', 'Data correction', A.me.name, D(-1, '15:00'), 'Approved', 'No approval (Super Admin)', ['Chloe Hughes · Referral attribution', 'a-learners.IA-L-30237'], { finalSuper: true, saImmediate: true, decidedBy: A.me.name, decision: 'Applied immediately — Super Admin — no approval required. Learner registered without the CarePlus code; agency confirmed by email.', reason: 'Learner registered without the CarePlus code; agency confirmed by email.', data: { field: 'Referral attribution', current: 'Self-registration', proposed: 'CarePlus Recruitment (agency)', firstReview: 'Not required — raised by the Super Administrator' } }),
+    q('AQ-1006', 'Data correction', A.me.name, D(-1, '15:00'), 'Approved', 'No approval (Super Admin)', ['Chloe Hughes · Referral attribution', 'a-learners.IA-L-30237'], { finalSuper: true, saImmediate: true, decidedBy: A.me.name, decision: 'Applied immediately — Super Admin — no approval required. Learner registered without the CarePlus code; agency confirmed by email.', reason: 'Learner registered without the CarePlus code; agency confirmed by email.', data: { field: 'Referral attribution', current: 'Self-registration', proposed: 'CarePlus Recruitment (demo) (agency)', firstReview: 'Not required — raised by the Super Administrator' } }),
     q('AQ-1007', 'Resubmission limit reached', 'Sarah Okonkwo', D(-8, '17:45'), 'Escalated', 'Rachel Hughes', ['Aisha Rahman · Assignment 7 — Personal development', 'a-learners.IA-L-18022.academic'], { escalated: true, reason: 'Two resubmissions used. Q1 still Not met.', data: { rec: 'One exceptional resubmission', v: 'C', aid: 'a7' } }),
     q('AQ-1008', 'Discontinue enrolment — academic', 'James Pryce', D(-3, '12:00'), 'Pending', 'Rachel Hughes', ['Ben Carter · Level 2 Diploma in Care', 'a-learners.IA-L-30755'], { reason: 'No evidence submitted for 4 months despite 3 action plans.' }),
     q('AQ-1009', 'Discontinue enrolment — non-payment', 'Mark Bennett', D(-12, '10:00'), 'Approved', 'No approval (direct)', ['Megan Roberts · Medication Awareness', 'a-learners.IA-L-30792'], { reason: 'Unpaid for 45 days after access paused.', decidedBy: 'Mark Bennett', decision: 'Discontinued directly (no approval step).' }),
     q('AQ-1012', 'Refund', 'Mark Bennett', D(-10, '09:15'), 'Approved', 'Leila Haddad', ['Isla Morgan · TXN-77201', 'a-finance'], { amount: 180, cur: 'GBP', reason: 'Enrolled on the wrong course (Care Certificate instead of Dementia Awareness).', decidedBy: 'Leila Haddad', decision: 'Approved — full refund, revoke access.', data: { tx: 'TXN-77201', consequence: 'Revoke access' } }),
     q('AQ-1013', 'Refund', av === 'C' ? A.me.name : 'Mark Bennett', D(-2, '13:40'), av === 'C' ? 'Approved' : 'Pending', av === 'C' ? 'No approval (Super Admin)' : 'Leila Haddad', ['Maria Santos · TXN-79118', 'a-finance'], { amount: 180, cur: 'GBP', reason: 'Duplicate payment flagged for the Care Certificate.', ...(av === 'C' ? { saImmediate: true, decidedBy: A.me.name, processed: D(-2, '13:41'), decision: 'Processed immediately — Super Admin — no approval required. Duplicate payment flagged for the Care Certificate.' } : {}), data: { tx: 'TXN-79118', consequence: 'Retain access' } }),
-    q('AQ-1014', 'Bundle price below minimum', 'Sophie Turner', D(-6, '16:00'), 'Pending', 'Owen Price', ['Gulf Care Recruitment · BN-02', 'a-bundles'], { amount: 4258.06, cur: 'GBP', reason: 'Two-year partnership; volume commitment of 25 seats.', data: { floor: 4838.71, requested: 4258.06, bundle: 'BN-02' } }),
-    q('AQ-1015', 'Link existing learner to agency', 'CarePlus Recruitment', D(-11, '11:00'), 'Returned to Requester', 'Sophie Turner', ['Chloe Hughes → CarePlus Recruitment', 'a-agencies.AG-02'], { reason: 'Learner now works for CarePlus.', decidedBy: 'Sophie Turner', decision: 'Returned — please upload the learner\'s signed consent.' }),
-    q('AQ-1016', 'Agency invoice (offline) purchase', 'Northern Lights Care Agency', D(-2, '10:30'), 'Pending', 'Mark Bennett', ['Northern Lights Care Agency · 15 seats Fire Safety', 'a-agencies.AG-05'], { amount: 435, cur: 'GBP', reason: 'PO-NLC-4471, 30-day terms.' }),
+    q('AQ-1014', 'Bundle price below minimum', 'Sophie Turner', D(-6, '16:00'), 'Pending', 'Owen Price', ['Gulf Care Recruitment (demo) · BN-02', 'a-bundles'], { amount: 4258.06, cur: 'GBP', reason: 'Two-year partnership; volume commitment of 25 seats.', data: { floor: 4838.71, requested: 4258.06, bundle: 'BN-02' } }),
+    q('AQ-1015', 'Link existing learner to agency', 'CarePlus Recruitment (demo)', D(-11, '11:00'), 'Returned to Requester', 'Sophie Turner', ['Chloe Hughes → CarePlus Recruitment (demo)', 'a-agencies.AG-02'], { reason: 'Learner now works for CarePlus.', decidedBy: 'Sophie Turner', decision: 'Returned — please upload the learner\'s signed consent.' }),
+    q('AQ-1016', 'Agency invoice (offline) purchase', 'Northern Lights Care Agency (demo)', D(-2, '10:30'), 'Pending', 'Mark Bennett', ['Northern Lights Care Agency (demo) · 15 seats Fire Safety', 'a-agencies.AG-05'], { amount: 435, cur: 'GBP', reason: 'PO-NLC-4471, 30-day terms.' }),
     // G4.4 / G4.7 new item types (mixed statuses)
     q('AQ-1022', 'Reactivate enrolment — academic', 'James Pryce', D(-2, '16:10'), 'Pending', 'Rachel Hughes', ['Hannah Patel · Level 2 Diploma in Care', 'a-learner.IA-L-30866'], { reason: 'Learner has re-engaged: agreed action plan and two overdue answers submitted to me by email.', data: { lid: 'IA-L-30866' } }) /* G12.7 #15: Ben Carter left free for the scenario */,
     q('AQ-1023', 'Reactivate enrolment — academic', 'Sarah Okonkwo', D(-21, '10:00'), 'Approved', 'Rachel Hughes', ['Hannah Patel · Level 2 Diploma in Care', 'a-learner.IA-L-30866'], { reason: 'Medical leave ended; learner ready to resume.', decidedBy: 'Rachel Hughes', decision: 'Approved — access restored.', data: { lid: 'IA-L-30866' } }),
@@ -190,7 +190,7 @@ function buildAdmin(av) {
     ['Nadia Qureshi', 'Super Administrator', D(-16, '10:00'), 'Approvals Queue', 'AQ-1021', 'Override decision', 'Rejected', 'Approved', 'Compassionate grounds'],
   ].map((r, i) => ({ id: 'AU-' + (9000 + i), actor: r[0], role: r[1], at: r[2], module: r[3], entity: r[4], action: r[5], before: r[6], after: r[7], reason: r[8], ip: ['81.2.69.' + (140 + i), '94.204.18.' + (20 + i)][i % 2] }));
   A.security = [
-    ['High', D(-1, '22:14'), 'Denied cross-agency access', 'Agency admin (CarePlus Recruitment) tried to open learner IA-L-24560 (BrightCare)', false],
+    ['High', D(-1, '22:14'), 'Denied cross-agency access', 'Agency admin (CarePlus Recruitment (demo)) tried to open learner IA-L-24560 (BrightCare)', false],
     ['Medium', D(-2, '09:40'), 'Out-of-scope action', 'Business Admin Sophie Turner attempted to edit an instalment plan', true],
     ['High', D(-2, '03:12'), 'Repeated failed logins', '9 failed attempts for mark.bennett@illumin-academy.example from 185.220.101.4', false],
     ['Medium', D(-4, '18:05'), '2FA failure', '3 wrong codes for leila.haddad@illumin-academy.example — locked 15 min', true],
@@ -228,11 +228,11 @@ function buildAdmin(av) {
     { id: 'AN-06', title: 'Fee reminder for Dubai cohort', aud: 'Dubai Cohort 2', ch: ['SMS'], status: 'Withdrawn', by: 'Leila Haddad', at: D(-12) },
   ];
   A.threads = [
-    { id: 'MT-1', subject: 'Report columns for monthly board pack', party: 'BrightCare Staffing Ltd', status: 'Open', msgs: [['Joanna Price', D(-1, '09:00'), 'Could the consolidated report include certificate expiry dates?']] },
+    { id: 'MT-1', subject: 'Report columns for monthly board pack', party: 'BrightCare Staffing Ltd (demo)', status: 'Open', msgs: [['Joanna Price', D(-1, '09:00'), 'Could the consolidated report include certificate expiry dates?']] },
     { id: 'MT-2', subject: 'Fee question escalated by assessor — Aisha Rahman', party: 'Redirected learner query', status: 'Answered', msgs: [['Sarah Okonkwo', D(-3, '11:00'), 'Learner asked about splitting instalment 5. Redirecting to Finance.'], ['Leila Haddad', D(-2, '10:00'), 'Replied to the learner with payment arrangement options.']] },
-    { id: 'MT-3', subject: 'Invoice PO-NLC-4471', party: 'Northern Lights Care Agency', status: 'Open', msgs: [['Fiona McLeod', D(-2, '10:35'), 'Purchase order attached for 15 Fire Safety seats.']] },
-    { id: 'MT-4', subject: 'Seat return for Grace Mensah', party: 'BrightCare Staffing Ltd', status: 'Closed', msgs: [['Joanna Price', D(-1, '16:00'), 'Unassigning Grace from Moving and Handling 2026.'], ['Sophie Turner', D(-1, '16:30'), 'Done — seat returned to BN-01.']] },
-    { id: 'MT-5', subject: 'Arabic subtitles for Dementia Awareness', party: 'Gulf Care Recruitment', status: 'Answered', msgs: [['Huda Al Marri', D(-8), 'Are Arabic subtitles planned?'], ['Sophie Turner', D(-7), 'Not this year — content is in UK English.']] },
+    { id: 'MT-3', subject: 'Invoice PO-NLC-4471', party: 'Northern Lights Care Agency (demo)', status: 'Open', msgs: [['Fiona McLeod', D(-2, '10:35'), 'Purchase order attached for 15 Fire Safety seats.']] },
+    { id: 'MT-4', subject: 'Seat return for Grace Mensah', party: 'BrightCare Staffing Ltd (demo)', status: 'Closed', msgs: [['Joanna Price', D(-1, '16:00'), 'Unassigning Grace from Moving and Handling 2026.'], ['Sophie Turner', D(-1, '16:30'), 'Done — seat returned to BN-01.']] },
+    { id: 'MT-5', subject: 'Arabic subtitles for Dementia Awareness', party: 'Gulf Care Recruitment (demo)', status: 'Answered', msgs: [['Huda Al Marri', D(-8), 'Are Arabic subtitles planned?'], ['Sophie Turner', D(-7), 'Not this year — content is in UK English.']] },
     { id: 'MT-6', subject: 'Learner query: certificate name', party: 'Redirected learner query', status: 'Open', msgs: [['Marcus Bell', D(0, '07:00'), 'Aisha asked how to add her middle name to certificates.']] },
   ];
   A.dsr = [
@@ -247,7 +247,7 @@ function buildAdmin(av) {
     ['ZS-04', D(0, '08:25'), 'Leicester Cohort 7', 'Marcus Bell', '812 3456 7890', 'Scheduled'], ['ZS-05', D(-1, '15:00'), 'Croydon Cohort 4', 'Tom Whitfield', '845 1102 3391', 'Completed'], ['ZS-06', D(2, '17:00'), 'Leicester Cohort 7', 'Marcus Bell', '812 3456 7891', 'Scheduled'],
     ['ZS-07', D(-3, '14:00'), 'Moving and Handling Q&A (short course)', 'Hannah Lewis', '833 0021 1145', 'Report retrieved'],
   ].map(r => ({ id: r[0], at: r[1], batch: r[2], teacher: r[3], mid: r[4], status: r[5] }));
-  A.unmatched = [['Aisha R (iPhone)', 'aisha.r88@icloud.com', 'ZS-01', 84], ['Guest 4471', '—', 'ZS-05', 12], ['Kofi', 'kofi.a@outlook.com', 'ZS-02', 90]].map((r, i) => ({ id: 'UM-' + i, name: r[0], email: r[1], session: r[2], mins: r[3] }));
+  A.unmatched = [['Aisha R (iPhone)', 'aisha.r88@icloud.example', 'ZS-01', 84], ['Guest 4471', '—', 'ZS-05', 12], ['Kofi', 'kofi.a@outlook.example', 'ZS-02', 90]].map((r, i) => ({ id: 'UM-' + i, name: r[0], email: r[1], session: r[2], mins: r[3] }));
   A.resources = [
     ['RS-01', 'Class recording: safeguarding workshop', 'Vimeo video', 'U306 · Level 3 Adult Care', 'Published', 'Immediate', 2], ['RS-02', 'Slides: types of harm and abuse', 'PDF', 'U306 · Level 3 Adult Care', 'Published', 'Immediate', 1],
     ['RS-03', 'Scenario: responding to a disclosure', 'SCORM', 'U306 · Level 3 Adult Care', 'Published', 'Immediate', 3], ['RS-04', 'Duty of candour factsheet', 'PDF', 'U305 · Level 3 Adult Care', 'Published', 'Immediate', 1],

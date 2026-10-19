@@ -72,11 +72,11 @@ function acaPatch() {
   const L3 = 'Level 3 Diploma in Adult Care (England)', L2 = 'Level 2 Diploma in Care (England)';
   if (!A.apps.some(a => a.id === 'APP-2220')) A.apps.push(
     app('APP-2220', 'Megan Roberts', L2, 'Self-registration', D(-2), 'Awaiting review', '— Unassigned', 0, 2),
-    app('APP-2221', 'Callum Fraser', L3, 'Agency — BrightCare Staffing Ltd', D(-4), 'Awaiting review', '— Unassigned', 0, 3),
+    app('APP-2221', 'Callum Fraser', L3, 'Agency — BrightCare Staffing Ltd (demo)', D(-4), 'Awaiting review', '— Unassigned', 0, 3),
     app('APP-2222', 'Noura Saeed', L3, 'Agent — GCR-118', D(-1), 'Awaiting review', '— Unassigned', 0, 0),
     app('APP-2223', 'Hannah Patel', L2, 'Welfare Buddy — WB-HASSAN22', D(-9), 'Under Review', ACA_A, 6, 4),
     app('APP-2224', 'Joseph Mathew', L3, 'Self-registration', D(-5), 'Under Review', 'Dr Helen Carter', 2, 5),
-    app('APP-2225', 'Lucy Evans', L2, 'Agency — CarePlus Recruitment', D(-3), 'Under Review', 'Owen Price', 1, 3),
+    app('APP-2225', 'Lucy Evans', L2, 'Agency — CarePlus Recruitment (demo)', D(-3), 'Under Review', 'Owen Price', 1, 3),
     app('APP-2226', 'Tariq Aziz', L3, 'Agent — GCR-118', D(-6), 'Under Review', ACA_B, 3, 2),
     app('APP-2227', 'Imran Sheikh', L2, 'Self-registration', D(-21), 'Approved', ACA_A, 0, 6));
   if (!REVIEWERS.includes(ACA_B)) REVIEWERS.push(ACA_B);

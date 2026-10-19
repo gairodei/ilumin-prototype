@@ -619,7 +619,7 @@
     const nd2 = d.notifs.length; wplan('', { wd: 'Tuesday', n: 'Plus tutorial' }, [plus]);
     ok('R2 wp edit: narrowing it takes the classes off Daniel\'s calendar and tells him once', s1.every(x => !has(d, x)) && d.notifs.length === nd2 + 1 && /Weekly classes removed/.test(d.notifs[0].title));
     // Attendance: a class that has started keeps its audience and register; excluded learners are never absent
-    const held = s2[0]; held.start = D(0, '00:01'); held.end = D(0, '23:00'); held.link = held.link || 'https://zoom.us/j/990001'; ACT.n4Import({ dataset: { s: held.id } }); const rows = N4().regs[held.id].rows;
+    const held = s2[0]; held.start = D(0, '00:01'); held.end = D(0, '23:00'); held.link = held.link || 'https://zoom.example/j/990001'; ACT.n4Import({ dataset: { s: held.id } }); const rows = N4().regs[held.id].rows;
     ok('R2 wp attendance: the register lists the audience only; the Plus learner isn\'t marked absent', !!rows[d.me.id] && !!rows[f.me.id] && !rows[lp]);
     const rows0 = JSON.stringify(rows); wplan('2', { wd: 'Thursday', n: 'Joint class' }, [fa]);
     ok('R2 wp attendance: changing plan 2\'s audience leaves the held class\'s audience and register as they were', r2Same(held.aud, [basic, fa]) && JSON.stringify(N4().regs[held.id].rows) === rows0 && s2.slice(1).every(x => r2Same(x.aud, [fa])));

@@ -5,7 +5,7 @@
    ============================================================ */
 'use strict';
 
-// role keys: switchRole keys, plus learner:<world> and agyH (Hartwell Home Care)
+// role keys: switchRole keys, plus learner:<world> and agyH (Hartwell Home Care (demo))
 function scRole(r) {
   if (!r) return;
   if (r.startsWith('learner')) { S.variant = r.split(':')[1] || 'A'; ACT.switchRole({ dataset: { r: 'learner' } }); return; }
@@ -82,7 +82,7 @@ function SC_LIST() {
       s('The new learner is visible in admin with country and data region.', 'admin', 'a-learners'),
       s('The referral attribution is counted.', 'admin', 'a-referrals')]],
     ['11', 'Agency link with consent', 'G9.2', [
-      s('Hartwell Home Care has asked to link Daniel Okafor for a new course — status "Awaiting learner consent".', 'agyH', 'g-learners'),
+      s('Hartwell Home Care (demo) has asked to link Daniel Okafor for a new course — status "Awaiting learner consent".', 'agyH', 'g-learners'),
       s('Learner approves on the dashboard (or from the consent email in the learner inbox).', 'learner:A', 'dashboard'),
       s('Agency sees "Linked" — no queue item for a new course.', 'agyH', 'g-learners'),
       s('Repeat for a course the learner is already enrolled on.', '', '', 'scConsentEnrolled'),

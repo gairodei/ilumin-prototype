@@ -12,9 +12,9 @@
    accounts only. */
 const S5C_COLS = [['name', 'Full name', ['full name', 'name']], ['email', 'Email', ['email', 'email address']], ['mobile', 'Mobile', ['mobile', 'mobile number']], ['country', 'Country', ['country']]];
 const S5C_MAX_ROWS = 500, S5C_MAX_BYTES = 1024 * 1024;
-const S5C_TEMPLATE = 'Full name,Email,Mobile,Country\r\n"Evans, Lucy",lucy.evans@example.co.uk,+44 7700 900801,United Kingdom\r\n';
+const S5C_TEMPLATE = 'Full name,Email,Mobile,Country\r\n"Evans, Lucy",lucy.evans@uk.example,+44 7700 900801,United Kingdom\r\n';
 // The earlier fixed sample, kept as a clearly labelled demonstration file (now a real CSV read like any other file)
-const S5C_DEMO = { name: 'demo-learners-6-rows.csv', text: 'Full name,Email,Mobile,Country\r\nLucy Evans,lucy.evans@example.co.uk,+44 7700 900801,United Kingdom\r\nImran Sheikh,imran.sheikh@example.co.uk,+44 7700 900802,United Kingdom\r\nAisha Rahman,aisha.rahman@gmail.com,+44 7700 900188,United Kingdom\r\nPeter Grant,peter.grant@,+44 7700 900804,United Kingdom\r\nNoura Saeed,noura.saeed@mail.ae,,United Arab Emirates\r\nTariq Aziz,tariq.aziz@mail.ae,+971 50 555 0199,United Arab Emirates\r\n' };
+const S5C_DEMO = { name: 'demo-learners-6-rows.csv', text: 'Full name,Email,Mobile,Country\r\nLucy Evans,lucy.evans@uk.example,+44 7700 900801,United Kingdom\r\nImran Sheikh,imran.sheikh@uk.example,+44 7700 900802,United Kingdom\r\nAisha Rahman,aisha.rahman@gmail.example,+44 7700 900188,United Kingdom\r\nPeter Grant,peter.grant@,+44 7700 900804,United Kingdom\r\nNoura Saeed,noura.saeed@mail.ae.example,,United Arab Emirates\r\nTariq Aziz,tariq.aziz@mail.ae.example,+971 50 000 0199,United Arab Emirates\r\n' };
 
 /* ---------- CSV reading (RFC 4180: quotes, "" escapes, commas and line breaks in quotes, CRLF / LF / CR, blank lines) ---------- */
 function s5cParse(text) {

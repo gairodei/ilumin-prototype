@@ -6,7 +6,7 @@
 
 /* ---------- Mock learner Priya Nair (world H) ----------
    CH-01 / CH-02: a plain UK learner — country set at registration, everything in GBP (the F1 moved-country state is removed). */
-const PRIYA = { id: 'IA-L-40990', first: 'Priya', last: 'Nair', email: 'priya.nair@example.com', mobile: '+44 7700 900877', dob: '22 Jun 1994', address: '18 Kings Road, Reading', postcode: 'RG1 3AB', country: 'United Kingdom', tz: 'Europe/London', cur: 'GBP', joined: '12 Mar 2026', referral: 'Self-registration', sponsor: null };
+const PRIYA = { id: 'IA-L-40990', first: 'Priya', last: 'Nair', email: 'priya.nair@example.com', mobile: '+44 7700 900877', dob: '22 Jun 1994', address: '18 Example Avenue, Reading', postcode: 'ZZ99 3AB', country: 'United Kingdom', tz: 'Europe/London', cur: 'GBP', joined: '12 Mar 2026', referral: 'Self-registration', sponsor: null };
 const PRIYA_JOINED = '2026-03-12T09:00:00.000Z';
 function fuShortEnrol(id, base, at, status) {
   const tpl = STORE.worlds.A.enrolments.find(e => e.kind === 'short' && (e.base || e.title).startsWith(base)) || STORE.worlds.A.enrolments.find(e => e.kind === 'short');

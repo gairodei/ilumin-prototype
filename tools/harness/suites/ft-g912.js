@@ -27,11 +27,11 @@
   // ---------- G9.2 consent ----------
   T('G9.2 consent flow (new course)', () => {
     agy('AG-07'); go('g-learners'); ok('Hartwell: seeded request "Awaiting learner consent"', /Link requests/.test(main()) && /Awaiting learner consent/.test(main()));
-    const c = agyConsents().find(x => x.agency === 'Hartwell Home Care' && x.status === 'Awaiting learner consent');
+    const c = agyConsents().find(x => x.agency === 'Hartwell Home Care (demo)' && x.status === 'Awaiting learner consent');
     ok('consent email in learner inbox', STORE.agy.lmails.some(m => m.cid === c.id && /wants to sponsor you for/.test(m.subj)));
-    S.variant = 'A'; ACT.switchRole({ dataset: { r: 'learner' } }); go('dashboard'); ok('learner dashboard prompt', /Hartwell Home Care wants to sponsor you for/.test(main()));
+    S.variant = 'A'; ACT.switchRole({ dataset: { r: 'learner' } }); go('dashboard'); ok('learner dashboard prompt', /Hartwell Home Care \(demo\) wants to sponsor you for/.test(main()));
     const q0 = ADMIN.queue.length; ACT.consentDo({ dataset: { id: c.id, y: '1' } }); ok('new course → Linked, no queue item', c.status === 'Linked' && ADMIN.queue.length === q0, c.status);
-    ok('learner now in Hartwell roster', agyRoster('Hartwell Home Care').some(l => l.id === STORE.worlds.A.me.id));
+    ok('learner now in Hartwell roster', agyRoster('Hartwell Home Care (demo)').some(l => l.id === STORE.worlds.A.me.id));
     agy('AG-07'); go('g-learners'); ok('agency sees Linked', /Linked/.test(main()));
   });
   T('G9.2 consent flow (already enrolled → Business Admin)', () => {
@@ -49,7 +49,7 @@
   // ---------- G9.3 ----------
   T('G9.3 same course, second agency', () => {
     agy('AG-02'); const sunil = allLearners().find(l => l.name === 'Sunil Menon'); ok('Sunil linked to CarePlus (two agencies)', inRoster(sunil.id));
-    const gcCourse = STORE.agy.assign.find(x => x.lid === sunil.id && x.agency === 'Gulf Care Recruitment').course; ok('blocked for Gulf Care course', agyOtherSponsor(sunil, gcCourse), gcCourse);
+    const gcCourse = STORE.agy.assign.find(x => x.lid === sunil.id && x.agency === 'Gulf Care Recruitment (demo)').course; ok('blocked for Gulf Care course', agyOtherSponsor(sunil, gcCourse), gcCourse);
     const b = agyBundles().find(x => x.courses.includes(gcCourse) && bStatus(x) !== 'Expired' && left(x) > 0);
     if (b) { S.agy.as = { step: 3, b: b.id, c: gcCourse, sel: [] }; go('g-seats'); ok('wizard shows the message (agency not named)', main().includes(SAME_COURSE_MSG) && !/Gulf Care/.test(document.querySelector('.g-wiz').textContent)); S.agy.as = null; }
     const r = agyRequestConsent(sunil, sunil.email, gcCourse, 'x'); ok('link request for same course refused', r.err === SAME_COURSE_MSG);

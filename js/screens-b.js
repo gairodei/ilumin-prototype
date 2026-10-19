@@ -371,7 +371,7 @@ ACT.changeWp = () => confirmDlg({ title: 'Change your workplace?', ok: 'Continue
 SUBMIT.wpSave = () => {
   const name = $('#wp-name').value.trim(), em = $('#wp-ce').value.trim();
   if (!name) return fieldErr('#wp-name', 'Enter the care home or employer name');
-  if (!/^\S+@\S+\.\S+$/.test(em)) return fieldErr('#wp-ce', 'Enter a valid email address, like name@carehome.co.uk');
+  if (!/^\S+@\S+\.\S+$/.test(em)) return fieldErr('#wp-ce', 'Enter a valid email address, like name@carehome.example');
   Object.assign(W.workplace, { name, address: $('#wp-addr').value, postcode: $('#wp-pc').value, ctitle: $('#wp-ct').value, cname: $('#wp-cn').value, cemail: em, cphone: $('#wp-cp').value, role: $('#wp-role').value, shift: $('#wp-shift').value, perm: 'Permission Pending', sent: now().toISOString(), expiry: D(14), reminder: null });
   setUi('wpEdit', false); setUi('wpBlank', false); render(); toast(`Permission request emailed to ${esc(W.workplace.cname || em)}.`);
 };

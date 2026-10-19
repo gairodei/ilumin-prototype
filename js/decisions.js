@@ -28,7 +28,7 @@ const CD_ITEMS = [
   ['D1', 'Keep', 'Queue status', 'Status "Paid/Processed"', 'agency.js:85 (AQ-5003), finance.js:74 (AQ-2007), :287, :343', 'Kept — agency invoice purchases use it too.'],
   ['D1', 'Remove', 'Queue item detail', 'case "Commission": attributed learners, rate, basis; Approve / Hold / Reject-Query / Mark as Paid/Processed', 'a-queue item · admin-a.js:112, :120, :139 (hold, paid)', 'Delete the branch and the commission-only "hold"/"paid" actions.'],
   ['D1', 'Remove', 'Routing table ("Who approves what")', 'Row "Commission (TBD P-01/P-02) · System (threshold crossed) · Super Admin · Reminder"', 'a-queue · admin-a.js:96', 'Delete the row.'],
-  ['D1', 'Remove', 'Mock record', 'AQ-1017 Commission — Gulf Care Recruitment Q3 (Held)', 'admin-data.js:155', 'Delete.'],
+  ['D1', 'Remove', 'Mock record', 'AQ-1017 Commission — Gulf Care Recruitment (demo) Q3 (Held)', 'admin-data.js:155', 'Delete.'],
   ['D1', 'Remove', 'Mock record', 'AQ-1018 Commission — BrightCare Q2 (Paid/Processed)', 'admin-data.js:156', 'Delete.'],
   ['D1', 'Modify', 'Sidebar', '"Referrals & Commission"', 'Super/System Admin sidebar · admin-core.js:10', 'Rename to "Referrals".'],
   ['D1', 'Modify', 'Page title', 'pageA("Referrals & Commission") and section comment', 'a-referrals · admin-c.js:87, :91', 'Rename to "Referrals". No breadcrumb exists on this page.'],

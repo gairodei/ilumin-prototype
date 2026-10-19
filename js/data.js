@@ -2,12 +2,12 @@
 'use strict';
 
 const PERSONAS = {
-  A: { id: 'IA-L-20417', first: 'Daniel', last: 'Okafor', email: 'daniel.okafor@outlook.com', mobile: '+44 7700 900412', dob: '14 Mar 1991', address: '14 Ellesmere Road, Chorlton, Manchester', postcode: 'M21 0SN', country: 'United Kingdom', tz: 'Europe/London', cur: 'GBP', joined: '3 Feb 2025', referral: 'Self-registration', sponsor: null },
-  B: { id: 'IA-L-31188', first: 'Priya', last: 'Raman', email: 'priya.raman@gmail.com', mobile: '+971 50 123 4471', dob: '2 Nov 1994', address: 'Apt 1204, Marina Pinnacle, Dubai Marina, Dubai', postcode: '—', country: 'United Arab Emirates', tz: 'Asia/Dubai', cur: 'GBP', joined: '22 Sep 2026', referral: 'Agent — Gulf Care Recruitment (code GCR-118)', sponsor: null },
-  C: { id: 'IA-L-18022', first: 'Aisha', last: 'Rahman', email: 'aisha.rahman@gmail.com', mobile: '+44 7700 900188', dob: '9 Jul 1988', address: '41 Evington Lane, Leicester', postcode: 'LE5 5PQ', country: 'United Kingdom', tz: 'Europe/London', cur: 'GBP', joined: '28 Nov 2025', referral: 'Welfare Buddy referral (code WB-HASSAN22)', sponsor: null },
-  D: { id: 'IA-L-24560', first: 'Grace', last: 'Mensah', email: 'grace.mensah@brightcare-staff.co.uk', mobile: '+44 7700 900631', dob: '23 Jan 1996', address: '7 Lansdowne Road, Croydon', postcode: 'CR0 2BX', country: 'United Kingdom', tz: 'Europe/London', cur: 'GBP', joined: '4 Mar 2026', referral: 'Created by agency', sponsor: 'BrightCare Staffing Ltd' },
-  E: { id: 'IA-L-09931', first: 'Tom', last: 'Whitfield', email: 'tom.whitfield@illumin-academy.example', mobile: '+44 7700 900255', dob: '30 Apr 1985', address: '3 Cotham Vale, Bristol', postcode: 'BS6 6HR', country: 'United Kingdom', tz: 'Europe/London', cur: 'GBP', joined: '15 Jun 2024', referral: 'Created by admin', sponsor: null },
-  F: { id: 'IA-L-27703', first: 'Fatima', last: 'Al Mansoori', email: 'fatima.almansoori@outlook.ae', mobile: '+971 55 778 2190', dob: '17 Aug 1992', address: 'Villa 22, Al Bateen, Abu Dhabi', postcode: '—', country: 'United Arab Emirates', tz: 'Asia/Dubai', cur: 'GBP', joined: '9 May 2025', referral: 'Self-registration', sponsor: null },
+  A: { id: 'IA-L-20417', first: 'Daniel', last: 'Okafor', email: 'daniel.okafor@outlook.example', mobile: '+44 7700 900412', dob: '14 Mar 1991', address: '14 Example Road, Manchester', postcode: 'ZZ99 1AA', country: 'United Kingdom', tz: 'Europe/London', cur: 'GBP', joined: '3 Feb 2025', referral: 'Self-registration', sponsor: null },
+  B: { id: 'IA-L-31188', first: 'Priya', last: 'Raman', email: 'priya.raman@gmail.example', mobile: '+971 50 000 4471', dob: '2 Nov 1994', address: 'Apt 1204, Example Tower, Dubai', postcode: '—', country: 'United Arab Emirates', tz: 'Asia/Dubai', cur: 'GBP', joined: '22 Sep 2026', referral: 'Agent — Gulf Care Recruitment (demo) (code GCR-118)', sponsor: null },
+  C: { id: 'IA-L-18022', first: 'Aisha', last: 'Rahman', email: 'aisha.rahman@gmail.example', mobile: '+44 7700 900188', dob: '9 Jul 1988', address: '41 Example Lane, Leicester', postcode: 'ZZ99 1AB', country: 'United Kingdom', tz: 'Europe/London', cur: 'GBP', joined: '28 Nov 2025', referral: 'Welfare Buddy referral (code WB-HASSAN22)', sponsor: null },
+  D: { id: 'IA-L-24560', first: 'Grace', last: 'Mensah', email: 'grace.mensah@brightcare-staff.example', mobile: '+44 7700 900631', dob: '23 Jan 1996', address: '7 Sample Road, Croydon', postcode: 'ZZ99 1AD', country: 'United Kingdom', tz: 'Europe/London', cur: 'GBP', joined: '4 Mar 2026', referral: 'Created by agency', sponsor: 'BrightCare Staffing Ltd (demo)' },
+  E: { id: 'IA-L-09931', first: 'Tom', last: 'Whitfield', email: 'tom.whitfield@illumin-academy.example', mobile: '+44 7700 900255', dob: '30 Apr 1985', address: '3 Example Vale, Bristol', postcode: 'ZZ99 1AE', country: 'United Kingdom', tz: 'Europe/London', cur: 'GBP', joined: '15 Jun 2024', referral: 'Created by admin', sponsor: null },
+  F: { id: 'IA-L-27703', first: 'Fatima', last: 'Al Mansoori', email: 'fatima.almansoori@outlook.ae.example', mobile: '+971 55 000 2190', dob: '17 Aug 1992', address: 'Villa 22, Example Villas, Abu Dhabi', postcode: '—', country: 'United Arab Emirates', tz: 'Asia/Dubai', cur: 'GBP', joined: '9 May 2025', referral: 'Self-registration', sponsor: null },
 };
 const VARIANTS = {
   A: { nvq: false }, B: { nvq: true, admitted: false }, C: { nvq: true, admitted: true },
@@ -245,7 +245,7 @@ function makeWorld(v) {
         { ref: '301 3.2', unit: 'U301', from: 'Assignment 1 · Q3', reason: 'Confirmed verbally during the interim review on 12 Jun.', status: 'Achieved', go: 'assignment.a1' },
         { ref: '304 2.2', unit: 'U304', from: 'Assignment 7 · Q3', reason: 'Not enough evidence given during the interim discussion. Returned to written evidence.', status: 'Returned to Action Required', go: 'assignment.a7' },
       ],
-      session: { status: 'Proposed', at: D(10, '09:00'), mode: 'In person', loc: 'Illumin Academy Leicester, Room 2, 5 Charles Street, Leicester LE1 1FB', zoom: 'https://zoom.us/j/84422019311', with: 'Sarah Okonkwo' },
+      session: { status: 'Proposed', at: D(10, '09:00'), mode: 'In person', loc: 'Illumin Academy Leicester, Room 2, 5 Charles Street, Leicester LE1 1FB', zoom: 'https://zoom.example/j/84422019311', with: 'Sarah Okonkwo' },
       history: [{ from: D(3, '13:00'), to: D(10, '09:00'), by: 'Academy', reason: 'Assessor availability changed', at: D(-4) }, { from: D(-5, '13:00'), to: D(3, '13:00'), by: 'You', reason: 'Night shift clash — requested a weekday morning', at: D(-12) }],
     };
     w.plan = [
@@ -258,11 +258,11 @@ function makeWorld(v) {
 
     /* Workplace + observations */
     w.workplace = {
-      perm: v === 'D' ? 'Permission Pending' : 'Granted', name: v === 'D' ? 'Addington Court Nursing Home' : 'Willowbrook Care Home', address: v === 'D' ? '118 Addington Road, Croydon' : '22 Stoughton Road, Oadby, Leicester', postcode: v === 'D' ? 'CR2 8LF' : 'LE2 4FR',
-      ctitle: 'Manager', cname: v === 'D' ? 'Mr Daniel Fraser' : 'Mrs Joanne Whitley', cemail: v === 'D' ? 'd.fraser@addingtoncourt.co.uk' : 'j.whitley@willowbrookcare.co.uk', cphone: v === 'D' ? '020 7946 0518' : '0113 496 0732',
+      perm: v === 'D' ? 'Permission Pending' : 'Granted', name: v === 'D' ? 'Addington Court Nursing Home (demo)' : 'Willowbrook Care Home (demo)', address: v === 'D' ? '118 Demo Road, Croydon' : '22 Demo Road, Leicester', postcode: v === 'D' ? 'ZZ99 2AA' : 'ZZ99 2AB',
+      ctitle: 'Manager', cname: v === 'D' ? 'Mr Daniel Fraser' : 'Mrs Joanne Whitley', cemail: v === 'D' ? 'd.fraser@addingtoncourt.example' : 'j.whitley@willowbrookcare.example', cphone: v === 'D' ? '020 7946 0518' : '0113 496 0732',
       role: v === 'D' ? 'Care Assistant' : 'Senior Care Assistant', shift: v === 'D' ? 'Nights — 3 on / 4 off (20:00–08:00)' : 'Days — 4 on / 3 off (07:30–19:30)',
       sent: D(-6), expiry: D(8), reminder: v === 'D' ? 'Reminder sent 2 Oct · escalated to the Academy on 3 Oct' : null, grantedAt: D(-240), grantedBy: 'Mrs Joanne Whitley', declineReason: 'We cannot host observations during the current CQC inspection period. Please try again after 1 November.',
-      history: [{ name: 'Ashfield Lodge Residential Home', from: '12 Jan 2026', to: '20 Feb 2026', perm: 'Granted', by: 'Ms Carol Dunn' }],
+      history: [{ name: 'Ashfield Lodge Residential Home (demo)', from: '12 Jan 2026', to: '20 Feb 2026', perm: 'Granted', by: 'Ms Carol Dunn' }],
     };
     w.observations = [
       { id: 'o1', at: D(8, '08:30'), loc: w.workplace.name, assessor: 'James Pryce', scope: 'U301 2.2, 2.3 · U306 3.1', status: 'Proposed' },
@@ -375,7 +375,7 @@ function makeWorld(v) {
   w.announcements = [
     { id: 'n1', title: 'Academy closed 25–26 December', from: 'Illumin Academy', kind: 'Academy', at: D(-3), pinned: true, body: 'The Academy office and support lines are closed on 25 and 26 December. Assignment deadlines are not affected.' },
     ...(flags.nvq ? [{ id: 'n2', title: 'Unit 306 class recording uploaded', from: 'Marcus Bell', kind: 'Teacher', at: D(-7), body: 'The recording and slides from Tuesday\'s safeguarding class are now in Learning Resources.', att: 'U306_safeguarding_slides.pdf' }] : []),
-    ...(flags.sponsored ? [{ id: 'n3', title: 'Book your observation shifts with the rota team', from: 'BrightCare Staffing Ltd', kind: 'Agency', at: D(-5), body: 'If your observation falls on a non-working day, contact the BrightCare rota team at least 72 hours before.' }] : []),
+    ...(flags.sponsored ? [{ id: 'n3', title: 'Book your observation shifts with the rota team', from: 'BrightCare Staffing Ltd (demo)', kind: 'Agency', at: D(-5), body: 'If your observation falls on a non-working day, contact the BrightCare rota team at least 72 hours before.' }] : []),
     { id: 'n4', title: 'New CPD course: Oral Health in Care Homes', from: 'Illumin Academy', kind: 'Academy', at: D(-10), body: 'A new 90-minute course is now in the catalogue.' },
     { id: 'n5', title: 'Planned maintenance — 14 September', from: 'Illumin Academy', kind: 'Academy', at: D(-25), expired: true, body: 'The portal was unavailable between 22:00 and 23:30.' },
   ];
@@ -420,7 +420,7 @@ function makeWorld(v) {
     N('Payments', 'Refund processed', 'Refund of ' + money(amt(49), cur) + ' against TXN-84410.', D(-30, '10:00'), 'payments', false),
     N('Enrolment', 'Enrolment discontinued', 'Medication Awareness was discontinued.', D(-32), 'course.med', false),
     N('Enrolment', 'Enrolment reactivated', 'Basic Life Support was reactivated after payment.', D(-24), 'course.bls', false),
-    N('Enrolment', 'Seat assigned by agency', 'BrightCare Staffing Ltd assigned you a seat (example).', D(-214), 'courses', false),
+    N('Enrolment', 'Seat assigned by agency', 'BrightCare Staffing Ltd (demo) assigned you a seat (example).', D(-214), 'courses', false),
     N('Certificates', 'Certificate issued', 'Safeguarding Adults Level 2 certificate issued.', D(-88), 'certificates', false),
     N('Certificates', 'Certificate revoked', 'Equality, Diversity and Inclusion certificate was revoked.', D(-100), 'certificates', false),
     N('Certificates', 'Certificate expiring in 30 days', 'Moving and Handling People expires on ' + fd(D(25)) + '.', D(-5), 'certificates', false),
@@ -456,10 +456,10 @@ function makeWorld(v) {
   /* ---------- Calendar events ---------- */
   const E = (id, type, title, start, mins, course, extra = {}) => ({ id, type, title, start, end: new Date(new Date(start).getTime() + mins * 6e4).toISOString(), course, ...extra });
   w.events = [
-    E('e1', 'class', flags.nvq ? 'Live class: Unit 306 safeguarding workshop' : 'Live Q&A: moving and handling', D(0, '08:25'), 60, flags.nvq ? w.nvq.title : 'Moving and Handling People — 2026', { link: 'https://zoom.us/j/81234567890', go: 'calendar' }),
-    E('e2', 'class', flags.nvq ? 'Live class: duty of care' : 'Live webinar: dementia communication', D(2, '17:00'), 90, flags.nvq ? w.nvq.title : 'Dementia Awareness', { link: 'https://zoom.us/j/81234567891', go: 'calendar' }),
-    E('e3', 'class', flags.nvq ? 'Classroom: equality and inclusion' : 'Live Q&A: Care Certificate standards 1–3', D(4, '17:00'), 90, flags.nvq ? w.nvq.title : 'The Care Certificate', { link: flags.nvq ? null : 'https://zoom.us/j/81234567892', loc: flags.nvq ? 'Illumin Academy Leicester, Room 1' : null, updated: D(4, '16:00'), go: 'calendar' }),
-    E('e4', 'class', 'Live class: health and safety refresher', D(11, '17:00'), 60, flags.nvq ? w.nvq.title : 'Moving and Handling People — 2026', { link: 'https://zoom.us/j/81234567893' }),
+    E('e1', 'class', flags.nvq ? 'Live class: Unit 306 safeguarding workshop' : 'Live Q&A: moving and handling', D(0, '08:25'), 60, flags.nvq ? w.nvq.title : 'Moving and Handling People — 2026', { link: 'https://zoom.example/j/81234567890', go: 'calendar' }),
+    E('e2', 'class', flags.nvq ? 'Live class: duty of care' : 'Live webinar: dementia communication', D(2, '17:00'), 90, flags.nvq ? w.nvq.title : 'Dementia Awareness', { link: 'https://zoom.example/j/81234567891', go: 'calendar' }),
+    E('e3', 'class', flags.nvq ? 'Classroom: equality and inclusion' : 'Live Q&A: Care Certificate standards 1–3', D(4, '17:00'), 90, flags.nvq ? w.nvq.title : 'The Care Certificate', { link: flags.nvq ? null : 'https://zoom.example/j/81234567892', loc: flags.nvq ? 'Illumin Academy Leicester, Room 1' : null, updated: D(4, '16:00'), go: 'calendar' }),
+    E('e4', 'class', 'Live class: health and safety refresher', D(11, '17:00'), 60, flags.nvq ? w.nvq.title : 'Moving and Handling People — 2026', { link: 'https://zoom.example/j/81234567893' }),
     E('e5', 'mile', flags.nvq ? 'Programme milestone: mid-point review' : 'Course access ends: Moving and Handling 2026', flags.nvq ? D(18, '08:00') : D(50, '22:59'), 30, flags.nvq ? w.nvq.title : 'Moving and Handling People — 2026', { go: flags.nvq ? 'progress' : 'course.mh26' }),
     E('e6', 'deadline', 'Certificate expires: Moving and Handling', D(25, '22:59'), 0, 'Certificates', { go: 'certificates' }),
   ];
@@ -497,7 +497,7 @@ function applyEdge() {
   if (e === 'arrangement' && w.plans) { const pl = w.plans.find(p => p.e === 'nvq'); if (pl) { pl.rows[4].due = D(14); pl.rows[4].status = 'Pending'; pl.rows[4].arrangement = true; } }
   if (e === 'discontinued') { const m = en('mh26'); if (m) { m.status = 'Discontinued'; m.reason = 'Discontinued by the Academy on ' + fd(D(-3)) + ': your identity check was not completed within 30 days of enrolment. Contact the Academy if you think this is wrong.'; } }
   if (e === 'expired') { const m = en('mh26'); if (m) { m.status = 'Expired-Incomplete'; m.end = D(-2); } }
-  if (e === 'unassigned') { w.enrolments = w.enrolments.filter(x => x.id !== 'mh26'); w.unassigned = { course: 'Moving and Handling People — 2026', agency: w.me.sponsor || 'BrightCare Staffing Ltd', at: D(-1, '16:20') }; }
+  if (e === 'unassigned') { w.enrolments = w.enrolments.filter(x => x.id !== 'mh26'); w.unassigned = { course: 'Moving and Handling People — 2026', agency: w.me.sponsor || 'BrightCare Staffing Ltd (demo)', at: D(-1, '16:20') }; }
   if (e === 'cancelRefund' || e === 'cancelMoved') w.batchCancelled = e === 'cancelRefund' ? { refund: true, amount: w.amt(300) } : { moved: 'Leicester Cohort 8 — L3AC-NOV26', start: D(30) };
   if (e === 'seatReleased' && w.admission) { w.admission.status = 'Approved'; w.docs.forEach(d => { d.status = 'Approved'; d.file = d.file || 'reference_letter.pdf'; d.uploaded = d.uploaded || D(-40, '18:30'); }); Object.assign(w.admission.deposit, { paid: true, paidAt: D(-36), holdUntil: D(-8), released: true }); }
   if (e === 'paypending') { /* fire safety already pending in variant A */ }
