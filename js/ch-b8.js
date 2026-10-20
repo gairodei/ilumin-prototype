@@ -223,7 +223,7 @@ ACT.applyNvq = el => {
   const c = CATALOGUE.find(x => x.id === el.dataset.id), pr = c && (STORE.chNewProgs || []).find(p => 'k-' + p.id === c.id);
   if (!pr) return _applyNvqCh8(el);
   if (W.admission || W.nvq) { toast('You already have an NVQ sign-up or programme. Continue it from Admission & Documents.', 'info'); go('admission'); return; }
-  confirmDlg({ title: 'Sign up for ' + esc(pr.title) + '?', ok: 'Start sign-up', body: `<p>Signing up takes five steps: your details (we assign your batch), your documents, your offer letter, your payment, then you start.</p><p class="small muted">Price ${money(pr.price, 'GBP')} — deposit ${money(pr.plan.deposit, 'GBP')} (when your batch starts in 28 days or more) or ${pr.plan.inst} monthly instalments.</p>`, onOk: () => { ch8StartSignup(W, pr); go('admission'); toast('Sign-up started.'); } });
+  confirmDlg({ title: 'Sign up for ' + esc(pr.title) + '?', ok: 'Start sign-up', body: `<p>Signing up takes five steps: your details (we assign your batch), your documents, your offer letter, your payment, then you start.</p><p class="small muted">Price ${money(pr.price, 'GBP')} — ${e2DepOr(s4TermsOf(pr.id))}${pr.plan.inst} monthly instalments.</p>`, onOk: () => { ch8StartSignup(W, pr); go('admission'); toast('Sign-up started.'); } });
 };
 // Payment step and completion use the programme's deposit and instalments
 const ch8PayAmount = (pr, opt) => opt === 'deposit' ? pr.plan.deposit : e1First(pr.price, pr.plan.inst);

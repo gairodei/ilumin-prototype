@@ -1104,7 +1104,9 @@
     document.querySelector('.ch8-doc[value="Employer reference letter"]').checked = true; ACT.ch8SaveDocs({ dataset: { id } }); ok('NP checklist saved, audited', ch8Docs(id).includes('Employer reference letter') && ADMIN.audit[0].action === 'Document checklist saved');
     go('a-programmes', { id, tab: 'plan' }); ok('NP payment plan: Academic Admin read-only (Finance / Super Admin edit)', !document.querySelector('#pp-d') && /Set by Finance or the Super Admin/.test(main()));
     ACT.ch8SavePlan({ dataset: { id } }); ok('NP plan save refused for the Academic Admin (logged)', ADMIN.audit[0].action === 'Blocked: payment plan');
-    SA(); go('a-programmes', { id, tab: 'plan' }); fill8({ '#pp-d': '400', '#pp-n': '8' }); ACT.ch8SavePlan({ dataset: { id } });
+    // E2 (20 Oct 2026) supersedes: typing an amount while "Use the default deposit" is selected made it the programme's own deposit.
+    // A custom deposit is now chosen explicitly ("Set a custom deposit amount for this programme"); the amount field is for that choice.
+    SA(); go('a-programmes', { id, tab: 'plan' }); document.querySelector('input[name="pp-wdm"][value="own"]').checked = true; fill8({ '#pp-d': '400', '#pp-n': '8' }); ACT.ch8SavePlan({ dataset: { id } });
     ok('NP Super Admin sets the plan in GBP, audited', pr.plan.deposit === 400 && pr.plan.inst === 8 && ADMIN.audit[0].action === 'Payment plan saved');
     // E1 review correction: "Edit plan" opened NVQ Programmes, which the Finance Admin role can't open (was: '.ch8-plans [data-tab="plan"][data-id=…]');
     // it now opens Finance's own plan editor

@@ -80,8 +80,10 @@ s4PlanIssue = function (p) {
 const _planSaveE1 = s4PlanSave;
 s4PlanSave = function (pr, f, note, opts = {}) {
   const prev = s4PlanCur(pr.id) || s4PlanLast(pr.id), meth = E1_METH_SAVE || (f && f.meth) || (prev && prev.meth) || null;
-  const why = meth ? s4PlanIssue({ ...f, meth, status: 'Active' }) : ''; if (why) return why;
-  const r = _planSaveE1.apply(this, arguments); if (r) return r;
+  // E2: "no deposit" is kept unless the save says otherwise (an editor that only knows default / own amounts never switches it on)
+  const depOff = f && 'depOff' in f ? !!f.depOff : f && f.deposit != null ? false : !!(prev && prev.depOff), f2 = { ...f, depOff, deposit: depOff ? null : f.deposit };
+  const why = meth ? s4PlanIssue({ ...f2, meth, status: 'Active' }) : ''; if (why) return why;
+  const r = _planSaveE1.call(this, pr, f2, note, opts); if (r) return r;
   const last = s4PlanLast(pr.id); if (meth) last.meth = meth;
   last.sched = e1Freeze(e1SchedSnap(pr, e1TermsOfPlan(last))); // E1 rounding: the exact schedule this new version offers, frozen
   const a = ADMIN.audit[0];
@@ -93,7 +95,7 @@ const _termsE1 = s4TermsOf;
 s4TermsOf = function (pid) { const t = _termsE1.apply(this, arguments), p = s4PlanCur(pid); return p && p.meth ? { ...t, meth: p.meth } : t; };
 const _r1TermsE1 = r1TermsOf;
 r1TermsOf = function (o) { const t = _r1TermsE1.apply(this, arguments), p = s4PlanCur(r1PidOf(o)); return p && p.meth ? { ...t, meth: p.meth } : t; };
-ACT.s4PlanHist = el => { const pr = s4Pr(el.dataset.p); openModal({ title: 'Payment plan history — ' + esc(pr.title), size: 'lg', body: `<ul class="list">${s4Plans(pr.id).slice().reverse().map(p => `<li class="li"><div class="li-b"><strong>Version ${p.v}</strong><span class="small">${esc(s4PlanTxt(p))} · ${esc(e1MethLbl(p))}</span><span class="xs muted">${p.fixture ? 'Configuration in use before plans were versioned (no recorded date or author)' : `${fdt(p.at)} · ${esc(p.by)} · ${esc(p.note)}`}</span></div>${chip(p.status, p.status === 'Active' ? 'green' : 'grey')}</li>`).join('')}</ul>`, actions: [{ label: 'Close', cls: 'btn-primary' }] }); };
+ACT.s4PlanHist = el => { const pr = s4Pr(el.dataset.p); openModal({ title: 'Payment plan history — ' + esc(pr.title), size: 'lg', body: `<ul class="list">${s4Plans(pr.id).slice().reverse().map(p => `<li class="li"><div class="li-b"><strong>Version ${p.v}</strong><span class="small">${esc(s4PlanTxt(p).replace('default deposit', p.sched && p.sched.deposit != null && !p.sched.depOff ? `Academy default deposit (${money(p.sched.deposit, 'GBP')} at this version)` : 'Academy default deposit'))} · ${esc(e1MethLbl(p))}</span><span class="xs muted">${p.fixture ? 'Configuration in use before plans were versioned (no recorded date or author)' : `${fdt(p.at)} · ${esc(p.by)} · ${esc(p.note)}`}</span></div>${chip(p.status, p.status === 'Active' ? 'green' : 'grey')}</li>`).join('')}</ul>`, actions: [{ label: 'Close', cls: 'btn-primary' }] }); };
 
 // The fees a plan has to fit: a Level 3 programme's active fee options, otherwise the programme fee
 const e1Fees = pr => r1IsL3Pid(pr.id) && r1Opts(pr.id).some(o => o.status === 'Active')
@@ -102,25 +104,24 @@ const e1Fees = pr => r1IsL3Pid(pr.id) && r1Opts(pr.id).some(o => o.status === 'A
 // Terms checked against every fee; returns '' or the reason
 function e1TermsIssue(pr, t) {
   if (t.meth !== 'one-time' && !(Number.isInteger(t.inst) && t.inst >= E1_N_MIN && t.inst <= E1_N_MAX)) return `Enter ${E1_N_MIN} to ${E1_N_MAX} monthly instalments`;
-  for (const f of e1Fees(pr)) { if (!(f.fee > 0)) continue; const why = s4PlanIssue({ fee: f.fee, deposit: t.dep, inst: t.inst, meth: t.meth, partial: true, status: 'Active' }); if (why) return (f.id ? `${f.label}: ` : '') + why; }
+  for (const f of e1Fees(pr)) { if (!(f.fee > 0)) continue; const why = s4PlanIssue({ fee: f.fee, deposit: t.depOff ? null : t.dep, depOff: !!t.depOff, inst: t.inst, meth: t.meth, partial: true, status: 'Active' }); if (why) return (f.id ? `${f.label}: ` : '') + why; }
   return '';
 }
 // The form: how learners pay, the instalment count, the deposit. "pp" = Finance's own plan form, "e1" = the creator's proposal
 function e1Form(px, t) {
-  const own = t.dep != null, dv = own ? t.dep : S4().cfg.deposit, many = t.meth !== 'one-time';
+  const dm = e1DepMode(t), many = t.meth !== 'one-time';
   return `<div class="e1-form">
     <fieldset class="stack e1-meth" style="border:0;padding:0"><legend class="lbl">How can learners pay?</legend>${Object.entries(E1_METH).map(([k, [l, h]]) => `<label class="check e1-mopt"><input type="radio" name="${px}-meth" value="${k}" ${t.meth === k ? 'checked' : ''} data-onchange="e1Meth" data-px="${px}"><span><strong>${l}</strong><br><span class="small muted">${h}</span></span></label>`).join('')}</fieldset>
     <div class="form-grid"><div class="field e1-n-${px}" ${many ? '' : 'hidden'}><label for="${px}-n">Number of monthly instalments</label><input class="input num" type="number" min="${E1_N_MIN}" max="${E1_N_MAX}" step="1" id="${px}-n" value="${many ? t.inst : CH_INST_N}" data-oninput="e1Live" data-px="${px}"><span class="hint">${E1_N_MIN} to ${E1_N_MAX}. ${esc(E1_ROUND_TXT)}</span></div>
-    <fieldset class="stack full s4-wdm" style="border:0;padding:0"><legend class="lbl">Deposit</legend><label class="check"><input type="radio" name="${px}-wdm" value="default" ${own ? '' : 'checked'} data-onchange="e1Live" data-px="${px}"> Use the default deposit (${money(S4().cfg.deposit, 'GBP')})</label><label class="check"><input type="radio" name="${px}-wdm" value="own" ${own ? 'checked' : ''} data-onchange="e1Live" data-px="${px}"> Own deposit for this programme</label></fieldset>
-    <div class="field"><label for="${px}-d">Deposit (GBP)</label><input class="input num" type="number" min="0" id="${px}-d" value="${dv}" data-oninput="e1Live" data-px="${px}"></div></div></div>`;
+    ${e1DepFields(px, 'wdm', 'd', dm, t.dep)}</div></div>`;
 }
 INP.e1Meth = el => { const px = el.dataset.px; $$(`.e1-n-${px}`).forEach(x => { x.hidden = el.value === 'one-time'; }); const n = $(`#${px}-n`); if (n && el.value !== 'one-time' && !(+n.value >= E1_N_MIN)) n.value = CH_INST_N; INP.e1Live(el); };
 // The payment summary follows the form as it is edited (nothing is saved until Save / Submit)
 INP.e1Live = el => {
   const px = el.dataset.px, sec = el.closest('.e1-plan'), pr = sec && ch8Pr(sec.dataset.pid), box = sec && sec.querySelector('.e1-sumbox'); if (!pr || !box) return;
   const meth = ($(`input[name="${px}-meth"]:checked`) || {}).value, inst = meth === 'one-time' ? 1 : Number(($(`#${px}-n`) || {}).value), dep = Number(($(`#${px}-d`) || {}).value), dm = ($(`input[name="${px}-wdm"]:checked`) || {}).value;
-  if (!E1_METH[meth] || !(Number.isInteger(inst) && inst >= 1 && inst <= E1_N_MAX) || !(dep >= 0)) return;
-  box.innerHTML = e1Summary(pr, { meth, inst, dep: dm !== 'own' && dep === S4().cfg.deposit ? null : dep });
+  if (!E1_METH[meth] || !(Number.isInteger(inst) && inst >= 1 && inst <= E1_N_MAX) || !E1_DEPM[dm] || (dm === 'own' && !(dep > 0))) return;
+  box.innerHTML = e1Summary(pr, { meth, inst, dep: dm === 'own' ? dep : null, depOff: dm === 'none' });
 };
 // Read the form; returns the terms or null (with the field marked)
 function e1ReadForm(px, pr) {
@@ -128,25 +129,45 @@ function e1ReadForm(px, pr) {
   if (!E1_METH[meth]) return fieldErr(`input[name="${px}-meth"]`, 'Choose how learners can pay'), null;
   const inst = meth === 'one-time' ? 1 : Number(nS);
   if (meth !== 'one-time' && !(/^\d+$/.test(nS) && inst >= E1_N_MIN && inst <= E1_N_MAX)) return fieldErr(`#${px}-n`, `Enter ${E1_N_MIN} to ${E1_N_MAX} monthly instalments (a whole number)`), null;
-  const dep = Number(dS), inherit = dm !== 'own' && dep === S4().cfg.deposit;
-  if (dS === '' || !(dep >= 0)) return fieldErr(`#${px}-d`, 'Enter the deposit in GBP'), null;
-  const t = { meth, inst, dep: inherit ? null : dep }, why = e1TermsIssue(pr, t);
+  const dep = e1DepRead(dm, dS, `input[name="${px}-wdm"]`, `#${px}-d`); if (dep === false) return null;
+  const t = { meth, inst, dep, depOff: dm === 'none' }, why = e1TermsIssue(pr, t);
   if (why) return fieldErr(/instalments/.test(why) && meth !== 'one-time' ? `#${px}-n` : `#${px}-d`, why), null;
   return t;
 }
-const e1TermsOfPlan = p => ({ meth: e1MethOf(p), inst: p ? p.inst : CH_INST_N, dep: p ? p.deposit : null });
-const e1EffDep = t => (t.dep == null ? S4().cfg.deposit : t.dep);
-const e1TermsTxt = t => `${E1_METH[t.meth][0]}${t.meth !== 'one-time' ? ` · ${t.inst} monthly instalments` : ''} · deposit ${money(e1EffDep(t), 'GBP')} ${t.dep == null ? '(default)' : '(own)'}`;
+const e1TermsOfPlan = p => ({ meth: e1MethOf(p), inst: p ? p.inst : CH_INST_N, dep: p && !p.depOff ? p.deposit : null, depOff: !!(p && p.depOff) });
+const e1EffDep = t => (t.depOff ? null : t.dep == null ? S4().cfg.deposit : t.dep);
+const e1TermsTxt = t => `${E1_METH[t.meth][0]}${t.meth !== 'one-time' ? ` · ${t.inst} monthly instalments` : ''} · ${e1DepTxt(t)}`;
+/* E2 (20 Oct 2026): every programme says whether it offers a deposit — not available, the Academy default, or its own amount */
+const E1_DEPM = { none: 'Deposit not available', default: 'Use Academy default deposit', own: 'Set a custom deposit amount for this programme' };
+const e1DepMode = t => (t.depOff ? 'none' : t.dep == null ? 'default' : 'own');
+// "no deposit" · "deposit £300.00 (Academy default)" · "deposit £150.00 (custom)"
+const e1DepTxt = t => (t.depOff ? 'no deposit' : `deposit ${money(e1EffDep(t), 'GBP')} ${t.dep == null ? '(Academy default)' : '(custom)'}`);
+// For Finance and the plan step: what learners are offered
+const e1DepLbl = t => (t.depOff ? 'Not available — this programme has no deposit route' : t.dep == null ? `${money(e1EffDep(t), 'GBP')} — Academy default` : `${money(t.dep, 'GBP')} — custom amount for this programme`);
+// The three choices and the custom amount (shown only for a custom deposit)
+function e1DepFields(px, rn, fid, dm, dep) {
+  const hint = { none: 'Learners pay in full or by instalments; no deposit route is offered.', default: `Currently ${money(S4().cfg.deposit, 'GBP')}. Follows the Academy default; when it changes, this programme gets a new plan version.`, own: 'This programme\'s own amount; it doesn\'t change when the Academy default changes.' };
+  return `<fieldset class="stack full s4-wdm e2-dep" style="border:0;padding:0"><legend class="lbl">Deposit</legend>${Object.entries(E1_DEPM).map(([k, l]) => `<label class="check"><input type="radio" name="${px}-${rn}" value="${k}" ${dm === k ? 'checked' : ''} data-onchange="e1DepMode" data-px="${px}"><span><strong>${esc(l)}${k === 'default' ? ` (${money(S4().cfg.deposit, 'GBP')})` : ''}</strong><br><span class="small muted">${esc(hint[k])}</span></span></label>`).join('')}</fieldset>
+    <div class="field e2-dv-${px}" ${dm === 'own' ? '' : 'hidden'}><label for="${px}-${fid}">Custom deposit (GBP)</label><input class="input num" type="number" min="0.01" step="0.01" id="${px}-${fid}" value="${dm === 'own' && dep != null ? dep : ''}" data-oninput="e1Live" data-px="${px}"><span class="hint">Above £0, in whole pence, and below every fee of this programme.</span></div>`;
+}
+INP.e1DepMode = el => { $$(`.e2-dv-${el.dataset.px}`).forEach(x => { x.hidden = el.value !== 'own'; }); INP.e1Live(el); };
+// The chosen deposit: null (none or the default), the custom amount, or false after marking the field
+function e1DepRead(dm, dS, radioSel, fieldSel) {
+  if (!E1_DEPM[dm]) return fieldErr(radioSel, 'Choose whether this programme offers a deposit'), false;
+  if (dm !== 'own') return null;
+  if (!/^\d+(\.\d{1,2})?$/.test(String(dS).trim()) || !(Number(dS) > 0)) return fieldErr(fieldSel, 'Enter a custom deposit above £0, in whole pence (for example 250 or 250.50)'), false;
+  return Number(dS);
+}
 const E1_ROUND_TXT = 'Instalments are rounded to the penny; the final instalment is adjusted so they total the fee exactly.';
 // E1 rounding: the exact schedule of every fee under these terms. Finance sees it before approving; a frozen copy is kept with the
 // proposal (the queue item) and with the plan version it produced. The deposit route is described, not scheduled — it is unchanged
 // (the deposit, then one balance row due within the seat hold).
 function e1SchedSnap(pr, t) {
   const n = t.meth === 'one-time' ? 1 : t.inst;
-  return { meth: t.meth, inst: n, deposit: e1EffDep(t), depOwn: t.dep != null,
+  return { meth: t.meth, inst: n, deposit: e1EffDep(t), depOwn: !t.depOff && t.dep != null, depOff: !!t.depOff,
     fees: e1Fees(pr).map(f => ({ id: f.id, label: f.label, mode: f.mode, fee: f.fee > 0 ? f.fee : null, sched: f.fee > 0 ? e1Sched(f.fee, n) : null })) };
 }
-const e1SnapKey = s => JSON.stringify(s && { meth: s.meth, inst: s.inst, deposit: s.deposit, fees: s.fees });
+const e1SnapKey = s => JSON.stringify(s && { meth: s.meth, inst: s.inst, deposit: s.deposit, depOff: !!s.depOff, fees: s.fees });
 // "Instalments 1–5: £166.67 each · instalment 6 (final): £166.65" — the actual amounts
 function e1SchedRows(sch) {
   if (!sch) return '—'; const n = sch.length, a = money(sch[0], 'GBP'), z = money(sch[n - 1], 'GBP');
@@ -161,14 +182,14 @@ function e1Summary(pr, t, snap) {
   const s = snap || e1SchedSnap(pr, t), l3 = r1IsL3Pid(pr.id), hold = chHoldDays(), dep = s.deposit, many = s.meth !== 'one-time', p = { meth: s.meth, inst: s.inst };
   const part = ((s4PlanCur(pr.id) || s4PlanLast(pr.id) || {}).partial) !== false;
   const rows = s.fees.map(f => {
-    const why = f.fee > 0 ? s4PlanIssue({ fee: f.fee, deposit: dep, inst: s.inst, meth: s.meth, partial: true, status: 'Active' }) : 'No fee set';
+    const why = f.fee > 0 ? s4PlanIssue({ fee: f.fee, deposit: s.depOff ? null : dep, depOff: !!s.depOff, inst: s.inst, meth: s.meth, partial: true, status: 'Active' }) : 'No fee set';
     const tot = f.sched ? f.sched.reduce((a, x) => a + e1Pence(x), 0) / 100 : null;
     const inst = !(f.fee > 0) ? '—' : !many ? 'None — one payment' : f.sched ? `<strong>${s.inst} monthly</strong><div class="e1-sch">${esc(e1SchedRows(f.sched))}</div><div class="xs muted e1-tot">Total ${money(tot, 'GBP')}</div>` : '—';
-    const depTxt = f.fee > dep ? `Alternative to ${E1_ALT[s.meth]}: ${money(dep, 'GBP')} deposit, followed by the ${money(f.fee - dep, 'GBP')} balance during the configured seat-hold period (${hold} days).` : '—';
+    const depTxt = s.depOff ? 'Not available — this programme doesn\'t offer a deposit.' : f.fee > dep ? `Alternative to ${E1_ALT[s.meth]}: ${money(dep, 'GBP')} deposit, followed by the ${money(f.fee - dep, 'GBP')} balance during the configured seat-hold period (${hold} days).` : '—';
     return `<tr><td>${esc(f.label)}</td>${l3 ? `<td class="small">${esc(f.mode)}</td>` : ''}<td class="r num">${f.fee > 0 ? money(f.fee, 'GBP') : '—'}</td><td class="small"><strong>${esc(E1_METH_SUM[s.meth])}</strong>${f.fee > 0 ? `<div>${esc(e1PayHow(f.fee, p))}</div>` : ''}${why ? `<div class="xs" style="color:var(--red)">${esc(why)}</div>` : ''}</td><td class="small">${inst}</td><td class="small e1-dep">${esc(depTxt)}</td></tr>`;
   }).join('');
   return `<div class="tbl-wrap e1-sum"><table class="tbl dense"><thead><tr><th>${l3 ? 'Fee option' : 'Applies to'}</th>${l3 ? '<th>Delivery mode</th>' : ''}<th class="r">Total fee</th><th>Payment methods</th><th>Instalment schedule</th><th>Deposit (alternative route)</th></tr></thead><tbody>${rows}</tbody></table></div>
-    <p class="xs muted e1-sum-note">${many ? esc(E1_ROUND_TXT) + ' ' : ''}Deposit eligibility: the deposit route is offered only when the learner's batch starts at least ${CH_HOLD_DAYS} days away (CH-10). Seat hold: ${hold} days (configured by Finance); the balance ${part ? 'can be paid in one go or in parts' : 'is paid in one go'} during the hold.${l3 ? ' Every fee option uses these terms.' : ''}</p>`;
+    <p class="xs muted e1-sum-note">${many ? esc(E1_ROUND_TXT) + ' ' : ''}${s.depOff ? 'Deposit: not offered for this programme — learners pay in full or by instalments, whenever their batch starts.' : `Deposit eligibility (an optional route): the deposit route is offered only when the learner's batch starts at least ${CH_HOLD_DAYS} days away (CH-10). Seat hold: ${hold} days (configured by Finance); the balance ${part ? 'can be paid in one go or in parts' : 'is paid in one go'} during the hold.`}${l3 ? ' Every fee option uses these terms.' : ''}</p>`;
 }
 
 /* ---------- C. Finance review of a new programme's payment terms ---------- */
@@ -238,13 +259,13 @@ function e1PlanStep(pr) {
   const qlink = q ? ` <a href="#a-queue.${q.id}" data-act="goTok" data-t="a-queue.${q.id}" class="mono">${q.id}</a>` : T && T.qid ? ` <span class="mono">${T.qid}</span>` : ''; // creators don't see Finance's queue
   const ret = T && T.status === 'Changes' && T.changes ? `<div class="small e1-ask"><strong>Finance's request:</strong> ${esc(T.changes.reason)} <span class="xs muted">— ${esc(T.changes.by)}, ${fdt(T.changes.at)}</span></div>` : '';
   const appr = T && T.status === 'Approved' && T.approved ? `<div class="small">Approved by ${esc(T.approved.by)} on ${fd(T.approved.at)}${T.approved.qid ? ` (${T.approved.qid})` : T.approved.how ? ` — ${esc(T.approved.how)}` : ''}.</div>` : '';
-  const head = `<div class="row-b"><h2>Payment plan</h2>${draft || T ? e1Chip(pr) : ''}</div><p class="small muted">All amounts in GBP. The deposit is offered only when the learner's batch starts in ${CH_HOLD_DAYS} days or more; otherwise the learner pays in full or the first instalment.</p>
+  const head = `<div class="row-b"><h2>Payment plan</h2>${draft || T ? e1Chip(pr) : ''}</div><p class="small muted">All amounts in GBP. Each programme chooses whether it offers a deposit. A deposit, when offered, is available only when the learner's batch starts in ${CH_HOLD_DAYS} days or more; otherwise the learner pays in full or the first instalment.</p>
     ${draft || T ? `<div class="note b-${{ green: 'green', grey: 'grey', amber: 'amber', red: 'red' }[st[1]]} e1-state" role="status">${ic(key === 'Pending' ? 'clock' : key === 'Changes' ? 'alert' : 'info')}<div class="small"><strong>${st[0]}${key === 'Pending' || key === 'Changes' ? qlink : ''}.</strong> ${st[2]}${ret}${appr}</div></div>` : ''}`;
   let body;
   if (fo && key === 'Pending') body = `<h3>Proposed terms</h3><p class="small">${esc(e1TermsTxt(shown))}</p>${q && e1Overdue(q) ? `<p class="small e1-overdue">${chip('Overdue', 'amber')} Waiting ${Math.max(0, -daysTo(q.raised))} days — it stays with Finance (no escalation).</p>` : ''}${q && e1CanDecide(q) ? `<div class="row"><button class="btn btn-primary" data-act="e1Decide" data-id="${q.id}" data-a="approve">Approve payment terms</button><button class="btn" data-act="e1Decide" data-id="${q.id}" data-a="return">Request changes</button></div>` : ''}${q ? `<div class="row"><button class="btn btn-ghost" data-act="goTok" data-t="a-queue.${q.id}">Open in Approvals Queue</button></div>` : ''}<p class="xs muted">${ic('lock', 12)} A Finance Admin approves these terms or requests changes. The plan can't be edited while they are waiting.</p>`;
   else if (fo) body = `${e1Form('pp', e1TermsOfPlan(cur))}<button class="btn btn-sm btn-primary" data-act="ch8SavePlan" data-id="${pr.id}">Save payment plan</button><p class="xs muted">${ic('lock', 12)} Set by Finance or the Super Admin — your saved plan is the approved plan.</p>`;
   else if (draft && e1IsCreator() && T && ['Draft', 'Changes'].includes(T.status)) body = `${e1Form('e1', shown)}<div class="row"><button class="btn btn-primary" data-act="e1Submit" data-id="${pr.id}">Submit to Finance for review</button><button class="btn" data-act="e1Draft" data-id="${pr.id}">Save draft</button></div><p class="xs muted">${ic('lock', 12)} Set by Finance or the Super Admin — you propose the terms here and a Finance Admin approves them or asks for changes.</p>`;
-  else body = `<dl class="kv"><dt>How learners pay</dt><dd>${esc(E1_METH[shown.meth][0])}</dd><dt>Instalments</dt><dd>${shown.meth === 'one-time' ? 'None' : shown.inst + ' monthly'}</dd><dt>Deposit</dt><dd>${money(e1EffDep(shown), 'GBP')} ${shown.dep == null ? '(default)' : '(own)'}</dd></dl><p class="xs muted">${ic('lock', 12)} Set by Finance or the Super Admin.</p>`;
+  else body = `<dl class="kv"><dt>How learners pay</dt><dd>${esc(E1_METH[shown.meth][0])}</dd><dt>Instalments</dt><dd>${shown.meth === 'one-time' ? 'None' : shown.inst + ' monthly'}</dd><dt>Deposit</dt><dd>${esc(e1DepLbl(shown))}</dd></dl><p class="xs muted">${ic('lock', 12)} Set by Finance or the Super Admin.</p>`;
   return `<section class="card e1-plan" data-pid="${pr.id}">${head}${body}<h3>Payment summary${T && !['Approved'].includes(T.status) && draft ? ' (proposed)' : ''}</h3><div class="e1-sumbox" aria-live="polite">${e1Summary(pr, shown)}</div>${issue && e1Ok(pr) ? `<div class="note b-red s4-planerr">${ic('alert')}<div class="small"><strong>Needs configuration.</strong> ${esc(issue)}</div></div>` : ''}${T && T.hist.length ? `<details class="e1-hist"><summary class="small">Payment terms history (${T.hist.length})</summary><ul class="list small">${T.hist.slice().reverse().map(h => `<li class="li"><div class="li-b"><strong>${esc(h[2])}</strong>${h[3] ? `<span>${esc(h[3])}</span>` : ''}<span class="xs muted">${fdt(h[0])} · ${esc(h[1])}</span></div></li>`).join('')}</ul></details>` : ''}</section>`;
 }
 const _planStepE1 = ch8PlanStep;
@@ -256,10 +277,11 @@ ACT.ch8SavePlan = el => {
   const pr = ch8Pr(el.dataset.id); if (!pr || !finOwner() || !$('input[name="pp-meth"]')) return _savePlanE1(el); // refusals stay S4a's (logged)
   const T = e1T(pr.id); if (T && T.status === 'Pending') { toast(`These terms are waiting for Finance review (${T.qid}) — approve them or request changes first.`, 'err'); return; }
   const t = e1ReadForm('pp', pr); if (!t) return;
-  const n0 = s4Plans(pr.id).length, prevM = e1MethLbl(s4PlanCur(pr.id) || s4PlanLast(pr.id)); $('#pp-n').value = String(t.inst);
-  E1_METH_SAVE = t.meth; try { _savePlanE1(el); } finally { E1_METH_SAVE = null; }
+  const cur = s4PlanCur(pr.id) || s4PlanLast(pr.id), n0 = s4Plans(pr.id).length;
+  const why = s4PlanSave(pr, { fee: cur ? cur.fee : pr.price, deposit: t.dep, depOff: !!t.depOff, inst: t.inst, partial: cur ? cur.partial : true, meth: t.meth }, 'Saved from the programme set-up', { noLog: true });
+  if (why) { fieldErr(/deposit/i.test(why) ? '#pp-d' : '#pp-n', why); return; }
   if (s4Plans(pr.id).length === n0) return;
-  const a = ADMIN.audit[0]; if (a && a.action === 'Payment plan saved') { a.before += ` · ${prevM}`; a.after += ` · ${E1_METH[t.meth][0]}`; }
+  ch8Log(pr, 'Payment plan saved', cur ? `v${cur.v} · ${e1TermsTxt(e1TermsOfPlan(cur))}` : '—', `v${s4PlanLast(pr.id).v} · ${e1TermsTxt(t)}`); render(); toast('Saved and audited.');
   if (T || pr.status === 'Draft') { const R = e1Store().terms[pr.id] = T || { hist: [] }; const v = s4PlanLast(pr.id).v; Object.assign(R, { status: 'Approved', prop: t, approved: { by: ADMIN.me.name, at: now().toISOString(), how: isSA() ? SA_TAG : 'Saved by Finance', v, sched: s4PlanLast(pr.id).sched } }); R.hist.push([now().toISOString(), ADMIN.me.name, `Plan saved (v${v}) — ${isSA() ? 'Super Administrator' : 'Finance'}`, e1TermsTxt(t)]); render(); }
 };
 // Creator: save the proposal, or submit it to Finance
@@ -297,12 +319,12 @@ function e1Decide(i, a, r, base) {
   if (!String(r || '').trim()) return refuse('No reason given', a === 'return' ? 'Say what needs to change.' : 'Enter a note for the record.');
   if (!isOpen(i) || !T || T.qid !== i.id || T.status !== 'Pending') return refuse('Not waiting for review', 'This proposal is no longer waiting for review.');
   const t = i.data.prop; if (a === 'approve') { const why = e1TermsIssue(pr, t); if (why) return refuse(why, 'Can\'t approve: ' + why + ' — request changes instead.'); }
-  if (a === 'approve' && i.data.sched && e1SnapKey(i.data.sched) !== e1SnapKey(e1SchedSnap(pr, t))) return refuse('The schedule changed after submission', 'Can\'t approve: the fees or schedule changed after these terms were submitted — request changes so they are submitted again.');
+  if (a === 'approve' && i.data.sched && e1SnapKey(i.data.sched) !== e1SnapKey(e1SchedSnap(pr, t))) return refuse('The schedule changed after submission', 'Can\'t approve: the fees, the schedule or the Academy default deposit changed after these terms were submitted — request changes so they are submitted again.');
   if (base() === false) return false;
   const at = now().toISOString(), txt = e1TermsTxt(t), go = `a-programmes.${pr.id}.plan`;
   if (a === 'approve') {
-    const cur = s4PlanCur(pr.id) || s4PlanLast(pr.id), same = cur && cur.status === 'Active' && e1MethOf(cur) === t.meth && cur.inst === t.inst && cur.deposit === t.dep;
-    if (!same) { E1_METH_SAVE = t.meth; try { s4PlanSave(pr, { fee: cur ? cur.fee : pr.price, deposit: t.dep, inst: t.inst, partial: cur ? cur.partial : true }, `Approved by Finance (${i.id}): ${r}`); } finally { E1_METH_SAVE = null; } }
+    const cur = s4PlanCur(pr.id) || s4PlanLast(pr.id), same = cur && cur.status === 'Active' && e1MethOf(cur) === t.meth && cur.inst === t.inst && cur.deposit === (t.depOff ? null : t.dep) && !!cur.depOff === !!t.depOff;
+    if (!same) { E1_METH_SAVE = t.meth; try { s4PlanSave(pr, { fee: cur ? cur.fee : pr.price, deposit: t.dep, depOff: !!t.depOff, inst: t.inst, partial: cur ? cur.partial : true }, `Approved by Finance (${i.id}): ${r}`); } finally { E1_METH_SAVE = null; } }
     else if (!cur.sched && i.data.sched) cur.sched = i.data.sched; // no new version (nothing differs): the approved version keeps the reviewed schedule; an existing snapshot is never replaced
     Object.assign(T, { status: 'Approved', approved: { by: ADMIN.me.name, at, qid: i.id, v: (s4PlanCur(pr.id) || {}).v, sched: i.data.sched || e1Freeze(e1SchedSnap(pr, t)) } });
     e1Hist(pr, `Approved by Finance (${i.id})`, `${txt} — ${r}`); ch8Log(pr, 'Payment terms approved', 'Waiting for Finance review', 'Approved', `${i.id} · ${r}`);
@@ -324,7 +346,7 @@ const _qdE1 = queueDetail;
 queueDetail = function (id) {
   let h = _qdE1.apply(this, arguments); const i = qItem(id); if (!i || i.type !== E1_T) return h;
   const d = i.data || {}, pr = ch8Pr(d.pid), t = d.prop, cur = pr && (s4PlanCur(pr.id) || s4PlanLast(pr.id));
-  const panel = `<section class="card e1-q"><h2>Programme payment terms</h2><dl class="kv"><dt>Programme</dt><dd>${pr ? `${isFin() ? `<strong>${esc(pr.title)}</strong>` : `<a href="#a-programmes.${pr.id}.plan" data-act="goTok" data-t="a-programmes.${pr.id}.plan">${esc(pr.title)}</a>`} <span class="xs muted">${pr.id} · ${esc(pr.level)} · ${esc(pr.status)}</span>` : '—'}</dd><dt>How learners pay</dt><dd><strong>${esc(E1_METH[t.meth][0])}</strong> — ${esc(E1_METH[t.meth][1])}</dd><dt>Instalments</dt><dd>${t.meth === 'one-time' ? 'None' : t.inst + ' monthly'}</dd><dt>Deposit</dt><dd>${money(e1EffDep(t), 'GBP')} ${t.dep == null ? '(default)' : '(own)'}</dd><dt>In force now</dt><dd class="small">${cur ? `v${cur.v} · ${esc(s4PlanTxt(cur))} · ${esc(e1MethLbl(cur))}` : 'No plan yet'}</dd><dt>On approval</dt><dd class="small">A new plan version is saved with these terms and the creator can publish the programme. Finance doesn't publish it. Existing learners keep their terms.</dd><dt>Requirement</dt><dd class="small">Confirmed (20 Oct 2026): a Finance Admin approves payment terms proposed for a new programme. Finance approves the financial terms only — not academic content or publication.</dd><dt>Route</dt><dd class="small">Routed to ${esc(i.first)}; any Active Finance Admin may decide (reviewer routing — provisional). This item doesn't escalate: after ${E1_OVERDUE} days it is marked overdue, for information only, and stays with Finance.</dd>${e1Overdue(i) ? `<dt>Overdue</dt><dd class="small e1-overdue">${chip('Overdue', 'amber')} Waiting ${i.days} days. Still decided by a Finance Admin; nothing is approved or rejected automatically.</dd>` : ''}</dl>${pr ? `<h3>Proposed payment schedule</h3><p class="xs muted">${d.sched ? 'Exactly as submitted — this is the schedule an approval saves with the new plan version.' : 'Submitted before schedules were recorded — worked out from the proposed terms.'}</p>${e1Summary(pr, t, d.sched)}` : ''}</section>`;
+  const panel = `<section class="card e1-q"><h2>Programme payment terms</h2><dl class="kv"><dt>Programme</dt><dd>${pr ? `${isFin() ? `<strong>${esc(pr.title)}</strong>` : `<a href="#a-programmes.${pr.id}.plan" data-act="goTok" data-t="a-programmes.${pr.id}.plan">${esc(pr.title)}</a>`} <span class="xs muted">${pr.id} · ${esc(pr.level)} · ${esc(pr.status)}</span>` : '—'}</dd><dt>How learners pay</dt><dd><strong>${esc(E1_METH[t.meth][0])}</strong> — ${esc(E1_METH[t.meth][1])}</dd><dt>Instalments</dt><dd>${t.meth === 'one-time' ? 'None' : t.inst + ' monthly'}</dd><dt>Deposit</dt><dd><strong>${esc(E1_DEPM[e1DepMode(t)])}</strong> — ${esc(e1DepLbl(t))}</dd><dt>In force now</dt><dd class="small">${cur ? `v${cur.v} · ${esc(s4PlanTxt(cur))} · ${esc(e1MethLbl(cur))}` : 'No plan yet'}</dd><dt>On approval</dt><dd class="small">A new plan version is saved with these terms and the creator can publish the programme. Finance doesn't publish it. Existing learners keep their terms.</dd><dt>Requirement</dt><dd class="small">Confirmed (20 Oct 2026): a Finance Admin approves payment terms proposed for a new programme. Finance approves the financial terms only — not academic content or publication.</dd><dt>Route</dt><dd class="small">Routed to ${esc(i.first)}; any Active Finance Admin may decide (reviewer routing — provisional). This item doesn't escalate: after ${E1_OVERDUE} days it is marked overdue, for information only, and stays with Finance.</dd>${e1Overdue(i) ? `<dt>Overdue</dt><dd class="small e1-overdue">${chip('Overdue', 'amber')} Waiting ${i.days} days. Still decided by a Finance Admin; nothing is approved or rejected automatically.</dd>` : ''}</dl>${pr ? `<h3>Proposed payment schedule</h3><p class="xs muted">${d.sched ? 'Exactly as submitted — this is the schedule an approval saves with the new plan version.' : 'Submitted before schedules were recorded — worked out from the proposed terms.'}</p>${e1Summary(pr, t, d.sched)}` : ''}</section>`;
   const k = [h.indexOf('<div class="q3">'), h.indexOf('<div class="grid-2"><div class="stack-lg">')].find(x => x >= 0) ?? -1; if (k >= 0) h = h.slice(0, k) + `<div class="grid-2 k-panels">${panel}</div>` + h.slice(k);
   const who = esc(i.raisedBy), opt = (btn, c) => `<div class="q-opt">${btn}<p class="xs q-conseq">→ ${c}</p></div>`;
   const card = `<section class="card q-decide"><h2>Decision</h2><div class="q-opts">${opt(`<button class="btn btn-primary" data-act="e1Decide" data-id="${i.id}" data-a="approve" ${selfBlocked(i) ? `disabled title="${esc(refuseMsg(i))}"` : !e1CanDecide(i) ? `disabled title="${esc(e1WhyNot(i))}"` : ''}>Approve payment terms</button>`, `A new payment-plan version is saved with these terms. ${who} is told and can then publish the programme.`)}${opt(`<button class="btn" data-act="e1Decide" data-id="${i.id}" data-a="return" ${!e1CanDecide(i) ? `disabled title="${esc(e1WhyNot(i))}"` : ''}>Request changes</button>`, `Goes back to ${who} with your reason, to change and submit again. Nothing is applied.`)}</div>
@@ -386,8 +408,8 @@ s4PlansCard = function () {
 const _r1FormE1 = r1Form;
 r1Form = function (o, pid) {
   const h = _r1FormE1.apply(this, arguments), p = s4PlanCur(pid); if (!p || !p.meth) return h;
-  const r = h.replace(/Deposit [^<]*? and \d+ monthly instalments come from this programme's payment plan\./, `Deposit ${money(s4EffDep(p), 'GBP')} and how learners pay (${esc(e1MethShort(p).toLowerCase())}) come from this programme's payment plan.`);
-  return p.meth === 'one-time' ? r.replace('The fee must divide into those instalments to the penny and be above the deposit.', 'The fee must be above the deposit.') : r; // no instalments to split into
+  const r = h.replace(/(?:No deposit|Deposit [^<]*?) and \d+ monthly instalments come from this programme's payment plan\./, `${p.depOff ? 'No deposit' : `Deposit ${money(s4EffDep(p), 'GBP')}`} and how learners pay (${esc(e1MethShort(p).toLowerCase())}) come from this programme's payment plan.`);
+  return p.meth === 'one-time' ? r.replace(' Instalments are rounded to the penny, with the final one adjusted so they total the fee exactly.', '') : r; // no instalments to split into
 };
 
 /* ---------- E1 clarification (20 Oct 2026): Step 1 doesn't assume instalments ----------
@@ -407,27 +429,27 @@ ACT.s4PlanEdit = el => {
   if (!s4FinGuard('change payment plans')) return;
   const tpl = el.dataset.t ? STORE.fin.templates.find(x => x.id === el.dataset.t) : null, fixed = el.dataset.p ? s4Pr(el.dataset.p) : null, ps = s4PlanProgs();
   const pick = fixed || ps.find(p => p.id === 'NV-L3'), cur = s4PlanCur(pick.id) || s4PlanLast(pick.id);
-  const fee = cur ? cur.fee : NVQ_FEES[pick.title] || '', own = tpl ? (tpl.depG ? tpl.depG : null) : cur ? cur.deposit : null, n = tpl ? tpl.n : cur ? cur.inst : CH_INST_N, part = tpl ? tpl.partial === 'Yes' : cur ? cur.partial : true, meth = tpl ? 'instalments' : e1MethOf(cur);
+  const fee = cur ? cur.fee : NVQ_FEES[pick.title] || '', own = tpl ? (tpl.depG ? tpl.depG : null) : cur && !cur.depOff ? cur.deposit : null, dm0 = tpl ? (tpl.depG ? 'own' : 'default') : cur ? e1DepMode(e1TermsOfPlan(cur)) : 'default', n = tpl ? tpl.n : cur ? cur.inst : CH_INST_N, part = tpl ? tpl.partial === 'Yes' : cur ? cur.partial : true, meth = tpl ? 'instalments' : e1MethOf(cur);
   reasonDlg({ title: fixed ? 'Payment plan — ' + esc(fixed.title) : 'Payment plan from a template', ok: 'Save new version', label: 'Reason (required)', extra: `${tpl ? `<div class="note b-amber">${ic('info')}<div class="small">Starting point: legacy template "${esc(tpl.course)}" (${money(tpl.gbp, 'GBP')} × ${tpl.n}${tpl.depG ? ', deposit ' + money(tpl.depG, 'GBP') : ''}). Its instalment count, deposit and part-payment setting are filled in; the fee stays the programme's. Nothing is saved until you choose "Save new version".</div></div>` : ''}
     <div class="form-grid">${fixed ? '' : `<div class="field full"><label for="pp-p">Programme</label><select class="select" id="pp-p" data-onchange="s4PpProg">${ps.map(p => `<option value="${p.id}" ${p.id === pick.id ? 'selected' : ''}>${esc(p.title)}</option>`).join('')}</select></div>`}
     <div class="field"><label for="pp-f">Programme fee (GBP)</label><input class="input num" type="number" min="1" step="0.01" id="pp-f" value="${fee}" ${fee && !isSA() ? 'readonly' : ''}>${fee && !isSA() ? '<span class="hint">The programme\'s price — only the Super Administrator changes it.</span>' : ''}</div>
     <fieldset class="stack full e1-meth" style="border:0;padding:0"><legend class="lbl">How can learners pay?</legend>${Object.entries(E1_METH).map(([k, [l, hh]]) => `<label class="check e1-mopt"><input type="radio" name="pp-meth" value="${k}" ${meth === k ? 'checked' : ''} data-onchange="e1Meth" data-px="pe"><span><strong>${l}</strong><br><span class="small muted">${hh}</span></span></label>`).join('')}</fieldset>
     <div class="field e1-n-pe" ${meth === 'one-time' ? 'hidden' : ''}><label for="pp-n">Monthly instalments</label><input class="input num" type="number" min="${E1_N_MIN}" max="${E1_N_MAX}" id="pp-n" value="${meth === 'one-time' ? CH_INST_N : n}"><span class="hint">${E1_N_MIN} to ${E1_N_MAX}. ${esc(E1_ROUND_TXT)}</span></div>
-    <fieldset class="stack full" style="border:0;padding:0"><legend class="lbl">Deposit</legend><label class="check"><input type="radio" name="pp-dm" value="default" ${own == null ? 'checked' : ''}> Use the default deposit (${money(S4().cfg.deposit, 'GBP')})</label><label class="check"><input type="radio" name="pp-dm" value="own" ${own != null ? 'checked' : ''}> Own deposit for this programme</label><div class="field"><label for="pp-dv">Own deposit (GBP)</label><input class="input num" type="number" min="0" step="0.01" id="pp-dv" value="${own != null ? own : ''}"></div></fieldset>
+    ${e1DepFields('pe', 'dm', 'dv', dm0, own).replace(/name="pe-dm"/g, 'name="pp-dm"').replace(/id="pe-dv"|for="pe-dv"/g, x => x.replace('pe-dv', 'pp-dv'))}
     <label class="check full"><input type="checkbox" id="pp-pa" ${part ? 'checked' : ''}> Part payments allowed (the balance can be paid in parts)</label>
     <p class="small full">First instalment: <strong>due at sign-up</strong> (CH-10 — can't be postponed here; Finance can adjust an enrolled learner's schedule).</p></div>`,
     onOk: r => {
       const pr = fixed || s4Pr($('#pp-p').value), dm = ($('input[name="pp-dm"]:checked') || {}).value, m = ($('input[name="pp-meth"]:checked') || {}).value || 'instalments', nS = $('#pp-n').value.trim();
-      const f = { fee: +$('#pp-f').value, inst: m === 'one-time' ? 1 : +nS, deposit: dm === 'own' ? +$('#pp-dv').value : null, partial: $('#pp-pa').checked, meth: m };
-      if (dm === 'own' && $('#pp-dv').value === '') { fieldErr('#pp-dv', 'Enter the deposit'); return false; }
+      const dv = e1DepRead(dm, $('#pp-dv').value, 'input[name="pp-dm"]', '#pp-dv'); if (dv === false) return false;
+      const f = { fee: +$('#pp-f').value, inst: m === 'one-time' ? 1 : +nS, deposit: dv, depOff: dm === 'none', partial: $('#pp-pa').checked, meth: m };
       if (m !== 'one-time' && !(/^\d+$/.test(nS) && f.inst >= E1_N_MIN && f.inst <= E1_N_MAX)) { fieldErr('#pp-n', `Enter ${E1_N_MIN} to ${E1_N_MAX} monthly instalments`); return false; }
       const fee0 = (s4PlanCur(pr.id) || s4PlanLast(pr.id) || {}).fee || NVQ_FEES[pr.title]; if (fee0 && f.fee !== fee0 && !isSA()) { logA('Payment Plans', `${pr.title} (${pr.id})`, 'Blocked: change the programme fee', money(fee0, 'GBP'), money(f.fee, 'GBP'), 'Only the Super Administrator changes a programme\'s price'); fieldErr('#pp-f', 'Only the Super Administrator changes the programme\'s price'); return false; }
       const issue = s4PlanIssue(f); if (issue) { fieldErr(/fee is set|whole pence/.test(issue) ? '#pp-f' : /instalments/.test(issue) ? '#pp-n' : '#pp-dv', issue); return false; }
       const T = e1T(pr.id); if (T && T.status === 'Pending') { fieldErr('#pp-f', `A proposal for this programme is waiting for Finance review (${T.qid}) — decide it first`); return false; }
-      const why3 = r1IsL3Pid(pr.id) ? e1TermsIssue(pr, { meth: m, inst: f.inst, dep: f.deposit }) : ''; if (why3 && f.fee === fee0) { fieldErr('#pp-n', why3); return false; }
-      const p0 = s4PlanCur(pr.id); if (p0 && p0.fee === f.fee && p0.inst === f.inst && p0.deposit === f.deposit && p0.partial === f.partial && e1MethOf(p0) === m) { fieldErr('#pp-f', 'Nothing has changed'); return false; }
+      const why3 = r1IsL3Pid(pr.id) ? e1TermsIssue(pr, { meth: m, inst: f.inst, dep: f.deposit, depOff: f.depOff }) : ''; if (why3 && f.fee === fee0) { fieldErr(/deposit/i.test(why3) ? '#pp-dv' : '#pp-n', why3); return false; }
+      const p0 = s4PlanCur(pr.id); if (p0 && p0.fee === f.fee && p0.inst === f.inst && p0.deposit === f.deposit && !!p0.depOff === f.depOff && p0.partial === f.partial && e1MethOf(p0) === m) { fieldErr('#pp-f', 'Nothing has changed'); return false; }
       s4PlanSave(pr, f, (tpl ? `From legacy template "${tpl.course}": ` : '') + r);
-      if (T && pr.status === 'Draft') { Object.assign(T, { status: 'Approved', prop: { meth: m, inst: f.inst, dep: f.deposit }, approved: { by: ADMIN.me.name, at: now().toISOString(), how: isSA() ? SA_TAG : 'Saved by Finance', v: s4PlanLast(pr.id).v, sched: s4PlanLast(pr.id).sched } }); e1Hist(pr, `Plan saved (v${s4PlanLast(pr.id).v}) — ${isSA() ? 'Super Administrator' : 'Finance'}`, e1TermsTxt(T.prop)); }
+      if (T && pr.status === 'Draft') { Object.assign(T, { status: 'Approved', prop: { meth: m, inst: f.inst, dep: f.deposit, depOff: f.depOff }, approved: { by: ADMIN.me.name, at: now().toISOString(), how: isSA() ? SA_TAG : 'Saved by Finance', v: s4PlanLast(pr.id).v, sched: s4PlanLast(pr.id).sched } }); e1Hist(pr, `Plan saved (v${s4PlanLast(pr.id).v}) — ${isSA() ? 'Super Administrator' : 'Finance'}`, e1TermsTxt(T.prop)); }
       render(); toast(`${pr.title}: plan version ${s4PlanLast(pr.id).v} saved — new sign-ups use it.`);
     } });
 };
@@ -473,7 +495,7 @@ const _applyNvqE1 = ACT.applyNvq;
 ACT.applyNvq = el => {
   const r = _applyNvqE1(el), c = CATALOGUE.find(x => x.id === (el && el.dataset && el.dataset.id)), pr = c && c.kind === 'nvq' ? s3Progs().find(p => p.title === c.title) : null, p = pr && s4PlanCur(pr.id);
   if (!MODAL || !p || !p.meth || p.meth === 'instalments') return r;
-  MODAL.body = MODAL.body.replace(/or (\d+) monthly instalments((?: of £[\d,]+\.\d\d| \(\d+ × £[\d,]+\.\d\d and a final £[\d,]+\.\d\d\))?)((?:, the first one now)?)\./g, (x, n, amt, first) => p.meth === 'one-time' ? 'or the full fee in one payment now.' : `or the full fee in one payment now, or ${n} monthly instalments${amt}${first}.`);
+  MODAL.body = MODAL.body.replace(/(or |\. )(\d+) monthly instalments((?: of £[\d,]+\.\d\d| \(\d+ × £[\d,]+\.\d\d and a final £[\d,]+\.\d\d\))?)((?:, the first one now)?)\./g, (x, pre, n, amt, first) => { const full = pre === 'or ' ? 'or the full fee' : '. The full fee'; return p.meth === 'one-time' ? `${full} in one payment now.` : `${full} in one payment now, or ${n} monthly instalments${amt}${first}.`; });
   renderModal(); return r;
 };
 

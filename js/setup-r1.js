@@ -38,7 +38,7 @@ function r1TermsOf(o) {
   const opt = { id: o.id, pid, label: o.label, mode: o.mode, fee, v: o.v, legacy: !!o.legacy };
   if (!p) return { ...base, fee, opt };
   const issue = o.status !== 'Active' ? 'This fee option is retired.' : s4PlanIssue({ ...p, fee });
-  return { pid, v: p.v, fee, deposit: s4EffDep(p), own: p.deposit != null, inst: p.inst, partial: p.partial, issue, opt };
+  return { pid, v: p.v, fee, deposit: s4EffDep(p), own: p.deposit != null, ...(p.depOff ? { depOff: true } : {}), inst: p.inst, partial: p.partial, issue, opt };
 }
 const r1Eligible = (pid = R1_PID) => r1Opts(pid).filter(o => o.status === 'Active' && !r1TermsOf(o).issue);
 // The learner's frozen option and mode (null for learners who are not on a Level 3 programme)
@@ -98,7 +98,7 @@ function r1Form(o, pid) {
     <div class="field full"><label for="fo-l">Display label</label><input class="input" id="fo-l" maxlength="80" value="${o ? esc(o.label) : ''}"><span class="hint">Shown to learners at sign-up, for example "Self-Paced — standard".</span></div>
     <div class="field"><label for="fo-f">Fee (GBP)</label><input class="input num" type="number" min="1" step="0.01" id="fo-f" value="${o ? (lock ? r1PlanFee(pid) || '' : o.fee) : ''}" ${lock || feeRo ? 'readonly' : ''}>${lock ? '<span class="hint">The programme payment plan\'s fee — change it in the payment plan.</span>' : feeRo ? '<span class="hint">Only the Super Administrator changes an existing option\'s fee.</span>' : ''}</div>
     <div class="field"><label for="fo-m">Delivery mode</label><select class="select" id="fo-m" ${lock ? 'disabled' : ''}>${lock ? `<option value="">${R1_LEGACY_MODE}</option>` : (o ? '' : '<option value="">Choose…</option>') + R1_MODES.map(m => `<option ${o && o.mode === m ? 'selected' : ''}>${m}</option>`).join('')}</select>${lock ? '<span class="hint">Fixed: its learners follow their batch\'s delivery mode, as before fee options.</span>' : ''}</div>
-    <p class="small full muted">${p ? `Deposit ${money(s4EffDep(p), 'GBP')} and ${p.inst} monthly instalments come from this programme's payment plan. Instalments are rounded to the penny, with the final one adjusted so they total the fee exactly. The fee must be above the deposit.` : 'This programme has no active payment plan yet — the option can be saved, and learners can choose it once the plan is set up.'}</p></div>`;
+    <p class="small full muted">${p ? `${p.depOff ? 'No deposit' : `Deposit ${money(s4EffDep(p), 'GBP')}`} and ${p.inst} monthly instalments come from this programme's payment plan. Instalments are rounded to the penny, with the final one adjusted so they total the fee exactly.${p.depOff ? '' : ' The fee must be above the deposit.'}` : 'This programme has no active payment plan yet — the option can be saved, and learners can choose it once the plan is set up.'}</p></div>`;
 }
 // Fee checks shared by the options card and the new-programme wizard; returns '' or the reason
 function r1FeeWhy(feeS, pid) {
@@ -159,7 +159,7 @@ ACT.r1OptHist = el => { const o = r1Opt(el.dataset.id); if (!o) return; openModa
 
 /* ---------- Learner sign-up (any Level 3 programme): choose one of its options; frozen with the terms ---------- */
 let R1_PICK = null; // the option chosen in the sign-up dialog, consumed when the sign-up starts
-const r1OptRow = (o, k) => { const t = r1TermsOf(o); return `<label class="opt r1-pick"><input type="radio" name="r1-opt" value="${o.id}" ${k ? 'checked' : ''}> <span><strong>${money(t.fee, 'GBP')} — ${esc(o.legacy ? 'Standard programme fee' : o.label)}</strong><span class="xs muted" style="display:block">${o.mode ? '' : 'Delivery mode: the mode of the batch you are assigned. '}Deposit ${money(t.deposit, 'GBP')} (when your batch starts in ${CH_HOLD_DAYS} days or more) or ${t.inst} monthly instalments${e1InstTxt(t.fee, t.inst)}, the first one now.</span></span></label>`; };
+const r1OptRow = (o, k) => { const t = r1TermsOf(o); return `<label class="opt r1-pick"><input type="radio" name="r1-opt" value="${o.id}" ${k ? 'checked' : ''}> <span><strong>${money(t.fee, 'GBP')} — ${esc(o.legacy ? 'Standard programme fee' : o.label)}</strong><span class="xs muted" style="display:block">${o.mode ? '' : 'Delivery mode: the mode of the batch you are assigned. '}${e2DepOr(t, true)}${t.inst} monthly instalments${e1InstTxt(t.fee, t.inst)}, the first one now.</span></span></label>`; };
 const _applyR1 = ACT.applyNvq;
 ACT.applyNvq = el => {
   const c = CATALOGUE.find(x => x.id === (el && el.dataset && el.dataset.id)), pr = c && c.kind === 'nvq' ? s3Progs().find(p => p.title === c.title) : null;
@@ -183,7 +183,7 @@ ch8StartSignup = function (w, pr) {
   const pick = R1_PICK && r1Opt(R1_PICK), el_ = r1Eligible(pr.id), o = (pick && r1PidOf(pick) === pr.id ? pick : null) || (el_.length === 1 ? el_[0] : r1Opt(r1StdOf(pr.id))); if (!o) return r;
   const t = r1TermsOf(o), fr = Object.freeze({ ...t, opt: Object.freeze({ ...t.opt }) });
   w.signup.plan = fr; w.nvq.feeOpt = o.id; if (o.mode) w.nvq.dmode = o.mode;
-  Object.assign(w.admission.deposit, t.issue ? { min: null, balance: null } : { min: t.deposit, balance: t.fee - t.deposit });
+  Object.assign(w.admission.deposit, t.issue || t.depOff ? { min: null, balance: null } : { min: t.deposit, balance: t.fee - t.deposit });
   logA('Admissions', `${chFullName(w)} (${w.me.id})`, 'Fee option chosen', '—', `${o.id} · ${r1OptTxt(o)} (option v${o.v})`, pr.title);
   return r;
 };
@@ -267,7 +267,7 @@ const r1OptsTxt = pid => r1Opts(pid).filter(o => o.status === 'Active').map(o =>
 const _ch8PlanR1b = ch8PlanStep;
 ch8PlanStep = function (pr) {
   const h = _ch8PlanR1b.apply(this, arguments); if (!pr || !r1IsL3Pid(pr.id)) return h; const p = pr.plan;
-  const per = r1Opts(pr.id).filter(o => o.status === 'Active').map(o => { const f = r1FeeOf(o); return `<li>${esc(o.label)} (${esc(r1ModeTxt(o))}) — ${money(f, 'GBP')}: ${p.inst} instalments${e1InstTxt(f, p.inst)}, or deposit ${money(p.deposit, 'GBP')} then ${money(f - p.deposit, 'GBP')}</li>`; }).join('');
+  const per = r1Opts(pr.id).filter(o => o.status === 'Active').map(o => { const f = r1FeeOf(o); return `<li>${esc(o.label)} (${esc(r1ModeTxt(o))}) — ${money(f, 'GBP')}: ${p.inst} instalments${e1InstTxt(f, p.inst)}${p.deposit == null ? ' — no deposit' : `, or deposit ${money(p.deposit, 'GBP')} then ${money(f - p.deposit, 'GBP')}`}</li>`; }).join('');
   return h.replace(/<p class="small">Price [\s\S]*?<\/p><\/section>/, `<ul class="small r1-planper">${per || '<li>No fee options yet.</li>'}</ul></section>`);
 };
 const _ch8ReviewR1 = ch8ReviewStep;

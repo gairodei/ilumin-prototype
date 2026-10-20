@@ -39,7 +39,8 @@ const s4Refuse = (module, entity, what) => { logA(module, entity, 'Blocked: ' + 
 const s4Plans = pid => (S4().plans[pid] = S4().plans[pid] || []);
 const s4PlanCur = pid => { const l = s4Plans(pid); for (let i = l.length - 1; i >= 0; i--) if (l[i].status === 'Active') return l[i]; return null; };
 const s4PlanLast = pid => { const l = s4Plans(pid); return l[l.length - 1] || null; };
-const s4EffDep = p => (p.deposit == null ? S4().cfg.deposit : p.deposit);
+// E2: a plan offers no deposit (depOff), the Academy default (deposit null) or its own amount
+const s4EffDep = p => (p.depOff ? null : p.deposit == null ? S4().cfg.deposit : p.deposit);
 // A plan is usable only when it reconciles: a fee, 1–24 instalments with a valid schedule (e1Sched: rounded to the penny, the final
 // instalment takes the difference — E1 rounding, 20 Oct 2026), and a deposit below the fee
 function s4PlanIssue(p) {
@@ -47,11 +48,13 @@ function s4PlanIssue(p) {
   if (!(p.fee > 0)) return 'No programme fee is set — it needs configuration by Finance or the Super Admin.';
   if (!(Number.isInteger(p.inst) && p.inst >= 1 && p.inst <= 24)) return 'The number of instalments must be 1 to 24.';
   if (!e1Sched(p.fee, p.inst)) return `${money(p.fee, 'GBP')} can't be paid in ${p.inst} instalments — each instalment must be at least £0.01 and the fee whole pence.`;
+  if (p.depOff) return ''; // E2: no deposit route, so no deposit to check
+  if (p.deposit != null && !(p.deposit > 0 && Math.abs(p.deposit * 100 - Math.round(p.deposit * 100)) < 1e-6)) return 'Enter a custom deposit above £0, in whole pence.';
   const d = s4EffDep(p); if (!(d >= 0) || d >= p.fee) return `The deposit (${money(d, 'GBP')}) must be below the fee (${money(p.fee, 'GBP')}).`;
   return '';
 }
 // What an applicant is offered: the programme's active plan with the deposit it resolves to (own amount or the default)
-function s4TermsOf(pid) { const p = s4PlanCur(pid), issue = s4PlanIssue(p); return p ? { pid, v: p.v, fee: p.fee, deposit: s4EffDep(p), own: p.deposit != null, inst: p.inst, partial: p.partial, issue } : { pid, v: null, fee: null, deposit: null, inst: null, issue }; }
+function s4TermsOf(pid) { const p = s4PlanCur(pid), issue = s4PlanIssue(p); return p ? { pid, v: p.v, fee: p.fee, deposit: s4EffDep(p), own: p.deposit != null, ...(p.depOff ? { depOff: true } : {}), inst: p.inst, partial: p.partial, issue } : { pid, v: null, fee: null, deposit: null, inst: null, issue }; }
 const s4Terms = w => (w && w.signup && w.signup.plan) || s4TermsOf(s4PidOfW(w));
 chProgFeeOf = w => s4Terms(w).fee;
 chDepOf = w => s4Terms(w).deposit;
@@ -59,12 +62,12 @@ chInstNOf = w => s4Terms(w).inst;
 chHoldDays = () => S4().cfg.hold;
 // The programme as the wizard sign-up code sees it for this applicant: their pinned plan
 function s4ProgView(w, pr) { const t = s4Terms(w); return Object.create(pr, { plan: { value: { deposit: t.deposit, inst: t.inst } }, price: { value: t.fee } }); }
-const s4PlanTxt = p => p ? `${money(p.fee, 'GBP')} · ${p.deposit == null ? 'default deposit' : 'deposit ' + money(p.deposit, 'GBP')} · ${p.inst} instalments · part payments ${p.partial ? 'yes' : 'no'}` : '—';
+const s4PlanTxt = p => p ? `${money(p.fee, 'GBP')} · ${p.depOff ? 'no deposit' : p.deposit == null ? 'default deposit' : 'deposit ' + money(p.deposit, 'GBP')} · ${p.inst} instalments · part payments ${p.partial ? 'yes' : 'no'}` : '—';
 function s4PlanSave(pr, f, note, opts = {}) {
   const issue = s4PlanIssue({ ...f, status: 'Active' }); if (issue) return issue;
   const l = s4Plans(pr.id), cur = s4PlanCur(pr.id), last = s4PlanLast(pr.id), v = (last ? last.v : 0) + 1;
   if (cur) cur.status = 'Superseded';
-  l.push({ v, fee: f.fee, deposit: f.deposit, inst: f.inst, partial: !!f.partial, status: 'Active', at: now().toISOString(), by: ADMIN.me.name, note: note || '' });
+  l.push({ v, fee: f.fee, deposit: f.depOff ? null : f.deposit, ...(f.depOff ? { depOff: true } : {}), inst: f.inst, partial: !!f.partial, status: 'Active', at: now().toISOString(), by: ADMIN.me.name, note: note || '' });
   s4FeeSync(pr, f.fee);
   if (!opts.noLog) logA('Payment Plans', `${pr.title} (${pr.id})`, opts.action || 'Payment plan saved', cur ? `v${cur.v} · ${s4PlanTxt(cur)}` : '—', `v${v} · ${s4PlanTxt(f)}`, note || '');
   return '';
@@ -207,7 +210,7 @@ ACT.applyNvq = el => {
   if (W.nvq) { toast('You already have an NVQ programme. Continue it from your dashboard.', 'info'); return; }
   if (pr.status !== 'Active') { toast('This programme isn\'t taking sign-ups.', 'err'); return; }
   const t = s4TermsOf(pr.id);
-  confirmDlg({ title: 'Sign up for ' + esc(pr.title) + '?', ok: 'Start sign-up', body: `<p>Signing up takes five steps: your details (we assign your batch), your documents, your offer letter, your payment, then you start.</p><p class="small muted">${t.issue ? 'Payment isn\'t available yet: this programme\'s payment plan needs configuration. You can still add your details and documents and sign your offer letter.' : `Price ${money(t.fee, 'GBP')} — deposit ${money(t.deposit, 'GBP')} (when your batch starts in ${CH_HOLD_DAYS} days or more) or ${t.inst} monthly instalments, the first one now.`}</p>`, onOk: () => { ch8StartSignup(W, pr); go('admission'); toast('Sign-up started.'); } });
+  confirmDlg({ title: 'Sign up for ' + esc(pr.title) + '?', ok: 'Start sign-up', body: `<p>Signing up takes five steps: your details (we assign your batch), your documents, your offer letter, your payment, then you start.</p><p class="small muted">${t.issue ? 'Payment isn\'t available yet: this programme\'s payment plan needs configuration. You can still add your details and documents and sign your offer letter.' : `Price ${money(t.fee, 'GBP')} — ${e2DepOr(t)}${t.inst} monthly instalments, the first one now.`}</p>`, onOk: () => { ch8StartSignup(W, pr); go('admission'); toast('Sign-up started.'); } });
 };
 // At sign-up start the applicant's checklist (their region's items), plan and offer letter version are fixed
 const _suStartS4 = ch8StartSignup;
@@ -215,7 +218,7 @@ ch8StartSignup = function (w, pr) {
   const r = _suStartS4.apply(this, arguments); if (!pr || !w.signup) return r;
   const t = Object.freeze({ ...s4TermsOf(pr.id) }), L = s4List(pr.id), reg = regionOf(w.me.country);
   Object.assign(w.signup, { plan: t, checklistV: L.v, docsRegion: reg, docsCountry: w.me.country });
-  Object.assign(w.admission.deposit, t.issue ? { min: null, balance: null } : { min: t.deposit, balance: t.fee - t.deposit });
+  Object.assign(w.admission.deposit, t.issue || t.depOff ? { min: null, balance: null } : { min: t.deposit, balance: t.fee - t.deposit });
   w.docs = s4DocsFor(pr.id, w.me.country);
   logA('Admissions', `${chFullName(w)} (${w.me.id})`, 'Sign-up terms fixed', '—', `Checklist v${L.v} (${reg} items${s4Other(w.me.country) ? ', country ' + w.me.country : ''}) · payment plan ${t.issue ? 'needs configuration' : 'v' + t.v} · offer letter v${w.signup.letterV}`, pr.title);
   return r;
@@ -245,7 +248,7 @@ function s4PlansCard() {
   const fo = finOwner();
   return `<section class="card s4-plans"><h2>Programme payment plans (used at sign-up)</h2><p class="small muted">One active plan per programme. The first instalment is due at sign-up (CH-10). A new version applies to new sign-ups; enrolled learners keep their plan.</p>
     <div class="tbl-wrap"><table class="tbl dense"><thead><tr><th>Programme</th><th class="r">Fee</th><th>Deposit</th><th>Instalments</th><th>Part payments</th><th>First instalment</th><th>Version</th><th>Status</th><th></th></tr></thead><tbody>${s4PlanProgs().map(pr => { const p = s4PlanCur(pr.id), last = s4PlanLast(pr.id), issue = s4PlanIssue(p), x = p || last;
-      return `<tr data-pid="${pr.id}"><td><strong>${esc(pr.title)}</strong><div class="xs muted">${pr.id} · ${pr.status}</div></td><td class="r">${x && x.fee ? money(x.fee, 'GBP') : '—'}</td><td>${x ? (x.deposit == null ? `${money(S4().cfg.deposit, 'GBP')} <span class="xs muted">(default)</span>` : `${money(x.deposit, 'GBP')} <span class="xs muted">(own)</span>`) : '—'}</td><td>${x && x.fee ? esc(e1SchedTxt(x.fee, x.inst)) : '—'}</td><td>${x ? (x.partial ? 'Yes' : 'No') : '—'}</td><td class="small">At sign-up</td><td>${x ? 'v' + x.v : '—'}</td><td>${p && !issue ? chip('Active', 'green') : last && last.status === 'Retired' ? chip('Retired', 'grey') : chip('Needs configuration', 'red')}${issue && p ? `<div class="xs" style="color:var(--red)">${esc(issue)}</div>` : ''}</td>
+      return `<tr data-pid="${pr.id}"><td><strong>${esc(pr.title)}</strong><div class="xs muted">${pr.id} · ${pr.status}</div></td><td class="r">${x && x.fee ? money(x.fee, 'GBP') : '—'}</td><td>${x ? (x.depOff ? 'Not available' : x.deposit == null ? `${money(S4().cfg.deposit, 'GBP')} <span class="xs muted">(default)</span>` : `${money(x.deposit, 'GBP')} <span class="xs muted">(own)</span>`) : '—'}</td><td>${x && x.fee ? esc(e1SchedTxt(x.fee, x.inst)) : '—'}</td><td>${x ? (x.partial ? 'Yes' : 'No') : '—'}</td><td class="small">At sign-up</td><td>${x ? 'v' + x.v : '—'}</td><td>${p && !issue ? chip('Active', 'green') : last && last.status === 'Retired' ? chip('Retired', 'grey') : chip('Needs configuration', 'red')}${issue && p ? `<div class="xs" style="color:var(--red)">${esc(issue)}</div>` : ''}</td>
         <td class="nowrap">${fo ? `<button class="btn btn-sm" data-act="s4PlanEdit" data-p="${pr.id}">${p ? 'Edit plan' : 'Set up plan'}</button>${p ? ` <button class="btn btn-sm" data-act="s4PlanRetire" data-p="${pr.id}">Retire</button>` : ''}` : ''} ${last ? `<button class="btn btn-sm btn-ghost" data-act="s4PlanHist" data-p="${pr.id}">History</button>` : ''}</td></tr>`; }).join('')}</tbody></table></div>${fo ? '' : `<p class="xs muted">${ic('lock', 12)} Payment plans are owned by Finance Admins and the Super Administrator — read-only for you.</p>`}</section>`;
 }
 function s4LegacyCard() {
@@ -282,17 +285,17 @@ ACT.s4PlanHist = el => { const pr = s4Pr(el.dataset.p); openModal({ title: 'Paym
 ACT.s4CfgEdit = () => {
   if (!finOwner()) return s4Refuse('System Configuration', S4_CFG, 'change the deposit configuration');
   const cf = S4().cfg;
-  reasonDlg({ title: 'Edit the deposit default and seat hold', ok: 'Save', label: 'Reason (required)', extra: `<div class="form-grid"><div class="field"><label for="cf-d">Default deposit (GBP)</label><input class="input num" type="number" min="1" step="0.01" id="cf-d" value="${cf.deposit}"></div><div class="field"><label for="cf-h">Seat hold (days)</label><input class="input num" type="number" min="1" max="${S4_HOLD_MAX}" id="cf-h" value="${cf.hold}"><span class="hint">1 to ${S4_HOLD_MAX} days (prototype limit — to confirm with the client).</span></div></div><p class="small muted">Applies to new sign-ups. Programmes with their own deposit keep it. Deposits already paid and holds already running don't change.</p>`,
+  reasonDlg({ title: 'Edit the deposit default and seat hold', ok: 'Save', label: 'Reason (required)', extra: `<div class="form-grid"><div class="field"><label for="cf-d">Default deposit (GBP)</label><input class="input num" type="number" min="1" step="0.01" id="cf-d" value="${cf.deposit}"></div><div class="field"><label for="cf-h">Seat hold (days)</label><input class="input num" type="number" min="1" max="${S4_HOLD_MAX}" id="cf-h" value="${cf.hold}"><span class="hint">1 to ${S4_HOLD_MAX} days (prototype limit — to confirm with the client).</span></div></div><p class="small muted">Applies to new sign-ups. Programmes using the default get a new plan version with the new amount; programmes with their own deposit, or no deposit, keep theirs. Deposits already paid and holds already running don't change.</p>`,
     onOk: r => {
       const d = +$('#cf-d').value, h = +$('#cf-h').value;
       if (!(d > 0)) { fieldErr('#cf-d', 'Enter a deposit above £0'); return false; }
       if (!(Number.isInteger(h) && h >= 1 && h <= S4_HOLD_MAX)) { logA('System Configuration', S4_CFG, 'Rejected: seat hold out of range', `${cf.hold} days`, `${$('#cf-h').value} days`, `Allowed: 1–${S4_HOLD_MAX} days`); fieldErr('#cf-h', `Enter 1 to ${S4_HOLD_MAX} days`); return false; }
-      const clash = s4PlanProgs().filter(pr => { const p = s4PlanCur(pr.id); return p && p.deposit == null && d >= p.fee; });
+      const clash = s4PlanProgs().filter(pr => { const p = s4PlanCur(pr.id); return p && p.deposit == null && !p.depOff && (d >= p.fee || e1Fees(pr).some(f => f.fee > 0 && d >= f.fee)); }); // E2: every fee option of a programme using the default
       if (clash.length) { fieldErr('#cf-d', 'Must be below the fee of every programme using the default: ' + clash.map(p => p.title).join(', ')); return false; }
       if (d === cf.deposit && h === cf.hold) { fieldErr('#cf-d', 'Nothing has changed'); return false; }
       const was = `${money(cf.deposit, 'GBP')} · ${cf.hold} days`, now_ = `${money(d, 'GBP')} · ${h} days`;
-      cf.deposit = d; cf.hold = h; cf.hist.unshift([ADMIN.me.name, now().toISOString(), was, now_]);
-      logA('System Configuration', S4_CFG, 'Updated', was, now_, r); s4CfgRow(); render(); toast('Saved and audited. New sign-ups use it; existing deposits and holds don\'t change.');
+      const d0 = cf.deposit; cf.deposit = d; cf.hold = h; cf.hist.unshift([ADMIN.me.name, now().toISOString(), was, now_]);
+      const aff = d !== d0 ? e2DefaultChanged(d0, d, r) : null; if (aff) cf.hist[0].push(aff); logA('System Configuration', S4_CFG, 'Updated', was, now_ + e2AffTxt(aff), r); s4CfgRow(); render(); toast('Saved and audited. New sign-ups use it; existing deposits and holds don\'t change.');
     } });
 };
 const _cfgEditS4 = ACT.cfgEdit;
@@ -343,7 +346,7 @@ chLetterTab = function (pr) {
   const l = chLetters(pr.id), cur = l[l.length - 1], can = s4CanLetter() && pr.status !== 'Retired';
   if (!cur) return `<section class="card"><h2>Offer letter</h2><p class="small">${pr.status === 'Retired' ? 'Retired programme — it takes no new applicants, so it has no offer letter.' : 'No offer letter uploaded yet.'}</p>${pr.status === 'Retired' || !can ? '' : `<button class="btn btn-primary" data-act="chLetterUp" data-id="${pr.id}">Upload offer letter</button>`}</section>`;
   return `<section class="card"><div class="row-b"><h2>Offer letter</h2>${can ? `<button class="btn btn-sm btn-primary" data-act="chLetterUp" data-id="${pr.id}">${ic('upload', 14)}Upload new version</button>` : ''}</div>
-    <p class="small muted">Applicants read and sign this letter in step 3 of their sign-up. Merge fields: <span class="ch-merge">{{full_name}}</span>, <span class="ch-merge">{{student_id}}</span> and <span class="ch-merge">{{programme}}</span>; everything else, including the signatory, is fixed text. Each version keeps its own text and file; published versions never change. A new version applies to new applicants only — anyone who has already started their sign-up keeps the version they started with.</p>
+    <p class="small muted">Applicants read and sign this letter in step 3 of their sign-up. Merge fields: <span class="ch-merge">{{full_name}}</span>, <span class="ch-merge">{{student_id}}</span>, <span class="ch-merge">{{programme}}</span> and <span class="ch-merge">{{payment_terms}}</span> (the payment routes this applicant is offered, from their own terms); everything else, including the signatory, is fixed text. Each version keeps its own text and file; published versions never change. A new version applies to new applicants only — anyone who has already started their sign-up keeps the version they started with.</p>
     <dl class="kv"><dt>Current version</dt><dd>Version ${cur.v} · <span class="mono small">${esc(cur.file)}</span> · uploaded by ${esc(cur.by)} on ${fd(cur.at)}</dd></dl>
     <div class="row"><button class="btn btn-sm" data-act="chLetterPrev" data-id="${pr.id}">Preview with a sample learner</button></div>
     <h3>Template</h3>${chLetterHtml(cur, { raw: true })}</section>
@@ -354,7 +357,7 @@ ACT.chLetterUp = el => {
   const pr = ADMIN.programmes.find(x => x.id === el.dataset.id); if (!s4LetterGuard(pr)) return; setUi('chLetterFile', '');
   const prev = chLetterCur(pr.id);
   reasonDlg({ title: 'Upload offer letter — ' + esc(pr.title), ok: 'Upload new version', label: 'What changed (required)', extra: `<div class="field"><label for="lt-f">Letter (PDF or DOCX)</label><input class="input" type="file" id="lt-f" accept=".pdf,.docx" data-onchange="chLetterFile"><span class="hint"><span id="lt-fname">No file chosen</span> — the prototype records the file name; the file itself is simulated.</span><button type="button" class="linklike small" data-act="chLetterSample">Prototype: use a sample DOCX</button></div>
-    <div class="field"><label for="lt-x">Letter text for this version</label><textarea class="textarea" id="lt-x" rows="8">${esc(s4ParaIn(prev && prev.text))}</textarea><span class="hint">Leave a blank line between paragraphs. Merge fields: {{full_name}}, {{student_id}}, {{programme}}.</span></div><p class="small muted">The new version applies to new applicants only. Earlier versions are kept unchanged.</p>`,
+    <div class="field"><label for="lt-x">Letter text for this version</label><textarea class="textarea" id="lt-x" rows="8">${esc(s4ParaIn(prev && prev.text))}</textarea><span class="hint">Leave a blank line between paragraphs. Merge fields: {{full_name}}, {{student_id}}, {{programme}}, {{payment_terms}} (what this applicant pays to confirm their place, from their own payment terms).</span></div><p class="small muted">The new version applies to new applicants only. Earlier versions are kept unchanged.</p>`,
     onOk: r => { const f = ui('chLetterFile', ''); if (!f) { fieldErr('#lt-f', 'Choose a PDF or DOCX file'); return false; } if (!/\.(pdf|docx)$/i.test(f)) { fieldErr('#lt-f', 'Upload a PDF or DOCX file'); return false; }
       const text = s4ParaOut($('#lt-x').value); if (!text.length) { fieldErr('#lt-x', 'Enter the letter text'); return false; }
       const l = chLetters(pr.id), p0 = l[l.length - 1], v = (p0 ? p0.v : 0) + 1;

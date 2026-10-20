@@ -1262,6 +1262,8 @@ body.frame-mobile .r1-np-row .r1-np-l { grid-column: 1 / -1; }
 .e1-hist { margin-top: 10px; }
 .e1-durchk { margin-left: 4px; }
 [class*="e1-n-"][hidden] { display: none !important; }
+[class*="e2-dv-"][hidden] { display: none !important; }
+.e2-dep .check { align-items: flex-start; }
 .e1-sum .tbl { min-width: 720px; }
 .e1-sum .e1-dep { min-width: 190px; }
 .e1-sum .e1-sch { margin-top: 2px; }

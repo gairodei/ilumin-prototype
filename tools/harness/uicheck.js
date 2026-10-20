@@ -122,6 +122,11 @@
     click($1('main input[name="e1-meth"][value="one-time"]')); ok('E1 plan step: "One payment" hides the instalment count', !shown($1('#e1-n')));
     click($1('main input[name="e1-meth"][value="both"]')); ok('E1 plan step: "Both" shows the count; the summary follows', shown($1('#e1-n')) && /in one payment, or/.test($1('main .e1-sumbox').textContent));
     ok('E1 plan step: no horizontal page overflow', appOver() <= 1, appOver());
+    // E2: the three deposit choices; the custom amount only for a custom deposit; the summary follows
+    ok('E2 plan step: three deposit choices displayed (not available / Academy default / custom); custom amount hidden', all('main input[name="e1-wdm"]').filter(shown).length === 3 && /Deposit not available/.test($1('main .e2-dep').textContent) && /Use Academy default deposit/.test($1('main .e2-dep').textContent) && /Set a custom deposit amount for this programme/.test($1('main .e2-dep').textContent) && !shown($1('#e1-d')));
+    click($1('main input[name="e1-wdm"][value="own"]')); ok('E2 plan step: "Set a custom deposit amount" shows the GBP field', shown($1('#e1-d')) && /Custom deposit \(GBP\)/.test($1('main .e2-dv-e1').textContent));
+    click($1('main input[name="e1-wdm"][value="none"]')); ok('E2 plan step: "Deposit not available" hides the field; the summary says "Not available"; no page overflow', !shown($1('#e1-d')) && /Not available — this programme doesn't offer a deposit/.test($1('main .e1-sumbox').textContent) && appOver() <= 1, appOver());
+    click($1('main input[name="e1-wdm"][value="default"]'));
     click($1('main [data-act="e1Submit"]')); ok('E1 submit dialog fits the viewport', !!$1('#modal-root .e1-sum') && !modalFits(), modalFits());
     click(all('#modal-root .modal button').find(b => b.textContent.trim() === 'Submit for review'));
     ok('E1 after submitting: "Waiting for Finance review", nothing editable', /Waiting for Finance review/.test(main()) && !$1('#e1-n'));
@@ -138,6 +143,9 @@
     click($1('main .ch8-plans [data-act="s4PlanEdit"][data-p="NV-N2"]'));
     ok('E1 Finance "Edit plan": its own plan editor with One payment / Instalments / Both, and it fits', all('#modal-root input[name="pp-meth"]').filter(shown).length === 3 && shown($1('#modal-root #pp-n')) && !modalFits(), modalFits());
     click($1('#modal-root input[name="pp-meth"][value="one-time"]')); ok('E1 Finance editor: "One payment" hides the instalment count', !shown($1('#modal-root #pp-n')));
+    ok('E2 Finance editor: three deposit choices displayed; NV-N2\'s custom £150 shown in its field', all('#modal-root input[name="pp-dm"]').filter(shown).length === 3 && $1('#modal-root input[name="pp-dm"][value="own"]').checked && shown($1('#modal-root #pp-dv')) && $1('#modal-root #pp-dv').value === '150');
+    click($1('#modal-root input[name="pp-dm"][value="none"]')); ok('E2 Finance editor: "Deposit not available" hides the amount; the dialog still fits', !shown($1('#modal-root #pp-dv')) && !modalFits(), modalFits());
+    click($1('#modal-root input[name="pp-dm"][value="own"]'));
     click($1('#modal-root input[name="pp-meth"][value="both"]')); $1('#rsn').value = 'UI check'; click(all('#modal-root .modal button').find(b => b.textContent.trim() === 'Save new version'));
     ok('E1 Finance editor saved "Both" as a new version', !$1('#modal-root .modal') && s4PlanCur('NV-N2').meth === 'both');
     // Level 3: two fee options share the programme's terms (Super Admin's plan step)
@@ -168,6 +176,16 @@
     ok('E1-R learner payment step: "6 monthly payments (5 × £166.67 and a final £166.65)", "Pay £166.67 by card"; no page overflow', /Instalments — 6 monthly payments \(5 × £166\.67 and a final £166\.65\)/.test(main()) && shown(all('main button').find(b => /Pay £166\.67 by card/.test(b.textContent))) && appOver() <= 1, appOver());
     click(all('main button').find(b => /Pay £166\.67 by card/.test(b.textContent)));
     ok('E1-R checkout dialog: charges £166.67 for "NVQ instalment 1 of 6" and fits the viewport', !!$1('#modal-root .modal') && /166\.67/.test($1('#modal-root').textContent) && /instalment 1 of 6/.test($1('#modal-root').textContent) && !modalFits(), modalFits()); closeModal();
+    // E2 learner: a programme without a deposit — no deposit route, a clear reason (not the 28-day one)
+    closeModal(); initStore(); setAdminIdentity('FA'); S.portal = 'admin'; S.signedIn = true; nav('f-plans'); ACT.s4PlanEdit({ dataset: { p: 'NV-L3' } }); click($1('#modal-root input[name="pp-dm"][value="none"]')); $1('#rsn').value = 'UI check'; click(all('#modal-root .modal button').find(b => b.textContent.trim() === 'Save new version'));
+    go('f-plans', { tab: 'templates' }); ok('E2 Finance saved "Deposit not available" for Level 3; Payment Plans shows "Not available"', s4PlanCur('NV-L3').depOff === true && !!$1('main .s4-plans tr[data-pid="NV-L3"]') && /Not available/.test($1('main .s4-plans tr[data-pid="NV-L3"]').textContent));
+    setAdminIdentity('A'); go('a-programmes', { id: 'NV-L3', tab: 'letter' });
+    ok('E2 Offer letter tab: the payment-wording warning is displayed (letter says "deposit", none offered); no page overflow', shown($1('main .e2-letter-clash')) && /doesn't offer a deposit/.test($1('main .e2-letter-clash').textContent) && appOver() <= 1, appOver());
+    S.variant = 'A'; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; go('browse'); click($1(`main [data-act="applyNvq"][data-id="${CATALOGUE.find(c => c.kind === 'nvq' && c.title === s3Pr('NV-L3').title).id}"]`));
+    ok('E2 learner sign-up dialog: "No deposit for this programme" on the option; the dialog fits', !!$1('#modal-root .r1-pick') && /No deposit for this programme\./.test($1('#modal-root .r1-pick').textContent) && !modalFits(), modalFits());
+    click(all('#modal-root .modal button').find(b => b.textContent.trim() === 'Start sign-up'));
+    { const w = STORE.worlds[S.variant]; ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); }
+    ok('E2 learner payment step: no deposit choice; "No deposit for this programme" displayed; no page overflow', !$1('main input[name="su-opt"][value="deposit"]') && shown($1('main .e2-nodep')) && /No deposit for this programme\./.test($1('main .e2-nodep').textContent) && !/A deposit can only hold a seat/.test(main()) && appOver() <= 1, appOver());
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));
     ok('no script errors', !errs.length, errs.join(' | '));
