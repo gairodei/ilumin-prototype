@@ -1163,11 +1163,14 @@
     ok('N2 two batches of the same programme with different delivery modes; channel kept separately', !!sp && !!fa && sp.course === fa.course && sp.dmode === 'Self-Paced' && fa.dmode === 'Fully Assisted' && sp.mode === 'Online' && fa.mode === 'Classroom' && sp.dmodeSrc === 'set');
     ok('N2 the choice is audited when the batch is created', ADMIN.audit.some(a => a.action === 'Delivery mode set' && a.entity.includes('L3SP-MAR27') && a.after === 'Self-Paced'));
     go('a-batches'); const row = [...app().querySelectorAll('main tr')].find(r => r.textContent.includes('L3SP-MAR27'));
-    ok('N2 batch list: Delivery mode column', !!row && /Self-Paced/.test(row.textContent));
+    // W1 (PD-W1-02) supersedes "Delivery mode column shows Self-Paced": a Level 3 batch's column shows its composition from its
+    // learners, so this empty batch reads "No learners yet" (its stored mode applies to standard-fee learners only)
+    ok('N2 batch list: Delivery mode column', !!row && /No learners yet/.test(row.textContent) && !/Self-Paced/.test(row.querySelector('.w1-comp').textContent));
     go('a-batches', { id: 'L3SP-MAR27' }); ok('N2 batch detail: delivery mode and the Self-Paced support wording', /Delivery mode for standard-fee learners: Self-Paced/.test(main()) && /academic support is through LMS messages/i.test(main()) && /not routine phone calls/.test(main()));
     COO('A'); setUi('cbTab', 'planned'); go('c-batches'); const crow = [...app().querySelectorAll('main tr')].find(r => r.textContent.includes('L3SP-MAR27'));
-    ok('N2 Coordinator batch list shows it', !!crow && /Self-Paced/.test(crow.textContent));
-    go('c-batches', { id: 'L3SP-MAR27' }); ok('N2 Coordinator overview: channel and mode separate; no "weekly live classes" claim for Self-Paced', /Delivery channel/.test(main()) && /Self-Paced/.test(app().querySelector('.n2-mode').textContent) && !/Online delivery with weekly live classes/.test(main()) && /not routine phone calls/.test(main()));
+    ok('N2 Coordinator batch list shows it', !!crow && /No learners yet/.test(crow.textContent)); // W1 (PD-W1-02): composition, as above
+    // W1 (PD-W1-02) supersedes the Self-Paced support wording for an empty Level 3 batch: the description follows its learners
+    go('c-batches', { id: 'L3SP-MAR27' }); ok('N2 Coordinator overview: channel and mode separate; no "weekly live classes" claim for Self-Paced', /Delivery channel/.test(main()) && /Self-Paced/.test(app().querySelector('.n2-mode').textContent) && !/Online delivery with weekly live classes/.test(main()) && /No learners yet\. Each learner's delivery mode comes from their fee option/.test(main()));
     // A learner on the Self-Paced batch
     const d = apply4('A', T3); ok('N2 sign-up batch panel shows the assigned batch\'s delivery mode', /Fully Assisted/.test(chAssignedHtml(d)));
     ACT.suNext(); d.docs.forEach(x => { x.status = 'Submitted'; }); ACT.suNext(); setUi('suSig', 'Daniel Okafor'); setUi('suDecl', true); ACT.suSign(); chSetBatch(d, sp); setUi('suOpt', 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal();
@@ -1178,7 +1181,9 @@
     document.querySelector('#bd-dm').value = 'Self-Paced'; fill({ '#bd-r': 'Planned as a Self-Paced intake' }); prim(); prim(); closeModal();
     ok('N2 empty batch: mode changed with the reason, audited, history kept', fa.dmode === 'Self-Paced' && fa.dmodeHist[0][4] === 'Planned as a Self-Paced intake' && ADMIN.audit.some(a => a.action === 'Delivery mode changed' && a.before === 'Fully Assisted' && a.after === 'Self-Paced'));
     ACT.s4bBatchEdit({ dataset: { id: 'L3SP-MAR27' } }); const sel = document.querySelector('#bd-dm');
-    ok('N2 batch with an enrolled learner: the mode field is locked with the reason', sel.disabled && /transfer and impact policy/.test(mroot().textContent));
+    // W1 (PD-W1-03) supersedes the "transfer and impact policy" reason for Level 3: the stored mode is locked because standard-fee
+    // learners (here Daniel, on the Standard programme fee) follow it
+    ok('N2 batch with an enrolled learner: the mode field is locked with the reason', sel.disabled && /on the Standard programme fee is enrolled and follows this setting/.test(mroot().textContent));
     sel.disabled = false; sel.innerHTML = '<option>Self-Paced</option><option>Fully Assisted</option>'; sel.value = 'Fully Assisted'; fill({ '#bd-r': 'Forced' });
     ok('N2 (negative) forcing a mode change on an enrolled batch is refused and logged; nothing changes', prim() === false && sp.dmode === 'Self-Paced' && ADMIN.audit[0].action === 'Blocked: change delivery mode'); closeModal();
     const jan = ADMIN.batches.find(b => b.code === 'L3AC-JAN26'); ACT.s4bBatchEdit({ dataset: { id: jan.code } }); ok('N2 seeded batch with learners (Leicester Cohort 7): locked', document.querySelector('#bd-dm').disabled); closeModal();
@@ -2235,10 +2240,12 @@
     ACT.s5cBatchCsv(); ok('S5c (24) a direct call explains and changes nothing — no roster change, no account, no enrolment', /not available/.test(mroot().textContent) && JSON.stringify([b.roster, b.enrolled, b.wait]) === r0 && lrnN() === n0); closeModal();
     ACT.addToBatch({ dataset: { id: b.code } }); ok('S5c Add learner no longer lists "bulk CSV" as a method', !/bulk CSV, multi-select/.test(mroot().textContent) && /Adding by CSV isn't available yet/.test(mroot().textContent)); closeModal();
     const busy = new Set(ADMIN.batches.filter(x => ['Open', 'In Progress'].includes(x.status)).flatMap(x => batchRoster(x).map(r => r[1]))), free = ADMIN.learners.find(l => l.acct === 'Active' && l.rec === 'Active' && !busy.has(l.id));
-    ACT.addToBatch({ dataset: { id: b.code, pre: free.id } }); document.querySelector('#ab-l').value = free.id; const e0 = b.enrolled; prim(); closeModal();
+    // W1 (PD-W1-05): on a Level 3 batch the fee-option group must now be chosen (it was preselected as the Standard programme fee)
+    const pickGroup = () => { const g = document.querySelector('#r2-ab-o'); if (g && !g.value && g.options.length > 1) g.value = g.options[1].value; };
+    ACT.addToBatch({ dataset: { id: b.code, pre: free.id } }); document.querySelector('#ab-l').value = free.id; pickGroup(); const e0 = b.enrolled; prim(); closeModal();
     ok('S5c (25) Add learner (one at a time) still works', b.enrolled === e0 + 1 && b.roster.some(r => r[1] === free.id));
     b.enrolled = b.cap; const w0 = b.wait, free2 = ADMIN.learners.find(l => l !== free && l.acct === 'Active' && l.rec === 'Active' && !busy.has(l.id));
-    ACT.addToBatch({ dataset: { id: b.code } }); document.querySelector('#ab-l').value = free2.id; prim(); closeModal();
+    ACT.addToBatch({ dataset: { id: b.code } }); document.querySelector('#ab-l').value = free2.id; pickGroup(); prim(); closeModal();
     ok('S5c (25) a full batch still sends the learner to the waitlist', b.wait === w0 + 1 && b.enrolled === b.cap);
     const other = ADMIN.batches.find(x => x !== b && x.status === 'Open'); if (other) { ACT.addToBatch({ dataset: { id: other.code } }); document.querySelector('#ab-l').value = free.id; prim(); }
     ok('S5c (25) a learner in another active batch still can\'t be added', !other || (/already in/.test(mroot().textContent) && !other.roster.some(r => r[1] === free.id))); closeModal();
@@ -2286,7 +2293,9 @@
   const openB = () => ADMIN.batches.find(x => x.status === 'Open' && x.enrolled < x.cap);
   const freeL = (skip = []) => { const busy = new Set(ADMIN.batches.filter(x => ['Open', 'In Progress'].includes(x.status)).flatMap(x => batchRoster(x).map(r => r[1]))); return ADMIN.learners.find(l => l.acct === 'Active' && l.rec === 'Active' && !busy.has(l.id) && !skip.includes(l.id)); };
   const rosterSnap = b => JSON.stringify([b.roster, b.enrolled, b.wait]);
-  const addVia = (b, l) => { ACT.addToBatch({ dataset: { id: b.code } }); if (!MODAL) return 'refused'; document.querySelector('#ab-l').value = l.id; const r = prim(); closeModal(); return r; };
+  // W1 (PD-W1-05): a Level 3 batch's fee-option group is chosen explicitly (no preselected Standard programme fee)
+  const addPick = () => { const g = document.querySelector('#r2-ab-o'); if (g && !g.value && g.options.length > 1) g.value = g.options[1].value; };
+  const addVia = (b, l) => { ACT.addToBatch({ dataset: { id: b.code } }); if (!MODAL) return 'refused'; document.querySelector('#ab-l').value = l.id; addPick(); const r = prim(); closeModal(); return r; };
 
   await T('S5e (1)–(4) adding a learner to a batch checks the actor in the action and on confirmation', async () => {
     fresh(); SA(); const b = openB(), l1 = freeL();

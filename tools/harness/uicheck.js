@@ -221,6 +221,17 @@
     S.coo.v = 'A'; cooEnter(); S.signedIn = true; go('c-sub', { id: 'IA-L-18022~a3' });
     ok('W0 Coordinator submission page: the learner\'s file is displayed; no invented "Q1_attachment.pdf"; no page overflow', shown($1('main [data-act="w0AttOpen"]')) && !/Q\d_attachment\.pdf/.test(main()) && appOver() <= 1, appOver());
     setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-programmes', { id: 'NV-N1', tab: 'obs' });
+    // W1: Create batch (Level 3) lists the fee options the batch accepts; the batch list shows the composition; no overflow
+    closeModal(); initStore(); setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-batches');
+    click($1('main [data-act="newBatch"]')); const nbco = $1('#modal-root #nb-co'); nbco.value = 'Level 3 Diploma in Adult Care (England)'; nbco.dispatchEvent(new Event('change', { bubbles: true }));
+    ok('W1 Create batch (Level 3): "Fee options this batch accepts" with each option ticked; the standard-fee mode field labelled as such; the dialog fits', shown($1('#modal-root #w1-nb-acc')) && all('#modal-root .w1-nb-o').every(x => x.checked) && /Delivery mode for standard-fee learners/.test(($1('#modal-root #nb-dm') || { closest: () => ({ textContent: '' }) }).closest('.field').textContent) && !modalFits(), modalFits());
+    click($1('#modal-root .w1-nb-o[value="L3-FO-STD"]')); ok('W1 unticking the Standard programme fee hides the mode field', !shown($1('#modal-root #nb-dm'))); closeModal();
+    ok('W1 batch list: the Delivery mode column shows the composition (a seeded Level 3 batch "Fully Assisted"); no page overflow', all('main .w1-comp').some(x => shown(x) && /Fully Assisted/.test(x.textContent)) && appOver() <= 1, appOver());
+    go('a-batches', { id: 'L3AC-NOV26' }); ok('W1 Level 3 batch detail: "Fee options accepted" with Change; no page overflow', shown($1('main .w1-acc')) && shown($1('main [data-act="w1Opts"]')) && appOver() <= 1, appOver());
+    click($1('main [data-act="w1Opts"]')); ok('W1 fee options dialog: options grouped, each with a label; the dialog fits', all('#modal-root .w1-o').length >= 1 && all('#modal-root .w1-o').every(x => !!x.closest('label')) && !modalFits(), modalFits()); closeModal();
+    S.coo.v = 'A'; cooEnter(); S.signedIn = true; go('c-batches', { id: 'L3AC-NOV26' });
+    ok('W1 Coordinator overview: fee options accepted and the description from the composition; no page overflow', shown($1('main .w1-acc')) && shown($1('main .w1-desc')) && appOver() <= 1, appOver());
+    setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-programmes', { id: 'NV-N1', tab: 'obs' });
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));
     ok('no script errors', !errs.length, errs.join(' | '));
