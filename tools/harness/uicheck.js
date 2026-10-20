@@ -210,6 +210,17 @@
     click($1('main .n5-legacy-note [data-tab="obs"]')); ok('N5a review legacy tab: "Open Observations" opens the Observations tab', $1('main .subtabs [data-tab="obs"]').getAttribute('aria-selected') === 'true');
     go('a-programmes', { id: 'NV-N1', tab: 'obs' });
     ok('N5a wizard: seven steps with Observations third and current; the section shown; no page overflow', all('main .ch8-steps .step').length === 7 && /Observations/.test($1('main .ch8-steps .step.cur').textContent) && shown($1('main .n5-head')) && appOver() <= 1, appOver());
+    // W0: an attached file is shown with the answer and with its submitted round (learner and Coordinator), without overflow
+    closeModal(); initStore(); S.variant = 'C'; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; go('assignment', { id: 'a3' });
+    const a3 = STORE.worlds.C.assignments.find(x => x.id === 'a3'); // (W is the viewport width in this file)
+    INP.attach({ files: [new File(['%PDF-1.4 UI check'], 'ui-check-evidence.pdf', { type: 'application/pdf' })], dataset: { key: 'a3.' + a3.qs[0].id + '.0' }, value: '' });
+    ok('W0 answer box: the attached file is displayed by name; no page overflow', shown($1('main .rte ~ .row [data-act="w0AttOpen"]')) && /ui-check-evidence\.pdf/.test($1('main [data-act="w0AttOpen"]').textContent) && appOver() <= 1, appOver());
+    click($1('main [data-act="w0AttOpen"]')); ok('W0 file dialog: file, added, question and integrity rows displayed; the dialog fits', /Integrity \(SHA-256\)/.test(($1('#modal-root') || {}).textContent || '') && !modalFits(), modalFits()); closeModal();
+    finaliseSubmit(a3, false, now().toISOString()); closeModal(); go('assignment', { id: 'a3' });
+    ok('W0 submitted answer: the file is displayed under its round; "No files attached" on the others; no page overflow', shown($1('main .w0-att [data-act="w0AttOpen"]')) && all('main .w0-att').filter(shown).some(x => /No files attached/.test(x.textContent)) && appOver() <= 1, appOver());
+    S.coo.v = 'A'; cooEnter(); S.signedIn = true; go('c-sub', { id: 'IA-L-18022~a3' });
+    ok('W0 Coordinator submission page: the learner\'s file is displayed; no invented "Q1_attachment.pdf"; no page overflow', shown($1('main [data-act="w0AttOpen"]')) && !/Q\d_attachment\.pdf/.test(main()) && appOver() <= 1, appOver());
+    setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-programmes', { id: 'NV-N1', tab: 'obs' });
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));
     ok('no script errors', !errs.length, errs.join(' | '));

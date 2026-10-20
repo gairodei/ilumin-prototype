@@ -10,7 +10,7 @@ const FIN_VARIANTS = {
   FD: { label: 'Multi-role: Finance Admin + System Administrator', staff: 'ST-011', roles: ['Finance Admin', 'System Administrator'], note: 'Role switcher in header · 2FA still applies', multi: true },
 };
 const FIN_A = 'Leila Haddad', FIN_B = 'Mark Bennett';
-const isFin = () => ADMIN && ADMIN.fin && S.finCtx !== 'System Administrator';
+const isFin = () => ADMIN && ADMIN.fin && S.finCtx !== 'System Administrator' && S.portal === 'admin'; // W0: Finance authority only in the admin portal
 function setAdminIdentity(av) {
   const A = ADMIN; if (!A) return;
   const mark = A.staff.find(s => s.id === 'ST-012');

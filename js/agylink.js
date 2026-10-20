@@ -135,7 +135,7 @@ ACT.agySimReject = () => { const ap = allApplications().find(x => x.agySeat && x
 function agyAdminExpiry(t, b, agency, at) {
   const tt = 'Agency bundle: ' + t.charAt(0).toLowerCase() + t.slice(1), bb = `${agency} · ${b}`;
   if (STORE.biz) STORE.biz.notifs.unshift({ id: 'BN-X' + Date.now() + Math.random().toString(36).slice(2, 5), t: tt, b: bb, at: at || now().toISOString(), go: 'b-licences', unread: true, cat: 'Bundles', to: 'all' });
-  const sa = ADMIN._saNotifs || (isSA() ? ADMIN.myNotifs : null); if (sa) sa.unshift({ t: tt, b: bb, at: at || now().toISOString(), unread: true, go: 'a-bundles' });
+  const sa = ADMIN._saNotifs || (isSAMe() ? ADMIN.myNotifs : null); if (sa) sa.unshift({ t: tt, b: bb, at: at || now().toISOString(), unread: true, go: 'a-bundles' });
 }
 const _agyNotifyK = agyNotify;
 agyNotify = function (t, b, go, cat, agency) { _agyNotifyK(t, b, go, cat, agency); if (/^(Bundle expiring|Seats lapsed)/.test(t)) agyAdminExpiry(t, b, agency || AGN()); };
@@ -145,7 +145,7 @@ AFTER.unshift(() => { if (!STORE.agy || !ADMIN || ADMIN._agyExpSeed) return; ADM
 /* ---------- G12.5 notifications for the new flows (data request nearing deadline; reactivation decision) ---------- */
 AFTER.push(() => {
   if (!ADMIN || !ADMIN.dsr || typeof sysNotify !== 'function') return;
-  ADMIN.dsr.filter(d => d.status === 'Open' && !d._near && dsrLeft(d) <= 7).forEach(d => { d._near = true; sysNotify('Data request nearing deadline', `${d.id} · ${d.type} · ${d.who} — due ${fd(dsrDue(d))} (${Math.max(0, dsrLeft(d))} days left)`, 'a-dataprotection..dsr'); const sa = ADMIN._saNotifs || (isSA() ? ADMIN.myNotifs : null); if (sa) sa.unshift({ t: 'Data request nearing deadline', b: `${d.id} · ${d.who} — due ${fd(dsrDue(d))}`, at: now().toISOString(), unread: true, go: 'a-dataprotection..dsr' }); });
+  ADMIN.dsr.filter(d => d.status === 'Open' && !d._near && dsrLeft(d) <= 7).forEach(d => { d._near = true; sysNotify('Data request nearing deadline', `${d.id} · ${d.type} · ${d.who} — due ${fd(dsrDue(d))} (${Math.max(0, dsrLeft(d))} days left)`, 'a-dataprotection..dsr'); const sa = ADMIN._saNotifs || (isSAMe() ? ADMIN.myNotifs : null); if (sa) sa.unshift({ t: 'Data request nearing deadline', b: `${d.id} · ${d.who} — due ${fd(dsrDue(d))}`, at: now().toISOString(), unread: true, go: 'a-dataprotection..dsr' }); });
 });
 const _applyR = applyDecision;
 applyDecision = function (i, a, r, o) {

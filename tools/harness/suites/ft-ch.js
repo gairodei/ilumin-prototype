@@ -960,7 +960,8 @@
     ok('Decisions Log: CH-37 – CH-41, CH-43 Applied (Batch 7b)', ['CH-37', 'CH-38', 'CH-39', 'CH-40', 'CH-41', 'CH-43'].every(id => /Applied \(Batch 7b\)/.test(r(id)) && /13 Oct 2026/.test(r(id))) && /S8/.test(r('CH-43')));
     const s23 = SC_LIST().find(x => x[0] === '23'), s7 = SC_LIST().find(x => x[0] === '7');
     ok('Scenario #23 "Academy-office observation and fee" — 8 steps, no transfer step', !!s23 && s23[1] === 'Academy-office observation and fee' && s23[3].length === 8 && !s23[3].some(x => /transfer to new date|moves automatically/i.test(x.text)) && /first confirmed observation/.test(s23[3][3].text) && /waiver/.test(s23[3][5].text));
-    ok('Scenario #7: office steps use the request flow', s7[3].length === 10 && /advises an Academy-office observation/.test(s7[3][5].text) && /Coordinator approves/.test(s7[3][7].text) && !s7[3].some(x => /Assessor proposes an Academy office observation instead/.test(x.text)));
+    // W0 (PD-W0-05) supersedes "Coordinator approves" (step 8): the Coordinator advised the request, so an Academic Admin approves it
+    ok('Scenario #7: office steps use the request flow', s7[3].length === 10 && /advises an Academy-office observation/.test(s7[3][5].text) && /An Academic Admin approves it in the Approvals Queue/.test(s7[3][7].text) && !s7[3].some(x => /Assessor proposes an Academy office observation instead/.test(x.text)));
     go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 7b/.test(s.textContent));
     ok('UX Changelog: Batch 7b entry', !!ux && ['CH-37:', 'CH-38:', 'CH-39:', 'CH-40:', 'CH-41:', 'CH-43:'].every(k => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(k))));
     SA(); ACT.qRouting(); const rows = [...document.querySelectorAll('#modal-root tbody tr')].map(tr => [...tr.children].map(td => td.textContent.trim()).join(' | '));

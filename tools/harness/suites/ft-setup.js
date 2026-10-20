@@ -838,7 +838,9 @@
     ok('A new deposit sign-up is held for 1 day', e.signup.done && e.admission.deposit.holdDays === 1 && Math.round(daysTo(e.admission.deposit.holdUntil)) === 1);
     ok('CH-10 eligibility is still 28 days with a 1-day hold', chDepositOk({ start: new Date(now().getTime() + 27.5 * DAY).toISOString() }) && !chDepositOk({ start: new Date(now().getTime() + 26.5 * DAY).toISOString() }));
     const e0 = e.admission.deposit.holdUntil;
-    ok('Hold 28 days (upper boundary) is accepted', cfgSet(300, 28) !== false && S4().cfg.hold === 28);
+    // W0 (PD-W0-01) supersedes: this step called Finance's deposit setting while still in the learner portal (after the sign-up
+    // above), which only worked because Finance authority carried over to other portals. It now acts as the Finance Admin again.
+    FA4(); ok('Hold 28 days (upper boundary) is accepted', cfgSet(300, 28) !== false && S4().cfg.hold === 28);
     ok('Existing hold deadlines are unchanged by the setting (the new learner and Aisha)', e.admission.deposit.holdUntil === e0 && e.admission.deposit.holdDays === 1 && STORE.worlds.C.admission.deposit.holdUntil === holdC0);
     chReleaseSeat(e); ok('P-32 unchanged: release says his own 1-day hold, deposit kept', e.admission.deposit.kept && /after 1 days/.test(e.admission.history.slice(-1)[0][0]));
     go('f-plans', { tab: 'templates' }); ok('The 28-day maximum is shown as a prototype choice to confirm with the client', /1–28 days; the 28-day maximum is a prototype choice to confirm with the client/.test(main()));

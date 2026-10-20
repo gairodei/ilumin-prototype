@@ -182,7 +182,11 @@ function depositRefund(name, v, amount, cur, cat, reason) {
 /* ---------- D8 / G4.2: Super Administrator actions need no approval ----------
    Raise points call saApply(): the normal approval effects run, the item is recorded as applied,
    the audit entry is tagged and an FYI notification goes out. Other roles' self-approval rules are untouched. */
-const isSA = () => !!(ADMIN && ADMIN.me && (ADMIN.me.roles || []).includes('Super Administrator'));
+// W0: Super Administrator authority applies only in the admin portal. The admin identity stays loaded while someone views the
+// Coordinator, Assessor, learner or agency portals, and must grant nothing there. isSAMe() is the identity alone — for routing
+// notifications to the Super Administrator's inbox, never for permission.
+const isSAMe = () => !!(ADMIN && ADMIN.me && (ADMIN.me.roles || []).includes('Super Administrator'));
+const isSA = () => isSAMe() && S.portal === 'admin';
 const SA_TAG = 'Super Admin — no approval required';
 function saApply(i, r) {
   i._sa = true;

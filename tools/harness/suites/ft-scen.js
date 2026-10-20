@@ -86,7 +86,11 @@
     step(7, 6); ok('#7.6 Coordinator told of the withdrawal (CH-43)', STORE.coo.notifs.some(n => /Workplace permission withdrawn/.test(n.t))); S.coo.v = 'A'; cooEnter(); S.signedIn = true; go('c-learner', { id: w.me.id }); ACT.chOrAdvise({ dataset: { id: w.me.id } }); $('#rsn').value = 'Workplace withdrew permission.'; prim();
     const rq = STORE.chOffReq.find(r => r.lid === w.me.id); ok('#7.6 Coordinator advises an Academy office observation (CH-43)', !!rq && rq.status === 'Awaiting consent');
     step(7, 7); ACT.chOrConsent({ dataset: { id: rq.id, a: 'accept' } }); prim(); ok('#7.7 learner agrees → Office observation request (CH-37)', rq.status === 'Pending approval' && !!rq.qid);
-    step(7, 8); S.coo.v = 'A'; cooEnter(); S.signedIn = true; go('c-learner', { id: w.me.id }); ACT.chOrDecide({ dataset: { id: rq.qid, a: 'approve' } }); $('#rsn').value = 'Agreed.'; prim(); ok('#7.8 Coordinator approves', rq.status === 'Approved');
+    // W0 (PD-W0-05) supersedes "#7.8 Coordinator approves": the same Coordinator advised this request at #7.6, so separation of
+    // duties refuses their decision; an Academic Admin (the other decider named by CH-37) approves it from the Approvals Queue.
+    S.coo.v = 'A'; cooEnter(); S.signedIn = true; go('c-learner', { id: w.me.id }); ACT.chOrDecide({ dataset: { id: rq.qid, a: 'approve' } });
+    ok('#7.8 (negative) the Coordinator who advised it can\'t approve it (refused, logged)', !MODAL && rq.status === 'Pending approval' && /^Blocked/.test(ADMIN.audit[0].action) && !document.querySelector('main .ch-orcard [data-act="chOrDecide"]') && /Academic Admin decides/.test(document.querySelector('main .ch-orcard').textContent));
+    step(7, 8); ACT.qDo({ dataset: { id: rq.qid, a: 'approve' } }); $('#rsn').value = 'Agreed.'; prim(); ok('#7.8 Academic Admin approves', rq.status === 'Approved' && rq.decidedBy === 'Rachel Hughes');
     step(7, 9); S.tas.v = 'A'; tasEnter(); S.signedIn = true; ACT.obPropose({ dataset: { l: w.me.id } }); $('#op-l').value = w.me.id; INP.obPerm($('#op-l')); $('input[name="op-lt"][value="office"]').checked = true; INP.obLt(); $('#op-d').value = D(15, '10:00').slice(0, 16); prim();
     const off = w.observations[0]; ok('#7.9 Academy office observation proposed at the Luton office (CH-37)', off.locType === 'office' && off.status === 'Proposed' && off.office && off.office.name === 'Luton office' && rq.status === 'Booked');
     step(7, 10); ACT.obsAccept({ dataset: { id: off.id } }); prim(); ok('#7.10 learner accepted the office visit', off.status === 'Confirmed', off.status);
