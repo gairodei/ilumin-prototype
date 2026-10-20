@@ -70,7 +70,8 @@
     const addOpt = (l, f, m) => { click($1('main .r1-opts[data-pid="NV-L3"] [data-act="r1OptAdd"]')); $1('#fo-l').value = l; $1('#fo-f').value = String(f); $1('#fo-m').value = m; $1('#rsn').value = 'UI check'; const a = MODAL.actions.find(x => /primary/.test(x.cls || '')); a.fn(); closeModal(); render(); };
     addOpt('Self-Paced Basic', 600, 'Self-Paced'); addOpt('Self-Paced Plus', 900, 'Self-Paced'); addOpt('Fully Assisted', 1800, 'Fully Assisted');
     ok('fee options: three added through the dialog', r1Opts('NV-L3').filter(o => !o.legacy).length === 3);
-    go('a-programmes', { id: 'NV-L3' }); ok('programme page (Level 3 Diploma): "Fee options" tab', click($1('main [data-tab="fees"]')) && shown($1('main .r1-opts')) && /Self-Paced Plus/.test(main()));
+    // CB1 (PD-CB-01) supersedes the "Fee options" tab: now Fees & Payments → Fee options (the same card)
+    go('a-programmes', { id: 'NV-L3' }); ok('programme page (Level 3 Diploma): Fees & Payments → "Fee options"', click($1('main .cb-sec[data-tab="payments"]')) && click($1('main .cb-panels [data-tab="fees"]')) && shown($1('main .r1-opts')) && /Self-Paced Plus/.test(main()));
     ok('programme page: no horizontal page overflow', appOver() <= 1, appOver());
     go('a-batches', { id: 'L3AC-NOV26-LEI', tab: 'schedule' }); click(all('main [data-act="addSession"]').find(b => !b.closest('.n3-plan')));
     const grp = all('#modal-root .r2-grp').map(g => g.querySelector('.r2-gh').textContent + ': ' + [...g.querySelectorAll('.r2-opt strong')].map(x => x.textContent).join(' | '));
@@ -117,7 +118,7 @@
     set('#np-l', 'Level 4'); set('#np-t', 'Level 4 UI check programme'); set('#np-r', 'QN 610/8888/1'); set('#np-d', '18'); set('#np-du', 'months'); set('#np-p', '2400');
     ok('E1 wizard: duration number and unit displayed side by side, unit readable', shown($1('#np-d')) && shown($1('#np-du')) && $1('#np-du').getBoundingClientRect().width >= 90 && Math.abs($1('#np-d').getBoundingClientRect().top - $1('#np-du').getBoundingClientRect().top) < 4, Math.round($1('#np-du').getBoundingClientRect().width));
     ok('E1 wizard: the dialog fits the viewport', !modalFits(), modalFits());
-    click(all('#modal-root .modal button').find(b => b.textContent.trim() === 'Create draft')); click($1('main .ch8-steps [data-tab="plan"]'));
+    click(all('#modal-root .modal button').find(b => b.textContent.trim() === 'Create draft')); click($1('main .cb-nav .cb-sec[data-tab="payments"]')); // CB1 (PD-CB-01): the Fees & Payments section (was the wizard's Payment plan step)
     ok('E1 plan step: Draft status and three clearly labelled payment choices', /Draft — not yet submitted/.test(main()) && all('main input[name="e1-meth"]').filter(shown).length === 3);
     click($1('main input[name="e1-meth"][value="one-time"]')); ok('E1 plan step: "One payment" hides the instalment count', !shown($1('#e1-n')));
     click($1('main input[name="e1-meth"][value="both"]')); ok('E1 plan step: "Both" shows the count; the summary follows', shown($1('#e1-n')) && /in one payment, or/.test($1('main .e1-sumbox').textContent));
@@ -189,7 +190,8 @@
     // N5a: programme Observations tab (published → new version → settings, evidence, Academy criterion) and the wizard step
     closeModal(); initStore(); setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-programmes', { id: 'NV-L3', tab: 'obs' });
     const mbtn = t => all('#modal-root .modal button').find(b => b.textContent.trim() === t);
-    ok('N5a tab: Observations selected, published version read-only (no edit controls), "Create new version" displayed; no page overflow', $1('main .subtabs [data-tab="obs"]').getAttribute('aria-selected') === 'true' && shown($1('main .n5-head')) && !$1('main [data-act="n5Settings"]') && shown($1('main [data-act="newProgVersion"]')) && appOver() <= 1, appOver());
+    // CB1 (PD-CB-01) supersedes the tab bar in the N5a checks below: the Observations section with its configuration and legacy-library panels
+    ok('N5a section (was a tab): Observations current, its configuration panel selected, published version read-only (no edit controls), "Create new version" displayed; no page overflow', !!$1('main .cb-sec.cur[data-tab="observations"]') && $1('main .cb-panels [data-tab="obs"]').getAttribute('aria-selected') === 'true' && shown($1('main .n5-head')) && !$1('main [data-act="n5Settings"]') && shown($1('main [data-act="newProgVersion"]')) && appOver() <= 1, appOver());
     click($1('main [data-act="newProgVersion"]')); $1('#rsn').value = 'UI check'; click(all('#modal-root .modal button').find(b => /Create Version 3/.test(b.textContent)));
     ok('N5a review: the new version shows "Not chosen yet" for Observation required, with the reason; blocking item listed', /Not chosen yet/.test($1('main .n5-settings').textContent) && shown($1('main .n5-req-hint')) && /choose whether observation is required/.test($1('main .n5-checks').textContent));
     ok('N5a draft: "Edit settings", "Evidence" and "Add criterion" displayed; blocking/warning list shown; no page overflow', shown($1('main [data-act="n5Settings"]')) && shown($1('main .n5-nvq [data-act="n5NvqEv"]')) && shown($1('main .n5-ia [data-act="n5IaEdit"]')) && shown($1('main .n5-checks')) && appOver() <= 1, appOver());
@@ -205,11 +207,11 @@
     ok('N5a add criterion dialog: title, evidence and NVQ mapping choices displayed; every checkbox has a label; the dialog fits', shown($1('#n5-t')) && all('#modal-root .n5-map').filter(shown).length === 6 && all('#modal-root input[type="checkbox"]').every(x => !!x.closest('label')) && !modalFits(), modalFits());
     $1('#n5-t').value = 'UI check criterion'; click(all('#modal-root .n5-ev').find(x => x.value === 'notes')); click($1('#modal-root .n5-map')); click(mbtn('Add criterion'));
     ok('N5a criterion added: shown in the Academy criteria table; no page overflow', /UI check criterion/.test($1('main .n5-ia').textContent) && appOver() <= 1, appOver());
-    click($1('main .subtabs [data-tab="library"]'));
-    ok('N5a review legacy tab: "Shared library (legacy)" selected, guidance with "Open Observations" displayed, no library edit buttons; no page overflow', /Shared library \(legacy\)/.test($1('main .subtabs [aria-selected="true"]').textContent) && shown($1('main .n5-legacy-note [data-tab="obs"]')) && !all('main [data-act="kLib"], main [data-act="kLibAttach"]').length && appOver() <= 1, appOver());
-    click($1('main .n5-legacy-note [data-tab="obs"]')); ok('N5a review legacy tab: "Open Observations" opens the Observations tab', $1('main .subtabs [data-tab="obs"]').getAttribute('aria-selected') === 'true');
+    click($1('main .cb-panels [data-tab="library"]'));
+    ok('N5a review legacy panel (was a tab): "Shared library (legacy)" selected, guidance with "Open Observations" displayed, no library edit buttons; no page overflow', /Shared library \(legacy\)/.test($1('main .cb-panels [aria-selected="true"]').textContent) && shown($1('main .n5-legacy-note [data-tab="obs"]')) && !all('main [data-act="kLib"], main [data-act="kLibAttach"]').length && appOver() <= 1, appOver());
+    click($1('main .n5-legacy-note [data-tab="obs"]')); ok('N5a review legacy panel: "Open Observations" opens the Observations configuration panel', $1('main .cb-panels [data-tab="obs"]').getAttribute('aria-selected') === 'true');
     go('a-programmes', { id: 'NV-N1', tab: 'obs' });
-    ok('N5a wizard: seven steps with Observations third and current; the section shown; no page overflow', all('main .ch8-steps .step').length === 7 && /Observations/.test($1('main .ch8-steps .step.cur').textContent) && shown($1('main .n5-head')) && appOver() <= 1, appOver());
+    ok('N5a new programme (was wizard step 3): seven sections with Observations current; the section shown; no page overflow', all('main .cb-nav .cb-sec').length === 7 && /Observations/.test($1('main .cb-sec.cur').textContent) && shown($1('main .n5-head')) && appOver() <= 1, appOver());
     // W0: an attached file is shown with the answer and with its submitted round (learner and Coordinator), without overflow
     closeModal(); initStore(); S.variant = 'C'; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; go('assignment', { id: 'a3' });
     const a3 = STORE.worlds.C.assignments.find(x => x.id === 'a3'); // (W is the viewport width in this file)
@@ -232,6 +234,24 @@
     S.coo.v = 'A'; cooEnter(); S.signedIn = true; go('c-batches', { id: 'L3AC-NOV26' });
     ok('W1 Coordinator overview: fee options accepted and the description from the composition; no page overflow', shown($1('main .w1-acc')) && shown($1('main .w1-desc')) && appOver() <= 1, appOver());
     setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-programmes', { id: 'NV-N1', tab: 'obs' });
+    // CB1: the unified course builder — seven sections reachable at every width, panels, read-only states, the unsaved-changes dialog
+    closeModal(); initStore(); setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-programmes'); click($1('main table tbody a[data-go="a-programmes"][data-id="NV-L3"]'));
+    const secs = all('main .cb-nav .cb-sec'), navBox = $1('main .cb-nav ol');
+    // CB1 final review: every section is discoverable without sideways scrolling, and the current one stands out
+    const inView = el => { const r = el.getBoundingClientRect(); return shown(el) && r.left >= 0 && r.right <= window.innerWidth + 1 && r.width >= 60; };
+    ok('CB1 builder: all seven sections displayed fully within the viewport, no sideways scrolling of the section bar; no page overflow', secs.length === 7 && secs.every(inView) && navBox.scrollWidth <= navBox.clientWidth + 1 && appOver() <= 1, secs.filter(s => !inView(s)).map(s => s.dataset.tab).join() + ' ' + navBox.scrollWidth + '/' + navBox.clientWidth);
+    const curSec = $1('main .cb-sec.cur'), other = $1('main .cb-sec:not(.cur)');
+    ok('CB1 builder: the current section is marked (aria-current) and looks different from the others (border and number colour)', !!curSec && curSec.getAttribute('aria-current') === 'page' && getComputedStyle(curSec).borderTopColor !== getComputedStyle(other).borderTopColor && getComputedStyle(curSec.querySelector('.cb-n')).backgroundColor !== getComputedStyle(other.querySelector('.cb-n')).backgroundColor && shown($1('main .cb-h')) && $1('main .cb-h').textContent.includes(curSec.querySelector('.cb-l').textContent));
+    ok('CB1 builder: header title, status, version and "Version history" displayed', shown($1('main .page-h h1')) && shown($1('main .page-h [data-tab="versions"]')) && /Version 2/.test($1('main .page-h').textContent));
+    const reach = ['details', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'review'].map(k => { click($1(`main .cb-sec[data-tab="${k}"]`)); return !!$1(`main .cb-sec.cur[data-tab="${k}"]`) && shown($1('main .cb-h')) && shown($1('main .cb-foot')) && appOver() <= 1; });
+    ok('CB1 builder: every section opens by clicking, with its heading and previous / next buttons, no page overflow', reach.every(Boolean), reach.join());
+    click($1('main .cb-sec[data-tab="payments"]')); ok('CB1 Fees & Payments: three panels displayed (Fee options, Payment plan, Observation fee rate); no page overflow', all('main .cb-panels .tab').filter(shown).length === 3 && appOver() <= 1, appOver());
+    click($1('main .cb-panels [data-tab="plan"]')); ok('CB1 Payment plan (read-only): the payment summary scrolls inside its box; no page overflow', shown($1('main .cb-plan .e1-sum')) && appOver() <= 1, appOver());
+    click($1('main .page-h [data-tab="versions"]')); ok('CB1 Version history displayed with "Back to the course builder"; no page overflow', /Version 2 \(current\)/.test(main()) && shown($1('main .cb-sh .btn')) && appOver() <= 1, appOver());
+    go('a-programmes', { id: 'NV-L3O' }); ok('CB1 retired programme: the read-only historical-record note displayed, no "Saving creates Version"; no write buttons; no page overflow', shown($1('main .cb-hist')) && !/Saving creates Version/.test($1('main .cb').textContent) && !$1('main .cb [data-act="chSupSave"], main .cb [data-act="newProgVersion"], main .cb [data-act="chLetterUp"]') && appOver() <= 1, appOver());
+    setAdminIdentity('SY'); S.portal = 'admin'; go('a-programmes', { id: 'NV-N1', tab: 'details' }); const nt = $1('#np-t'); nt.value += ' x'; nt.dispatchEvent(new Event('input', { bubbles: true }));
+    click($1('main .cb-sec[data-tab="review"]')); ok('CB1 unsaved changes: "Leave without saving?" dialog with both choices; the dialog fits', !!MODAL && MODAL.title === 'Leave without saving?' && all('#modal-root .modal button').filter(b => shown(b) && /Stay and save|Leave without saving/.test(b.textContent)).length === 2 && !modalFits(), modalFits());
+    closeModal(); CB_DIRTY = null; go('a-programmes'); click($1('main [data-act="chProgNew"]')); ok('CB1 New NVQ programme dialog: "Section 1 — Course Details" displayed; the dialog fits', /Section 1 — Course Details/.test($1('#modal-root').textContent) && !modalFits(), modalFits()); closeModal();
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));
     ok('no script errors', !errs.length, errs.join(' | '));

@@ -51,16 +51,20 @@
   /* ---------- Builder: tab, step, read-only published versions ---------- */
   await T('N5a builder', async () => {
     fresh(); SA();
-    ['NV-L2', 'NV-L3', 'NV-L4', 'NV-L5'].forEach(id => { go('a-programmes', { id, tab: 'obs' }); const tabs = [...document.querySelectorAll('main .subtabs .tab')].map(t => t.textContent);
-      ok(`N5a-B1 ${id}: an "Observations" tab after the shared library tab, selected, read-only for the published version`, tabs[tabs.indexOf('Shared library (legacy)') + 1] === 'Observations' && document.querySelector('main .subtabs [data-tab="obs"]').getAttribute('aria-selected') === 'true' && !document.querySelector('main [data-act="n5Settings"], main [data-act="n5IaEdit"], main [data-act="n5NvqEv"]') && !!document.querySelector('main [data-act="newProgVersion"]')); });
+    // CB1 (PD-CB-01) supersedes the tab bar in N5a-B1…B4, W4 and K2: was an "Observations" tab after "Shared library (legacy)" (seeded)
+    // or step 3 of the wizard bar; now the Observations section (4 of 7) with "Observation configuration" and, for seeded programmes,
+    // "Shared library (legacy)" panels. What each shows, and who can change it, is unchanged.
+    ['NV-L2', 'NV-L3', 'NV-L4', 'NV-L5'].forEach(id => { go('a-programmes', { id, tab: 'obs' }); const pans = [...document.querySelectorAll('main .cb-panels .tab')].map(t => t.textContent);
+      ok(`N5a-B1 ${id}: the Observations section (old "obs" link) with its configuration panel selected and the legacy library panel next to it, read-only for the published version`, !!document.querySelector('main .cb-sec.cur[data-tab="observations"]') && pans.join() === 'Observation configuration,Shared library (legacy)' && document.querySelector('main .cb-panels [data-tab="obs"]').getAttribute('aria-selected') === 'true' && !document.querySelector('main [data-act="n5Settings"], main [data-act="n5IaEdit"], main [data-act="n5NvqEv"]') && !!document.querySelector('main [data-act="newProgVersion"]')); });
     go('a-programmes', { id: 'NV-L3', tab: 'obs' });
-    ok('N5a-B2 Level 3: Fee options tab kept; Observations shows its own NVQ criteria and IA-1–IA-4', !!document.querySelector('main .subtabs [data-tab="fees"]') && ['301 2.1', '306 3.1'].every(c => !!document.querySelector(`main .n5-nvq tr[data-code="${c}"]`)) && ['IA-1', 'IA-4'].every(c => !!document.querySelector(`main .n5-ia tr[data-code="${c}"]`)) && !document.querySelector('main .n5-nvq tr[data-code="301 1.1"]'));
+    ok('N5a-B2 Level 3: Fee options kept (Fees & Payments section); Observations shows its own NVQ criteria and IA-1–IA-4', !!document.querySelector('main .cb-sec[data-tab="payments"]') && ['301 2.1', '306 3.1'].every(c => !!document.querySelector(`main .n5-nvq tr[data-code="${c}"]`)) && ['IA-1', 'IA-4'].every(c => !!document.querySelector(`main .n5-ia tr[data-code="${c}"]`)) && !document.querySelector('main .n5-nvq tr[data-code="301 1.1"]'));
+    go('a-programmes', { id: 'NV-L3', tab: 'fees' }); ok('N5a-B2 …the old "fees" link opens the Level 3 fee options', !!document.querySelector('main .cb-panels [data-tab="fees"][aria-selected="true"]') && !!document.querySelector('main .r1-opts'));
     go('a-programmes', { id: 'NV-L5', tab: 'obs' });
     ok('N5a-B2 Level 5: its own NVQ criteria (501 2.1…), no Level 3 codes, no Academy criteria', !!document.querySelector('main .n5-nvq tr[data-code="501 2.1"]') && !document.querySelector('main .n5-nvq tr[data-code="301 2.1"]') && /No Academy criteria in this version/.test(document.querySelector('main .n5-ia').textContent));
-    go('a-programmes', { id: 'NV-L3', tab: 'tree' }); ok('N5a-B3 other tabs unchanged: the Hierarchy tab still renders with the Observations tab added', /Hierarchy/.test(main()) && !!document.querySelector('main .subtabs [data-tab="obs"][aria-selected="false"]'));
-    go('a-programmes', { id: 'NV-N1', tab: 'obs' }); const steps = [...document.querySelectorAll('main .ch8-steps .step')];
-    ok('N5a-B4 wizard: Observations is step 3 (after Structure), current, editable in the Draft', steps.length === 7 && steps[2].classList.contains('cur') && /Observations/.test(steps[2].textContent) && !!document.querySelector('main .n5-head') && !!document.querySelector('main [data-act="n5Settings"]') && !/undefined/.test(main()));
-    ok('N5a-B4 …"Next: Offer letter" follows it', /Next: Offer letter/.test((document.querySelector('main .ch-nav') || {}).textContent || ''));
+    go('a-programmes', { id: 'NV-L3', tab: 'tree' }); ok('N5a-B3 other sections unchanged: the hierarchy still renders (Curriculum) with Observations as another section', /Hierarchy/.test(main()) && !!document.querySelector('main .cb-sec.cur[data-tab="curriculum"]') && !!document.querySelector('main .cb-sec[data-tab="observations"]:not(.cur)'));
+    go('a-programmes', { id: 'NV-N1', tab: 'obs' }); const steps = [...document.querySelectorAll('main .cb-nav .cb-sec')];
+    ok('N5a-B4 new programme: Observations is section 4 (after Curriculum and Assessments), current, editable in the Draft', steps.length === 7 && steps[3].classList.contains('cur') && /Observations/.test(steps[3].textContent) && !!document.querySelector('main .n5-head') && !!document.querySelector('main [data-act="n5Settings"]') && !/undefined/.test(main()));
+    ok('N5a-B4 …"Fees & Payments →" follows it', /Fees & Payments →/.test((document.querySelector('main .cb-foot') || {}).textContent || ''));
     go('a-programmes', { id: 'NV-N1', tab: 'review' });
     ok('N5a-B5 wizard Review: an Observations line and the blocking "choose whether observation is required"', !!document.querySelector('main .n5-rev') && /Blocking\s*Observations: choose whether observation is required for Version 1 \(Yes or No\)/.test(document.querySelector('main .ch8-review').textContent));
     go('a-programmes', { id: 'NV-L3O', tab: 'obs' });
@@ -226,7 +230,7 @@
     ok('N5a-W3 audit: "Version 2 published" stays the latest entry, the configuration\'s publication just under it', audit0().action === 'Version 2 published' && ADMIN.audit[1].action === 'Observation configuration published' && /NV-N2/.test(ADMIN.audit[1].entity));
     ok('N5a-W3 …then published: Version 2 with its frozen configuration', n2.version === 2 && P('NV-N2', 2) && Object.isFrozen(P('NV-N2', 2)) && P('NV-N2', 2).nvq['201 2.1'].types.join() === 'notes,docs' && !D('NV-N2') && P('NV-N2', 1).required === null);
     go('a-programmes', { id: 'NV-N2', tab: 'obs' }); const ro = !document.querySelector('main [data-act="n5Settings"]'); go('a-programmes', { id: 'NV-N2', tab: 'details' });
-    ok('N5a-W4 the step is read-only after publishing; on other steps it is marked done', ro && !!document.querySelector('main .ch8-steps .step.done [data-tab="obs"]'));
+    ok('N5a-W4 the section is read-only after publishing; on other sections it is listed with nothing to fix', ro && !!document.querySelector('main .cb-sec[data-tab="observations"]') && !document.querySelector('main .cb-sec[data-tab="observations"] .cb-badge.bad'));
   });
 
   /* ---------- Authorization ---------- */
@@ -283,7 +287,7 @@
   await T('N5a compatibility', async () => {
     fresh(); SA(); newVer('NV-L3'); configure('NV-L3'); iaEdit('NV-L3', 'IA-3', { t: 'Infection control (2027)' });
     ok('N5a-K1 today\'s observation forms still use the shared library (IA-1–IA-4 unchanged by the programme draft)', STORE.worlds.C.iaCriteria.map(x => x.join(' ')).join() === STORE.aca.obsLib.filter(c => c.form && c.status === 'Active' && c.progs.includes('NV-L3')).map(c => c.code + ' ' + c.title).join());
-    go('a-programmes', { id: 'NV-L3', tab: 'library' }); const lt = document.querySelector('main .subtabs [data-tab="library"]');
+    go('a-programmes', { id: 'NV-L3', tab: 'library' }); const lt = document.querySelector('main .cb-panels [data-tab="library"]'); // CB1: a panel of Observations (was a tab)
     ok('N5a-K2 legacy tab: labelled "Shared library (legacy)", the same shared list, read-only (no library actions)', lt.textContent === 'Shared library (legacy)' && /IA-15/.test(main()) && !document.querySelector('main [data-act="kLib"], main [data-act="kLibAttach"], main [data-act="s3LibActivate"], main [data-act="kLibRetire"]'));
     ok('N5a-K2 …guidance: it doesn\'t configure the programme; buttons to the Observations tab and to the library page', /Legacy — read-only here\. This list doesn't configure/.test(document.querySelector('main .n5-legacy-note').textContent) && !!document.querySelector('main .n5-legacy-note [data-go="a-programmes"][data-tab="obs"][data-id="NV-L3"]') && !!document.querySelector('main .n5-legacy-note [data-go="k-obslib"]'));
     go('k-obslib'); ok('N5a-K2 …the shared library page itself is still editable (it supplies today\'s forms)', !!document.querySelector('main [data-act="kLib"]') && !!document.querySelector('main [data-act="kLibAttach"]'));

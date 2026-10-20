@@ -68,9 +68,9 @@ document.getElementById('f').addEventListener('load', () => setTimeout(() => {
     const n = nav(cw, d); n.signIn(); n.side();
     r.navList = n.h1() === 'NVQ Programmes' && !n.is404() && n.rows() > 0 && cw.location.hash === '#a-programmes';
     n.q('main table tbody a[data-go="a-programmes"][data-id]').click();
-    r.navOpen = !n.is404() && /^#a-programmes\\.NV-/.test(cw.location.hash) && d.querySelectorAll('main .subtabs [data-tab]').length >= 3;
+    r.navOpen = !n.is404() && /^#a-programmes\\.NV-/.test(cw.location.hash) && d.querySelectorAll('main .cb-nav .cb-sec[data-tab]').length === 7; // CB1 (PD-CB-01): the seven course-builder sections (was the tab bar)
     n.side(); n.q('main [data-act="chProgNew"]').click();
-    r.navWizard = /Step 1 of 6/.test(n.q('#modal-root').textContent) && !!n.q('#modal-root #np-t'); cw.eval('closeModal()');
+    r.navWizard = /Section 1 — Course Details/.test(n.q('#modal-root').textContent) && !!n.q('#modal-root #np-t'); cw.eval('closeModal()');
     r.errs = (cw.__smokeErrs || []).slice();
     r.scripts = d.querySelectorAll('script[src]').length;
     r.loaded = cw.performance.getEntriesByType('resource').filter(e => /\\.js$/.test(e.name)).length;

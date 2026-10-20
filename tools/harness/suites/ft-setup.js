@@ -508,7 +508,9 @@
     ACT.newProgVersion({ dataset: { id: 'NV-L3' } }); reason('Draft'); pb('NV-L3', 'letter');
     ok('C: with a draft: "Publish version 3" (and no "Create new version")', /Publish version 3/.test((app().querySelector('[data-act="kPubProg"]') || {}).textContent || '') && !app().querySelector('[data-act="newProgVersion"]') && /editing Version 3 \(draft\)/.test(main()));
     pb('NV-L3D', 'support'); ok('C: Draft programme: "Publish programme"', /Publish programme/.test((app().querySelector('[data-act="kPubProg"]') || {}).textContent || ''));
-    pb('NV-L3O', 'letter'); ok('C: Retired programme: read-only, no version buttons', /Retired programme — read-only/.test(main()) && !app().querySelector('[data-act="kPubProg"], [data-act="newProgVersion"]'));
+    // CB1 final review (PD-CB-03) supersedes the wording only: was "Retired programme — read-only"; now the version area is one note,
+    // "Retired — a read-only historical record" (nothing can be saved, no new version). Read-only and no version buttons are unchanged.
+    pb('NV-L3O', 'letter'); ok('C: Retired programme: read-only, no version buttons', /Retired — a read-only historical record/.test(main()) && !app().querySelector('[data-act="kPubProg"], [data-act="newProgVersion"]'));
     pb('NV-L3', 'tree'); ok('C: builder tabs show the same header', /editing Version 3 \(draft\)/.test(main()) && app().querySelectorAll('.s3-vh').length === 1);
   });
 

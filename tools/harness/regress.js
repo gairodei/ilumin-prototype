@@ -59,7 +59,10 @@
       const det = [...document.querySelectorAll('main [data-go][data-id]')].map(b => [b.dataset.go, b.dataset.id]).filter(([g]) => g && g !== 'index');
       tabs.forEach(([g, id, t]) => { try { enter(); } catch (e) { } snap(role, g + '.' + (id || '') + '.' + t); });
       const dg = new Set();
-      det.forEach(([g, id]) => { if (dg.has(g)) return; dg.add(g); try { enter(); } catch (e) { } snap(role, g + '.' + id); const t2 = [...document.querySelectorAll('main .subtabs [data-tab]')].map(b => [b.dataset.go, b.dataset.id, b.dataset.tab]); t2.forEach(([g2, id2, tt]) => { try { enter(); } catch (e) { } snap(role, g2 + '.' + (id2 || '') + '.' + tt); }); });
+      // CB1: a programme page has the course builder's sections (.cb-nav) instead of a tab bar, and each section its panels (.cb-panels)
+      det.forEach(([g, id]) => { if (dg.has(g)) return; dg.add(g); try { enter(); } catch (e) { } snap(role, g + '.' + id); const t2 = [...document.querySelectorAll('main .subtabs [data-tab], main .cb-nav [data-tab]')].map(b => [b.dataset.go, b.dataset.id, b.dataset.tab]), seen = new Set(t2.map(x => x[2]));
+        t2.forEach(([g2, id2, tt]) => { try { enter(); } catch (e) { } snap(role, g2 + '.' + (id2 || '') + '.' + tt);
+          [...document.querySelectorAll('main .cb-panels [data-tab]')].map(b => [b.dataset.go, b.dataset.id, b.dataset.tab]).filter(p => !seen.has(p[2])).forEach(([g3, id3, pt]) => { seen.add(pt); try { enter(); } catch (e) { } snap(role, g3 + '.' + (id3 || '') + '.' + pt); }); }); });
     });
   });
   // Demo Scenarios + record pages, then every scenario step's screen (role switched as the step's Open button does)

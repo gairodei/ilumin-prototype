@@ -328,7 +328,9 @@
   /* ---------- CH-08 admin: Offer letter tab ---------- */
   await T('CH-08 NVQ course editor — Offer letter tab', async () => {
     fresh(); SA(); go('a-programmes', { id: 'NV-L3', tab: 'letter' });
-    ok('CH-08 "Offer letter" tab next to the others', [...app().querySelectorAll('.subtabs [data-tab], .subtabs button')].some(b => /Offer letter/.test(b.textContent)) && /Hierarchy builder/.test(main()));
+    // CB1 (PD-CB-01) supersedes: was an "Offer letter" tab next to "Hierarchy builder"; now the old "letter" link opens Documents &
+    // Contract → Offer letter, with Curriculum (the hierarchy builder) one of the seven sections
+    ok('CH-08 "Offer letter" panel of Documents & Contract, next to the other sections', !!app().querySelector('.cb-sec.cur[data-tab="documents"]') && !!app().querySelector('.cb-panels .tab[data-tab="letter"][aria-selected="true"]') && !!app().querySelector('.cb-sec[data-tab="curriculum"]'));
     ok('CH-08 tab: merge fields, current version, template', /\{\{full_name\}\}/.test(main()) && /\{\{student_id\}\}/.test(main()) && /Version 1/.test(main()) && !!app().querySelector('main .ch-letter'));
     ok('CH-08 a letter for every NVQ course (retired one excepted)', ['NV-L2', 'NV-L3', 'NV-L4', 'NV-L5'].every(id => chLetters(id).length === 1) && !chLetters('NV-L3O').length);
     btnAct('chLetterPrev').click(); await wait(60); ok('CH-08 preview filled with a sample learner', !!MODAL && /Aisha Rahman/.test(mroot().textContent) && /IA-L-18022/.test(mroot().textContent)); closeModal();
@@ -908,7 +910,9 @@
     ACT.cfgEdit({ dataset: { id: 'CF-OFA' } }); document.querySelector('#cv').value = '£75.00'; document.querySelector('#rsn').value = 'New price list'; press();
     ok('CH-38 fee change audited', ADMIN.audit.some(a => a.entity === 'Observation fee — fully assisted' && a.after === '£75.00') && chFeeAmt('Fully assisted') === 75);
     SA(); go('a-programmes', { id: 'NV-L3D', tab: 'support' });
-    ok('CH-38 programme → Support type tab, tagged Pending client (P-31), NV-L3D Self-paced', /Support type/.test(main()) && [...app().querySelectorAll('.tbd')].some(x => /P-31/.test(x.textContent)) && document.querySelector('input[name="ch-sup"][value="Self-paced"]').checked);
+    // CB1 (PD-CB-01) supersedes the "Support type" tab: was /Support type/ in the tab bar; now the same control is the Fees & Payments
+    // section's "Observation fee rate" panel (its Save button still says "Save support type"); the P-31 tag and the saved value are unchanged
+    ok('CH-38 programme → Fees & Payments → Observation fee rate (old "support" link), tagged Pending client (P-31), NV-L3D Self-paced', !!app().querySelector('.cb-sec.cur[data-tab="payments"]') && !!app().querySelector('.cb-panels .tab[data-tab="support"][aria-selected="true"]') && /Save support type/.test(main()) && [...app().querySelectorAll('.tbd')].some(x => /P-31/.test(x.textContent)) && document.querySelector('input[name="ch-sup"][value="Self-paced"]').checked);
     ok('CH-38 default Fully assisted; world C\'s programme stays Fully assisted', chSupportOf('NV-L3') === 'Fully assisted' && chSupportOfCourse(STORE.worlds.C.nvq.title) === 'Fully assisted' && chFeeAmt(chSupportOf('NV-L3D')) === 100);
     learner('D'); go('payments'); const fd_ = STORE.chFees.find(x => x.lid === STORE.worlds.D.me.id);
     ok('CH-38 sponsored learner pays the fee: fee card with Pay now', !!fd_ && /Your course fees are covered by/.test(main()) && !!app().querySelector('.ch-feecard [data-act="chFeePay"]') && /Non-refundable/.test(main()));
@@ -1075,7 +1079,8 @@
     const pr = np();
     ok('NP created as Draft, Version 1, with details and Support type', !!pr && pr.status === 'Draft' && pr.version === 1 && pr.price === 2600 && pr.level === 'Level 4' && chSupportOf(pr.id) === 'Self-paced' && S.route === 'a-programmes' && S.params && true);
     ok('NP audited', ADMIN.audit.some(a => a.module === 'NVQ Programmes' && a.action === 'Programme created (Draft, Version 1)' && a.entity.includes(pr.id)));
-    go('a-programmes', { id: pr.id, tab: 'details' }); ok('NP setup wizard: seven steps (N5a adds Observations after Structure), Draft chip', app().querySelectorAll('.ch8-steps .step').length === 7 && app().querySelectorAll('.ch8-steps .step')[2].textContent.includes('Observations') && /Draft/.test(main()) && /Version 1/.test(main()));
+    // CB1 (PD-CB-01) supersedes: was the seven-step wizard bar with Observations third; now the seven builder sections, Observations fourth
+    go('a-programmes', { id: pr.id, tab: 'details' }); ok('NP course builder: seven sections (Observations is section 4), Course Details current, Draft chip', app().querySelectorAll('.cb-nav .cb-sec').length === 7 && app().querySelectorAll('.cb-nav .cb-sec')[3].textContent.includes('Observations') && !!app().querySelector('.cb-sec.cur[data-tab="details"]') && /Draft/.test(main()) && /Version 1/.test(main()));
     document.querySelector('#np-p').value = '2700'; ACT.ch8SaveDetails({ dataset: { id: pr.id } }); ok('NP details editable while Draft, audited', pr.price === 2700 && ADMIN.audit[0].action === 'Details changed');
     go('a-programmes'); ok('NP listed on NVQ Programmes as Draft', /Level 4 Certificate in Care Leadership/.test(main()));
   });

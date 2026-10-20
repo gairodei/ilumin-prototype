@@ -35,12 +35,13 @@
       const row = q('main table tbody a[data-go="a-programmes"][data-id]'); const title = row && row.textContent.trim(), id = row && row.dataset.id;
       clickEl(row); await tick();
       ok(`NAV ${who}: clicking a programme in the list opens it (${id})`, S.params.id === id && h1() === title && !is404() && location.hash === '#a-programmes.' + id, `h1 "${h1()}"`);
-      ok(`NAV ${who}: the programme's tabs render`, document.querySelectorAll('main .subtabs [data-tab]').length >= 3);
+      // CB1 (PD-CB-01) supersedes: was the programme's tab bar (.subtabs, at least 3 tabs); now the seven course-builder sections
+      ok(`NAV ${who}: the programme's course-builder sections render`, document.querySelectorAll('main .cb-nav .cb-sec[data-tab]').length === 7);
       history.back(); await new Promise(res => setTimeout(res, 50));
       ok(`NAV ${who}: Back returns to the list`, listShown() && location.hash === '#a-programmes', location.hash);
       clickEl(q('main [data-act="chProgNew"]'));
       const m = q('#modal-root');
-      ok(`NAV ${who}: New NVQ programme opens the wizard (Step 1 of 6 — Details, title / level / reference / duration / fee fields)`, !!MODAL && /Step 1 of 6/.test(m.textContent) && ['#np-t', '#np-l', '#np-r', '#np-d', '#np-p'].every(s => m.querySelector(s)), m.textContent.slice(0, 120));
+      ok(`NAV ${who}: New NVQ programme opens the wizard (CB1 supersedes "Step 1 of 6 — Details": now "Section 1 — Course Details"; title / level / reference / duration / fee fields)`, !!MODAL && /Section 1 — Course Details/.test(m.textContent) && ['#np-t', '#np-l', '#np-r', '#np-d', '#np-p'].every(s => m.querySelector(s)), m.textContent.slice(0, 120));
       closeModal();
     });
   }
@@ -68,7 +69,7 @@
     ok('NAV (negative) no Error 404 page after the reload', !is404());
     ok('NAV a note says the programme isn\'t in this demo and why', /That programme isn't available/.test(main()) && main().includes(id) && /kept only until the page is reloaded/.test(main()) && !!q(`main [data-nvq-gone="${id}"]`));
     ok('NAV the address is corrected to #a-programmes and NVQ Programmes stays selected', location.hash === '#a-programmes' && S.route === 'a-programmes' && !S.params.id && (q('#app nav [aria-current="page"]') || {}).textContent.trim() === 'NVQ Programmes', location.hash);
-    ok('NAV the list keeps New NVQ programme, and it still opens the wizard', (clickEl(q('main [data-act="chProgNew"]')), !!MODAL && /Step 1 of 6/.test(q('#modal-root').textContent))); closeModal();
+    ok('NAV the list keeps New NVQ programme, and it still opens the wizard', (clickEl(q('main [data-act="chProgNew"]')), !!MODAL && /Section 1 — Course Details/.test(q('#modal-root').textContent))); closeModal();
     reload(location.hash); await viaPanel('sysA');
     ok('NAV a further reload stays on the list, without the note', listShown() && !/That programme isn't available/.test(main()));
     await clickSide('a-programmes'); ok('NAV the sidebar link still opens the list', listShown());

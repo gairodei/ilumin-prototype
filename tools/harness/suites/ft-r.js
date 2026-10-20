@@ -484,7 +484,9 @@
     ok('R1f created: Level 3 Draft with 3 options (empty rows ignored), stable IDs under the programme ID', !!pr && pr.level === 'Level 3' && o.length === 3 && o.map(x => x.id).join() === [1, 2, 3].map(n => pr.id + '-FO-00' + n).join() && o.every(x => x.pid === pr.id) && o.map(x => x.mode).join() === 'Self-Paced,Fully Assisted,Self-Paced');
     ok('R1f the plan keeps its deposit and instalments; its reference fee is the lowest option fee', s4TermsOf(pr.id).fee === 600 && s4TermsOf(pr.id).inst === 6 && r1Eligible(pr.id).length === 3 && ADMIN.audit.some(a => a.action === 'Fee option added' && a.entity.includes(pr.id + '-FO-001')));
     go('a-programmes', { id: pr.id, tab: 'details' }); ok('R1f the Draft\'s details list its options (managed under Finance)', /Managed under Finance → Instalment plans/.test(main()) && main().includes(pr.id + '-FO-002'));
-    go('a-programmes', { id: pr.id, tab: 'support' }); ok('R1f new programme Details (Level 3): the learner-level rule, not the batch-level P-31 wording', /comes from the fee option/.test(main()));
+    // CB1 (PD-CB-01) supersedes the address only: "support" wasn't a step of new programmes, so it showed Details; it now opens the
+    // observation fee rate panel. The check (the Details text) is unchanged and now goes to Details directly.
+    go('a-programmes', { id: pr.id, tab: 'details' }); ok('R1f new programme Details (Level 3): the learner-level rule, not the batch-level P-31 wording', /comes from the fee option/.test(main()));
     go('a-programmes', { id: 'NV-L3D', tab: 'support' }); ok('R1f Support tab of a built-in Level 3 programme (2027 draft): the confirmed learner-level rule is stated; open P-31 questions keep their tag', !!app().querySelector('.r1-sup3') && !!app().querySelector('.tbd'));
     // Level 4: unchanged single price and delivery mode (with its P-31 wording)
     npOpen(); const lv = document.querySelector('#np-l'); lv.value = 'Level 4'; INP.r1NpLevel(lv);
