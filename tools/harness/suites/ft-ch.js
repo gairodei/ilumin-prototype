@@ -10,6 +10,8 @@
   const mroot = () => document.getElementById('modal-root');
   const T = async (n, f) => { try { closeModal(); S.frame = 'auto'; await f(); } catch (e) { R.push('FAIL ' + n + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
   const fresh = () => { closeModal(); S.ui = {}; S.edge = 'none'; S.frame = 'auto'; initStore(); };
+  // N5a review (supersedes publishing without it): every new programme and new version records "Observation required" (Yes / No) first
+  const obsDecide = (id, v = 'no') => { ACT.n5Settings({ dataset: { p: id } }); const r = document.querySelector(`#modal-root input[name="n5-req"][value="${v}"]`); if (r && MODAL) { r.checked = true; MODAL.actions.find(x => /primary/.test(x.cls || '')).fn(); } closeModal(); };
   const learner = v => { S.variant = v; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; };
   const SA = () => { setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; S.ui = {}; };
   const FA = () => { setAdminIdentity('FA'); S.portal = 'admin'; S.signedIn = true; S.ui = {}; };
@@ -1072,7 +1074,7 @@
     const pr = np();
     ok('NP created as Draft, Version 1, with details and Support type', !!pr && pr.status === 'Draft' && pr.version === 1 && pr.price === 2600 && pr.level === 'Level 4' && chSupportOf(pr.id) === 'Self-paced' && S.route === 'a-programmes' && S.params && true);
     ok('NP audited', ADMIN.audit.some(a => a.module === 'NVQ Programmes' && a.action === 'Programme created (Draft, Version 1)' && a.entity.includes(pr.id)));
-    go('a-programmes', { id: pr.id, tab: 'details' }); ok('NP setup wizard: six steps, Draft chip', app().querySelectorAll('.ch8-steps .step').length === 6 && /Draft/.test(main()) && /Version 1/.test(main()));
+    go('a-programmes', { id: pr.id, tab: 'details' }); ok('NP setup wizard: seven steps (N5a adds Observations after Structure), Draft chip', app().querySelectorAll('.ch8-steps .step').length === 7 && app().querySelectorAll('.ch8-steps .step')[2].textContent.includes('Observations') && /Draft/.test(main()) && /Version 1/.test(main()));
     document.querySelector('#np-p').value = '2700'; ACT.ch8SaveDetails({ dataset: { id: pr.id } }); ok('NP details editable while Draft, audited', pr.price === 2700 && ADMIN.audit[0].action === 'Details changed');
     go('a-programmes'); ok('NP listed on NVQ Programmes as Draft', /Level 4 Certificate in Care Leadership/.test(main()));
   });
@@ -1111,7 +1113,7 @@
     // E1 review correction: "Edit plan" opened NVQ Programmes, which the Finance Admin role can't open (was: '.ch8-plans [data-tab="plan"][data-id=…]');
     // it now opens Finance's own plan editor
     FA(); go('f-plans'); ok('NP Finance → Payment Plans: Edit plan opens Finance\'s plan editor', !!app().querySelector('.ch8-plans [data-act="s4PlanEdit"][data-p="' + id + '"]') && !app().querySelector('.ch8-plans [data-go="a-programmes"]'));
-    acaEnter('KA'); S.signedIn = true; go('a-programmes', { id, tab: 'review' }); const pub = app().querySelector('[data-act="ch8Publish"]');
+    acaEnter('KA'); S.signedIn = true; obsDecide(id); go('a-programmes', { id, tab: 'review' }); const pub = app().querySelector('[data-act="ch8Publish"]');
     ok('NP review: nothing blocking; Publish enabled', !pub.disabled && !/Blocking/.test(main()));
     ACT.ch8Publish({ dataset: { id } }); document.querySelector('#rsn').value = 'Ready'; press();
     ok('NP published: Active, Version 1, audited', pr.status === 'Active' && pr.version === 1 && ADMIN.audit.some(a => a.action === 'Programme published (Version 1)'));

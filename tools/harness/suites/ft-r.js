@@ -10,6 +10,8 @@
   const T = async (n, f) => { try { closeModal(); S.frame = 'auto'; await f(); } catch (e) { R.push('FAIL ' + n + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
   // (the Assessor portal keeps its own state between tests: an unsaved marking draft would stop navigation with the 'Unsaved marking changes' prompt)
   const fresh = () => { closeModal(); S.ui = {}; S.edge = 'none'; S.frame = 'auto'; if (S.tas) { S.tas.dirty = false; S.tas.qi = 0; } S.saveFail = false; S.offline = false; initStore(); };
+  // N5a review (supersedes publishing without it): every new programme and new version records "Observation required" (Yes / No) first
+  const obsDecide = (id, v = 'no') => { ACT.n5Settings({ dataset: { p: id } }); const r = document.querySelector(`#modal-root input[name="n5-req"][value="${v}"]`); if (r && MODAL) { r.checked = true; MODAL.actions.find(x => /primary/.test(x.cls || '')).fn(); } closeModal(); };
   const learner = v => { S.variant = v; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; };
   const SA = () => { setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; S.ui = {}; };
   const FA = () => { setAdminIdentity('FA'); S.portal = 'admin'; S.signedIn = true; S.ui = {}; };
@@ -454,7 +456,7 @@
   const add8 = (act, ds, o) => { ACT[act]({ dataset: ds }); fill(o); return prim(); };
   // Publish with the existing wizard steps: one unit / module / outcome / criterion, an offer letter
   const pubNew = pr => { const id = pr.id; go('a-programmes', { id, tab: 'structure' }); add8('ch8AddUnit', { id }, { '#u-c': 'U370', '#u-t': 'Practice' }); add8('ch8AddMod', { id, u: 0 }, { '#m-t': 'Core practice', '#m-ab': 'C/650/3701' }); add8('ch8AddLo', { id, u: 0, m: 0 }, { '#lo-t': 'Understand practice', '#lo-y': 'Knowledge' }); add8('ch8AddCrit', { id, u: 0, m: 0, l: 0 }, { '#c-d': 'Describe practice', '#c-e': 'Written account' });
-    ACT.chLetterUp({ dataset: { id } }); ACT.chLetterSample(); document.querySelector('#rsn').value = 'First version'; press(); ACT.ch8Publish({ dataset: { id } }); const t = document.querySelector('#rsn'); if (t) { t.value = 'Ready'; press(); } closeModal(); return pr.status === 'Active'; };
+    ACT.chLetterUp({ dataset: { id } }); ACT.chLetterSample(); document.querySelector('#rsn').value = 'First version'; press(); obsDecide(id); ACT.ch8Publish({ dataset: { id } }); const t = document.querySelector('#rsn'); if (t) { t.value = 'Ready'; press(); } closeModal(); return pr.status === 'Active'; };
   const mkBatch = (code, course, dm) => { ACT.newBatch(); if (!MODAL) return null; fill({ '#nb-c': code }); const co = document.querySelector('#nb-co'); co.value = course; INP.n2NbCourse(co); if (dm) document.querySelector('#nb-dm').value = dm; document.querySelector('#nb-m').value = 'Online'; if (prim() === false) return null; const ac = document.querySelector('#nb-ac'); ac.value = 'Dr Helen Carter'; if (prim() === false) return null; prim(); prim(); prim(); closeModal(); return ADMIN.batches.find(b => b.code === code) || null; };
 
   await T('R2 (final) Create batch: no class-pattern wording for Level 3; other levels unchanged', async () => {

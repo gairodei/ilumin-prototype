@@ -186,6 +186,30 @@
     click(all('#modal-root .modal button').find(b => b.textContent.trim() === 'Start sign-up'));
     { const w = STORE.worlds[S.variant]; ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); }
     ok('E2 learner payment step: no deposit choice; "No deposit for this programme" displayed; no page overflow', !$1('main input[name="su-opt"][value="deposit"]') && shown($1('main .e2-nodep')) && /No deposit for this programme\./.test($1('main .e2-nodep').textContent) && !/A deposit can only hold a seat/.test(main()) && appOver() <= 1, appOver());
+    // N5a: programme Observations tab (published → new version → settings, evidence, Academy criterion) and the wizard step
+    closeModal(); initStore(); setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-programmes', { id: 'NV-L3', tab: 'obs' });
+    const mbtn = t => all('#modal-root .modal button').find(b => b.textContent.trim() === t);
+    ok('N5a tab: Observations selected, published version read-only (no edit controls), "Create new version" displayed; no page overflow', $1('main .subtabs [data-tab="obs"]').getAttribute('aria-selected') === 'true' && shown($1('main .n5-head')) && !$1('main [data-act="n5Settings"]') && shown($1('main [data-act="newProgVersion"]')) && appOver() <= 1, appOver());
+    click($1('main [data-act="newProgVersion"]')); $1('#rsn').value = 'UI check'; click(all('#modal-root .modal button').find(b => /Create Version 3/.test(b.textContent)));
+    ok('N5a review: the new version shows "Not chosen yet" for Observation required, with the reason; blocking item listed', /Not chosen yet/.test($1('main .n5-settings').textContent) && shown($1('main .n5-req-hint')) && /choose whether observation is required/.test($1('main .n5-checks').textContent));
+    ok('N5a draft: "Edit settings", "Evidence" and "Add criterion" displayed; blocking/warning list shown; no page overflow', shown($1('main [data-act="n5Settings"]')) && shown($1('main .n5-nvq [data-act="n5NvqEv"]')) && shown($1('main .n5-ia [data-act="n5IaEdit"]')) && shown($1('main .n5-checks')) && appOver() <= 1, appOver());
+    click($1('main [data-act="n5Settings"]'));
+    ok('N5a settings dialog: three groups of choices displayed, each with a visible legend; the dialog fits', all('#modal-root .n5-fs legend').filter(shown).length === 3 && all('#modal-root input[type="radio"]').filter(shown).length === 6 && !modalFits(), modalFits());
+    click($1('#modal-root input[name="n5-req"][value="yes"]')); click($1('#modal-root input[name="n5-wp"][value="Permitted"]')); click($1('#modal-root input[name="n5-off"][value="Available"]')); click(mbtn('Save settings'));
+    ok('N5a settings saved: Observation required "Yes" displayed', /Yes/.test($1('main .n5-settings dd').textContent) && !MODAL);
+    click($1('main .n5-nvq [data-act="n5NvqEv"]'));
+    ok('N5a evidence dialog: five evidence types and instructions displayed; the dialog fits', all('#modal-root .n5-ev').filter(shown).length === 5 && shown($1('#n5n-i')) && !modalFits(), modalFits());
+    click(all('#modal-root .n5-ev').find(x => x.value === 'photos')); click(mbtn('Save evidence'));
+    ok('N5a evidence saved: "Photos" shown on the criterion row', /Photos/.test($1('main .n5-nvq tbody tr').textContent));
+    click($1('main .n5-ia [data-act="n5IaEdit"][data-c=""]'));
+    ok('N5a add criterion dialog: title, evidence and NVQ mapping choices displayed; every checkbox has a label; the dialog fits', shown($1('#n5-t')) && all('#modal-root .n5-map').filter(shown).length === 6 && all('#modal-root input[type="checkbox"]').every(x => !!x.closest('label')) && !modalFits(), modalFits());
+    $1('#n5-t').value = 'UI check criterion'; click(all('#modal-root .n5-ev').find(x => x.value === 'notes')); click($1('#modal-root .n5-map')); click(mbtn('Add criterion'));
+    ok('N5a criterion added: shown in the Academy criteria table; no page overflow', /UI check criterion/.test($1('main .n5-ia').textContent) && appOver() <= 1, appOver());
+    click($1('main .subtabs [data-tab="library"]'));
+    ok('N5a review legacy tab: "Shared library (legacy)" selected, guidance with "Open Observations" displayed, no library edit buttons; no page overflow', /Shared library \(legacy\)/.test($1('main .subtabs [aria-selected="true"]').textContent) && shown($1('main .n5-legacy-note [data-tab="obs"]')) && !all('main [data-act="kLib"], main [data-act="kLibAttach"]').length && appOver() <= 1, appOver());
+    click($1('main .n5-legacy-note [data-tab="obs"]')); ok('N5a review legacy tab: "Open Observations" opens the Observations tab', $1('main .subtabs [data-tab="obs"]').getAttribute('aria-selected') === 'true');
+    go('a-programmes', { id: 'NV-N1', tab: 'obs' });
+    ok('N5a wizard: seven steps with Observations third and current; the section shown; no page overflow', all('main .ch8-steps .step').length === 7 && /Observations/.test($1('main .ch8-steps .step.cur').textContent) && shown($1('main .n5-head')) && appOver() <= 1, appOver());
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));
     ok('no script errors', !errs.length, errs.join(' | '));

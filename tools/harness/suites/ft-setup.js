@@ -11,6 +11,8 @@
   const mroot = () => document.getElementById('modal-root');
   const T = async (n, f) => { try { closeModal(); S.frame = 'auto'; await f(); } catch (e) { R.push('FAIL ' + n + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
   const fresh = () => { closeModal(); S.ui = {}; S.edge = 'none'; S.frame = 'auto'; initStore(); };
+  // N5a review (supersedes publishing without it): every new programme and new version records "Observation required" (Yes / No) first
+  const obsDecide = (id, v = 'no') => { ACT.n5Settings({ dataset: { p: id } }); const r = document.querySelector(`#modal-root input[name="n5-req"][value="${v}"]`); if (r && MODAL) { r.checked = true; MODAL.actions.find(x => /primary/.test(x.cls || '')).fn(); } closeModal(); };
   const learner = v => { S.variant = v; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; };
   const SA = () => { setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; S.ui = {}; };
   const role = r => { ACT.switchRole({ dataset: { r } }); S.signedIn = true; };
@@ -304,7 +306,7 @@
     ok('S3-03 Create new version: a real Version 3 draft (a copy of the current tree)', !!dv && dv.v === 3 && dv.tree !== STORE.worlds.C.tree && dv.tree.length === 7 && /Version 3 \(draft\)/.test(main()) && !!app().querySelector('[data-act="kPubProg"]'));
     pb('NV-L3', 'tree'); dlg('s3Rename', { p: 'NV-L3', u: 'U301' }, { '#rn-t': 'Communication in care settings (2027)' });
     ok('S3-03 the draft is edited; the current version is not', dv.tree[0].title === 'Communication in care settings (2027)' && STORE.worlds.C.tree[0].title !== dv.tree[0].title);
-    ACT.kPubProg({ dataset: { id: 'NV-L3' } }); reason('Publish 2027 wording'); const pr = s3Pr('NV-L3');
+    obsDecide('NV-L3'); ACT.kPubProg({ dataset: { id: 'NV-L3' } }); reason('Publish 2027 wording'); const pr = s3Pr('NV-L3');
     ok('S3-03 Publish version 3: current version, history updated, audited', pr.version === 3 && !STORE.s3.drafts['NV-L3'] && STORE.s3.trees['NV-L3'][0].title === 'Communication in care settings (2027)' && ADMIN.audit[0].action === 'Version 3 published');
     pb('NV-L3', 'versions'); ok('S3-03 Versions tab: Version 3 (current), Version 2 superseded', /Version 3 \(current\)/.test(main()) && /Version 2/.test(main()) && /Superseded/.test(main()));
     ok('S3-03 Aisha stays on her version (old unit title)', !/\(2027\)/.test(learnerUnits('C')) && /U301/.test(main()));
@@ -314,7 +316,7 @@
     ok('S3-03 published wizard programme offers "Create new version"', !!app().querySelector('[data-act="s3WizVersion"]') && !app().querySelector('[data-act="ch8AddUnit"]'));
     ACT.s3WizVersion({ dataset: { id } }); reason('Add a unit'); go('a-programmes', { id, tab: 'structure' });
     ok('S3-03 wizard Version 2 (draft): structure editable', p2.nextDraft && !!app().querySelector('[data-act="ch8AddUnit"]') && /Version 2 \(draft\)/.test(main()));
-    dlg('ch8AddUnit', { id }, { '#u-c': 'U299', '#u-t': 'Digital skills' }); ACT.s3WizPublish({ dataset: { id } }); reason('Publish');
+    dlg('ch8AddUnit', { id }, { '#u-c': 'U299', '#u-t': 'Digital skills' }); obsDecide(id); ACT.s3WizPublish({ dataset: { id } }); reason('Publish');
     ok('S3-03 wizard Publish version 2', p2.version === 2 && !p2.nextDraft && ch8Tree(id).some(u => u.code === 'U299') && ADMIN.audit[0].action === 'Version 2 published');
   });
 
@@ -324,7 +326,7 @@
     const set = (u, lo) => { INP.loType({ value: 'Knowledge', dataset: { p: 'NV-L3D', u, lo } }); reason('Typed'); };
     set('U310', 'LO2'); set('U311', 'LO1');
     ok('S3-04 types set in NV-L3D only (Level 3 unaffected)', STORE.s3.trees['NV-L3D'].find(u => u.code === 'U311').mods[0].los[0].type === 'Knowledge' && !STORE.s3.drafts['NV-L3D']);
-    ACT.kPubProg({ dataset: { id: 'NV-L3D' } }); reason('Ready');
+    obsDecide('NV-L3D'); ACT.kPubProg({ dataset: { id: 'NV-L3D' } }); reason('Ready');
     ok('S3-04 publishes once every Learning Outcome has a type', s3Pr('NV-L3D').status === 'Active' && ADMIN.audit[0].action === 'Programme published');
     acaEnter('KA'); S.signedIn = true; go('a-batches'); ACT.newBatch(); ok('S3-04 the published programme is offered when creating a batch', /2027 update/.test(mroot().textContent)); closeModal();
   });
@@ -350,7 +352,9 @@
     ok('S3-05 Retire: kept in the library, removed from the forms', L.find(x => x.code === 'IA-2').status === 'Retired' && !/IA-2 /.test(formIA()) && !STORE.worlds.C.iaCriteria.some(x => x[0] === 'IA-2'));
     SA(); go('k-obslib'); ACT.kLib({ dataset: { id: 'IA-3' } }); document.querySelector('#kl-f').checked = false; fill({ '#kl-r': 'Not on forms' }); prim();
     ok('S3-05 untick "Use on observation forms": removed from forms', !STORE.worlds.C.iaCriteria.some(x => x[0] === 'IA-3'));
-    pb('NV-L3', 'library'); ok('S3-05 the programme\'s library tab shows the same list', /IA-16/.test(main()) && !!app().querySelector('[data-act="kLibAttach"]'));
+    // N5a review supersedes: the programme's library tab offered the shared library's edit actions (was: kLibAttach on this tab).
+    // It is now "Shared library (legacy)": the same list, read-only, pointing to the Observations tab; the library page itself stays editable.
+    pb('NV-L3', 'library'); ok('S3-05 / N5a review: the programme\'s legacy library tab shows the same list, read-only, with the way to Observations', /IA-16/.test(main()) && !app().querySelector('main [data-act="kLibAttach"], main [data-act="kLib"]') && !!app().querySelector('main .n5-legacy-note [data-tab="obs"]'));
   });
 
   await T('S3-06 assessment types: add, edit, retire', async () => {
@@ -404,7 +408,7 @@
     return li;
   };
   // … then the unsupported Learning Outcome is changed to Observation and Version 2 is published
-  const n2Custom = () => { const li = n2Draft(); INP.ch8LoType({ value: 'Observation', dataset: { id: 'NV-N2', u: '0', m: '0', l: String(li) } }); ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Publish Version 2'); };
+  const n2Custom = () => { const li = n2Draft(); INP.ch8LoType({ value: 'Observation', dataset: { id: 'NV-N2', u: '0', m: '0', l: String(li) } }); obsDecide('NV-N2'); ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Publish Version 2'); };
   const signUp = (batch) => { learner('A'); go('browse'); ACT.applyNvq({ dataset: { id: 'k-NV-N2' } }); prim(); const w = W; ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); if (batch) chSetBatch(w, batch); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal(); return w; };
 
   await T('S3 correction A — custom assessment types show their configured name; rules follow the evidence method', async () => {
@@ -432,7 +436,7 @@
     ACT.s3WizPublish({ dataset: { id: 'NV-N2' } });
     ok('Wizard (negative): "Publish version 2" refused; still Version 1 with the draft open', !!MODAL && /Can't publish this version/.test(MODAL.title) && /Professional discussion/.test(mroot().textContent) && n2().version === 1 && n2().nextDraft); closeModal();
     go('a-programmes', { id: 'NV-N2', tab: 'structure' }); ok('Wizard: the draft stays editable', !!app().querySelector('[data-act="ch8AddUnit"]') && !!app().querySelector(`[data-onchange="ch8LoType"][data-l="${li}"]`));
-    INP.ch8LoType({ value: 'Observation', dataset: { id: 'NV-N2', u: '0', m: '0', l: String(li) } }); ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Supported now');
+    INP.ch8LoType({ value: 'Observation', dataset: { id: 'NV-N2', u: '0', m: '0', l: String(li) } }); obsDecide('NV-N2'); ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Supported now');
     ok('Wizard (positive): with supported types (incl. the written custom type) Version 2 publishes', n2().version === 2 && !n2().nextDraft);
     // A Draft programme made with the wizard: the Publish button is disabled with the reason
     acaEnter('KA'); S.signedIn = true; ACT.ch8AddLo({ dataset: { id: 'NV-N1', u: 0, m: 0 } }); fill({ '#lo-t': 'Discuss leadership', '#lo-y': 'Professional discussion' }); prim();
@@ -445,7 +449,7 @@
     ok('Builder: unsupported type on a published programme goes into a draft version (current version unchanged)', !!dv && dv.tree.find(u => u.code === 'U401').mods[0].los[0].type === 'Professional discussion' && cur.find(u => u.code === 'U401').mods[0].los[0].type === 'Knowledge');
     ACT.kPubProg({ dataset: { id: 'NV-L4' } });
     ok('Builder (negative): publish blocked, naming U401 LO1 and the type; audited', !!MODAL && !!mroot().querySelector('.s3-unsup') && /U401 LO1 \(Professional discussion — evidence: professional discussion\)/.test(mroot().textContent) && ADMIN.audit[0].action === 'Blocked: publish' && /Unsupported assessment method/.test(ADMIN.audit[0].reason) && s3Pr('NV-L4').version === 1); closeModal();
-    INP.loType({ value: 'Knowledge', dataset: { p: 'NV-L4', u: 'U401', lo: 'LO1' } }); reason('Back to Knowledge'); ACT.kPubProg({ dataset: { id: 'NV-L4' } }); reason('Publish');
+    INP.loType({ value: 'Knowledge', dataset: { p: 'NV-L4', u: 'U401', lo: 'LO1' } }); reason('Back to Knowledge'); obsDecide('NV-L4'); ACT.kPubProg({ dataset: { id: 'NV-L4' } }); reason('Publish');
     ok('Builder (positive): the draft stays editable; once supported it publishes Version 2', s3Pr('NV-L4').version === 2 && !STORE.s3.drafts['NV-L4']);
     INP.loType({ value: 'Professional discussion', dataset: { p: 'NV-L3D', u: 'U310', lo: 'LO2' } }); reason('PD'); INP.loType({ value: 'Knowledge', dataset: { p: 'NV-L3D', u: 'U311', lo: 'LO1' } }); reason('K');
     ACT.kPubProg({ dataset: { id: 'NV-L3D' } }); ok('Builder Draft programme NV-L3D (negative): blocked, stays Draft', /U310 LO2 \(Professional discussion/.test(mroot().textContent) && s3Pr('NV-L3D').status === 'Draft'); closeModal();
@@ -459,11 +463,11 @@
     ACT.ch8AddUnit({ dataset: { id: 'NV-N2' } }); fill({ '#u-c': 'U299', '#u-t': 'Digital skills' }); prim();
     w = signUp(null); const snap = JSON.stringify(w.tree);
     ok('V (negative): a sign-up while Version 2 is a draft gets Version 1 — never unpublished draft edits', w.nvq.progVersion === 1 && !w.tree.some(u => u.code === 'U299') && ch8Tree('NV-N2').some(u => u.code === 'U299'));
-    acaEnter('KA'); S.signedIn = true; ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Publish');
+    acaEnter('KA'); S.signedIn = true; obsDecide('NV-N2'); ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Publish');
     ok('V: publishing Version 2 doesn\'t migrate the enrolled learner (structure and version unchanged)', n2().version === 2 && JSON.stringify(w.tree) === snap && w.nvq.progVersion === 1);
     fresh(); acaEnter('KA'); S.signedIn = true; go('a-batches'); mkBatch('L2PW-MAR27-ONL', n2().title); const b1 = ADMIN.batches.find(b => b.code === 'L2PW-MAR27-ONL');
     ACT.s3WizVersion({ dataset: { id: 'NV-N2' } }); reason('v2'); go('a-programmes', { id: 'NV-N2', tab: 'structure' }); ACT.ch8AddUnit({ dataset: { id: 'NV-N2' } }); fill({ '#u-c': 'U299', '#u-t': 'Digital skills' }); prim();
-    ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Publish'); go('a-batches'); mkBatch('L2PW-JUN27-ONL', n2().title); const b2 = ADMIN.batches.find(b => b.code === 'L2PW-JUN27-ONL');
+    obsDecide('NV-N2'); ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Publish'); go('a-batches'); mkBatch('L2PW-JUN27-ONL', n2().title); const b2 = ADMIN.batches.find(b => b.code === 'L2PW-JUN27-ONL');
     ok('V: each batch records the version it was created on (1 and 2)', b1.progVersion === 1 && b2.progVersion === 2);
     w = signUp(b1);
     ok('V: a learner enrolled in the Version 1 batch starts on Version 1 (consistent with the batch)', w.signup.batch === b1.code && w.nvq.progVersion === b1.progVersion && !w.tree.some(u => u.code === 'U299'));
@@ -523,7 +527,7 @@
   await T('S3 correction E — version history: fixtures are marked, new entries are real', async () => {
     fresh(); pb('NV-L3', 'versions'); const h = STORE.s3.hist['NV-L3'];
     ok('E: seeded versions are demo fixtures with no invented date or author', h.length === 2 && h.every(x => x.fixture && !x.at && !x.by) && /Demo fixture — existed before this prototype's audit trail/.test(main()));
-    ACT.newProgVersion({ dataset: { id: 'NV-L3' } }); reason('Spec change'); ACT.kPubProg({ dataset: { id: 'NV-L3' } }); reason('Publish it');
+    ACT.newProgVersion({ dataset: { id: 'NV-L3' } }); reason('Spec change'); obsDecide('NV-L3'); ACT.kPubProg({ dataset: { id: 'NV-L3' } }); reason('Publish it');
     const e = h[h.length - 1]; pb('NV-L3', 'versions');
     ok('E: publishing adds a real entry (actor, time, reason) and audit rows', e.v === 3 && !e.fixture && e.by === ADMIN.me.name && !!e.at && e.note === 'Publish it' && /Version history — audit/.test(main()) && /Version 3 published/.test(main()) && /Version created \(draft\)/.test(main()));
     ok('E: wizard programme Version 1 uses its own recorded publish date', (x => !x.fixture && x.at === n2().published)(s3Hist(n2())[0]));
@@ -542,7 +546,7 @@
     ok('E2E-1/2: new programme with its own hierarchy and module code (no Level 3 units)', t.length === 1 && t[0].code === 'U350' && t[0].mods[0].ab === 'B/652/3501' && t[0].mods[0].los[0].crit[0].d === 'Describe three types of dementia' && !t.some(u => u.code === 'U301') && STORE.s3.trees['NV-L3'].length === 7);
     // E2E-7: publishing a new Level 3 version leaves Aisha's version, evidence and progress untouched
     const snap = JSON.stringify(STORE.worlds.C.tree), prog = learnerUnits('C');
-    pb('NV-L3', 'tree'); dlg('nodeAdd', { p: 'NV-L3', lvl: 'unit' }, { '#nd-c': 'U309', '#nd-t': 'Dementia (2027)' }); ACT.kPubProg({ dataset: { id: 'NV-L3' } }); reason('Publish');
+    pb('NV-L3', 'tree'); dlg('nodeAdd', { p: 'NV-L3', lvl: 'unit' }, { '#nd-c': 'U309', '#nd-t': 'Dementia (2027)' }); obsDecide('NV-L3'); ACT.kPubProg({ dataset: { id: 'NV-L3' } }); reason('Publish');
     ok('E2E-6/7: Version 3 published; Aisha\'s tree (evidence, statuses) is byte-for-byte unchanged and her Progress is the same', s3Pr('NV-L3').version === 3 && JSON.stringify(STORE.worlds.C.tree) === snap && learnerUnits('C') === prog);
     // E2E-8: a batch created now records Version 3
     acaEnter('KA'); S.signedIn = true; go('a-batches'); mkBatch('L3DC-APR27', s3Pr('NV-L3').title); const b = ADMIN.batches.find(x => x.code === 'L3DC-APR27');

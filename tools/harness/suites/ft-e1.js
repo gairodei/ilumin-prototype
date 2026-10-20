@@ -9,6 +9,8 @@
   const mroot = () => document.getElementById('modal-root');
   const T = async (n, f) => { try { closeModal(); S.frame = 'auto'; await f(); } catch (e) { R.push('FAIL ' + n + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
   const fresh = () => { closeModal(); S.ui = {}; S.edge = 'none'; S.frame = 'auto'; if (S.tas) { S.tas.dirty = false; S.tas.qi = 0; } S.saveFail = false; S.offline = false; initStore(); };
+  // N5a review (supersedes publishing without it): every new programme and new version records "Observation required" (Yes / No) first
+  const obsDecide = (id, v = 'no') => { ACT.n5Settings({ dataset: { p: id } }); const r = document.querySelector(`#modal-root input[name="n5-req"][value="${v}"]`); if (r && MODAL) { r.checked = true; MODAL.actions.find(x => /primary/.test(x.cls || '')).fn(); } closeModal(); };
   const learner = v => { S.variant = v; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; };
   const SA = () => { setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; S.ui = {}; };
   const FA = () => { setAdminIdentity('FA'); S.portal = 'admin'; S.signedIn = true; S.ui = {}; };
@@ -26,7 +28,7 @@
   const newProg = (title, o = {}) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': o.level || 'Level 4', '#np-r': 'QN 610/' + (2000 + title.length) + '/1', '#np-d': String(o.n ?? 12), '#np-du': o.unit || 'months', '#np-p': String(o.price || 2400) }); const n0 = (STORE.chNewProgs || []).length; prim(); closeModal(); return (STORE.chNewProgs || []).length > n0 ? last() : null; };
   const add8 = (act, ds, o) => { ACT[act]({ dataset: ds }); fill(o); return prim(); };
   // The other publishing requirements (structure with a typed Learning Outcome, an offer letter)
-  const ready = pr => { const id = pr.id; go('a-programmes', { id, tab: 'structure' }); add8('ch8AddUnit', { id }, { '#u-c': 'U480', '#u-t': 'Practice' }); add8('ch8AddMod', { id, u: 0 }, { '#m-t': 'Core', '#m-ab': 'C/650/4801' }); add8('ch8AddLo', { id, u: 0, m: 0 }, { '#lo-t': 'Understand practice', '#lo-y': 'Knowledge' }); add8('ch8AddCrit', { id, u: 0, m: 0, l: 0 }, { '#c-d': 'Describe practice', '#c-e': 'Written account' }); ACT.chLetterUp({ dataset: { id } }); ACT.chLetterSample(); document.querySelector('#rsn').value = 'First version'; press(); };
+  const ready = pr => { const id = pr.id; obsDecide(id); go('a-programmes', { id, tab: 'structure' }); add8('ch8AddUnit', { id }, { '#u-c': 'U480', '#u-t': 'Practice' }); add8('ch8AddMod', { id, u: 0 }, { '#m-t': 'Core', '#m-ab': 'C/650/4801' }); add8('ch8AddLo', { id, u: 0, m: 0 }, { '#lo-t': 'Understand practice', '#lo-y': 'Knowledge' }); add8('ch8AddCrit', { id, u: 0, m: 0, l: 0 }, { '#c-d': 'Describe practice', '#c-e': 'Written account' }); ACT.chLetterUp({ dataset: { id } }); ACT.chLetterSample(); document.querySelector('#rsn').value = 'First version'; press(); };
   const finNotifs = () => STORE.fin.notifs.filter(n => String(n.key || '').startsWith('e1-sub-'));
   const acaNotifs = () => (STORE.aca ? STORE.aca.notifs : []).filter(n => /^Payment terms/.test(n.t));
   // Learner A (Daniel Okafor, no NVQ) signs up to a programme and reaches the payment step
