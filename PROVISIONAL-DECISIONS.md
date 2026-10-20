@@ -148,6 +148,11 @@ Existing issues fixed in the E1 review (20 Oct 2026):
 - Finance → Payment Plans: a Finance Admin's "Edit plan" went to the programme set-up, which the Finance role can't open ("You don't have permission"). It now opens Finance's own plan editor, or the waiting review item (PD-E1-13).
 - Finance's Approvals Queue list labelled every type other than Refund as "Agency invoice purchase". The Type column and the Type filter now show each item's business type: "Refund", "Agency invoice purchase", "Bundle VAT change", "Observation fee waiver" and "Programme payment terms". The Finance dashboard's "Awaiting my approval" list uses the same labels. Routing and permissions are unchanged. File: `js/finance.js` (`finQLbl`).
 
+E1 payment configuration clarification (client wording, 20 Oct 2026):
+- Stated rule: **administrators configure the allowed payment methods for each NVQ programme; learners may use only those methods.** One payment only, instalments only, or both; the instalment count is set by the administrator and is fixed for learners. Audit result: E1 already implemented this (the Payment Plan step, Finance approval, and the learner checkout that offers only the approved methods and never an editable count).
+- Corrected: Step 1 of the wizard assumed instalments. Its Level 3 fee-options text said each fee must split into "6 unless changed" instalments, and Step 1 **refused** such fees (for example £500), even for a programme that would be one payment only. Step 1 now says "Add the available fees and delivery modes for this programme. Payment methods and instalments are configured in the Payment Plan step." and checks only the fee amount. The instalment split and the deposit are checked in the Payment Plan step and again when Finance approves, against the method chosen. Fee options added later still check against the plan in force. Supersedes R1f "a fee that doesn't divide into the instalments is refused" (at Step 1).
+- Corrected: Finance's fee-option form no longer says the fee "must divide into those instalments" when the plan is one payment.
+
 ## Pending client clarification: confirmed as not decided in the prototype
 
 | Topic | What the prototype does now | Register entry |

@@ -354,7 +354,23 @@ s4PlansCard = function () {
 };
 // Level 3 fee options: the plan's method is stated where the options are managed
 const _r1FormE1 = r1Form;
-r1Form = function (o, pid) { const h = _r1FormE1.apply(this, arguments), p = s4PlanCur(pid); if (!p || !p.meth) return h; return h.replace(/Deposit [^<]*? and \d+ monthly instalments come from this programme's payment plan\./, `Deposit ${money(s4EffDep(p), 'GBP')} and how learners pay (${esc(e1MethShort(p).toLowerCase())}) come from this programme's payment plan.`); };
+r1Form = function (o, pid) {
+  const h = _r1FormE1.apply(this, arguments), p = s4PlanCur(pid); if (!p || !p.meth) return h;
+  const r = h.replace(/Deposit [^<]*? and \d+ monthly instalments come from this programme's payment plan\./, `Deposit ${money(s4EffDep(p), 'GBP')} and how learners pay (${esc(e1MethShort(p).toLowerCase())}) come from this programme's payment plan.`);
+  return p.meth === 'one-time' ? r.replace('The fee must divide into those instalments to the penny and be above the deposit.', 'The fee must be above the deposit.') : r; // no instalments to split into
+};
+
+/* ---------- E1 clarification (20 Oct 2026): Step 1 doesn't assume instalments ----------
+   Administrators configure the allowed payment methods per programme in the Payment Plan step; Step 1 only collects the fees. So the
+   wizard's Level 3 fee options are checked as amounts here (£0.01 to the maximum, pence at most); whether each fee splits into the
+   instalments and sits above the deposit is checked in the Payment Plan step and again when Finance approves (e1TermsIssue), against
+   the method actually configured — a one-payment programme has no instalments to split into. Fee options added later still check
+   against the plan in force (r1FeeWhy with a programme). */
+const E1_STEP1_FEES = 'Add the available fees and delivery modes for this programme. Payment methods and instalments are configured in the Payment Plan step.';
+const _feeWhyE1 = r1FeeWhy;
+r1FeeWhy = function (feeS, pid) { const why = _feeWhyE1.apply(this, arguments); return pid || /^Enter a fee/.test(why) ? why : ''; };
+const _fieldsE1b = ch8DetailsFields;
+ch8DetailsFields = function () { return _fieldsE1b.apply(this, arguments).replace(/<p class="xs muted">Learners choose one when they sign up\. Each fee must split evenly[^<]*<\/p>/, `<p class="xs muted e1-step1-fees">${esc(E1_STEP1_FEES)}</p>`); };
 
 /* ---------- Finance's plan editor (Finance → Payment Plans, Super Admin → Finance): the same "how learners pay" ---------- */
 ACT.s4PlanEdit = el => {
@@ -439,6 +455,7 @@ const _baE1 = buildAdmin; buildAdmin = function () { const r = _baE1.apply(this,
 UXC.push(['E1', 'NVQ programme duration and payment configuration (Oct 2026; Finance approval of new-programme terms confirmed 20 Oct 2026)', [
   'Duration: the New NVQ programme wizard, the programme Details step, the published Details and the Review show the duration as a whole number (1–999) and a unit (days, weeks, months or years), e.g. "12 months", "1 week". Durations entered before as free text are read as structured only when they are exactly "<number> <unit>"; anything else (e.g. "12–18 months") is kept as written, marked "Check duration", raises a Review warning and must be chosen again in Details — it is never converted. A changed duration is recorded on the "Details changed" audit entry.',
   'How learners pay: the programme payment plan (wizard Payment plan step; Finance → Payment Plans editor) offers One payment, Instalments, or Both (the learner chooses at sign-up). Instalments: 2–24 monthly, and every fee must split into them to the penny (the existing rule, PD-R1-03 — no adjusted final instalment). The method belongs to the plan: every Level 3 fee option uses it; the Payment summary lists each fee (each option, its mode) with how its learners pay and the deposit route. Deposit eligibility (28 days, CH-10), the seat hold, plan versions, pinned sign-up terms and existing learners\' payments are unchanged; a plan saved before E1 keeps offering instalments.',
+  'Clarification (20 Oct 2026): administrators configure the allowed payment methods per programme; learners use only those. The wizard\'s Step 1 Level 3 fee options now read "Add the available fees and delivery modes for this programme. Payment methods and instalments are configured in the Payment Plan step." and check only the fee amount — no fee is refused at Step 1 for not splitting into 6 instalments; the split is checked in the Payment Plan step and at Finance approval against the configured method. Finance\'s fee-option form states no instalment split for a one-payment plan.',
   'Learner sign-up: one payment → "Pay in full" (or the deposit, when eligible); both → "Pay in full" or "Instalments" (or the deposit). Paying in full creates one paid row and a "One-time payment" plan; bank transfer and Finance confirmation work as before.',
   'Finance review (CONFIRMED 20 Oct 2026 for new programmes; routing details provisional): a programme created by an Academic Admin or System Admin starts with Draft payment terms. The creator proposes the terms in the Payment plan step (Save draft / Submit to Finance for review). Submitting raises one "Programme payment terms" item in the Approvals Queue (first approver Finance Admin, escalates to the Super Admin after 7 days) and one in-app notification to that Finance Admin. An Active Finance Admin approves (a new plan version is saved) or requests changes with a reason; the creator is told once. The item never escalates: after 7 days it is marked overdue (informational) and stays with Finance — the Super Administrator gains no authority over it. Finance → Payment Plans "Edit plan" opens Finance\'s own plan editor (Finance can\'t open NVQ Programmes), or the waiting review item. The terms and the fee are locked while Finance reviews; a fee changed after approval needs approval again. A Draft programme can\'t be published until its terms are approved; publishing stays with the Super Admin, System Admin and Academic Admin. Finance Admins and the Super Administrator still own the plan (G5.2): their own saves are approved terms; the Super Administrator\'s own terms need no approval (D8). Programmes and plans that existed before E1 stay in force.']]);
 const _aIdxE1 = SCREENS['a-index'];

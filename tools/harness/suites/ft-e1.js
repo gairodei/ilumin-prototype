@@ -341,6 +341,57 @@
     ACT.qRouting(); ok('E1-C the confirmed routing table (G4 "Who approves what") is unchanged: 19 rows, no provisional type', document.querySelectorAll('#modal-root tbody tr').length === 19 && !/Programme payment terms/.test(mroot().textContent)); closeModal();
   });
 
+  /* ================= E1 clarification (20 Oct 2026): administrators configure the methods; learners use only those ================= */
+  const l3Wizard = (title, rows) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (4000 + title.length) + '/3', '#np-d': '12', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l')); rows.forEach(([l, f, m], k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('#modal-root .r1-np-row')[k]; r.querySelector('.r1-np-l').value = l; r.querySelector('.r1-np-f').value = f; r.querySelector('.r1-np-m').value = m; }); };
+  const payOpts = () => [...document.querySelectorAll('main input[name="su-opt"]')].map(x => x.value).sort().join();
+  await T('E1-CL Step 1: concise fee guidance; no instalment assumption before the Payment Plan step', async () => {
+    fresh(); ACA(); go('a-programmes'); ACT.chProgNew(); INP.r1NpLevel(Object.assign(document.querySelector('#np-l'), { value: 'Level 3' }));
+    const t = document.querySelector('#modal-root .r1-np-opts').textContent;
+    ok('E1-CL Step 1 Level 3 fee options: "Add the available fees and delivery modes … configured in the Payment Plan step."', /Add the available fees and delivery modes for this programme\. Payment methods and instalments are configured in the Payment Plan step\./.test(t));
+    ok('E1-CL Step 1 no longer states six (or any) instalments or the split rule', !/instalments \(|split evenly|unless changed|\b6\b/.test(t)); closeModal();
+    l3Wizard('Level 3 Certificate in Pay Config', [['Self-Paced', '500', 'Self-Paced']]); const n0 = (STORE.chNewProgs || []).length; prim();
+    const pr = last(); closeModal();
+    ok('E1-CL Step 1 accepts a fee that doesn\'t split into 6 (£500) — the split is checked against the configured method later', (STORE.chNewProgs || []).length === n0 + 1 && pr.title === 'Level 3 Certificate in Pay Config' && r1Opts(pr.id)[0].fee === 500);
+    ['0', '12.345', String(R1_FEE_MAX + 1)].forEach(f => { l3Wizard('Level 3 Bad fee ' + f, [['Self-Paced', f, 'Self-Paced']]); ok(`E1-CL (negative) Step 1 still refuses an invalid fee amount (${f})`, prim() === false && /Enter a fee/.test(mroot().textContent)); closeModal(); });
+    FA(); ACT.r1OptAdd({ dataset: { p: 'NV-L3' } }); ok('E1-CL a fee option added later still checks against the plan in force (6 instalments: £500 refused)', (fill({ '#fo-l': 'Bad', '#fo-f': '500', '#fo-m': 'Self-Paced' }), reason() === false) && /equal instalments/.test(mroot().textContent)); closeModal();
+  });
+  await T('E1-CL the creator configures the method; Finance approval gates it; the split is checked for the method chosen', async () => {
+    fresh(); ACA(); l3Wizard('Level 3 Certificate in One Payment', [['Self-Paced', '500', 'Self-Paced'], ['Fully Assisted', '1000', 'Fully Assisted']]); prim(); closeModal(); const pr = last(), v0 = s4Plans(pr.id).length;
+    go('a-programmes', { id: pr.id, tab: 'plan' }); const q0 = ADMIN.queue.length;
+    ok('E1-CL plan step: three configurations offered to the creator (one payment, instalments, both)', ['one-time', 'instalments', 'both'].every(m => !!document.querySelector(`input[name="e1-meth"][value="${m}"]`)));
+    meth('e1', 'instalments'); fill({ '#e1-n': '6' }); ACT.e1Submit({ dataset: { id: pr.id } });
+    ok('E1-CL (negative) instalments × 6 refused for £500 / £1,000, naming the option; nothing sent', !MODAL && ADMIN.queue.length === q0 && /Self-Paced:/.test(main()) && /divide/.test(main()));
+    meth('e1', 'one-time'); ACT.e1Submit({ dataset: { id: pr.id } }); press(); const i = ADMIN.queue.find(x => x.id === e1T(pr.id).qid);
+    ok('E1-CL one payment submitted: one Finance item with the proposal (no instalments)', !!i && i.status === 'Pending' && i.data.prop.meth === 'one-time' && i.data.prop.inst === 1);
+    ok('E1-CL (gate) the proposed method isn\'t in force before Finance approves', s4Plans(pr.id).length === v0 && s4PlanCur(pr.id).meth !== 'one-time' && ch8Check(pr).block.some(b => /waiting for Finance review/.test(b)));
+    FA(); ACT.e1Decide({ dataset: { id: i.id, a: 'approve' } }); reason('One payment agreed.');
+    const p = s4PlanCur(pr.id); ok('E1-CL approved by Finance: plan in force is one payment, no instalments; both options reconcile', p.meth === 'one-time' && p.inst === 1 && r1Opts(pr.id).every(o => !r1TermsOf(o).issue));
+    ok('E1-CL Finance\'s fee-options form states no instalment split for a one-payment plan', (ACT.r1OptAdd({ dataset: { p: pr.id } }), /how learners pay \(one payment\)/.test(mroot().textContent) && !/divide into those instalments/.test(mroot().textContent) && /must be above the deposit/.test(mroot().textContent))); closeModal();
+  });
+  await T('E1-CL learners see only the approved methods; the instalment count is fixed; the fee option is separate', async () => {
+    fresh(); SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — standard', fee: 3000, mode: 'Self-Paced' }, 'E1-CL', 'Added'); const o2 = r1Opts('NV-L3').find(o => o.fee === 3000);
+    // Full payment only
+    FA(); planEdit('NV-L3', 'one-time', null, 'One payment only'); let w = toPay('NV-L3', o2.id);
+    ok('E1-CL one payment only: "Pay in full" (and the eligible deposit); no instalment choice, no count to edit', payOpts() === 'deposit,full' && !document.querySelector('main input[type="number"]') && !/monthly payments/.test(main()));
+    setUi('suOpt', 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); let pl = w.plans.find(x => x.e === 'nvq');
+    ok('E1-CL (negative) a forced "instalment" choice is ignored: paid in full, one row of the option\'s fee', w.signup.done && w.signup.pay.full && pl.rows.length === 1 && pl.rows[0].amount === 3000);
+    // Instalments only
+    fresh(); SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — standard', fee: 3000, mode: 'Self-Paced' }, 'E1-CL', 'Added');
+    FA(); planEdit('NV-L3', 'instalments', 4, 'Instalments only'); w = toPay('NV-L3', r1Opts('NV-L3').find(o => o.fee === 3000).id);
+    ok('E1-CL instalments only: the approved 4 monthly payments (and the deposit); no "Pay in full"; no count to edit', payOpts() === 'deposit,instalment' && /4 monthly payments of £750.00/.test(main()) && !/Pay in full/.test(main()) && !document.querySelector('main input[type="number"]'));
+    setUi('suOpt', 'full'); setUi('suMethod', 'bank'); render(); ACT.suPay(); pl = w.plans.find(x => x.e === 'nvq');
+    ok('E1-CL (negative) a forced "full" choice is ignored: exactly the approved 4 instalments', w.signup.done && !w.signup.pay.full && pl.rows.length === 4 && pl.rows.every(r => r.amount === 750) && w.signup.plan.inst === 4);
+    // Both
+    fresh(); SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — standard', fee: 3000, mode: 'Self-Paced' }, 'E1-CL', 'Added');
+    const snap = () => JSON.stringify(['B', 'C'].map(k => [STORE.worlds[k].signup.plan, STORE.worlds[k].plans, STORE.worlds[k].admission.deposit]));
+    const hist0 = snap(); FA(); planEdit('NV-L3', 'both', 4, 'Both'); w = toPay('NV-L3', r1Opts('NV-L3').find(o => o.fee === 3000).id);
+    ok('E1-CL both: "Pay in full" and "4 monthly payments" offered; the count is fixed (no input)', payOpts() === 'deposit,full,instalment' && /Pay in full — £3,000.00 now/.test(main()) && /4 monthly payments of £750.00/.test(main()) && !document.querySelector('main input[type="number"]'));
+    ok('E1-CL existing learners\' pinned plans and deposits unchanged by the new terms', snap() === hist0 && !STORE.worlds.C.signup.plan.meth && STORE.worlds.C.signup.plan.inst === 6);
+    // Fee option ≠ payment method: another option changes the agreed price (and mode), not the methods or the count
+    fresh(); SA(); FA(); planEdit('NV-L3', 'both', 4, 'Both'); const std = toPay('NV-L3', 'L3-FO-STD');
+    ok('E1-CL Level 3: the fee option sets the agreed price; the method and count come from the plan', std.signup.plan.opt.id === 'L3-FO-STD' && std.signup.plan.meth === 'both' && std.signup.plan.inst === 4 && std.signup.plan.fee === 2400 && payOpts() === 'deposit,full,instalment' && w.signup.plan.opt.mode === 'Self-Paced' && w.signup.plan.fee === 3000);
+  });
+
   fresh();
   const out = document.createElement('pre'); out.id = 'ft-out'; out.textContent = R.join('\n') + '\n' + R.filter(x => x.startsWith('PASS')).length + '/' + R.length; document.body.appendChild(out);
 })();

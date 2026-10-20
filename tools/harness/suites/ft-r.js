@@ -468,7 +468,9 @@
     ok('R1f wizard (Level 3): no delivery-mode / class-pattern selector; the mode comes from the fee option; no "Pending" label shown', !vis(document.querySelector('#modal-root .r1-np-sup')) && /comes from the fee option/.test(document.querySelector('#modal-root .r1-np-modes').textContent) && /Self-Paced and Fully Assisted learners/.test(document.querySelector('#modal-root .r1-np-modes').textContent) && !vis(document.querySelector('#modal-root .tbd')));
     fill({ '#np-t': 'Level 3 Certificate in Support Work', '#np-r': 'QN 610/5555/3', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */ });
     ok('R1f (negative) at least one complete option (label required)', prim() === false && !(STORE.chNewProgs || []).some(p => p.title === 'Level 3 Certificate in Support Work'));
-    npRow(0, { l: 'Self-Paced', f: 500, m: 'Self-Paced' }); ok('R1f (negative) a fee that doesn\'t divide into the instalments is refused', prim() === false);
+    // E1 clarification (20 Oct 2026) supersedes: "a fee that doesn't divide into the instalments is refused" (£500 against 6, at Step 1).
+    // Step 1 now checks the amount only; the split is checked in the Payment Plan step against the configured method (ft-e1.js, E1-CL).
+    npRow(0, { l: 'Self-Paced', f: '12.345', m: 'Self-Paced' }); ok('R1f (negative) an invalid fee amount is refused (part pennies)', prim() === false);
     npRow(0, { l: 'Self-Paced', f: 600, m: '' }); ok('R1f (negative) the delivery mode is required', prim() === false);
     npRow(0, { l: 'Self-Paced', f: 600, m: 'Self-Paced' }); ACT.r1NpAdd(); npRow(1, { l: 'self-paced', f: 1200, m: 'Fully Assisted' }); ok('R1f (negative) labels must differ', prim() === false);
     npRow(1, { l: 'Fully Assisted', f: 1200, m: 'Fully Assisted' }); ACT.r1NpAdd(); npRow(2, { l: 'Self-Paced plus', f: 900, m: 'Self-Paced' }); ACT.r1NpAdd(); ACT.r1NpAdd();
