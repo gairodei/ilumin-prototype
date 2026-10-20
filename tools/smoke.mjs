@@ -6,7 +6,8 @@
 // resolves in dist/ with exact letter case; the copies are byte-identical to the sources the regression tests.
 // Served: dist/ is served at "/" with its _headers (as Cloudflare Pages does); a browser loads it and the test fails on any
 // request that isn't 200, any script error, a script that didn't run, or the demo not booting (30 Demo Scenarios, a Level 3
-// Schedule tab).
+// Schedule tab), and NVQ Programmes navigation by clicking — the sidebar link, a programme, the wizard, a reload on a
+// programme that isn't in the fresh data and a direct address change — with no Error 404.
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, extname, relative } from 'node:path';
 import { createServer } from 'node:http';
@@ -42,9 +43,34 @@ function pagesHeaders() { // the "/*" block of _headers, as Cloudflare Pages app
 const TRAP = '<script>window.__smokeErrs=[];addEventListener("error",function(e){__smokeErrs.push((e.message||"resource failed")+" @ "+((e.filename||(e.target&&(e.target.src||e.target.href))||"")+":"+(e.lineno||"")))},true);addEventListener("unhandledrejection",function(e){__smokeErrs.push("unhandled rejection: "+e.reason)});</script>';
 const PROBE = `<!doctype html><meta charset="utf-8"><title>smoke</title><body><iframe id="f" src="/?smoke=1" style="width:1280px;height:900px"></iframe><pre id="smoke"></pre><script>
 const out = r => { document.getElementById('smoke').textContent = JSON.stringify(r); };
+let r = {}, loads = 0;
+// NVQ Programmes navigation as a user does it (DOM clicks on the served build): demo panel → System Admin A → sidebar
+// NVQ Programmes (opening its collapsed group) → a programme → New NVQ programme. is404 = the in-app Error 404 page.
+const nav = (cw, d) => {
+  const q = s => d.querySelector(s), h1 = () => ((q('main h1') || {}).textContent || '').trim(), is404 = () => /We can't find that page/.test((q('main') || d.body).textContent);
+  const rows = () => d.querySelectorAll('main table tbody tr').length;
+  const signIn = () => { q('.demo-fab').click(); q('#demo-root [data-act="switchRole"][data-r="sysA"]').click(); if (cw.eval('S.demoOpen')) q('#demo-root .demo-fab').click(); };
+  const side = () => { const a = q('#app nav [data-go="a-programmes"]'), g = a && a.closest('details'); if (g && !g.open) g.querySelector('summary').click(); q('#app nav [data-go="a-programmes"]').click(); };
+  return { q, h1, is404, rows, signIn, side };
+};
 document.getElementById('f').addEventListener('load', () => setTimeout(() => {
-  const cw = document.getElementById('f').contentWindow, d = cw.document, r = {};
+  const cw = document.getElementById('f').contentWindow, d = cw.document; loads++;
+  if (loads === 2) { // reloaded on a programme that isn't in the fresh demo data (created before the reload, or an old link)
+    try {
+      const n = nav(cw, d); r.navReloadSignin = /Sign in/.test(d.querySelector('main').textContent); n.signIn();
+      r.navStale = n.h1() === 'NVQ Programmes' && !n.is404() && n.rows() > 0 && !!n.q('main [data-nvq-gone="NV-N99"]') && cw.location.hash === '#a-programmes';
+      r.navStaleInfo = n.h1() + ' ' + cw.location.hash;
+      cw.location.hash = '#a-programmes.NV-L3.versions';
+      return setTimeout(() => { r.navDirect = /Level 3 Diploma in Adult Care/.test(n.h1()) && !n.is404() && cw.eval('S.params.tab') === 'versions'; r.errs3 = (cw.__smokeErrs || []).slice(); out(r); }, 300);
+    } catch (e) { r.thrown = String(e && e.stack || e); return out(r); }
+  }
   try {
+    const n = nav(cw, d); n.signIn(); n.side();
+    r.navList = n.h1() === 'NVQ Programmes' && !n.is404() && n.rows() > 0 && cw.location.hash === '#a-programmes';
+    n.q('main table tbody a[data-go="a-programmes"][data-id]').click();
+    r.navOpen = !n.is404() && /^#a-programmes\\.NV-/.test(cw.location.hash) && d.querySelectorAll('main .subtabs [data-tab]').length >= 3;
+    n.side(); n.q('main [data-act="chProgNew"]').click();
+    r.navWizard = /Step 1 of 6/.test(n.q('#modal-root').textContent) && !!n.q('#modal-root #np-t'); cw.eval('closeModal()');
     r.errs = (cw.__smokeErrs || []).slice();
     r.scripts = d.querySelectorAll('script[src]').length;
     r.loaded = cw.performance.getEntriesByType('resource').filter(e => /\\.js$/.test(e.name)).length;
@@ -55,8 +81,8 @@ document.getElementById('f').addEventListener('load', () => setTimeout(() => {
     cw.eval('setAdminIdentity("A"); S.portal = "admin"; S.signedIn = true; go("a-batches", { id: "L3AC-NOV26-LEI", tab: "schedule" })');
     r.sched = !!d.querySelector('main .r2-sched') && /Add weekly recurring classes/.test(d.querySelector('main').textContent);
     r.errs2 = (cw.__smokeErrs || []).slice(r.errs.length);
-  } catch (e) { r.thrown = String(e && e.stack || e); }
-  out(r);
+  } catch (e) { r.thrown = String(e && e.stack || e); return out(r); }
+  out(r); document.getElementById('f').src = '/?smoke=2#a-programmes.NV-N99';
 }, 1500));
 </script>`;
 
@@ -95,6 +121,11 @@ async function served() {
   ok('served: the app boots and the last scripts ran (R2 Schedule area, R5 records, E1)', r.app === true && r.last === true);
   ok('served: Demo Scenarios — all 30 listed and rendered', r.scen === 30 && r.scList === 30, r.scen + ' rendered / ' + r.scList + ' listed');
   ok('served: a Level 3 batch Schedule tab renders (unified Schedule area)', r.sched === true);
+  ok('served: System Admin → sidebar NVQ Programmes (clicked) shows the programme list, not Error 404', r.navList === true);
+  ok('served: a programme opens from the list, and New NVQ programme opens the wizard', r.navOpen === true && r.navWizard === true);
+  ok('served: after a reload on a programme that isn\'t in the fresh data, signing in shows the list with a note (no Error 404)', r.navReloadSignin === true && r.navStale === true, r.navStaleInfo);
+  ok('served: changing the address to a programme tab opens it (direct navigation)', r.navDirect === true);
+  ok('served: no script errors after the reload', !(r.errs3 || []).length, (r.errs3 || []).join(' | '));
 }
 
 if (!process.argv.includes('--static-only')) await served();
