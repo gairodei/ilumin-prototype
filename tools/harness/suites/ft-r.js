@@ -49,7 +49,10 @@
     ok('R1 add (Finance): stable ID, label, fee, mode, Active; audited with reason', /^L3-FO-\d{3}$/.test(a) && o.fee === 600 && o.mode === 'Self-Paced' && o.status === 'Active' && ADMIN.audit[0].action === 'Fee option added' && ADMIN.audit[0].reason === 'New SP price');
     const b = optAdd('Fully Assisted — premium', 1800, 'Fully Assisted');
     ok('R1 any amounts (not a fixed list): £600 and £1,800 accepted; IDs unique', !!b && b !== a);
-    ACT.r1OptAdd(); fill({ '#fo-l': 'Bad', '#fo-f': '500', '#fo-m': 'Self-Paced' }); ok('R1 (negative) fee must divide into the plan\'s 6 instalments to the penny (£500 → refused)', reason() === false && /equal instalments/.test(mroot().textContent)); closeModal();
+    // E1 rounding (20 Oct 2026, PD-E1-15) supersedes: "fee must divide into the plan's 6 instalments to the penny (£500 → refused)".
+    // £500 now reconciles (5 × £83.33 + £83.35) — checked without saving, so the option counts below are unchanged; the deposit rule stays.
+    ok('R1 a fee that doesn\'t split evenly reconciles with the plan (£500 over 6 → 5 × £83.33 + £83.35), checked without saving', r1FeeWhy('500', 'NV-L3') === '' && e1SchedTxt(500, 6) === '5 × £83.33 + £83.35');
+    ACT.r1OptAdd(); fill({ '#fo-l': 'Bad', '#fo-f': '250', '#fo-m': 'Self-Paced' }); ok('R1 (negative) a fee not above the plan\'s deposit is refused (£250, deposit £300)', reason() === false && /must be below the fee/.test(mroot().textContent)); closeModal();
     ACT.r1OptAdd(); fill({ '#fo-l': 'self-paced — STANDARD', '#fo-f': '660', '#fo-m': 'Self-Paced' }); ok('R1 (negative) duplicate active label refused (case-insensitive)', reason() === false); closeModal();
     ACT.r1OptAdd(); fill({ '#fo-l': 'No mode', '#fo-f': '660', '#fo-m': '' }); ok('R1 (negative) mode is required', reason() === false); closeModal();
     ACT.r1OptAdd(); fill({ '#fo-l': 'Zero', '#fo-f': '0', '#fo-m': 'Self-Paced' }); ok('R1 (negative) fee above £0 required', reason() === false); closeModal();

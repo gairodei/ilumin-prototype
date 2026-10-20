@@ -40,12 +40,13 @@ const s4Plans = pid => (S4().plans[pid] = S4().plans[pid] || []);
 const s4PlanCur = pid => { const l = s4Plans(pid); for (let i = l.length - 1; i >= 0; i--) if (l[i].status === 'Active') return l[i]; return null; };
 const s4PlanLast = pid => { const l = s4Plans(pid); return l[l.length - 1] || null; };
 const s4EffDep = p => (p.deposit == null ? S4().cfg.deposit : p.deposit);
-// A plan is usable only when it reconciles: a fee, 1–24 equal instalments to the penny, and a deposit below the fee
+// A plan is usable only when it reconciles: a fee, 1–24 instalments with a valid schedule (e1Sched: rounded to the penny, the final
+// instalment takes the difference — E1 rounding, 20 Oct 2026), and a deposit below the fee
 function s4PlanIssue(p) {
   if (!p) return 'This programme has no active payment plan — it needs configuration by Finance or the Super Admin.';
   if (!(p.fee > 0)) return 'No programme fee is set — it needs configuration by Finance or the Super Admin.';
   if (!(Number.isInteger(p.inst) && p.inst >= 1 && p.inst <= 24)) return 'The number of instalments must be 1 to 24.';
-  if (Math.round(p.fee * 100) % p.inst) return `${money(p.fee, 'GBP')} doesn't divide into ${p.inst} equal instalments.`;
+  if (!e1Sched(p.fee, p.inst)) return `${money(p.fee, 'GBP')} can't be paid in ${p.inst} instalments — each instalment must be at least £0.01 and the fee whole pence.`;
   const d = s4EffDep(p); if (!(d >= 0) || d >= p.fee) return `The deposit (${money(d, 'GBP')}) must be below the fee (${money(p.fee, 'GBP')}).`;
   return '';
 }
@@ -244,7 +245,7 @@ function s4PlansCard() {
   const fo = finOwner();
   return `<section class="card s4-plans"><h2>Programme payment plans (used at sign-up)</h2><p class="small muted">One active plan per programme. The first instalment is due at sign-up (CH-10). A new version applies to new sign-ups; enrolled learners keep their plan.</p>
     <div class="tbl-wrap"><table class="tbl dense"><thead><tr><th>Programme</th><th class="r">Fee</th><th>Deposit</th><th>Instalments</th><th>Part payments</th><th>First instalment</th><th>Version</th><th>Status</th><th></th></tr></thead><tbody>${s4PlanProgs().map(pr => { const p = s4PlanCur(pr.id), last = s4PlanLast(pr.id), issue = s4PlanIssue(p), x = p || last;
-      return `<tr data-pid="${pr.id}"><td><strong>${esc(pr.title)}</strong><div class="xs muted">${pr.id} · ${pr.status}</div></td><td class="r">${x && x.fee ? money(x.fee, 'GBP') : '—'}</td><td>${x ? (x.deposit == null ? `${money(S4().cfg.deposit, 'GBP')} <span class="xs muted">(default)</span>` : `${money(x.deposit, 'GBP')} <span class="xs muted">(own)</span>`) : '—'}</td><td>${x && x.fee ? `${x.inst} × ${money(x.fee / x.inst, 'GBP')}` : '—'}</td><td>${x ? (x.partial ? 'Yes' : 'No') : '—'}</td><td class="small">At sign-up</td><td>${x ? 'v' + x.v : '—'}</td><td>${p && !issue ? chip('Active', 'green') : last && last.status === 'Retired' ? chip('Retired', 'grey') : chip('Needs configuration', 'red')}${issue && p ? `<div class="xs" style="color:var(--red)">${esc(issue)}</div>` : ''}</td>
+      return `<tr data-pid="${pr.id}"><td><strong>${esc(pr.title)}</strong><div class="xs muted">${pr.id} · ${pr.status}</div></td><td class="r">${x && x.fee ? money(x.fee, 'GBP') : '—'}</td><td>${x ? (x.deposit == null ? `${money(S4().cfg.deposit, 'GBP')} <span class="xs muted">(default)</span>` : `${money(x.deposit, 'GBP')} <span class="xs muted">(own)</span>`) : '—'}</td><td>${x && x.fee ? esc(e1SchedTxt(x.fee, x.inst)) : '—'}</td><td>${x ? (x.partial ? 'Yes' : 'No') : '—'}</td><td class="small">At sign-up</td><td>${x ? 'v' + x.v : '—'}</td><td>${p && !issue ? chip('Active', 'green') : last && last.status === 'Retired' ? chip('Retired', 'grey') : chip('Needs configuration', 'red')}${issue && p ? `<div class="xs" style="color:var(--red)">${esc(issue)}</div>` : ''}</td>
         <td class="nowrap">${fo ? `<button class="btn btn-sm" data-act="s4PlanEdit" data-p="${pr.id}">${p ? 'Edit plan' : 'Set up plan'}</button>${p ? ` <button class="btn btn-sm" data-act="s4PlanRetire" data-p="${pr.id}">Retire</button>` : ''}` : ''} ${last ? `<button class="btn btn-sm btn-ghost" data-act="s4PlanHist" data-p="${pr.id}">History</button>` : ''}</td></tr>`; }).join('')}</tbody></table></div>${fo ? '' : `<p class="xs muted">${ic('lock', 12)} Payment plans are owned by Finance Admins and the Super Administrator — read-only for you.</p>`}</section>`;
 }
 function s4LegacyCard() {

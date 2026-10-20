@@ -86,8 +86,11 @@
     ACT.ch8SavePlan({ dataset: { id: 'NV-N2' } }); let p = s4PlanCur('NV-N2');
     ok('E1-B one payment saved as a new plan version (1 payment, method recorded, audited)', p.meth === 'one-time' && p.inst === 1 && p.fee === 900 && /One payment/.test(ADMIN.audit[0].after) && /Instalments/.test(ADMIN.audit[0].before));
     go('a-programmes', { id: 'NV-N2', tab: 'plan' }); ok('E1-B summary: "£900.00 in one payment"', /£900\.00 in one payment/.test(main()));
-    const v0 = s4Plans('NV-N2').length, bad = [['1', 'Enter 2 to 24'], ['25', 'Enter 2 to 24'], ['2.5', 'whole number'], ['7', 'divide']];
+    // E1 rounding (20 Oct 2026, PD-E1-15) supersedes: "7 instalments refused" for £900 ("doesn't divide"). £900 over 7 now has a valid
+    // schedule (6 × £128.57 + £128.58), so 7 is no longer a negative case; the count range and whole-number checks still apply.
+    const v0 = s4Plans('NV-N2').length, bad = [['1', 'Enter 2 to 24'], ['25', 'Enter 2 to 24'], ['2.5', 'whole number']];
     bad.forEach(([n, msg]) => { go('a-programmes', { id: 'NV-N2', tab: 'plan' }); meth('pp', 'instalments'); fill({ '#pp-n': n }); ACT.ch8SavePlan({ dataset: { id: 'NV-N2' } }); ok(`E1-B (negative) ${n} instalments refused`, s4Plans('NV-N2').length === v0 && main().includes(msg), main().slice(0, 0)); });
+    ok('E1-R £900 over 7 is accepted by the plan check (6 × £128.57 + £128.58), not saved by the check', e1TermsIssue(ch8Pr('NV-N2'), { meth: 'instalments', inst: 7, dep: 150 }) === '' && e1SchedTxt(900, 7) === '6 × £128.57 + £128.58' && s4Plans('NV-N2').length === v0);
     go('a-programmes', { id: 'NV-N2', tab: 'plan' }); meth('pp', 'instalments'); fill({ '#pp-n': '4' }); ACT.ch8SavePlan({ dataset: { id: 'NV-N2' } }); p = s4PlanCur('NV-N2');
     ok('E1-B instalments: 4 monthly saved', p.meth === 'instalments' && p.inst === 4);
     go('a-programmes', { id: 'NV-N2', tab: 'plan' }); meth('pp', 'both'); fill({ '#pp-n': '3' }); ACT.ch8SavePlan({ dataset: { id: 'NV-N2' } }); p = s4PlanCur('NV-N2');
@@ -142,8 +145,11 @@
     ok('E1-L3 programme created with two options; the Super Admin\'s terms are approved at once (D8)', r1Opts(pr.id).length === 2 && e1T(pr.id).status === 'Approved' && !ADMIN.queue.some(i => i.type === 'Programme payment terms'));
     go('a-programmes', { id: pr.id, tab: 'plan' });
     ok('E1-L3 payment summary lists each option with its mode, fee and how its learners pay', document.querySelectorAll('.e1-sum tbody tr').length === 2 && /Self-Paced/.test(main()) && /Fully Assisted/.test(main()) && /6 monthly instalments of £400\.00/.test(main()) && /6 monthly instalments of £450\.00/.test(main()));
-    meth('pp', 'both'); fill({ '#pp-n': '7' }); const v0 = s4Plans(pr.id).length; ACT.ch8SavePlan({ dataset: { id: pr.id } });
-    ok('E1-L3 (negative) 7 instalments refused, naming the option that doesn\'t split', s4Plans(pr.id).length === v0 && /Self-Paced:/.test(main()) && /divide/.test(main()));
+    // E1 rounding (20 Oct 2026, PD-E1-15) supersedes: "7 instalments refused, naming the option that doesn't split". Both options now
+    // have a valid 7-instalment schedule — £2,400: 6 × £342.86 + £342.84 (final rounds down); £2,700: 6 × £385.71 + £385.74 (final up).
+    meth('pp', 'both'); fill({ '#pp-n': '7' }); const v0 = s4Plans(pr.id).length; ACT.ch8SavePlan({ dataset: { id: pr.id } }); go('a-programmes', { id: pr.id, tab: 'plan' });
+    const sum7 = (document.querySelector('main .e1-sum') || {}).textContent || '';
+    ok('E1-R Level 3: 7 instalments accepted for both options; one new version keeping both exact schedules', s4Plans(pr.id).length === v0 + 1 && s4PlanCur(pr.id).inst === 7 && /Instalments 1–6: £342\.86 each · instalment 7 \(final\): £342\.84/.test(sum7) && /Instalments 1–6: £385\.71 each · instalment 7 \(final\): £385\.74/.test(sum7) && (s => s.fees.length === 2 && s.fees.every(f => f.sched.reduce((a, x) => a + e1Pence(x), 0) === e1Pence(f.fee)))(s4PlanCur(pr.id).sched));
     go('a-programmes', { id: pr.id, tab: 'plan' }); meth('pp', 'both'); fill({ '#pp-n': '6' }); ACT.ch8SavePlan({ dataset: { id: pr.id } }); go('a-programmes', { id: pr.id, tab: 'plan' });
     ok('E1-L3 both: one plan for both options ("in one payment, or 6 monthly")', s4PlanCur(pr.id).meth === 'both' && /£2,400\.00 in one payment, or 6 monthly/.test(main()) && /£2,700\.00 in one payment, or 6 monthly/.test(main()));
     ok('E1-L3 each option\'s terms carry the shared method (no per-option override)', r1Opts(pr.id).every(o => r1TermsOf(o).meth === 'both' && r1TermsOf(o).inst === 6) && r1Opts(pr.id).every(o => !('meth' in o)));
@@ -353,14 +359,20 @@
     const pr = last(); closeModal();
     ok('E1-CL Step 1 accepts a fee that doesn\'t split into 6 (£500) — the split is checked against the configured method later', (STORE.chNewProgs || []).length === n0 + 1 && pr.title === 'Level 3 Certificate in Pay Config' && r1Opts(pr.id)[0].fee === 500);
     ['0', '12.345', String(R1_FEE_MAX + 1)].forEach(f => { l3Wizard('Level 3 Bad fee ' + f, [['Self-Paced', f, 'Self-Paced']]); ok(`E1-CL (negative) Step 1 still refuses an invalid fee amount (${f})`, prim() === false && /Enter a fee/.test(mroot().textContent)); closeModal(); });
-    FA(); ACT.r1OptAdd({ dataset: { p: 'NV-L3' } }); ok('E1-CL a fee option added later still checks against the plan in force (6 instalments: £500 refused)', (fill({ '#fo-l': 'Bad', '#fo-f': '500', '#fo-m': 'Self-Paced' }), reason() === false) && /equal instalments/.test(mroot().textContent)); closeModal();
+    // E1 rounding (20 Oct 2026, PD-E1-15) supersedes: "a fee option added later ... (6 instalments: £500 refused)". £500 over 6 is now
+    // 5 × £83.33 + £83.35; a later option is still checked against the plan in force — here, the deposit (£300) must be below the fee.
+    FA(); ACT.r1OptAdd({ dataset: { p: 'NV-L3' } }); ok('E1-CL (negative) a fee option added later still checks against the plan in force (£250 is not above the £300 deposit)', (fill({ '#fo-l': 'Bad', '#fo-f': '250', '#fo-m': 'Self-Paced' }), reason() === false) && /must be below the fee/.test(mroot().textContent)); closeModal();
+    FA(); ACT.r1OptAdd({ dataset: { p: 'NV-L3' } }); ok('E1-R a fee option of £500 is accepted against 6 instalments (5 × £83.33 + £83.35); the form states the rounding', /final one adjusted so they total the fee exactly/.test(mroot().textContent) && (fill({ '#fo-l': 'Rounded', '#fo-f': '500', '#fo-m': 'Self-Paced' }), reason() !== false) && r1Opts('NV-L3').some(o => o.label === 'Rounded' && o.fee === 500 && !r1TermsOf(o).issue) && e1SchedTxt(500, 6) === '5 × £83.33 + £83.35'); closeModal();
   });
   await T('E1-CL the creator configures the method; Finance approval gates it; the split is checked for the method chosen', async () => {
     fresh(); ACA(); l3Wizard('Level 3 Certificate in One Payment', [['Self-Paced', '500', 'Self-Paced'], ['Fully Assisted', '1000', 'Fully Assisted']]); prim(); closeModal(); const pr = last(), v0 = s4Plans(pr.id).length;
     go('a-programmes', { id: pr.id, tab: 'plan' }); const q0 = ADMIN.queue.length;
     ok('E1-CL plan step: three configurations offered to the creator (one payment, instalments, both)', ['one-time', 'instalments', 'both'].every(m => !!document.querySelector(`input[name="e1-meth"][value="${m}"]`)));
+    // E1 rounding (20 Oct 2026, PD-E1-15) supersedes: "instalments × 6 refused for £500 / £1,000, naming the option". They now open
+    // the submit dialog with the exact schedules; nothing is sent until the creator confirms (here they cancel and choose one payment).
     meth('e1', 'instalments'); fill({ '#e1-n': '6' }); ACT.e1Submit({ dataset: { id: pr.id } });
-    ok('E1-CL (negative) instalments × 6 refused for £500 / £1,000, naming the option; nothing sent', !MODAL && ADMIN.queue.length === q0 && /Self-Paced:/.test(main()) && /divide/.test(main()));
+    const dlg = MODAL ? mroot().textContent : '';
+    ok('E1-R instalments × 6 for £500 / £1,000: the submit dialog shows both exact schedules; nothing sent before confirming', !!MODAL && ADMIN.queue.length === q0 && /Instalments 1–5: £83\.33 each · instalment 6 \(final\): £83\.35/.test(dlg) && /Instalments 1–5: £166\.67 each · instalment 6 \(final\): £166\.65/.test(dlg) && /Total £1,000\.00/.test(dlg)); closeModal();
     meth('e1', 'one-time'); ACT.e1Submit({ dataset: { id: pr.id } }); press(); const i = ADMIN.queue.find(x => x.id === e1T(pr.id).qid);
     ok('E1-CL one payment submitted: one Finance item with the proposal (no instalments)', !!i && i.status === 'Pending' && i.data.prop.meth === 'one-time' && i.data.prop.inst === 1);
     ok('E1-CL (gate) the proposed method isn\'t in force before Finance approves', s4Plans(pr.id).length === v0 && s4PlanCur(pr.id).meth !== 'one-time' && ch8Check(pr).block.some(b => /waiting for Finance review/.test(b)));
@@ -390,6 +402,127 @@
     // Fee option ≠ payment method: another option changes the agreed price (and mode), not the methods or the count
     fresh(); SA(); FA(); planEdit('NV-L3', 'both', 4, 'Both'); const std = toPay('NV-L3', 'L3-FO-STD');
     ok('E1-CL Level 3: the fee option sets the agreed price; the method and count come from the plan', std.signup.plan.opt.id === 'L3-FO-STD' && std.signup.plan.meth === 'both' && std.signup.plan.inst === 4 && std.signup.plan.fee === 2400 && payOpts() === 'deposit,full,instalment' && w.signup.plan.opt.mode === 'Self-Paced' && w.signup.plan.fee === 3000);
+  });
+
+  /* ---------- E1-R: instalment rounding, the payment summary, schedule snapshots and the pence-safe split (20 Oct 2026) ---------- */
+  const pence = a => a.reduce((t, x) => t + e1Pence(x), 0);
+  await T('E1-R the shared schedule helper: rounding, exact totals, invalid input', async () => {
+    fresh();
+    ok('E1-R £1,000 / 6 → 5 × £166.67 + £166.65 (final rounds down)', JSON.stringify(e1Sched(1000, 6)) === JSON.stringify([166.67, 166.67, 166.67, 166.67, 166.67, 166.65]) && pence(e1Sched(1000, 6)) === 100000);
+    ok('E1-R £800 / 6 → 5 × £133.33 + £133.35 (final rounds up)', JSON.stringify(e1Sched(800, 6)) === JSON.stringify([133.33, 133.33, 133.33, 133.33, 133.33, 133.35]) && pence(e1Sched(800, 6)) === 80000);
+    ok('E1-R £1,500 / 6 → 6 × £250.00 (even split unchanged)', JSON.stringify(e1Sched(1500, 6)) === JSON.stringify([250, 250, 250, 250, 250, 250]) && e1SchedTxt(1500, 6) === '6 × £250.00');
+    ok('E1-R text forms: "5 × £166.67 + £166.65" and " (5 × £133.33 and a final £133.35)"', e1SchedTxt(1000, 6) === '5 × £166.67 + £166.65' && e1InstTxt(800, 6) === ' (5 × £133.33 and a final £133.35)' && e1InstTxt(1500, 6) === ' of £250.00');
+    // n0 counts fees with no schedule other than those where nearest-penny rounding leaves no positive final instalment (£1 over 18)
+    let bad = 0, n0 = 0;
+    for (let f = 1; f <= 5000; f += 13.37) for (let n = 1; n <= 24; n++) { const fee = Math.round(f * 100) / 100, s = e1Sched(fee, n); if (!s) { if (Math.round(e1Pence(fee) / n) * (n - 1) < e1Pence(fee)) n0++; continue; } const per = e1Pence(s[0]); if (pence(s) !== e1Pence(fee) || s.some(x => !(x > 0)) || s.slice(0, -1).some(x => e1Pence(x) !== per) || Math.abs(e1Pence(s[n - 1]) - per) > n) bad++; }
+    ok('E1-R every fee £1–£5,000 (step £13.37) × 1–24 instalments: totals the fee to the penny, all positive, regular ones equal', bad === 0 && n0 === 0, `${bad} bad, ${n0} null`);
+    ok('E1-R (negative) a tiny fee over many instalments has no valid schedule (£1 over 18 would need a negative final instalment) and is refused', e1Sched(1, 18) === null && /can't be paid in 18 instalments/.test(s4PlanIssue({ fee: 1, inst: 18, deposit: 0 })) && pence(e1Sched(1, 17)) === 100);
+    ok('E1-R (negative) invalid amounts and counts give no schedule', [[0, 6], [-5, 6], [NaN, 6], ['abc', 6], [12.345, 6], [100, 0], [100, 25], [100, 2.5], [0.05, 6], [null, 6]].every(([f, n]) => e1Sched(f, n) === null) && e1First(0, 6) === null && e1SchedTxt(0, 6) === '—');
+    ok('E1-R (negative) the plan check refuses a schedule that can\'t exist (£0.05 over 6), keeps the deposit and count rules', /can't be paid in 6 instalments/.test(s4PlanIssue({ fee: 0.05, inst: 6, deposit: 0 })) && /must be below the fee/.test(s4PlanIssue({ fee: 1000, inst: 6, deposit: 1000 })) && /1 to 24/.test(s4PlanIssue({ fee: 1000, inst: 25, deposit: null })) && s4PlanIssue({ fee: 1000, inst: 6, deposit: null }) === '');
+    ok('E1-R split in two: £166.67 → £83.34 + £83.33; £0.01 can\'t be split', JSON.stringify(e1Halves(166.67)) === '[83.34,83.33]' && JSON.stringify(e1Halves(250)) === '[125,125]' && e1Halves(0.01) === null);
+  });
+  await T('E1-R payment summary: three Level 3 fee options with exact schedules and the deposit as an alternative route', async () => {
+    fresh(); SA(); l3Wizard('Level 3 Certificate in Rounding', [['Self-Paced', '800', 'Self-Paced'], ['Fully Assisted', '1000', 'Fully Assisted'], ['Fully Assisted — plus', '1500', 'Fully Assisted']]); prim(); closeModal(); const pr = last();
+    go('a-programmes', { id: pr.id, tab: 'plan' }); const sum = () => (document.querySelector('main .e1-sum') || {}).textContent || '', note = () => (document.querySelector('main .e1-sum-note') || {}).textContent || '';
+    ok('E1-R summary columns: fee option, delivery mode, total fee, payment methods, instalment schedule, deposit (alternative route)', [...document.querySelectorAll('main .e1-sum thead th')].map(x => x.textContent).join('|') === 'Fee option|Delivery mode|Total fee|Payment methods|Instalment schedule|Deposit (alternative route)' && document.querySelectorAll('main .e1-sum tbody tr').length === 3);
+    ok('E1-R £800: "Instalments 1–5: £133.33 each · instalment 6 (final): £133.35", Total £800.00', /Instalments 1–5: £133\.33 each · instalment 6 \(final\): £133\.35/.test(sum()) && /Total £800\.00/.test(sum()));
+    ok('E1-R £1,000: "Instalments 1–5: £166.67 each · instalment 6 (final): £166.65", Total £1,000.00', /Instalments 1–5: £166\.67 each · instalment 6 \(final\): £166\.65/.test(sum()) && /Total £1,000\.00/.test(sum()));
+    ok('E1-R £1,500: "Instalments 1–6: £250.00 each", Total £1,500.00', /Instalments 1–6: £250\.00 each/.test(sum()) && /Total £1,500\.00/.test(sum()));
+    ok('E1-R (negative) no divisibility error for ordinary fees', !/divide|doesn't divide|equal instalments|Needs configuration/.test(main()));
+    ok('E1-R deposit: "Alternative to instalments: £300.00 deposit, followed by the £700.00 balance during the configured seat-hold period (28 days)."', sum().includes('Alternative to instalments: £300.00 deposit, followed by the £700.00 balance during the configured seat-hold period (28 days).') && sum().includes('followed by the £500.00 balance') && sum().includes('followed by the £1,200.00 balance'));
+    ok('E1-R eligibility stated separately: batch at least 28 days away; the rounding rule stated', /the deposit route is offered only when the learner's batch starts at least 28 days away/.test(note()) && /final instalment is adjusted so they total the fee exactly/.test(note()));
+    S4().cfg.hold = 21; render();
+    ok('E1-R the configured hold is shown (21 days), eligibility stays at 28 days', sum().includes('during the configured seat-hold period (21 days)') && !sum().includes('(28 days)') && /Seat hold: 21 days/.test(note()) && /at least 28 days away/.test(note()));
+    S4().cfg.hold = 28;
+    meth('pp', 'both'); ok('E1-R methods column: "One payment or instalments — the learner chooses", with both amounts', /One payment or instalments — the learner chooses/.test(sum()) && /£1,000\.00 in one payment, or 6 monthly instalments \(5 × £166\.67 and a final £166\.65\)/.test(sum()) && /Alternative to paying in full or by instalments/.test(sum()));
+    meth('pp', 'one-time'); ok('E1-R one payment: no instalments; the deposit stays an alternative to paying in full (PD-E1-05, provisional)', /None — one payment/.test(sum()) && /Alternative to paying in full: £300\.00 deposit/.test(sum()) && !/Instalments 1–/.test(sum()));
+  });
+  await T('E1-R Finance reviews the exact proposed schedule; a frozen copy stays with the proposal and the plan version', async () => {
+    fresh(); ACA(); l3Wizard('Level 3 Certificate in Review Rounding', [['Self-Paced', '800', 'Self-Paced'], ['Fully Assisted', '1000', 'Fully Assisted']]); prim(); closeModal(); const pr = last(), v0 = s4Plans(pr.id).length;
+    go('a-programmes', { id: pr.id, tab: 'plan' }); meth('e1', 'instalments'); fill({ '#e1-n': '6' }); ACT.e1Submit({ dataset: { id: pr.id } });
+    ok('E1-R submit dialog shows the exact schedules before sending', !!MODAL && /£133\.33 each · instalment 6 \(final\): £133\.35/.test(mroot().textContent) && /£166\.67 each · instalment 6 \(final\): £166\.65/.test(mroot().textContent));
+    press(); const i = ADMIN.queue.find(x => x.id === e1T(pr.id).qid), S = i && i.data.sched;
+    ok('E1-R the proposal keeps the exact schedule of each option', !!S && S.inst === 6 && S.fees.length === 2 && JSON.stringify(S.fees.map(f => f.sched)) === JSON.stringify([e1Sched(800, 6), e1Sched(1000, 6)]) && S.fees.every(f => pence(f.sched) === e1Pence(f.fee)));
+    try { S.fees[0].sched[0] = 1; S.fees[0].fee = 1; } catch (e) { /* strict callers get a TypeError; either way nothing changes */ }
+    ok('E1-R the proposal snapshot is immutable (frozen, deep)', S.fees[0].sched[0] === 133.33 && S.fees[0].fee === 800 && Object.isFrozen(S) && Object.isFrozen(S.fees[1]) && Object.isFrozen(S.fees[1].sched));
+    FA(); const qd = queueDetail(i.id);
+    ok('E1-R Finance\'s queue item shows the submitted schedule exactly ("Proposed payment schedule")', /Proposed payment schedule/.test(qd) && /Exactly as submitted/.test(qd) && /£133\.33 each · instalment 6 \(final\): £133\.35/.test(qd) && /£166\.67 each · instalment 6 \(final\): £166\.65/.test(qd) && /Total £800\.00/.test(qd));
+    ACA(); ACT.e1Decide({ dataset: { id: i.id, a: 'approve' } });
+    ok('E1-R (negative) the creator can\'t approve their own proposal: refused, no version', !MODAL && s4Plans(pr.id).length === v0 && i.status === 'Pending');
+    SA(); ACT.e1Decide({ dataset: { id: i.id, a: 'approve' } });
+    ok('E1-R (negative) the Super Administrator can\'t approve payment terms: refused, logged, no version', !MODAL && s4Plans(pr.id).length === v0 && i.status === 'Pending' && ADMIN.audit[0].action === 'Blocked: decide payment terms', ADMIN.audit[0].action);
+    FA(); const o = r1Opts(pr.id)[0]; o.fee = 850; ACT.e1Decide({ dataset: { id: i.id, a: 'approve' } }); const r0 = reason('Agreed');
+    ok('E1-R (negative) approval refused when a fee changed after submission (Finance must approve what it saw)', r0 === false && s4Plans(pr.id).length === v0 && i.status === 'Pending' && ADMIN.audit[0].action === 'Blocked: decide payment terms' && /schedule changed after submission/.test(ADMIN.audit[0].reason)); closeModal(); o.fee = 800;
+    const a0 = ADMIN.audit.length; ACT.e1Decide({ dataset: { id: i.id, a: 'approve' } }); reason('Rounded schedule agreed.');
+    const p = s4PlanCur(pr.id), T = e1T(pr.id), saved = ADMIN.audit.slice(0, ADMIN.audit.length - a0).filter(x => x.action === 'Payment plan saved');
+    // The proposal (6 instalments, default deposit) matches the Draft's plan version, so approval adds no version (PD-E1-09); that version
+    // now keeps the reviewed schedule
+    ok('E1-R approved, terms unchanged: no duplicate plan version; the approved version keeps the frozen schedule Finance reviewed', s4Plans(pr.id).length === v0 && saved.length === 0 && T.status === 'Approved' && T.approved.v === p.v && !!p.sched && e1SnapKey(p.sched) === e1SnapKey(S) && Object.isFrozen(p.sched) && e1SnapKey(T.approved.sched) === e1SnapKey(S), `${s4Plans(pr.id).length}/${v0} ${T.status} ${saved.length}`);
+    ACT.e1Decide({ dataset: { id: i.id, a: 'approve' } }); const r2 = MODAL ? reason('Again') : false; closeModal();
+    ok('E1-R (negative) a second approval adds no version and changes no snapshot', r2 === false && s4Plans(pr.id).length === v0 && e1SnapKey(s4PlanCur(pr.id).sched) === e1SnapKey(S));
+    const keep = JSON.stringify(p.sched); planEdit(pr.id, 'instalments', 4, 'Four instalments');
+    ok('E1-R a later version has its own schedule; the approved version\'s schedule is untouched', s4PlanCur(pr.id).v === p.v + 1 && s4PlanCur(pr.id).sched.inst === 4 && JSON.stringify(s4PlanCur(pr.id).sched.fees[1].sched) === JSON.stringify([250, 250, 250, 250]) && JSON.stringify(s4Plans(pr.id).find(x => x.v === p.v).sched) === keep && s4Plans(pr.id).find(x => x.v === p.v).status === 'Superseded');
+    ACA(); ACT.s4PlanEdit({ dataset: { p: pr.id } }); ok('E1-R (negative) an Academic Admin can\'t open Finance\'s plan editor (refused, logged)', !MODAL && ADMIN.audit[0].action === 'Blocked: change payment plans'); closeModal();
+  });
+  await T('E1-R approval of changed terms: exactly one new plan version carrying the reviewed schedule', async () => {
+    fresh(); ACA(); l3Wizard('Level 3 Certificate in Both Rounding', [['Self-Paced', '800', 'Self-Paced'], ['Fully Assisted', '1000', 'Fully Assisted']]); prim(); closeModal(); const pr = last(), v0 = s4Plans(pr.id).length;
+    go('a-programmes', { id: pr.id, tab: 'plan' }); meth('e1', 'both'); fill({ '#e1-n': '6' }); ACT.e1Submit({ dataset: { id: pr.id } }); press();
+    const i = ADMIN.queue.find(x => x.id === e1T(pr.id).qid), S = i.data.sched;
+    FA(); const a0 = ADMIN.audit.length; ACT.e1Decide({ dataset: { id: i.id, a: 'approve' } }); reason('Both agreed.');
+    const p = s4PlanCur(pr.id), saved = ADMIN.audit.slice(0, ADMIN.audit.length - a0).filter(x => x.action === 'Payment plan saved');
+    ok('E1-R exactly one new version, audited once, by the Finance Admin, with the reviewed frozen schedule', s4Plans(pr.id).length === v0 + 1 && p.v === v0 + 1 && p.meth === 'both' && p.by === ADMIN.me.name && saved.length === 1 && /Approved by Finance/.test(saved[0].reason) && e1SnapKey(p.sched) === e1SnapKey(S) && Object.isFrozen(p.sched.fees[0].sched) && e1SnapKey(e1T(pr.id).approved.sched) === e1SnapKey(S), `${s4Plans(pr.id).length}/${v0} ${saved.length}`);
+    ok('E1-R the previous version is superseded and was not given the new schedule', s4Plans(pr.id)[v0 - 1].status === 'Superseded' && e1SnapKey(s4Plans(pr.id)[v0 - 1].sched || null) !== e1SnapKey(S));
+  });
+  await T('E1-R Finance → Payment Plans shows the actual amounts', async () => {
+    fresh(); FA(); planEdit('NV-N2', 'instalments', 7, 'Seven instalments'); go('f-plans', { tab: 'templates' });
+    const row = document.querySelector('.s4-plans tr[data-pid="NV-N2"]');
+    const l3r = document.querySelector('.s4-plans tr[data-pid="NV-L3"]');
+    ok('E1-R NV-N2 £900 over 7 saved and listed as "6 × £128.57 + £128.58"; Level 3 still "6 × £400.00"', s4PlanCur('NV-N2').inst === 7 && !!row && /6 × £128\.57 \+ £128\.58/.test(row.textContent) && !!l3r && /6 × £400\.00/.test(l3r.textContent), `inst ${s4PlanCur('NV-N2').inst} row ${row && row.textContent.slice(0, 160)} l3 ${l3r && l3r.textContent.slice(0, 120)} audit ${ADMIN.audit[0].action}`);
+  });
+  await T('E1-R learner checkout shows and records the exact amounts; the deposit route is unchanged', async () => {
+    fresh(); SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — rounded', fee: 1000, mode: 'Self-Paced' }, 'E1-R', 'Added'); const oid = r1Opts('NV-L3').find(o => o.fee === 1000).id;
+    const others = () => JSON.stringify(Object.keys(STORE.worlds).filter(k => k !== 'A').map(k => [k, STORE.worlds[k].plans, STORE.worlds[k].signup && STORE.worlds[k].signup.plan, STORE.worlds[k].admission && STORE.worlds[k].admission.deposit])), hist0 = others();
+    let w = toPay('NV-L3', oid); setUi('suOpt', 'instalment'); setUi('suMethod', 'card'); render();
+    ok('E1-R payment step: "6 monthly payments (5 × £166.67 and a final £166.65)"; first instalment £166.67 now', /Instalments — 6 monthly payments \(5 × £166\.67 and a final £166\.65\)/.test(main()) && /Pay the first instalment \(£166\.67\) now/.test(main()) && /Pay £166\.67 by card/.test(main()));
+    const _co = checkout; let got = null; checkout = o => { got = o; return _co(o); };
+    try { ACT.suPay(); } finally { checkout = _co; }
+    ok('E1-R checkout charges £166.67 as "NVQ instalment 1 of 6"', !!got && got.amount === 166.67 && /^NVQ instalment 1 of 6 — /.test(got.title) && /166\.67/.test(mroot().textContent));
+    got.onSuccess(got.amount, 'TXN-E1R'); const pl = w.plans.find(x => x.e === 'nvq');
+    ok('E1-R recorded rows: 5 × £166.67 + £166.65, totalling £1,000.00 exactly; the first paid', w.signup.done && pl.total === 1000 && pl.rows.length === 6 && JSON.stringify(pl.rows.map(r => r.amount)) === JSON.stringify(e1Sched(1000, 6)) && pence(pl.rows.map(r => r.amount)) === 100000 && pl.rows[0].paid === 166.67 && pl.rows[0].status === 'Paid' && pl.rows.slice(1).every(r => r.paid === 0) && w.signup.pay.amount === 166.67);
+    ok('E1-R the learner\'s Payments page shows the final £166.65', (go('payments'), /166\.65/.test(main())));
+    // Finance split-in-two on the outstanding amount
+    FA(); const v = 'A', row2 = pl.rows[1]; ACT.finAdjust({ dataset: { v, e: 'nvq' } }); fill({ '#ad-r': String(row2.n), '#ad-s': 'yes' }); const ad0 = STORE.fin.adjust.length; reason('Hardship split');
+    ok('E1-R Finance split in two: £166.67 → £83.34 + £83.33; the plan still totals £1,000.00; audited', pl.rows.length === 7 && pl.rows[1].amount === 83.34 && pl.rows[2].amount === 83.33 && pence(pl.rows.map(r => r.amount)) === 100000 && STORE.fin.adjust.length === ad0 + 1 && ADMIN.audit[0].action === 'Instalment schedule adjusted');
+    const r3 = pl.rows[3]; r3.paid = 50; r3.status = 'Partial'; ACT.finAdjust({ dataset: { v, e: 'nvq' } }); fill({ '#ad-r': String(r3.n), '#ad-s': 'yes' }); reason('Split the rest');
+    ok('E1-R split of a part-paid instalment splits only the £116.67 outstanding: £50 paid + £58.34 stays, £58.33 moves', pl.rows[3].amount === 108.34 && pl.rows[3].paid === 50 && pl.rows[4].amount === 58.33 && pence(pl.rows.map(r => r.amount)) === 100000);
+    ACA(); const n7 = pl.rows.length; ACT.finAdjust({ dataset: { v, e: 'nvq' } }); ok('E1-R (negative) an Academic Admin can\'t adjust a schedule (refused, logged)', !MODAL && pl.rows.length === n7 && /^Blocked: adjust/.test(ADMIN.audit[0].action)); closeModal();
+    ok('E1-R other learners\' plans, pinned terms and deposits are untouched', others() === hist0);
+    // Deposit route: one balance row, the configured hold, eligibility at 28 days, seat release keeps the deposit
+    fresh(); SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — rounded', fee: 1000, mode: 'Self-Paced' }, 'E1-R', 'Added'); S4().cfg.hold = 21;
+    w = toPay('NV-L3', r1Opts('NV-L3').find(o => o.fee === 1000).id); setUi('suOpt', 'deposit'); setUi('suMethod', 'card'); render();
+    ok('E1-R deposit option unchanged: "£300.00 now", then the £700.00 balance within the 21-day hold', /Deposit \(holds your seat\) — £300\.00 now/.test(main()) && /Then pay the £700\.00 balance within 21 days/.test(main()));
+    { const _co = checkout; let g = null; checkout = o => { g = o; return _co(o); }; try { ACT.suPay(); } finally { checkout = _co; } if (g) g.onSuccess(g.amount, 'TXN-E1R-D'); }
+    const pd = w.plans.find(x => x.e === 'nvq');
+    ok('E1-R deposit sign-up: deposit £300, one balance row £700 due at the hold — not split into instalments', w.signup.pay.amount === 300 && pd.plan === 'Deposit and balance' && pd.rows.length === 1 && pd.rows[0].amount === 700 && w.admission.deposit.balance === 700 && w.admission.deposit.holdDays === 21 && Math.round(daysTo(pd.rows[0].due)) === 21);
+    ok('E1-R deposit eligibility stays at 28 days whatever the hold (25 days away: no deposit)', !chDepositOk({ start: D(25) }) && chDepositOk({ start: D(28) }));
+    chReleaseSeat(w, true); ok('E1-R seat release unchanged: deposit kept, seat released', w.admission.deposit.released && w.admission.deposit.kept && !w.signup.batch, JSON.stringify(w.admission.deposit));
+    S4().cfg.hold = 28;
+  });
+  await T('E1-R historical plans and pinned terms are not recalculated', async () => {
+    fresh(); const vers = Object.entries(S4().plans).flatMap(([pid, l]) => l.map(p => [pid, p]));
+    // NV-N1 (seeded Draft, £2,900 over 6) never split evenly: it was "Needs configuration" and is now usable (5 × £483.33 + £483.35).
+    // Every other seeded plan splits evenly, so the helper gives exactly the equal amounts it had before.
+    ok('E1-R every seeded plan that was usable splits evenly, so the helper gives exactly its old equal amounts', vers.filter(([pid, p]) => p.fee > 0 && pid !== 'NV-N1').every(([, p]) => e1Sched(p.fee, p.inst).every(x => x === p.fee / p.inst)));
+    ok('E1-R NV-N1 (£2,900 over 6, refused before) now has a valid schedule: 5 × £483.33 + £483.35', s4PlanCur('NV-N1').fee === 2900 && s4PlanCur('NV-N1').inst === 6 && e1SchedTxt(2900, 6) === '5 × £483.33 + £483.35' && !s4TermsOf('NV-N1').issue);
+    ok('E1-R seeded plan versions are not given a schedule snapshot (not mutated)', vers.every(([, p]) => !('sched' in p)));
+    const rows = Object.values(STORE.worlds).flatMap(w => (w.plans || []).flatMap(pl => pl.rows || []));
+    ok('E1-R seeded learners\' payment rows keep their recorded amounts (whole pence, unchanged by the helper)', rows.length > 0 && rows.every(r => Math.abs(r.amount * 100 - Math.round(r.amount * 100)) < 1e-6));
+    SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — rounded', fee: 1000, mode: 'Self-Paced' }, 'E1-R', 'Added'); const oid = r1Opts('NV-L3').find(o => o.fee === 1000).id;
+    const w = toPay('NV-L3', oid); const pin = JSON.stringify(w.signup.plan);
+    FA(); planEdit('NV-L3', 'instalments', 4, 'Four instalments for new sign-ups');
+    ok('E1-R a plan change after the learner\'s sign-up started doesn\'t reprice them (pinned: 6 instalments of the £1,000 option)', JSON.stringify(w.signup.plan) === pin && w.signup.plan.inst === 6 && w.signup.plan.fee === 1000);
+    learner('A'); setUi('suOpt', 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); const pl = w.plans.find(x => x.e === 'nvq');
+    ok('E1-R …and they are charged their pinned schedule: 5 × £166.67 + £166.65', pl.rows.length === 6 && JSON.stringify(pl.rows.map(r => r.amount)) === JSON.stringify(e1Sched(1000, 6)));
   });
 
   fresh();

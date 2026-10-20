@@ -1262,7 +1262,10 @@ body.frame-mobile .r1-np-row .r1-np-l { grid-column: 1 / -1; }
 .e1-hist { margin-top: 10px; }
 .e1-durchk { margin-left: 4px; }
 [class*="e1-n-"][hidden] { display: none !important; }
-.e1-sum .tbl { min-width: 560px; }
+.e1-sum .tbl { min-width: 720px; }
+.e1-sum .e1-dep { min-width: 190px; }
+.e1-sum .e1-sch { margin-top: 2px; }
+.e1-sum-note { margin-top: 6px; }
 @media (max-width: 640px) { .e1-dur { grid-column: 1 / -1; } .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); } }
 body.frame-mobile .e1-dur { grid-column: 1 / -1; }
 body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }

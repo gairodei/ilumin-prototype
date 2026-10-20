@@ -129,6 +129,7 @@
     const qid = (ADMIN.queue.find(i => i.type === 'Programme payment terms') || {}).id; go('a-queue', { id: qid });
     ok('E1 Finance item: proposal panel, Approve payment terms and Request changes displayed', shown($1('main .e1-q')) && shown($1('main .q-decide [data-a="approve"]')) && shown($1('main .q-decide [data-a="return"]')));
     ok('E1 Finance item: no horizontal page overflow', appOver() <= 1, appOver());
+    ok('E1-R Finance item: the exact proposed schedule is displayed ("Proposed payment schedule", "Instalments 1–6: £400.00 each", total)', shown($1('main .e1-q .e1-sum')) && /Proposed payment schedule/.test($1('main .e1-q').textContent) && /Instalments 1–6: £400\.00 each/.test($1('main .e1-q .e1-sum').textContent) && /Total £2,400\.00/.test($1('main .e1-q .e1-sum').textContent));
     click($1('main .q-decide [data-a="return"]')); ok('E1 Request changes dialog fits the viewport', !!$1('#modal-root #rsn') && !modalFits(), modalFits()); closeModal();
     // E1 review corrections: Finance's Edit plan stays in Finance; the queue list names each type
     nav('a-queue'); const qrow = all('main tbody tr').find(tr => tr.textContent.includes('AQ-7301'));
@@ -145,11 +146,28 @@
     go('a-programmes', { id: l3.id, tab: 'plan' }); click($1('main input[name="pp-meth"][value="both"]'));
     ok('E1 Level 3 plan step: both fee options listed with mode, fee and how learners pay', all('main .e1-sum tbody tr').filter(shown).length === 2 && /Self-Paced/.test($1('main .e1-sum').textContent) && /£2,700\.00 in one payment, or 6 monthly/.test($1('main .e1-sum').textContent));
     ok('E1 Level 3 plan step: deposit policy stated; no page overflow', /28 days or more/.test($1('main .e1-plan').textContent) && appOver() <= 1, appOver());
+    // E1-R: three fee options that don't all split evenly — the exact schedules, the deposit as an alternative route, readable at every width
+    const l3r = ch8Create({ title: 'Level 3 UI rounding programme', level: 'Level 3', ref: 'QN 610/7272/3', dur: '12 months', durV: { n: 12, unit: 'months' }, desc: '', price: 800, support: 'Fully assisted', r1opts: [{ label: 'Self-Paced', fee: 800, mode: 'Self-Paced' }, { label: 'Fully Assisted', fee: 1000, mode: 'Fully Assisted' }, { label: 'Fully Assisted — plus', fee: 1500, mode: 'Fully Assisted' }] });
+    go('a-programmes', { id: l3r.id, tab: 'plan' }); const sumR = $1('main .e1-sum');
+    ok('E1-R plan step: three options with exact schedules (£133.35, £166.65 finals; £250.00 each) and totals displayed', !!sumR && all('main .e1-sum tbody tr').filter(shown).length === 3 && /instalment 6 \(final\): £133\.35/.test(sumR.textContent) && /instalment 6 \(final\): £166\.65/.test(sumR.textContent) && /Instalments 1–6: £250\.00 each/.test(sumR.textContent) && /Total £1,000\.00/.test(sumR.textContent));
+    ok('E1-R plan step: no divisibility error; deposit shown as the alternative route with the configured hold', !/divide|equal instalments|Needs configuration/.test(main()) && /Alternative to instalments: £300\.00 deposit, followed by the £700\.00 balance during the configured seat-hold period \(28 days\)\./.test(sumR.textContent) && shown($1('main .e1-sum-note')) && /at least 28 days away/.test($1('main .e1-sum-note').textContent));
+    ok('E1-R plan step: the summary scrolls inside its own frame (no page overflow); the deposit column stays readable', appOver() <= 1 && all('main .e1-sum td.e1-dep').filter(shown).every(td => td.getBoundingClientRect().width >= 150), `${appOver()} / ${all('main .e1-sum td.e1-dep').map(td => Math.round(td.getBoundingClientRect().width)).join(',')}`);
     // Learner: the payment step for a "Both" plan
     S.variant = 'A'; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; go('browse'); const ap = $1('main [data-act="applyNvq"][data-id="k-NV-N2"]'); ok('E1 learner: Browse offers the programme', !!ap); click(ap); const sb = all('#modal-root .modal button').find(b => b.textContent.trim() === 'Start sign-up'); ok('E1 learner: the sign-up dialog opens', !!sb, MODAL ? MODAL.title : 'no dialog'); click(sb);
     { const w = STORE.worlds[S.variant]; /* (W here is the viewport width) */ ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); }
     ok('E1 learner payment step: deposit, "Pay in full" and "Instalments" displayed', ['deposit', 'full', 'instalment'].every(v => shown($1(`main input[name="su-opt"][value="${v}"]`))) && /Pay in full — £900\.00 now/.test(main()));
     click($1('main input[name="su-opt"][value="full"]')); ok('E1 learner: choosing "Pay in full" asks for £900.00; no page overflow', /Pay £900\.00/.test(main()) && appOver() <= 1, appOver());
+    // E1-R learner checkout: a fee that doesn't split evenly shows and charges the actual first instalment
+    closeModal(); initStore(); setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; r1AddOpt('NV-L3', { label: 'Self-Paced — rounded', fee: 1000, mode: 'Self-Paced' }, 'UI check', 'Added'); const oR = r1Opts('NV-L3').find(o => o.fee === 1000);
+    S.variant = 'A'; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; go('browse'); const cL3 = CATALOGUE.find(c => c.kind === 'nvq' && c.title === s3Pr('NV-L3').title);
+    click($1(`main [data-act="applyNvq"][data-id="${cL3.id}"]`)); const rR = $1(`#modal-root input[name="r1-opt"][value="${oR.id}"]`);
+    ok('E1-R learner sign-up dialog: the £1,000 option states "6 monthly instalments (5 × £166.67 and a final £166.65)"', !!rR && /6 monthly instalments \(5 × £166\.67 and a final £166\.65\), the first one now/.test(rR.closest('label').textContent));
+    if (rR) rR.checked = true; click(all('#modal-root .modal button').find(b => b.textContent.trim() === 'Start sign-up'));
+    { const w = STORE.worlds[S.variant]; ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); }
+    click($1('main input[name="su-opt"][value="instalment"]'));
+    ok('E1-R learner payment step: "6 monthly payments (5 × £166.67 and a final £166.65)", "Pay £166.67 by card"; no page overflow', /Instalments — 6 monthly payments \(5 × £166\.67 and a final £166\.65\)/.test(main()) && shown(all('main button').find(b => /Pay £166\.67 by card/.test(b.textContent))) && appOver() <= 1, appOver());
+    click(all('main button').find(b => /Pay £166\.67 by card/.test(b.textContent)));
+    ok('E1-R checkout dialog: charges £166.67 for "NVQ instalment 1 of 6" and fits the viewport', !!$1('#modal-root .modal') && /166\.67/.test($1('#modal-root').textContent) && /instalment 1 of 6/.test($1('#modal-root').textContent) && !modalFits(), modalFits()); closeModal();
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));
     ok('no script errors', !errs.length, errs.join(' | '));

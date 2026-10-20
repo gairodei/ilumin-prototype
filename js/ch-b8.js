@@ -104,11 +104,11 @@ function ch8DocsStep(pr) {
 }
 ACT.ch8SaveDocs = el => { const pr = ch8Pr(el.dataset.id), sel = $$('.ch8-doc:checked').map(x => x.value); if (!sel.length) { toast('Choose at least one required document.', 'err'); return; } const was = ch8Docs(pr.id).join(', '); STORE.chProgDocs[pr.id] = sel; ch8Log(pr, 'Document checklist saved', was, sel.join(', ')); render(); toast('Saved and audited.'); };
 function ch8PlanStep(pr) {
-  const p = pr.plan, ed = finOwner(), inst = pr.price / p.inst;
+  const p = pr.plan, ed = finOwner();
   return `<section class="card"><h2>Payment plan</h2><p class="small muted">All amounts in GBP. The deposit is offered only when the learner's batch starts in ${CH_HOLD_DAYS} days or more; otherwise the learner pays the first instalment.</p>
     ${ed ? `<div class="form-grid"><div class="field"><label for="pp-d">Deposit (GBP)</label><input class="input num" type="number" min="0" id="pp-d" value="${p.deposit}"></div><div class="field"><label for="pp-n">Monthly instalments</label><input class="input num" type="number" min="1" max="24" id="pp-n" value="${p.inst}"></div></div><button class="btn btn-sm btn-primary" data-act="ch8SavePlan" data-id="${pr.id}">Save payment plan</button>`
       : `<dl class="kv"><dt>Deposit</dt><dd>${money(p.deposit, 'GBP')}</dd><dt>Instalments</dt><dd>${p.inst} monthly</dd></dl><p class="xs muted">${ic('lock', 12)} Set by Finance or the Super Admin.</p>`}
-    <p class="small">Price ${money(pr.price, 'GBP')} · ${p.inst} instalments of ${money(inst, 'GBP')} · deposit ${money(p.deposit, 'GBP')} then the balance of ${money(pr.price - p.deposit, 'GBP')}.</p></section>`;
+    <p class="small">Price ${money(pr.price, 'GBP')} · ${p.inst} instalments${e1InstTxt(pr.price, p.inst)} · deposit ${money(p.deposit, 'GBP')} then the balance of ${money(pr.price - p.deposit, 'GBP')}.</p></section>`;
 }
 ACT.ch8SavePlan = el => { const pr = ch8Pr(el.dataset.id); if (!finOwner()) { logA('NVQ Programmes', pr.title, 'Blocked: payment plan', '—', '—', ADMIN.me.name); toast('The payment plan is set by Finance or the Super Admin.', 'err'); return; } const dep = +v8('#pp-d'), n = +v8('#pp-n'); if (!(dep >= 0) || dep >= pr.price) return fieldErr('#pp-d', 'Enter a deposit below the price'); if (!(n >= 1 && n <= 24)) return fieldErr('#pp-n', 'Enter 1 to 24 instalments'); const was = `${money(pr.plan.deposit, 'GBP')} · ${pr.plan.inst}`; pr.plan = { deposit: dep, inst: n }; ch8Log(pr, 'Payment plan saved', was, `${money(dep, 'GBP')} · ${n}`); render(); toast('Saved and audited.'); };
 // Finance edits the plan from Finance → Payment Plans
@@ -226,18 +226,18 @@ ACT.applyNvq = el => {
   confirmDlg({ title: 'Sign up for ' + esc(pr.title) + '?', ok: 'Start sign-up', body: `<p>Signing up takes five steps: your details (we assign your batch), your documents, your offer letter, your payment, then you start.</p><p class="small muted">Price ${money(pr.price, 'GBP')} — deposit ${money(pr.plan.deposit, 'GBP')} (when your batch starts in 28 days or more) or ${pr.plan.inst} monthly instalments.</p>`, onOk: () => { ch8StartSignup(W, pr); go('admission'); toast('Sign-up started.'); } });
 };
 // Payment step and completion use the programme's deposit and instalments
-const ch8PayAmount = (pr, opt) => opt === 'deposit' ? pr.plan.deposit : pr.price / pr.plan.inst;
+const ch8PayAmount = (pr, opt) => opt === 'deposit' ? pr.plan.deposit : e1First(pr.price, pr.plan.inst);
 const _stepPayCh8 = chStepPay;
 chStepPay = function (w) {
   const pr = ch8ProgOfW(w), base = _stepPayCh8.apply(this, arguments); if (!pr) return base;
   if (/no other batch has a place/.test(base)) return base;
-  const s = w.signup, b = chBatch(s.batch), fee = pr.price, depOk = chDepositOk(b) && !s.noDeposit, inst = fee / pr.plan.inst;
+  const s = w.signup, b = chBatch(s.batch), fee = pr.price, depOk = chDepositOk(b) && !s.noDeposit, inst = e1First(fee, pr.plan.inst);
   let opt = ui('suOpt', depOk ? 'deposit' : 'instalment'); if (opt === 'deposit' && !depOk) opt = 'instalment';
   const method = ui('suMethod', 'card'), amount = ch8PayAmount(pr, opt), ref = chRefOf(w, opt);
   return `<section class="card"><h2>4. Payment</h2>${s.moved ? `<div class="note b-blue" role="status">${ic('info')}<div class="small"><strong>Your batch has changed.</strong> ${esc(s.moved.from)} filled before you paid, so you've been assigned <strong>${esc(s.moved.to)}</strong>.</div></div>` : ''}<dl class="kv"><dt>Batch</dt><dd>${esc(chBatchLbl(b))} · starts ${fd(b.start)} (in ${daysTo(b.start)} days)</dd><dt>Programme fee</dt><dd class="num">${money(fee, 'GBP')}</dd></dl>
     <fieldset class="stack"><legend class="lbl">How do you want to pay?</legend>
     ${depOk ? `<label class="check"><input type="radio" name="su-opt" value="deposit" ${opt === 'deposit' ? 'checked' : ''} data-onchange="suOpt"><span><strong>Deposit (holds your seat) — ${money(pr.plan.deposit, 'GBP')} now</strong><br><span class="small muted">Then pay the ${money(fee - pr.plan.deposit, 'GBP')} balance within ${chHoldDays()} days.</span></span></label>` : `<div class="note b-grey ch-nodep">${ic('info')}<div class="small"><strong>${s.noDeposit ? 'Instalments only.' : 'No deposit for this batch.'}</strong> ${s.noDeposit ? 'The deposit option isn\'t offered again for this course.' : `A deposit can only hold a seat when the batch starts in ${CH_HOLD_DAYS} days or more.`}</div></div>`}
-    <label class="check"><input type="radio" name="su-opt" value="instalment" ${opt === 'instalment' ? 'checked' : ''} data-onchange="suOpt"><span><strong>Instalments — ${pr.plan.inst} monthly payments of ${money(inst, 'GBP')}</strong><br><span class="small muted">Pay the first instalment (${money(inst, 'GBP')}) now.</span></span></label></fieldset>
+    <label class="check"><input type="radio" name="su-opt" value="instalment" ${opt === 'instalment' ? 'checked' : ''} data-onchange="suOpt"><span><strong>Instalments — ${pr.plan.inst} monthly payments${e1InstTxt(fee, pr.plan.inst)}</strong><br><span class="small muted">Pay the first instalment (${money(inst, 'GBP')}) now.</span></span></label></fieldset>
     <fieldset class="stack"><legend class="lbl">Payment method</legend><label class="check"><input type="radio" name="su-m" value="card" ${method === 'card' ? 'checked' : ''} data-onchange="suMethod"><span><strong>Card</strong></span></label><label class="check"><input type="radio" name="su-m" value="bank" ${method === 'bank' ? 'checked' : ''} data-onchange="suMethod"><span><strong>Bank transfer</strong> <span class="small muted">— you start now; Finance confirms your payment</span></span></label></fieldset>
     ${method === 'bank' ? `<div class="note b-blue">${ic('info')}<div class="small"><strong>Pay ${money(amount, 'GBP')} by bank transfer.</strong><br>Pay to: ${chBankHtml(ref)}<br>Your payment shows as <strong>Awaiting confirmation by Finance</strong>.</div></div>` : ''}
     ${chNav(w, `<button class="btn btn-primary" data-act="suPay">${method === 'card' ? `Pay ${money(amount, 'GBP')} by card` : 'I\'ve made the transfer — start now'}</button>`)}</section>`;
@@ -256,7 +256,7 @@ chComplete = function (w, o) {
   const r = _ccCh8.apply(this, arguments), pr = ch8ProgOfW(w); if (!pr || !w.signup.done || !o || !o.opt) return r;
   const fee = pr.price, dep = pr.plan.deposit, n = pr.plan.inst, pl = w.plans.find(p => p.e === 'nvq'), at = w.signup.pay ? w.signup.pay.at : now().toISOString(), bank = o.method === 'bank', st = bank ? 'Awaiting confirmation by Finance' : 'Paid';
   if (o.opt === 'deposit') { Object.assign(w.admission.deposit, { min: dep, balance: fee - dep }); if (pl) { pl.deposit = { ...pl.deposit, amount: dep }; pl.rows = [{ n: 1, amount: fee - dep, due: pl.rows[0] ? pl.rows[0].due : at, status: 'Pending', paid: 0 }]; } }
-  else if (pl) pl.rows = Array.from({ length: n }, (_, i) => ({ n: i + 1, amount: fee / n, due: new Date(new Date(at).getTime() + i * 30 * DAY).toISOString(), status: i ? 'Pending' : st, paid: i || bank ? 0 : fee / n, receipt: i || bank ? undefined : 'RCP-' + (27500 + +w.me.id.slice(-3)) }));
+  else if (pl) pl.rows = e1Sched(fee, n).map((amt, i) => ({ n: i + 1, amount: amt, due: new Date(new Date(at).getTime() + i * 30 * DAY).toISOString(), status: i ? 'Pending' : st, paid: i || bank ? 0 : amt, receipt: i || bank ? undefined : 'RCP-' + (27500 + +w.me.id.slice(-3)) }));
   if (pl) pl.total = fee;
   return r;
 };

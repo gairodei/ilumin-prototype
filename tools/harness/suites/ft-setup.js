@@ -635,7 +635,10 @@
     ok('S4-06 Finance → Plan templates: programme plans, deposit default, legacy templates marked unassigned', !!app().querySelector('.s4-plans') && !!app().querySelector('.s4-cfg') && /Legacy plan templates — unassigned/.test(main()) && /never used at sign-up/.test(main()) && !!app().querySelector('[data-act="s4PlanEdit"][data-p="NV-L4"]') && /Needs configuration/.test(app().querySelector('.s4-plans tr[data-pid="NV-L4"]').textContent));
     ACT.s4PlanEdit({ dataset: { t: 'PL-1' } }); ok('S4-06 a legacy template only pre-fills the editor (nothing saved until "Save")', !!MODAL && document.querySelector('#pp-n').value === '12' && s4Plans('NV-L3').length === 1); closeModal();
     ok('S4-06 the editor has no way to postpone the first instalment (CH-10)', (ACT.s4PlanEdit({ dataset: { p: 'NV-L2' } }), /First instalment: due at sign-up/.test(mroot().textContent) && !mroot().querySelector('input[type="date"]'))); closeModal();
-    ok('S4-06 (negative) a plan that doesn\'t divide evenly is refused', planSet('NV-L2', { n: 7 }) === false && s4Plans('NV-L2').length === 1); closeModal();
+    // E1 rounding (20 Oct 2026, PD-E1-15) supersedes: "a plan that doesn't divide evenly is refused" (£1,800 over 7). It now has a valid
+    // schedule (6 × £257.14 + £257.16), checked here without saving so the versions below are unchanged; an out-of-range count is refused.
+    ok('S4-06 a plan that doesn\'t divide evenly now reconciles (£1,800 over 7: 6 × £257.14 + £257.16)', s4PlanIssue({ fee: 1800, inst: 7, deposit: null, partial: true }) === '' && e1SchedTxt(1800, 7) === '6 × £257.14 + £257.16');
+    ok('S4-06 (negative) a plan with 25 instalments is refused', planSet('NV-L2', { n: 25 }) === false && s4Plans('NV-L2').length === 1); closeModal();
     ok('S4-06 (negative) a deposit at or above the fee is refused', planSet('NV-L2', { dep: 1800 }) === false); closeModal();
     planSet('NV-L2', { dep: 200, r: 'Lower L2 deposit' });
     ok('S4-06 Edit: version 2 with every field, audited; version 1 kept', (p => p.v === 2 && p.deposit === 200 && p.inst === 6 && p.partial === true)(s4PlanCur('NV-L2')) && s4Plans('NV-L2')[0].status === 'Superseded' && ADMIN.audit[0].action === 'Payment plan saved');
