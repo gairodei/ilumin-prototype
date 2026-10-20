@@ -532,7 +532,7 @@
   await T('S3 end to end — create, isolate, publish, keep learners, batches, keys, library scope, access', async () => {
     fresh(); acaEnter('KA'); S.signedIn = true; go('a-programmes'); ACT.chProgNew();
     // R1 (final review): a new Level 3 programme is created with fee options instead of a single price — one option at the same £1,500
-    fill({ '#np-t': 'Level 3 Certificate in Dementia Care', '#np-l': 'Level 3', '#np-r': 'QN 610/7777/1', '#np-d': '9 months', '#np-ds': 'Dementia care.' }); fill({ '#modal-root .r1-np-l': 'Standard', '#modal-root .r1-np-f': '1500', '#modal-root .r1-np-m': 'Fully Assisted' }); prim();
+    fill({ '#np-t': 'Level 3 Certificate in Dementia Care', '#np-l': 'Level 3', '#np-r': 'QN 610/7777/1', '#np-d': '9', '#np-du': 'months' /* E1-A: number + unit (was free text '9 months') */, '#np-ds': 'Dementia care.' }); fill({ '#modal-root .r1-np-l': 'Standard', '#modal-root .r1-np-f': '1500', '#modal-root .r1-np-m': 'Fully Assisted' }); prim();
     const pr = (STORE.chNewProgs || []).slice(-1)[0], id = pr.id; go('a-programmes', { id, tab: 'structure' });
     const a8 = (act, ds, o) => { ACT[act]({ dataset: { id, ...ds } }); fill(o); return prim(); };
     a8('ch8AddUnit', {}, { '#u-c': 'U350', '#u-t': 'Dementia awareness' }); a8('ch8AddMod', { u: 0 }, { '#m-t': 'Understanding dementia', '#m-ab': 'B/652/3501' });

@@ -1068,7 +1068,7 @@
     ok('NP details: title, level, reference, duration, description, price (GBP), Support type with the P-31 tag', ['#np-t', '#np-l', '#np-r', '#np-d', '#np-ds', '#np-p'].every(s => document.querySelector(s)) && document.querySelectorAll('input[name="np-s"]').length === 2 && /Pending client: Fully assisted vs self-paced/.test(mroot().textContent));
     prim(); ok('NP required fields', !!MODAL && /Enter a title/.test(mroot().textContent));
     closeModal(); ACT.chProgNew(); fill8({ '#np-t': 'Level 3 Diploma in Adult Care (England)', '#np-r': 'QN 1', '#np-p': '2000' }); prim(); ok('NP title must be unique', !!MODAL && /already exists/.test(mroot().textContent) && !(STORE.chNewProgs || []).some(p => !p.seed)); closeModal(); ACT.chProgNew();
-    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12 months', '#np-p': '2600', '#np-ds': 'For team leaders.' }); document.querySelector('input[name="np-s"][value="Self-paced"]').checked = true; prim();
+    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600', '#np-ds': 'For team leaders.' }); document.querySelector('input[name="np-s"][value="Self-paced"]').checked = true; prim();
     const pr = np();
     ok('NP created as Draft, Version 1, with details and Support type', !!pr && pr.status === 'Draft' && pr.version === 1 && pr.price === 2600 && pr.level === 'Level 4' && chSupportOf(pr.id) === 'Self-paced' && S.route === 'a-programmes' && S.params && true);
     ok('NP audited', ADMIN.audit.some(a => a.module === 'NVQ Programmes' && a.action === 'Programme created (Draft, Version 1)' && a.entity.includes(pr.id)));
@@ -1079,7 +1079,7 @@
 
   await T('New NVQ programme: structure, letter, documents, plan, review, publish', async () => {
     fresh(); acaEnter('KA'); S.signedIn = true; go('a-programmes'); ACT.chProgNew();
-    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12 months', '#np-p': '2600' }); prim(); const pr = np(), id = pr.id;
+    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600' }); prim(); const pr = np(), id = pr.id;
     go('a-programmes', { id, tab: 'review' }); const pub0 = app().querySelector('[data-act="ch8Publish"]');
     ok('NP review: blocking items listed; Publish disabled with a reason', /Add at least one unit/.test(main()) && /No offer letter uploaded/.test(main()) && pub0.disabled && !!pub0.title);
     ACT.ch8Publish({ dataset: { id } }); ok('NP publish refused while items are missing (logged)', /Can't publish/.test(MODAL.title) && pr.status === 'Draft' && ADMIN.audit[0].action === 'Blocked: publish (items missing)'); closeModal();
@@ -1106,7 +1106,9 @@
     ACT.ch8SavePlan({ dataset: { id } }); ok('NP plan save refused for the Academic Admin (logged)', ADMIN.audit[0].action === 'Blocked: payment plan');
     SA(); go('a-programmes', { id, tab: 'plan' }); fill8({ '#pp-d': '400', '#pp-n': '8' }); ACT.ch8SavePlan({ dataset: { id } });
     ok('NP Super Admin sets the plan in GBP, audited', pr.plan.deposit === 400 && pr.plan.inst === 8 && ADMIN.audit[0].action === 'Payment plan saved');
-    FA(); go('f-plans'); ok('NP Finance → Payment Plans: link to edit the plan', !!app().querySelector('.ch8-plans [data-tab="plan"][data-id="' + id + '"]'));
+    // E1 review correction: "Edit plan" opened NVQ Programmes, which the Finance Admin role can't open (was: '.ch8-plans [data-tab="plan"][data-id=…]');
+    // it now opens Finance's own plan editor
+    FA(); go('f-plans'); ok('NP Finance → Payment Plans: Edit plan opens Finance\'s plan editor', !!app().querySelector('.ch8-plans [data-act="s4PlanEdit"][data-p="' + id + '"]') && !app().querySelector('.ch8-plans [data-go="a-programmes"]'));
     acaEnter('KA'); S.signedIn = true; go('a-programmes', { id, tab: 'review' }); const pub = app().querySelector('[data-act="ch8Publish"]');
     ok('NP review: nothing blocking; Publish enabled', !pub.disabled && !/Blocking/.test(main()));
     ACT.ch8Publish({ dataset: { id } }); document.querySelector('#rsn').value = 'Ready'; press();

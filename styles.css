@@ -1251,3 +1251,18 @@ body.frame-mobile .r1-np-row .r1-np-l { grid-column: 1 / -1; }
   .r2-sched table.s4b-sched td:nth-child(6) { flex-basis: 100%; padding-top: 4px; }
   .r2-sched table.s4b-sched td:nth-child(2) .r2-kind { display: inline; margin-left: 6px; }
 }
+/* E1 — structured duration, payment methods and Finance review of payment terms */
+.e1-dur-row { display: grid; grid-template-columns: minmax(0, 7rem) minmax(0, 1fr); gap: 8px; }
+.e1-dur-row .input, .e1-dur-row .select { width: 100%; min-width: 0; }
+.e1-meth { margin: 4px 0 8px; }
+.e1-mopt { align-items: flex-start; }
+.e1-form .field[hidden] { display: none !important; }
+.e1-state .e1-ask { margin-top: 4px; }
+.e1-sum .tbl td { vertical-align: top; }
+.e1-hist { margin-top: 10px; }
+.e1-durchk { margin-left: 4px; }
+[class*="e1-n-"][hidden] { display: none !important; }
+.e1-sum .tbl { min-width: 560px; }
+@media (max-width: 640px) { .e1-dur { grid-column: 1 / -1; } .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); } }
+body.frame-mobile .e1-dur { grid-column: 1 / -1; }
+body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }

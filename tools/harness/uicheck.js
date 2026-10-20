@@ -110,6 +110,45 @@
       ['r5Sc30Sched', () => S.route === 'a-batches' && !!$1('main [data-act="addSession"]')], ['r5Sc30Cal', () => S.route === 'calendar'], ['r5Sc30Pub', () => S.route === 'a-assignments'], ['r5Sc30Sub', () => S.route === 'assignments'], ['r5Sc30Coo', () => S.route === 'c-submissions' && !!$1('main .r4-wl')], ['r5Sc30Asr', () => S.route === 't-queue' && !!$1('main .r4-wl')]];
     const bad = steps.filter(([act, chk]) => { closeModal(); ACT.scOpen(); go('demo-scenarios'); const b = $1(`#sc-30 [data-act="${act}"]`); if (!click(b)) return true; return !chk(); }).map(x => x[0]); closeModal();
     ok('Scenario #30: all ten step buttons open the right screen', !bad.length, bad.join(', '));
+    // 6e. E1 (provisional): duration controls, the creator's payment terms, submit to Finance, Finance's review item
+    closeModal(); initStore(); acaEnter('KA'); S.signedIn = true; go('a-dashboard'); nav('a-programmes'); click($1('main [data-act="chProgNew"]'));
+    const set = (s, v) => { const e = $1(s); e.value = v; e.dispatchEvent(new Event('change', { bubbles: true })); };
+    set('#np-l', 'Level 4'); set('#np-t', 'Level 4 UI check programme'); set('#np-r', 'QN 610/8888/1'); set('#np-d', '18'); set('#np-du', 'months'); set('#np-p', '2400');
+    ok('E1 wizard: duration number and unit displayed side by side, unit readable', shown($1('#np-d')) && shown($1('#np-du')) && $1('#np-du').getBoundingClientRect().width >= 90 && Math.abs($1('#np-d').getBoundingClientRect().top - $1('#np-du').getBoundingClientRect().top) < 4, Math.round($1('#np-du').getBoundingClientRect().width));
+    ok('E1 wizard: the dialog fits the viewport', !modalFits(), modalFits());
+    click(all('#modal-root .modal button').find(b => b.textContent.trim() === 'Create draft')); click($1('main .ch8-steps [data-tab="plan"]'));
+    ok('E1 plan step: Draft status and three clearly labelled payment choices', /Draft — not yet submitted/.test(main()) && all('main input[name="e1-meth"]').filter(shown).length === 3);
+    click($1('main input[name="e1-meth"][value="one-time"]')); ok('E1 plan step: "One payment" hides the instalment count', !shown($1('#e1-n')));
+    click($1('main input[name="e1-meth"][value="both"]')); ok('E1 plan step: "Both" shows the count; the summary follows', shown($1('#e1-n')) && /in one payment, or/.test($1('main .e1-sumbox').textContent));
+    ok('E1 plan step: no horizontal page overflow', appOver() <= 1, appOver());
+    click($1('main [data-act="e1Submit"]')); ok('E1 submit dialog fits the viewport', !!$1('#modal-root .e1-sum') && !modalFits(), modalFits());
+    click(all('#modal-root .modal button').find(b => b.textContent.trim() === 'Submit for review'));
+    ok('E1 after submitting: "Waiting for Finance review", nothing editable', /Waiting for Finance review/.test(main()) && !$1('#e1-n'));
+    setAdminIdentity('FA'); S.portal = 'admin'; S.signedIn = true; go('f-dashboard'); nav('a-queue');
+    const qid = (ADMIN.queue.find(i => i.type === 'Programme payment terms') || {}).id; go('a-queue', { id: qid });
+    ok('E1 Finance item: proposal panel, Approve payment terms and Request changes displayed', shown($1('main .e1-q')) && shown($1('main .q-decide [data-a="approve"]')) && shown($1('main .q-decide [data-a="return"]')));
+    ok('E1 Finance item: no horizontal page overflow', appOver() <= 1, appOver());
+    click($1('main .q-decide [data-a="return"]')); ok('E1 Request changes dialog fits the viewport', !!$1('#modal-root #rsn') && !modalFits(), modalFits()); closeModal();
+    // E1 review corrections: Finance's Edit plan stays in Finance; the queue list names each type
+    nav('a-queue'); const qrow = all('main tbody tr').find(tr => tr.textContent.includes('AQ-7301'));
+    ok('E1 Finance queue: Bundle VAT request labelled "Bundle VAT change"', !!qrow && /Bundle VAT change/.test(qrow.textContent) && !/Agency invoice purchase/.test(qrow.textContent));
+    nav('f-plans'); ok('E1 Finance → Payment Plans: no link into NVQ Programmes', !all('main [data-go="a-programmes"]').length);
+    click($1('main .ch8-plans [data-act="s4PlanEdit"][data-p="NV-N2"]'));
+    ok('E1 Finance "Edit plan": its own plan editor with One payment / Instalments / Both, and it fits', all('#modal-root input[name="pp-meth"]').filter(shown).length === 3 && shown($1('#modal-root #pp-n')) && !modalFits(), modalFits());
+    click($1('#modal-root input[name="pp-meth"][value="one-time"]')); ok('E1 Finance editor: "One payment" hides the instalment count', !shown($1('#modal-root #pp-n')));
+    click($1('#modal-root input[name="pp-meth"][value="both"]')); $1('#rsn').value = 'UI check'; click(all('#modal-root .modal button').find(b => b.textContent.trim() === 'Save new version'));
+    ok('E1 Finance editor saved "Both" as a new version', !$1('#modal-root .modal') && s4PlanCur('NV-N2').meth === 'both');
+    // Level 3: two fee options share the programme's terms (Super Admin's plan step)
+    setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-dashboard');
+    const l3 = ch8Create({ title: 'Level 3 UI check programme', level: 'Level 3', ref: 'QN 610/7171/3', dur: '12 months', durV: { n: 12, unit: 'months' }, desc: '', price: 2400, support: 'Fully assisted', r1opts: [{ label: 'Self-Paced', fee: 2400, mode: 'Self-Paced' }, { label: 'Fully Assisted', fee: 2700, mode: 'Fully Assisted' }] });
+    go('a-programmes', { id: l3.id, tab: 'plan' }); click($1('main input[name="pp-meth"][value="both"]'));
+    ok('E1 Level 3 plan step: both fee options listed with mode, fee and how learners pay', all('main .e1-sum tbody tr').filter(shown).length === 2 && /Self-Paced/.test($1('main .e1-sum').textContent) && /£2,700\.00 in one payment, or 6 monthly/.test($1('main .e1-sum').textContent));
+    ok('E1 Level 3 plan step: deposit policy stated; no page overflow', /28 days or more/.test($1('main .e1-plan').textContent) && appOver() <= 1, appOver());
+    // Learner: the payment step for a "Both" plan
+    S.variant = 'A'; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; go('browse'); const ap = $1('main [data-act="applyNvq"][data-id="k-NV-N2"]'); ok('E1 learner: Browse offers the programme', !!ap); click(ap); const sb = all('#modal-root .modal button').find(b => b.textContent.trim() === 'Start sign-up'); ok('E1 learner: the sign-up dialog opens', !!sb, MODAL ? MODAL.title : 'no dialog'); click(sb);
+    { const w = STORE.worlds[S.variant]; /* (W here is the viewport width) */ ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); }
+    ok('E1 learner payment step: deposit, "Pay in full" and "Instalments" displayed', ['deposit', 'full', 'instalment'].every(v => shown($1(`main input[name="su-opt"][value="${v}"]`))) && /Pay in full — £900\.00 now/.test(main()));
+    click($1('main input[name="su-opt"][value="full"]')); ok('E1 learner: choosing "Pay in full" asks for £900.00; no page overflow', /Pay £900\.00/.test(main()) && appOver() <= 1, appOver());
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));
     ok('no script errors', !errs.length, errs.join(' | '));

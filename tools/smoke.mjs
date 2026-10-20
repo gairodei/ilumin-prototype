@@ -29,7 +29,7 @@ ok('dist/ holds only index.html, its referenced assets and the Pages config', fi
 ok('no harness, docs, decisions register, screenshots or Git data in dist/', !files.some(f => /^(tools|\.git|deploy)\/|\.(md|png|jpe?g|sh|mjs|log)$|PROVISIONAL|TBD-register|(^|\/)\./i.test(f)), files.filter(f => /^(tools|\.git)\/|\.(md|png|sh|mjs)$|PROVISIONAL|TBD/i.test(f)).join(', '));
 ok('every shipped file is byte-identical to its source', ['index.html', ...refs].filter(f => existsSync(join(DIST, f))).every(f => sha(join(ROOT, f)) === sha(join(DIST, f))));
 ok('_headers keeps the site out of search engines', /X-Robots-Tag:\s*noindex/i.test(readFileSync(join(DIST, '_headers'), 'utf8')));
-ok('every script and stylesheet in index.html is referenced (80 scripts + styles.css)', refs.filter(u => u.startsWith('js/')).length === readdirSync(join(ROOT, 'js')).filter(f => f.endsWith('.js')).length && refs.includes('styles.css'));
+ok('every script and stylesheet in index.html is referenced (every script in js/ + styles.css)', refs.filter(u => u.startsWith('js/')).length === readdirSync(join(ROOT, 'js')).filter(f => f.endsWith('.js')).length && refs.includes('styles.css'));
 
 /* ---------- Served from an HTTP root, in a real browser ---------- */
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.txt': 'text/plain; charset=utf-8' };
@@ -50,7 +50,7 @@ document.getElementById('f').addEventListener('load', () => setTimeout(() => {
     r.loaded = cw.performance.getEntriesByType('resource').filter(e => /\\.js$/.test(e.name)).length;
     r.css = [...d.styleSheets].some(s => /styles\\.css$/.test(s.href || '') && s.cssRules.length > 100);
     r.app = typeof cw.eval('App') === 'object' && d.querySelector('#app').children.length > 0;
-    r.last = cw.eval('typeof r2SchedSection === "function" && typeof r5CohLink === "function" && UXC.some(x => x[0] === "R5 audiences")');
+    r.last = cw.eval('typeof r2SchedSection === "function" && typeof r5CohLink === "function" && UXC.some(x => x[0] === "R5 audiences") && typeof e1Decide === "function" && UXC.some(x => x[0] === "E1")');
     cw.eval('setAdminIdentity("A"); S.portal = "admin"; S.signedIn = true; ACT.scOpen(); go("demo-scenarios")'); r.scen = d.querySelectorAll('main section[id^="sc-"]').length; r.scList = cw.eval('SC_LIST().length');
     cw.eval('setAdminIdentity("A"); S.portal = "admin"; S.signedIn = true; go("a-batches", { id: "L3AC-NOV26-LEI", tab: "schedule" })');
     r.sched = !!d.querySelector('main .r2-sched') && /Add weekly recurring classes/.test(d.querySelector('main').textContent);
@@ -92,7 +92,7 @@ async function served() {
   ok(`served: all ${refs.filter(u => u.startsWith('js/')).length} scripts requested and loaded`, r.scripts === refs.filter(u => u.startsWith('js/')).length && r.loaded >= r.scripts, `${r.loaded} of ${r.scripts}`);
   ok('served: styles.css applied', r.css === true);
   ok('served: no script errors while loading or using the demo', !r.thrown && !r.errs.length && !(r.errs2 || []).length, r.thrown || r.errs.concat(r.errs2 || []).join(' | '));
-  ok('served: the app boots and the last scripts ran (R2 Schedule area, R5 records)', r.app === true && r.last === true);
+  ok('served: the app boots and the last scripts ran (R2 Schedule area, R5 records, E1)', r.app === true && r.last === true);
   ok('served: Demo Scenarios — all 30 listed and rendered', r.scen === 30 && r.scList === 30, r.scen + ' rendered / ' + r.scList + ' listed');
   ok('served: a Level 3 batch Schedule tab renders (unified Schedule area)', r.sched === true);
 }

@@ -447,7 +447,7 @@
   const npOpen = () => { SA(); go('a-programmes'); ACT.chProgNew(); };
   const npRow = (k, o) => { const r = document.querySelectorAll('#modal-root .r1-np-row')[k]; r.querySelector('.r1-np-l').value = o.l; r.querySelector('.r1-np-f').value = String(o.f); r.querySelector('.r1-np-m').value = o.m; };
   // A new Level 3 programme through the wizard, with fee options (rows: [{l, f, m}])
-  const newL3 = (title, rows) => { npOpen(); fill({ '#np-t': title, '#np-r': 'QN 610/' + (1000 + title.length) + '/3', '#np-d': '12 months' }); rows.forEach((o, k) => { if (k) ACT.r1NpAdd(); npRow(k, o); }); const r = prim(); if (r === false) return null; closeModal(); return (STORE.chNewProgs || []).slice(-1)[0]; };
+  const newL3 = (title, rows) => { npOpen(); fill({ '#np-t': title, '#np-r': 'QN 610/' + (1000 + title.length) + '/3', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */ }); rows.forEach((o, k) => { if (k) ACT.r1NpAdd(); npRow(k, o); }); const r = prim(); if (r === false) return null; closeModal(); return (STORE.chNewProgs || []).slice(-1)[0]; };
   const add8 = (act, ds, o) => { ACT[act]({ dataset: ds }); fill(o); return prim(); };
   // Publish with the existing wizard steps: one unit / module / outcome / criterion, an offer letter
   const pubNew = pr => { const id = pr.id; go('a-programmes', { id, tab: 'structure' }); add8('ch8AddUnit', { id }, { '#u-c': 'U370', '#u-t': 'Practice' }); add8('ch8AddMod', { id, u: 0 }, { '#m-t': 'Core practice', '#m-ab': 'C/650/3701' }); add8('ch8AddLo', { id, u: 0, m: 0 }, { '#lo-t': 'Understand practice', '#lo-y': 'Knowledge' }); add8('ch8AddCrit', { id, u: 0, m: 0, l: 0 }, { '#c-d': 'Describe practice', '#c-e': 'Written account' });
@@ -466,7 +466,7 @@
     fresh(); npOpen();
     ok('R1f wizard (Level 3): fee options instead of the single price', vis(document.querySelector('#modal-root .r1-np-l3')) && !vis(document.querySelector('#np-p')) && !!document.querySelector('#modal-root .r1-np-row'));
     ok('R1f wizard (Level 3): no delivery-mode / class-pattern selector; the mode comes from the fee option; no "Pending" label shown', !vis(document.querySelector('#modal-root .r1-np-sup')) && /comes from the fee option/.test(document.querySelector('#modal-root .r1-np-modes').textContent) && /Self-Paced and Fully Assisted learners/.test(document.querySelector('#modal-root .r1-np-modes').textContent) && !vis(document.querySelector('#modal-root .tbd')));
-    fill({ '#np-t': 'Level 3 Certificate in Support Work', '#np-r': 'QN 610/5555/3', '#np-d': '12 months' });
+    fill({ '#np-t': 'Level 3 Certificate in Support Work', '#np-r': 'QN 610/5555/3', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */ });
     ok('R1f (negative) at least one complete option (label required)', prim() === false && !(STORE.chNewProgs || []).some(p => p.title === 'Level 3 Certificate in Support Work'));
     npRow(0, { l: 'Self-Paced', f: 500, m: 'Self-Paced' }); ok('R1f (negative) a fee that doesn\'t divide into the instalments is refused', prim() === false);
     npRow(0, { l: 'Self-Paced', f: 600, m: '' }); ok('R1f (negative) the delivery mode is required', prim() === false);
@@ -486,7 +486,7 @@
     ['Level 2', 'Level 5'].forEach(L => { lv.value = L; INP.r1NpLevel(lv); ok('R1f wizard (' + L + '): unchanged — single price and the delivery-mode selector', vis(document.querySelector('#np-p')) && vis(document.querySelector('#modal-root .r1-np-sup')) && !vis(document.querySelector('#modal-root .r1-np-l3'))); });
     lv.value = 'Level 3'; INP.r1NpLevel(lv); ok('R1f wizard: switching back to Level 3 hides the selector again', !vis(document.querySelector('#modal-root .r1-np-sup')) && vis(document.querySelector('#modal-root .r1-np-l3')));
     lv.value = 'Level 4'; INP.r1NpLevel(lv);
-    fill({ '#np-t': 'Level 4 Certificate in Team Leading', '#np-r': 'QN 610/4444/4', '#np-d': '12 months', '#np-p': '2600' }); prim(); closeModal();
+    fill({ '#np-t': 'Level 4 Certificate in Team Leading', '#np-r': 'QN 610/4444/4', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600' }); prim(); closeModal();
     const p4 = (STORE.chNewProgs || []).find(x => x.title === 'Level 4 Certificate in Team Leading');
     ok('R1f Level 4 created with its price and no fee options', !!p4 && p4.price === 2600 && !r1IsL3Pid(p4.id) && !r1Opts(p4.id).length);
     go('a-finance', { tab: 'plans' }); const cards = [...app().querySelectorAll('.r1-opts')].map(c => c.dataset.pid);
