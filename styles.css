@@ -1367,3 +1367,7 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 .cb-refs, .cb-refs-done { display: grid; gap: 6px; }
 .cb-keyh { margin: 0; padding-left: 16px; }
 .cb-aq-att .row { flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+
+/* CB6 — Observation events */
+.cb-ev, .cb-locs { display: grid; gap: 8px; }
+.cb-ev-checks { margin: 0; }

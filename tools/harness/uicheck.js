@@ -300,6 +300,12 @@
     click($1('main .cb-asg-ed [data-act="s2QAdd"]')); ok('CB5 question dialog with evidence and attachment settings fits', !!MODAL && !!$1('#modal-root #aq-ev') && !modalFits(), modalFits()); closeModal();
     click($1('main .cb-asg-tabs [data-t="mapping"]')); ok('CB5 criteria mapping in place: no page overflow', appOver() <= 1, appOver());
     go('a-programmes', { id: 'NV-L3', tab: 'keys' }); ok('CB5 Answer keys: history table displayed; no page overflow', shown($1('main .cb-keys')) && appOver() <= 1, appOver());
+    // CB6: Observation events — locations, events list, the event dialog, at every width
+    setAdminIdentity('A'); S.portal = 'admin'; ACT.n5Settings({ dataset: { p: 'NV-L3D' } }); ['n5-req:yes', 'n5-wp:Permitted', 'n5-off:Available'].forEach(x => { const [n, v] = x.split(':'), r = document.querySelector(`#modal-root input[name="${n}"][value="${v}"]`); if (r) r.checked = true; }); MODAL.actions.find(a => /primary/.test(a.cls || '')).fn(); closeModal();
+    go('a-programmes', { id: 'NV-L3D', tab: 'events' }); click($1('main [data-act="cbObsEv"][data-e=""]'));
+    ok('CB6 Add observation event dialog fits', !!MODAL && !!$1('#modal-root #ev-n') && !modalFits(), modalFits());
+    document.querySelectorAll('#modal-root .ev-c').forEach(c => { c.checked = true; }); document.querySelectorAll('#modal-root .ev-l[value="workplace"]').forEach(c => { c.checked = true; }); MODAL.actions.find(a => /primary/.test(a.cls || '')).fn(); closeModal();
+    ok('CB6 Observation events: locations card and the events table displayed; no page overflow', shown($1('main .cb-locs')) && shown($1('main .cb-ev tbody tr')) && appOver() <= 1, appOver());
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));
     ok('no script errors', !errs.length, errs.join(' | '));
