@@ -1357,3 +1357,13 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
   .cb-cur-loh, .cb-cur-c { grid-template-columns: minmax(0, 1fr); }
   .cb-cur-loh .cb-acts, .cb-cur-c .cb-acts { justify-content: flex-start; }
 }
+
+/* CB5 — Assessments */
+.cb-assess tr.cb-sel td { background: var(--brand-soft); }
+.cb-asg-ed { display: grid; gap: 12px; }
+.cb-asg-body { display: grid; gap: 12px; min-width: 0; }
+.cb-asg-btns { flex-wrap: wrap; gap: 8px; }
+.cb-qev { margin: 0 0 4px; }
+.cb-refs, .cb-refs-done { display: grid; gap: 6px; }
+.cb-keyh { margin: 0; padding-left: 16px; }
+.cb-aq-att .row { flex-wrap: wrap; gap: 6px 10px; align-items: center; }

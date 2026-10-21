@@ -291,6 +291,15 @@
     click($1('main .cb-cur-tree > details[data-cbu="U399"] [data-act="nodeAdd"][data-lvl="crit"]')); ok('CB4 Add criterion dialog: names the unit, module and Learning Outcome; the dialog fits', !!MODAL && /U399/.test($1('#modal-root .cb-ctx').textContent) && /Partnership working/.test($1('#modal-root .cb-ctx').textContent) && !modalFits(), modalFits()); closeModal();
     click($1('main .cb-cur-tree > details[data-cbu="U399"] [data-act="cbCurEdit"]')); ok('CB4 Edit dialog: code read-only, title editable; the dialog fits', !!MODAL && !!$1('#modal-root #ce-t') && !modalFits(), modalFits()); closeModal();
     setAdminIdentity('SY'); go('a-programmes', { id: 'NV-N1', tab: 'structure' }); ok('CB4 new programme (NV-N1): the same editor with its type lists; no page overflow', shown($1('main .cb-cur-tree')) && all('main .cb-cur [data-onchange="ch8LoType"]').filter(shown).length >= 2 && appOver() <= 1, appOver());
+    // CB5: Assessments — list, an assignment open in place, the question dialog, the learner's form with References
+    setAdminIdentity('A'); S.portal = 'admin'; go('a-programmes', { id: 'NV-L3', tab: 'assessments' });
+    ok('CB5 Assessments: the assignment list and New assignment displayed; no page overflow', shown($1('main .cb-assess')) && shown($1('main [data-act="cbAsgNew"]')) && appOver() <= 1, appOver());
+    click($1('main [data-act="cbAsgNew"]')); ok('CB5 New assignment dialog fits', !!MODAL && !modalFits(), modalFits()); closeModal();
+    click($1('main .cb-assess [data-act="cbAsgOpen"][data-id="a8"]')); click($1('main .cb-asg-tabs [data-t="questions"]'));
+    ok('CB5 an assignment open in place (Questions): tabs, questions and settings displayed; no page overflow', shown($1('main .cb-asg-ed')) && all('main .cb-asg-tabs .tab').filter(shown).length === 3 && appOver() <= 1, appOver());
+    click($1('main .cb-asg-ed [data-act="s2QAdd"]')); ok('CB5 question dialog with evidence and attachment settings fits', !!MODAL && !!$1('#modal-root #aq-ev') && !modalFits(), modalFits()); closeModal();
+    click($1('main .cb-asg-tabs [data-t="mapping"]')); ok('CB5 criteria mapping in place: no page overflow', appOver() <= 1, appOver());
+    go('a-programmes', { id: 'NV-L3', tab: 'keys' }); ok('CB5 Answer keys: history table displayed; no page overflow', shown($1('main .cb-keys')) && appOver() <= 1, appOver());
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));
     ok('no script errors', !errs.length, errs.join(' | '));

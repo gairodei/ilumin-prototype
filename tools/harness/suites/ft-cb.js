@@ -54,8 +54,10 @@
     });
     // CB2 (PD-CB-15) supersedes "says editing arrives in CB2": seeded programmes' details stay read-only and say why
     open('NV-L3', 'details'); ok('CB1-B published seeded Course Details: read-only (no inputs) with the reason; nothing promised for CB2', !qa('.cb-body input, .cb-body select, .cb-body textarea').length && /existed before the course builder are read-only/.test(q('.cb-body').textContent) && !/planned for CB2/.test(main()) && /QN 603\/2851\/9/.test(main()));
-    open('NV-L3', 'assessments'); ok('CB1-B Assessments: the programme\'s assignments listed read-only, link to Assignments & Criteria Mapping, says authoring arrives in CB5', qa('.cb-assess tbody tr').length >= 5 && !!q('.cb-assess [data-go="a-assignments"]') && /planned for CB5/.test(main()) && !!q('.cb-sec[data-tab="assessments"] .cb-badge'));
-    q('.cb-assess [data-go="a-assignments"][data-id]').click(); ok('CB1-B …"Open" opens that assignment in Assignments & Criteria Mapping', S.route === 'a-assignments' && !!S.params.id && !/We can't find that page/.test(main()));
+    // CB5 (PD-CB-34) supersedes the read-only list ("authoring arrives in CB5", "Open" → Assignments & Criteria Mapping): assignments are
+    // authored in Section 3; "Open" opens the assignment in place
+    open('NV-L3', 'assessments'); ok('CB1-B Assessments: the programme\'s assignments listed with New assignment; not marked read-only for the Super Admin; nothing promised for CB5', qa('.cb-assess tbody tr').length >= 5 && !!q('.cb-assess [data-act="cbAsgNew"]') && !/planned for CB5/.test(main()) && !q('.cb-sec[data-tab="assessments"] .cb-badge'));
+    q('.cb-assess [data-act="cbAsgOpen"][data-id]').click(); ok('CB1-B …"Open" opens that assignment in Section 3 (Details, Questions, Criteria mapping)', S.route === 'a-programmes' && !!q('.cb-asg-ed') && qa('.cb-asg-tabs .tab').length === 3 && !/We can't find that page/.test(main()));
   });
 
   await T('CB1-C existing drafts', async () => {
