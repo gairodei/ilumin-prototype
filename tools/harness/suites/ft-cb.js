@@ -39,7 +39,9 @@
     ok('CB1-A header: title, level, reference, status, version and "Version history"', q('.page-h h1').textContent === pr.title && /Level 4/.test(q('.page-h').textContent) && /QN 610\/7777\/1/.test(q('.page-h').textContent) && !!q('.page-h [data-tab="versions"]'));
     ok('CB1-A no old step bar or tab bar anywhere', oldNav() === 0);
     q('.cb-sec[data-tab="details"]').click(); ok('CB1-A Course Details: the details form, editable while Draft (CB2: "Save details" / "Save and continue")', cur() === 'details' && !!q('#np-t') && !!q('[data-act="cbDetSave"]'));
-    q('.cb-sec[data-tab="payments"]').click(); ok('CB1-A Fees & Payments: the creator\'s payment-terms proposal (Save draft / Submit to Finance), Draft — not yet submitted', pan() === 'plan' && !!q('[data-act="e1Submit"]') && !!q('[data-act="e1Draft"]') && /Draft — not yet submitted/.test(main()));
+    // CB8 (PD-CB-48, PD-CB-52) supersedes "the creator's payment-terms proposal (Save draft / Submit to Finance)" in the Payment plan panel:
+    // the creator edits the financial package in "Fees & payment options" and submits it with "Submit to Finance for review"
+    q('.cb-sec[data-tab="payments"]').click(); ok('CB1-A Fees & Payments: the creator\'s financial package (Submit to Finance for review), Draft — not yet sent to Finance', pan() === 'fees' && !!q('[data-act="cb8Submit"]') && !!q('[data-act="cb8PayAdd"]') && /Draft — not yet sent to Finance/.test(main()));
     FA(); go('a-programmes'); ok('CB1-A (negative) Finance can\'t open NVQ Programmes (unchanged)', /permission/i.test(main()) && !q('[data-act="chProgNew"]') && !q('.cb-nav'));
   });
 
@@ -91,8 +93,10 @@
     q('.page-h [data-tab="versions"]').click(); ok('CB1-D Version history: the versions with the current one, and a way back', /Version 2 \(current\)/.test(main()) && !q('.cb-nav') && !!q('.cb-sh [data-tab="curriculum"]'));
     q('.cb-sh [data-tab="curriculum"]').click(); ok('CB1-D …"Back to the course builder" returns to Curriculum', cur() === 'curriculum');
     SA(); const pr = (() => { go('a-programmes'); ACT.chProgNew(); const f = (s, v) => { document.querySelector(s).value = v; }; f('#np-t', 'Level 3 CB1 options'); f('#np-l', 'Level 3'); INP.r1NpLevel(document.querySelector('#np-l')); f('#np-r', 'QN 603/7777/3'); f('#np-d', '6'); f('#np-du', 'months'); const r = document.querySelector('main .r1-np-row'); r.querySelector('.r1-np-l').value = 'Self-Paced'; r.querySelector('.r1-np-f').value = '1800'; r.querySelector('.r1-np-m').value = 'Self-Paced'; document.querySelector('#np-obs-yes').checked = true; document.querySelector('#np-code').value = 'CB1-L3'; ACT.cbDetCreate(); return (STORE.chNewProgs || []).slice(-1)[0]; })(); // CB2 (PD-CB-14): the Course Details page, not the dialog
-    open(pr.id, 'payments'); ok('CB1-D new Level 3 programme: Fees & Payments now also shows its fee options and observation fee rate (no screen before)', qa('.cb-panels .tab').map(t => t.dataset.tab).join() === 'plan,fees,support');
-    q('.cb-panels [data-tab="fees"]').click(); ok('CB1-D …its fee options card lists its option', !!q('.r1-opts') && main().includes(pr.id + '-FO-001'));
+    // CB8 (PD-CB-48) supersedes the panels "plan, fees, support" and the R1 options card for a new programme: "Fees & payment options"
+    // (one card per fee option, with its observation fees and payment options), "Financial versions", and the legacy rate
+    open(pr.id, 'payments'); ok('CB1-D new Level 3 programme: Fees & Payments shows its fee options, its financial versions and the observation fee rate', qa('.cb-panels .tab').map(t => t.dataset.tab).join() === 'fees,payhist,support');
+    q('.cb-panels [data-tab="fees"]').click(); ok('CB1-D …its fee option is a card with its ID', !!q('.cb8-opt') && main().includes(pr.id + '-FO-001'));
     q('.cb-panels [data-tab="support"]').click(); document.querySelector('input[name="ch-sup"][value="Self-paced"]').checked = true; ACT.chSupSave({ dataset: { id: pr.id } }); reason('CB1 rate');
     ok('CB1-D …the observation fee rate it was silently given can now be seen and changed (audited), in the same store CH-38 reads', chSupportOf(pr.id) === 'Self-paced' && chFeeAmt(chSupportOf(pr.id)) === 100 && ADMIN.audit[0].action === 'Support type changed');
   });

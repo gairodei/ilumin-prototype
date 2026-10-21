@@ -1121,15 +1121,18 @@
     go('a-programmes', { id, tab: 'docs' }); ok('NP document checklist: the Required enrolment documents list (no quick-pick checkboxes)', !document.querySelector('.ch8-doc') && !!document.querySelector('.s4-ck [data-act="s4CkAdd"]'));
     ACT.s4CkAdd({ dataset: { p: id } }); fill8({ '#ck-n': 'Employer reference letter', '#ck-g': 'Optional.' }); document.querySelector('#ck-m').value = '0'; document.querySelector('#rsn').value = 'Optional reference'; press();
     ok('NP checklist saved, audited', ch8Docs(id).includes('Employer reference letter') && ADMIN.audit[0].action === 'Checklist item added');
-    go('a-programmes', { id, tab: 'plan' }); ok('NP payment plan: Academic Admin read-only (Finance / Super Admin edit)', !document.querySelector('#pp-d') && /Set by Finance or the Super Admin/.test(main()));
-    ACT.ch8SavePlan({ dataset: { id } }); ok('NP plan save refused for the Academic Admin (logged)', ADMIN.audit[0].action === 'Blocked: payment plan');
-    // E2 (20 Oct 2026) supersedes: typing an amount while "Use the default deposit" is selected made it the programme's own deposit.
-    // A custom deposit is now chosen explicitly ("Set a custom deposit amount for this programme"); the amount field is for that choice.
-    SA(); go('a-programmes', { id, tab: 'plan' }); document.querySelector('input[name="pp-wdm"][value="own"]').checked = true; fill8({ '#pp-d': '400', '#pp-n': '8' }); ACT.ch8SavePlan({ dataset: { id } });
-    ok('NP Super Admin sets the plan in GBP, audited', pr.plan.deposit === 400 && pr.plan.inst === 8 && ADMIN.audit[0].action === 'Payment plan saved');
-    // E1 review correction: "Edit plan" opened NVQ Programmes, which the Finance Admin role can't open (was: '.ch8-plans [data-tab="plan"][data-id=…]');
-    // it now opens Finance's own plan editor
-    FA(); go('f-plans'); ok('NP Finance → Payment Plans: Edit plan opens Finance\'s plan editor', !!app().querySelector('.ch8-plans [data-act="s4PlanEdit"][data-p="' + id + '"]') && !app().querySelector('.ch8-plans [data-go="a-programmes"]'));
+    // CB8 (PD-CB-48, PD-CB-52) supersedes "NP payment plan: Academic Admin read-only (Finance / Super Admin edit)", "NP plan save refused for the
+    // Academic Admin", "NP Super Admin sets the plan in GBP" (the old plan step: #pp-d / #pp-n / ch8SavePlan) and Finance's "Edit plan" for a new
+    // programme: the creator edits the financial package in Section 5; the old plan-step save is refused for a package programme (logged); the
+    // Super Administrator's own package is approved at once (D8); Finance views it ("View package") and approves packages in the queue.
+    go('a-programmes', { id, tab: 'plan' }); ok('NP Fees & payment options: the Academic Admin edits the financial package (no old plan form)', !document.querySelector('#pp-d') && !!app().querySelector('main [data-act="cb8PayAdd"]') && !!app().querySelector('main [data-act="cb8Submit"]'));
+    ACT.ch8SavePlan({ dataset: { id } }); ok('NP the old plan-step save is refused for the Academic Admin (logged, the role refusal as before)', ADMIN.audit[0].action === 'Blocked: payment plan');
+    SA(); ACT.ch8SavePlan({ dataset: { id } }); ok('NP …and refused for the Super Admin too on a package programme (logged)', /^Blocked: save the payment plan/.test(ADMIN.audit[0].action)); acaEnter('KA'); S.signedIn = true;
+    // (the observation answer is recorded first: a package is checked against it — observation fees apply only where observations are permitted, PD-CB-51)
+    SA(); obsDecide(id); const o8 = cb8Work(pr).opts[0]; ACT.cb8PayDel({ dataset: { p: id, o: o8.id, k: '6' } }); ACT.cb8PayAdd({ dataset: { p: id, o: o8.id, k: '8' } });
+    go('a-programmes', { id, tab: 'fees' }); const r8 = app().querySelector('main input[name="e1-wdm"][value="own"]'); r8.checked = true; INP.e1DepMode(r8); app().querySelector('main #e1-d').value = '400'; ACT.cb8SaApprove({ dataset: { p: id } }); document.querySelector('#rsn').value = 'Own terms'; press();
+    ok('NP Super Admin sets the terms in GBP (D8: approved at once), audited', pr.plan.deposit === 400 && pr.plan.inst === 8 && ADMIN.audit.some(a => a.action === 'Financial package approved'));
+    FA(); go('f-plans'); ok('NP Finance → Payment Plans: "View package" for a package programme (not Edit plan)', !!app().querySelector('.ch8-plans [data-act="cb8ViewPkg"][data-p="' + id + '"]') && !app().querySelector('.ch8-plans [data-go="a-programmes"]') && !app().querySelector('.ch8-plans [data-act="s4PlanEdit"][data-p="' + id + '"]'));
     acaEnter('KA'); S.signedIn = true; obsDecide(id); go('a-programmes', { id, tab: 'review' }); const pub = app().querySelector('[data-act="ch8Publish"]');
     ok('NP review: nothing blocking; Publish enabled', !pub.disabled && !/Blocking/.test(main()));
     ACT.ch8Publish({ dataset: { id } }); document.querySelector('#rsn').value = 'Ready'; press();

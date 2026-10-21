@@ -35,24 +35,29 @@
   const addOpt = (fee, label = 'Self-Paced — E2') => { SA(); r1AddOpt('NV-L3', { label, fee, mode: 'Self-Paced' }, 'E2', 'Added'); return optOf(fee).id; };
   const payWith = (w, opt, method = 'bank') => { setUi('suOpt', opt); setUi('suMethod', method); render(); const _co = checkout; let g = null; checkout = o => { g = o; return _co(o); }; try { ACT.suPay(); } finally { checkout = _co; } if (g) g.onSuccess(g.amount, 'TXN-E2'); return w.plans.find(x => x.e === 'nvq'); };
 
+  // CB8 (PD-CB-48, PD-CB-52) supersedes the creator's E1 Payment plan step (its live summary .e1-sumbox and e1Draft / e1Submit): a new programme's
+  // deposit is part of its financial package in Section 5 — the same three choices and fields (e1-wdm, e1-d), saved with "Save deposit setting"
+  // (cb8Dep) and stated in the package's Deposit block. The rules tested are unchanged.
+  const pkgDep = (pr, dm, amt) => { go('a-programmes', { id: pr.id, tab: 'fees' }); depPick('e1', dm, amt); ACT.cb8Dep({ dataset: { p: pr.id } }); return main(); };
+  const pkgSubmit = pr => { go('a-programmes', { id: pr.id, tab: 'fees' }); ACT.cb8Submit({ dataset: { p: pr.id } }); };
   await T('E2 the three deposit choices: creator, Finance plan step and Finance editor', async () => {
-    fresh(); ACA(); const pr = newProg('Level 4 Certificate in Deposit Choice'); go('a-programmes', { id: pr.id, tab: 'plan' });
+    fresh(); ACA(); const pr = newProg('Level 4 Certificate in Deposit Choice'); go('a-programmes', { id: pr.id, tab: 'fees' });
     const labs = px => [...document.querySelectorAll(`input[name="${px}"]`)].map(r => r.closest('label').querySelector('strong').textContent);
-    ok('E2 creator\'s Payment plan step: exactly three choices with the agreed wording; the default shows the current Academy default', JSON.stringify(labs('e1-wdm')) === JSON.stringify(['Deposit not available', 'Use Academy default deposit (£300.00)', 'Set a custom deposit amount for this programme']) && document.querySelector('input[name="e1-wdm"][value="default"]').checked);
+    ok('E2 creator\'s Fees & payment options: exactly three choices with the agreed wording; the default shows the current Academy default', JSON.stringify(labs('e1-wdm')) === JSON.stringify(['Deposit not available', 'Use Academy default deposit (£300.00)', 'Set a custom deposit amount for this programme']) && document.querySelector('input[name="e1-wdm"][value="default"]').checked);
     ok('E2 the custom amount field is shown only for a custom deposit', document.querySelector('.e2-dv-e1').hidden && (depPick('e1', 'own'), !document.querySelector('.e2-dv-e1').hidden) && (depPick('e1', 'none'), document.querySelector('.e2-dv-e1').hidden));
-    ok('E2 the live summary follows: "Not available" with no deposit; the 28-day eligibility is not stated as if it applied', /Not available — this programme doesn't offer a deposit/.test(document.querySelector('.e1-sumbox').textContent) && /Deposit: not offered for this programme/.test(document.querySelector('.e1-sumbox').textContent) && !/at least 28 days away/.test(document.querySelector('.e1-sumbox').textContent));
-    depPick('e1', 'own', 450); ok('E2 …and the custom amount: "Alternative to instalments: £450.00 deposit"', /Alternative to instalments: £450\.00 deposit, followed by the £1,950\.00 balance/.test(document.querySelector('.e1-sumbox').textContent));
-    ok('E2 the default amount isn\'t written into the programme (a default proposal stores no amount)', e1T(pr.id).prop.dep === null && !e1T(pr.id).prop.depOff && s4PlanCur(pr.id).deposit === null);
+    pkgDep(pr, 'none'); ok('E2 the package states "Not available" with no deposit; the 28-day eligibility is not stated as if it applied', /Not available — learners pay by one of the payment options/.test(document.querySelector('main .cb8-dep').textContent) && !/28 days/.test(document.querySelector('main .cb8-dep').textContent));
+    pkgDep(pr, 'own', 450); ok('E2 …and the custom amount: "£450.00 — custom amount", a separate route with the 28-day eligibility and the seat hold', /£450\.00 — custom amount for this programme\. Offered only when the learner's batch starts in 28 days or more/.test(document.querySelector('main .cb8-dep').textContent));
+    pkgDep(pr, 'default'); ok('E2 the default amount isn\'t written into the programme (a default package stores no amount)', cb8Work(pr).dep.mode === 'default' && cb8Work(pr).dep.amount === null && s4PlanCur(pr.id).deposit === null);
     SA(); go('a-programmes', { id: 'NV-N1', tab: 'plan' }); ok('E2 Finance / Super Admin plan step: the same three choices', JSON.stringify(labs('pp-wdm')) === JSON.stringify(['Deposit not available', 'Use Academy default deposit (£300.00)', 'Set a custom deposit amount for this programme']));
     FA(); ACT.s4PlanEdit({ dataset: { p: 'NV-L2' } }); ok('E2 Finance → Payment Plans "Edit plan": the same three choices; custom field hidden for the default', JSON.stringify(labs('pp-dm')) === JSON.stringify(['Deposit not available', 'Use Academy default deposit (£300.00)', 'Set a custom deposit amount for this programme']) && document.querySelector('.e2-dv-pe').hidden); closeModal();
   });
   await T('E2 custom deposit validation (whole pence, above £0, below every fee and every Level 3 option)', async () => {
-    fresh(); ACA(); const pr = l3Wizard('Level 3 Certificate in Deposit Rules', [['Self-Paced', '800', 'Self-Paced'], ['Fully Assisted', '1000', 'Fully Assisted']]); go('a-programmes', { id: pr.id, tab: 'plan' });
-    const tryDep = v => { render(); depPick('e1', 'own', v); ACT.e1Draft({ dataset: { id: pr.id } }); return main(); };
-    ['', '0', '-5', '12.345', 'abc'].forEach(v => ok(`E2 (negative) custom deposit "${v}" refused (above £0, whole pence)`, /Enter a custom deposit above £0, in whole pence/.test(tryDep(v)) && e1T(pr.id).prop.dep === null));
-    ok('E2 (negative) a custom deposit equal to the lowest option fee is refused, naming the option', /Self-Paced: The deposit \(£800\.00\) must be below the fee \(£800\.00\)/.test(tryDep('800')) && e1T(pr.id).prop.dep === null);
+    fresh(); ACA(); const pr = l3Wizard('Level 3 Certificate in Deposit Rules', [['Self-Paced', '800', 'Self-Paced'], ['Fully Assisted', '1000', 'Fully Assisted']]);
+    const tryDep = v => { render(); return pkgDep(pr, 'own', v); }, dep0 = () => cb8Work(pr).dep.mode === 'default' && cb8Work(pr).dep.amount === null;
+    ['', '0', '-5', '12.345', 'abc'].forEach(v => ok(`E2 (negative) custom deposit "${v}" refused (above £0, whole pence)`, /Enter a custom deposit above £0, in whole pence/.test(tryDep(v)) && dep0()));
+    ok('E2 (negative) a custom deposit equal to the lowest option fee is refused, naming the option', /Self-Paced: The deposit \(£800\.00\) must be below the fee \(£800\.00\)/.test(tryDep('800')) && dep0());
     ok('E2 (negative) above one option, below the other: refused for that option', /Self-Paced: The deposit \(£900\.00\) must be below the fee/.test(tryDep('900')));
-    tryDep('799.99'); ok('E2 a custom deposit below every option (£799.99) is saved as the proposal', e1T(pr.id).prop.dep === 799.99 && !e1T(pr.id).prop.depOff);
+    tryDep('799.99'); ok('E2 a custom deposit below every option (£799.99) is saved in the draft package', cb8Work(pr).dep.mode === 'own' && cb8Work(pr).dep.amount === 799.99);
     FA(); ok('E2 (negative) Finance editor: a custom deposit at or above a fee is refused', depEdit('NV-L2', 'own', 1800) === false && /must be below the fee/.test(mroot().textContent)); closeModal();
     ok('E2 (negative) Finance editor: a custom deposit must be entered', depEdit('NV-L2', 'own', '') === false && /Enter a custom deposit above £0/.test(mroot().textContent)); closeModal();
     SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — low', fee: 250, mode: 'Self-Paced' }, 'E2', 'Added'); FA();
@@ -102,29 +107,32 @@
     ok('E2 learners\' payment records, deposits and pinned terms are unchanged', JSON.stringify(Object.values(STORE.worlds).map(w => [w.plans, w.admission && w.admission.deposit, w.signup && w.signup.plan])) === worlds0);
     ok('E2 (negative) the same default saved again: refused, no versions', cfgSet(350) === false && s4Plans('NV-L3').length === l3v + 1); closeModal();
   });
+  // CB8 (PD-CB-52) supersedes the E1 form submission (e1Submit) and the frozen E1 schedule (i.data.sched): the creator submits the package
+  // (cb8Submit) and the queue item keeps the frozen package (i.data.pkg); Finance's item shows its deposit choice. Rules unchanged.
   await T('E2 Finance review: the deposit choice is part of the terms; request changes, resubmit, approve', async () => {
-    fresh(); ACA(); const pr = newProg('Level 4 Certificate in Deposit Review'); go('a-programmes', { id: pr.id, tab: 'plan' }); meth('e1', 'instalments'); fill({ '#e1-n': '6' }); depPick('e1', 'none');
-    ACT.e1Submit({ dataset: { id: pr.id } }); ok('E2 submit dialog states "no deposit"', /no deposit/.test(mroot().textContent) && /Not available/.test(mroot().textContent)); press();
+    fresh(); ACA(); const pr = newProg('Level 4 Certificate in Deposit Review'); pkgDep(pr, 'none');
+    pkgSubmit(pr); ok('E2 submit dialog states the deposit is not available', /Not available/.test(mroot().textContent)); press();
     const i = ADMIN.queue.find(x => x.id === e1T(pr.id).qid);
-    ok('E2 the proposal records "no deposit" (terms and frozen snapshot); the programme can\'t be published yet', i.data.prop.depOff === true && i.data.sched.depOff === true && Object.isFrozen(i.data.sched) && ch8Check(pr).block.some(b => /waiting for Finance review/.test(b)));
-    FA(); ok('E2 Finance\'s item shows "Deposit not available — this programme has no deposit route"', /Deposit not available<\/strong> — Not available — this programme has no deposit route/.test(queueDetail(i.id)));
+    ok('E2 the proposal records "no deposit" (terms and frozen package); the programme can\'t be published yet', i.data.prop.depOff === true && i.data.pkg.dep.mode === 'none' && Object.isFrozen(i.data.pkg) && ch8Check(pr).block.some(b => /waiting for Finance review/.test(b)));
+    FA(); ok('E2 Finance\'s item shows "Deposit not available"', /<dt>Deposit<\/dt><dd class="small">Deposit not available/.test(queueDetail(i.id)));
     ACT.e1Decide({ dataset: { id: i.id, a: 'return' } }); reason('Please offer a £200 deposit.');
     ok('E2 Finance requests changes: back to the creator, nothing applied', e1T(pr.id).status === 'Changes' && !s4PlanCur(pr.id).depOff);
-    ACA(); go('a-programmes', { id: pr.id, tab: 'plan' }); ok('E2 the returned form keeps "Deposit not available" selected', document.querySelector('input[name="e1-wdm"][value="none"]').checked);
-    depPick('e1', 'own', 200); ACT.e1Submit({ dataset: { id: pr.id } }); press(); const i2 = ADMIN.queue.find(x => x.id === e1T(pr.id).qid);
-    FA(); ok('E2 the resubmitted item shows "Set a custom deposit amount for this programme — £200.00"', i2.id !== i.id && /Set a custom deposit amount for this programme<\/strong> — £200\.00 — custom amount for this programme/.test(queueDetail(i2.id)));
+    ACA(); go('a-programmes', { id: pr.id, tab: 'fees' }); ok('E2 the returned package keeps "Deposit not available" selected', document.querySelector('input[name="e1-wdm"][value="none"]').checked);
+    pkgDep(pr, 'own', 200); pkgSubmit(pr); press(); const i2 = ADMIN.queue.find(x => x.id === e1T(pr.id).qid);
+    FA(); ok('E2 the resubmitted item shows "Custom deposit £200.00"', i2.id !== i.id && /Custom deposit £200\.00/.test(queueDetail(i2.id)));
     const v0 = s4Plans(pr.id).length; ACT.e1Decide({ dataset: { id: i2.id, a: 'approve' } }); reason('£200 agreed.');
-    const p = s4PlanCur(pr.id); ok('E2 approved: one new version with the £200 custom deposit and its snapshot', s4Plans(pr.id).length === v0 + 1 && p.deposit === 200 && !p.depOff && p.sched.deposit === 200 && p.sched.depOwn === true && e1T(pr.id).status === 'Approved' && !ch8Check(pr).block.some(b => /Finance/.test(b)));
+    const p = s4PlanCur(pr.id); ok('E2 approved: one new version with the £200 custom deposit, its snapshot and its package', s4Plans(pr.id).length === v0 + 1 && p.deposit === 200 && !p.depOff && p.sched.deposit === 200 && p.sched.depOwn === true && p.pkg.dep.amount === 200 && e1T(pr.id).status === 'Approved' && !ch8Check(pr).block.some(b => /Finance/.test(b)));
     ACA(); ACT.ch8SavePlan({ dataset: { id: pr.id } }); ok('E2 (negative) the creator can\'t change the approved plan (refused, logged)', s4PlanCur(pr.id).deposit === 200 && /^Blocked/.test(ADMIN.audit[0].action));
     ACT.s4PlanEdit({ dataset: { p: pr.id } }); ok('E2 (negative) the creator can\'t open Finance\'s plan editor', !MODAL && ADMIN.audit[0].action === 'Blocked: change payment plans');
   });
   await T('E2 a proposal using the default can\'t be approved after the default changes; Super Admin D8 unchanged', async () => {
-    fresh(); ACA(); const pr = newProg('Level 4 Certificate in Default Drift'); go('a-programmes', { id: pr.id, tab: 'plan' }); depPick('e1', 'default'); ACT.e1Submit({ dataset: { id: pr.id } }); press();
+    fresh(); ACA(); const pr = newProg('Level 4 Certificate in Default Drift'); pkgDep(pr, 'default'); pkgSubmit(pr); press();
     const i = ADMIN.queue.find(x => x.id === e1T(pr.id).qid), v0 = s4Plans(pr.id).length;
     FA(); cfgSet(320); ok('E2 the pending programme gets no version from the default change', s4Plans(pr.id).length === v0);
     ACT.e1Decide({ dataset: { id: i.id, a: 'approve' } }); const r0 = reason('Agreed');
     ok('E2 (negative) approval refused: the Academy default changed after submission (Finance approves what it saw)', r0 === false && e1T(pr.id).status === 'Pending' && ADMIN.audit[0].action === 'Blocked: decide payment terms' && /changed after submission/.test(ADMIN.audit[0].reason)); closeModal();
-    SA(); const sp = newProg('Level 4 Certificate in SA Deposit'); go('a-programmes', { id: sp.id, tab: 'plan' }); depPick('pp', 'none'); ACT.ch8SavePlan({ dataset: { id: sp.id } });
+    // CB8 (PD-CB-52) supersedes the Super Administrator's old plan-step save (pp-wdm / ch8SavePlan): their own package is approved at once (D8)
+    SA(); const sp = newProg('Level 4 Certificate in SA Deposit'); go('a-programmes', { id: sp.id, tab: 'fees' }); depPick('e1', 'none'); ACT.cb8SaApprove({ dataset: { p: sp.id } }); reason('Own terms');
     ok('E2 Super Admin (D8): "no deposit" saved and approved at once, no queue item', s4PlanCur(sp.id).depOff === true && e1T(sp.id).status === 'Approved' && !ADMIN.queue.some(x => x.data && x.data.pid === sp.id));
   });
   await T('E2 pinned terms: learners keep the deposit setting in force when their sign-up started', async () => {
@@ -189,9 +197,10 @@
     const c1 = cSig(), k = [...c1].findIndex((ch, j) => ch !== c0[j]); ok('E2 a seeded signed letter (Priya, version 1) is unchanged by the new versions and plan changes', c1 === c0, `${STORE.worlds.C.me.first} ${!!STORE.worlds.C.signup.sig} @${k}: «${c0.slice(Math.max(0, k - 60), k + 60)}» vs «${c1.slice(Math.max(0, k - 60), k + 60)}»`);
   });
   await T('E2 Academy default change: audit, version history, no repricing, no approval rights', async () => {
-    fresh(); ACA(); const pend = newProg('Level 4 Certificate in Pending Default'); go('a-programmes', { id: pend.id, tab: 'plan' }); depPick('e1', 'default'); ACT.e1Submit({ dataset: { id: pend.id } }); press();
+    // CB8 (PD-CB-52): the proposals are packages submitted from Section 5 (was e1Submit from the Payment plan step)
+    fresh(); ACA(); const pend = newProg('Level 4 Certificate in Pending Default'); pkgDep(pend, 'default'); pkgSubmit(pend); press();
     const i = ADMIN.queue.find(x => x.id === e1T(pend.id).qid);
-    const own = newProg('Level 4 Certificate in Pending Custom'); go('a-programmes', { id: own.id, tab: 'plan' }); depPick('e1', 'own', 200); ACT.e1Submit({ dataset: { id: own.id } }); press();
+    const own = newProg('Level 4 Certificate in Pending Custom'); pkgDep(own, 'own', 200); pkgSubmit(own); press();
     const i2 = ADMIN.queue.find(x => x.id === e1T(own.id).qid);
     const vers0 = JSON.stringify(S4().plans), learners0 = JSON.stringify(Object.values(STORE.worlds).map(w => [w.plans, w.admission && w.admission.deposit, w.signup && w.signup.plan]));
     const l3v = s4Plans('NV-L3').length;
@@ -204,15 +213,18 @@
     ok('E2 learners\' obligations (payment rows, deposits, pinned terms) are not repriced', JSON.stringify(Object.values(STORE.worlds).map(w => [w.plans, w.admission && w.admission.deposit, w.signup && w.signup.plan])) === learners0);
     ACT.s4PlanHist({ dataset: { p: 'NV-L3' } }); ok('E2 version history: the new version "Academy default deposit (£320.00 at this version)", the seeded one unchanged', s4Plans('NV-L3').length === l3v + 1 && /Academy default deposit \(£320\.00 at this version\)/.test(mroot().textContent) && /Configuration in use before plans were versioned/.test(mroot().textContent)); closeModal();
     ok('E2 no approval rights: both proposals still wait for Finance; nothing decided by the Super Administrator', i.status === 'Pending' && i2.status === 'Pending' && e1T(pend.id).status === 'Pending' && !(i.history || []).some(h => /Approved/.test(h[2])));
-    FA(); ok('E2 Finance\'s item for the default proposal says it must be resubmitted; the custom one has no such note', /The Academy default deposit changed after submission<\/strong> \(£300\.00 when submitted, £320\.00 now\)/.test(queueDetail(i.id)) && !/changed after submission/.test(queueDetail(i2.id)));
+    // CB8 (PD-CB-55) supersedes E2's note wording for a package item ("…changed after submission</strong> (£300.00 when submitted, £320.00 now)"): the item says it
+    // can't be approved as submitted because the Academy default deposit changed after submission (£300.00 then, £320.00 now)
+    FA(); ok('E2 Finance\'s item for the default proposal says it must be resubmitted; the custom one has no such note', /Can't be approved as submitted:<\/strong> the Academy default deposit changed after submission \(£300\.00 then, £320\.00 now\)/.test(queueDetail(i.id)) && !/changed after submission/.test(queueDetail(i2.id)));
     ACT.e1Decide({ dataset: { id: i2.id, a: 'approve' } }); reason('Custom £200 agreed.');
     ok('E2 the custom-deposit proposal is unaffected by the default change and is approved', e1T(own.id).status === 'Approved' && s4PlanCur(own.id).deposit === 200);
     ACT.e1Decide({ dataset: { id: i.id, a: 'approve' } }); ok('E2 (negative) the default proposal can\'t be approved with the old default', reason('Agreed') === false && e1T(pend.id).status === 'Pending'); closeModal();
     ACT.e1Decide({ dataset: { id: i.id, a: 'return' } }); reason('Please resubmit with the current default (£320).');
-    ACA(); go('a-programmes', { id: pend.id, tab: 'plan' }); ACT.e1Submit({ dataset: { id: pend.id } }); press(); const i3 = ADMIN.queue.find(x => x.id === e1T(pend.id).qid);
-    FA(); ok('E2 resubmitted with the current default: no stale note', i3.id !== i.id && i3.data.sched.deposit === 320 && !/changed after submission/.test(queueDetail(i3.id)));
+    // CB8 (PD-CB-52): resubmitted from Section 5; the frozen package (was the E1 schedule snapshot) records the default in force (£320)
+    ACA(); pkgSubmit(pend); press(); const i3 = ADMIN.queue.find(x => x.id === e1T(pend.id).qid);
+    FA(); ok('E2 resubmitted with the current default: no stale note', i3.id !== i.id && i3.data.pkg.dep.eff === 320 && !/changed after submission/.test(queueDetail(i3.id)));
     ACT.e1Decide({ dataset: { id: i3.id, a: 'approve' } }); reason('Current default agreed.');
-    ok('E2 approved with the current default (£320 in the approved snapshot)', e1T(pend.id).status === 'Approved' && s4TermsOf(pend.id).deposit === 320 && e1T(pend.id).approved.sched.deposit === 320);
+    ok('E2 approved with the current default (£320 in the approved package)', e1T(pend.id).status === 'Approved' && s4TermsOf(pend.id).deposit === 320 && s4PlanCur(pend.id).pkg.dep.eff === 320);
   });
 
   fresh();

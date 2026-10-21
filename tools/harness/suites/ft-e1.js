@@ -26,7 +26,9 @@
   // CB2 (PD-CB-14) supersedes the creation dialog: "New NVQ programme" opens Course Details of an unsaved course, the observation
   // question is required, and "Save and continue" (ACT.cbDetCreate) creates the Draft — false when refused, as the dialog's button was
   let codeN = 0; // CB2 correction: a course code is required for a new course (unique per test programme)
-  const create = (obs = 'no') => { const r = document.querySelector('#np-obs-' + obs); if (r) r.checked = true; const c = document.querySelector('#np-code'); if (c && !c.value) c.value = 'TC' + (++codeN); return ACT.cbDetCreate(); };
+  // CB8 (PD-CB-49): a programme created in the builder since CB8 sets its terms as a financial package (ft-cb8.js). E1's single-method proposal flow
+  // tested here still governs programmes created before CB8 (no package flag) — so each programme made here is marked as one of those (fixture).
+  const create = (obs = 'no') => { const r = document.querySelector('#np-obs-' + obs); if (r) r.checked = true; const c = document.querySelector('#np-code'); if (c && !c.value) c.value = 'TC' + (++codeN); const pr = ACT.cbDetCreate(); if (pr && pr.id) delete pr.cb8; return pr; };
   const meth = (px, m) => { const r = document.querySelector(`input[name="${px}-meth"][value="${m}"]`); r.checked = true; INP.e1Meth(r); };
   // A new programme through the wizard dialog (Level 2/4/5: one price); returns the programme or null
   const newProg = (title, o = {}) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': o.level || 'Level 4', '#np-r': 'QN 610/' + (2000 + title.length) + '/1', '#np-d': String(o.n ?? 12), '#np-du': o.unit || 'months', '#np-p': String(o.price || 2400) }); const n0 = (STORE.chNewProgs || []).length; create(); return (STORE.chNewProgs || []).length > n0 ? last() : null; };

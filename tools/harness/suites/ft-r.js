@@ -486,7 +486,8 @@
     ACT.cbDetCreate(); closeModal(); const pr = (STORE.chNewProgs || []).find(p => p.title === 'Level 3 Certificate in Support Work'), o = pr && r1Opts(pr.id);
     ok('R1f created: Level 3 Draft with 3 options (empty rows ignored), stable IDs under the programme ID', !!pr && pr.level === 'Level 3' && o.length === 3 && o.map(x => x.id).join() === [1, 2, 3].map(n => pr.id + '-FO-00' + n).join() && o.every(x => x.pid === pr.id) && o.map(x => x.mode).join() === 'Self-Paced,Fully Assisted,Self-Paced');
     ok('R1f the plan keeps its deposit and instalments; its reference fee is the lowest option fee', s4TermsOf(pr.id).fee === 600 && s4TermsOf(pr.id).inst === 6 && r1Eligible(pr.id).length === 3 && ADMIN.audit.some(a => a.action === 'Fee option added' && a.entity.includes(pr.id + '-FO-001')));
-    go('a-programmes', { id: pr.id, tab: 'details' }); ok('R1f the Draft\'s details list its options (managed under Finance)', /Managed under Finance → Instalment plans/.test(main()) && main().includes(pr.id + '-FO-002'));
+    // CB8 (PD-CB-48) supersedes "managed under Finance → Instalment plans": a new programme's fee options are managed in Section 5 (its financial package)
+    go('a-programmes', { id: pr.id, tab: 'details' }); ok('R1f the Draft\'s details list its options (managed in Section 5 — Fees & Payments)', /Managed in Section 5 — Fees &amp; Payments\.|Managed in Section 5 — Fees & Payments\./.test(main()) && main().includes(pr.id + '-FO-002'));
     // CB1 (PD-CB-01) supersedes the address only: "support" wasn't a step of new programmes, so it showed Details; it now opens the
     // observation fee rate panel. The check (the Details text) is unchanged and now goes to Details directly.
     go('a-programmes', { id: pr.id, tab: 'details' }); ok('R1f new programme Details (Level 3): the learner-level rule, not the batch-level P-31 wording', /comes from the fee option/.test(main()));
@@ -510,7 +511,11 @@
     const dSP = optAdd('Self-Paced — standard', 660, 'Self-Paced'); // an option of the Level 3 Diploma
     const [nSP, nFA] = r1Opts(pr.id).map(o => o.id);
     ok('R1f each programme keeps its own options (no shared IDs)', r1Opts('NV-L3').every(o => o.pid === 'NV-L3' && !r1Opts(pr.id).includes(o)) && r1Opts(pr.id).every(o => o.pid === pr.id) && dSP === 'L3-FO-001' && nSP === pr.id + '-FO-001');
-    ACT.r1OptAdd({ dataset: { p: pr.id } }); fill({ '#fo-l': 'Fully Assisted plus', '#fo-f': '1800', '#fo-m': 'Fully Assisted' }); reason('Extra option');
+    // CB8 (PD-CB-48, PD-CB-52) supersedes Finance's fee-option card (r1OptAdd / r1OptEdit / r1OptRetire) for a programme made in the builder: options are
+    // added, edited and retired in its financial package (Section 5) and reach the R1 store, with the same stable IDs, when the package is approved
+    // (the Super Administrator's own package at once, D8). The rule tested is unchanged: each programme keeps its own options and learners are never repriced.
+    const pk = (f, note) => { f(); ACT.cb8SaApprove({ dataset: { p: pr.id } }); reason(note); };
+    pk(() => { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); fill({ '#c8-l': 'Fully Assisted plus', '#c8-f': '1800', '#c8-m': 'Fully Assisted' }); press(); ACT.cb8PayAdd({ dataset: { p: pr.id, o: pr.id + '-FO-003', k: '6' } }); }, 'Extra option');
     ok('R1f adding an option to the new programme leaves the Diploma\'s options unchanged', r1Opts(pr.id).length === 3 && r1Opts('NV-L3').length === 2 && r1Opts(pr.id)[2].id === pr.id + '-FO-003');
     ok('R1f publish the new programme with the existing wizard steps', pubNew(pr), pr.status);
     SA(); go('a-batches'); const b = mkBatch('L3SW-MAR27', pr.title, 'Fully Assisted'); ok('R1f a batch of the new programme', !!b && r2IsL3B(b));
@@ -521,7 +526,7 @@
     const d = apply3x('A', pr, nSP); finish(d, 'instalment', b); const f = apply3x('F', pr, nFA); finish(f, 'deposit', b);
     ok('R1f enrolment: option, mode and fee frozen (Daniel £600 Self-Paced, Fatima £1,200 Fully Assisted)', d.signup.plan.opt.id === nSP && d.signup.plan.opt.pid === pr.id && d.signup.plan.fee === 600 && r2ModeOfW(d) === 'Self-Paced' && f.signup.plan.fee === 1200 && r2ModeOfW(f) === 'Fully Assisted' && d.plans.find(p => p.e === 'nvq').rows[0].amount === 100 && f.plans.find(p => p.e === 'nvq').rows[0].amount === 900);
     const snap = JSON.stringify([d.signup.plan, d.plans, f.signup.plan, f.plans]);
-    SA(); ACT.r1OptEdit({ dataset: { id: nSP } }); fill({ '#fo-f': '720' }); reason('Price rise'); ACT.r1OptRetire({ dataset: { id: nFA } }); reason('Withdrawn');
+    SA(); pk(() => { ACT.cb8Opt({ dataset: { p: pr.id, o: nSP } }); fill({ '#c8-f': '720' }); press(); ACT.cb8OptRetire({ dataset: { p: pr.id, o: nFA } }); reason('Withdrawn'); }, 'Price rise');
     ok('R1f editing / retiring the new programme\'s options never reprices its learners', JSON.stringify([d.signup.plan, d.plans, f.signup.plan, f.plans]) === snap && r1Opt(nSP).fee === 720 && r1Opt(nFA).status === 'Retired');
     ok('R1f mixed batch of the new programme (Daniel Self-Paced, Fatima Fully Assisted)', d.signup.batch === b.code && f.signup.batch === b.code && r2IsMixed(b));
     ACT.addSession({ dataset: { b: b.code } }); const groups = [...document.querySelectorAll('#modal-root .r2-g')].map(x => x.value).filter(v => !v.startsWith('mode:'));
@@ -584,7 +589,9 @@
     const nf = f.notifs.length; audEdit(s, [basic], 'Self-Paced Basic only');
     ok('R2 edit: removed learners lose the session and are told once; the remaining audience keeps it', r2Same(s.aud, [basic]) && !has(f, s) && f.notifs.length === nf + 1 && /removed from your timetable/.test(f.notifs[0].title) && has(d, s) && !n4Eligible(s).includes(lp));
     learner('F'); ACT.joinZoom({ dataset: { id: 'bs-' + s.id } }); ok('R2 edit: the removed learner gets no Zoom link', !MODAL);
-    const ret = r1Opts(other.id)[0]; SA(); ACT.r1OptRetire({ dataset: { id: ret.id } }); reason('Withdrawn');
+    // CB8 (PD-CB-48): a package always keeps at least one fee option, so a programme without any is a state from before packages; it is set up
+    // directly here (fixture) to check R2's empty state, which still applies (was: retired through Finance's fee-option card)
+    const ret = r1Opts(other.id)[0]; ret.status = 'Retired';
     const box = r2AudBox({ code: 'TMP', course: other.title, dmode: 'Self-Paced' });
     // unified selector (old: a disabled "only ticked" radio): nothing to tick and no radio choice
     ok('R2 sel: a programme without fee options shows a clear empty state; nothing to tick, no radio choice', /has no fee options yet/.test(box) && !/class="r2-g"/.test(box) && !/name="r2-aud"/.test(box));

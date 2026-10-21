@@ -120,23 +120,28 @@
     ok('E1 wizard: duration number and unit displayed side by side, unit readable', shown($1('#np-d')) && shown($1('#np-du')) && $1('#np-du').getBoundingClientRect().width >= 90 && Math.abs($1('#np-d').getBoundingClientRect().top - $1('#np-du').getBoundingClientRect().top) < 4, Math.round($1('#np-du').getBoundingClientRect().width));
     ok('E1 Course Details: no page overflow', appOver() <= 1, appOver()); // CB2 (PD-CB-14): the page, not the dialog
     $1('main #np-code').value = 'UI-L4'; click($1('main #np-obs-no')); click($1('main [data-act="cbDetCreate"]')); click($1('main .cb-nav .cb-sec[data-tab="payments"]')); // CB1 (PD-CB-01): the Fees & Payments section (was the wizard's Payment plan step)
-    ok('E1 plan step: Draft status and three clearly labelled payment choices', /Draft — not yet submitted/.test(main()) && all('main input[name="e1-meth"]').filter(shown).length === 3);
-    click($1('main input[name="e1-meth"][value="one-time"]')); ok('E1 plan step: "One payment" hides the instalment count', !shown($1('#e1-n')));
-    click($1('main input[name="e1-meth"][value="both"]')); ok('E1 plan step: "Both" shows the count; the summary follows', shown($1('#e1-n')) && /in one payment, or/.test($1('main .e1-sumbox').textContent));
-    ok('E1 plan step: no horizontal page overflow', appOver() <= 1, appOver());
-    // E2: the three deposit choices; the custom amount only for a custom deposit; the summary follows
-    ok('E2 plan step: three deposit choices displayed (not available / Academy default / custom); custom amount hidden', all('main input[name="e1-wdm"]').filter(shown).length === 3 && /Deposit not available/.test($1('main .e2-dep').textContent) && /Use Academy default deposit/.test($1('main .e2-dep').textContent) && /Set a custom deposit amount for this programme/.test($1('main .e2-dep').textContent) && !shown($1('#e1-d')));
-    click($1('main input[name="e1-wdm"][value="own"]')); ok('E2 plan step: "Set a custom deposit amount" shows the GBP field', shown($1('#e1-d')) && /Custom deposit \(GBP\)/.test($1('main .e2-dv-e1').textContent));
-    click($1('main input[name="e1-wdm"][value="none"]')); ok('E2 plan step: "Deposit not available" hides the field; the summary says "Not available"; no page overflow', !shown($1('#e1-d')) && /Not available — this programme doesn't offer a deposit/.test($1('main .e1-sumbox').textContent) && appOver() <= 1, appOver());
+    // CB8 (PD-CB-48, PD-CB-50, PD-CB-52) supersedes the E1 plan-step checks ("How can learners pay?" one payment / instalments / both, #e1-n, the live
+    // .e1-sumbox and the E1 submit dialog / queue panel) for a programme made in the builder: Section 5 is its financial package
+    const over = el => !!el && el.scrollWidth - el.clientWidth > 1;
+    ok('CB8 Fees & payment options: Draft status, the fee option card and "Add payment option" displayed', /Draft — not yet sent to Finance/.test(main()) && shown($1('main .cb8-opt')) && shown($1('main [data-act="cb8PayAdd"]')) && shown($1('main .cb8-add input')));
+    const kIn = $1('main .cb8-add input'); kIn.value = '4'; INP.cb8KLive(kIn);
+    ok('CB8 Add payment option: the live preview is displayed (rule, amounts, example dates)', shown($1('main .cb8-prev')) && /4 × £600\.00/.test($1('main .cb8-prev').textContent) && /Example for sample start/.test($1('main .cb8-prev').textContent));
+    click($1('main [data-act="cb8PayAdd"]'));
+    ok('CB8 two payment options listed in the card; no card, payment row or page overflow', all('main .cb8-pay').length === 2 && !all('main .cb8-opt, main .cb8-pay').some(over) && appOver() <= 1, appOver());
+    ok('CB8 the dated example opens inside the card', click($1('main .cb8-pay[data-k="4"] .cb8-ex summary')) && shown($1('main .cb8-pay[data-k="4"] .cb8-dates')) && !over($1('main .cb8-pay[data-k="4"]')));
+    // E2: the three deposit choices; the custom amount only for a custom deposit (same fields, now in the package)
+    ok('E2 Fees & payment options: three deposit choices displayed (not available / Academy default / custom); custom amount hidden', all('main input[name="e1-wdm"]').filter(shown).length === 3 && /Deposit not available/.test($1('main .e2-dep').textContent) && /Use Academy default deposit/.test($1('main .e2-dep').textContent) && /Set a custom deposit amount for this programme/.test($1('main .e2-dep').textContent) && !shown($1('#e1-d')));
+    click($1('main input[name="e1-wdm"][value="own"]')); ok('E2 "Set a custom deposit amount" shows the GBP field', shown($1('#e1-d')) && /Custom deposit \(GBP\)/.test($1('main .e2-dv-e1').textContent));
+    click($1('main input[name="e1-wdm"][value="none"]')); ok('E2 "Deposit not available" hides the field; no page overflow', !shown($1('#e1-d')) && appOver() <= 1, appOver());
     click($1('main input[name="e1-wdm"][value="default"]'));
-    click($1('main [data-act="e1Submit"]')); ok('E1 submit dialog fits the viewport', !!$1('#modal-root .e1-sum') && !modalFits(), modalFits());
+    click($1('main [data-act="cb8Submit"]')); ok('CB8 submit dialog (the whole package) fits the viewport', !!$1('#modal-root .cb8-pkg') && !modalFits(), modalFits());
     click(all('#modal-root .modal button').find(b => b.textContent.trim() === 'Submit for review'));
-    ok('E1 after submitting: "Waiting for Finance review", nothing editable', /Waiting for Finance review/.test(main()) && !$1('#e1-n'));
+    ok('CB8 after submitting: "Waiting for Finance review", nothing editable', /Waiting for Finance review/.test(main()) && !$1('main [data-act="cb8PayAdd"]'));
     setAdminIdentity('FA'); S.portal = 'admin'; S.signedIn = true; go('f-dashboard'); nav('a-queue');
     const qid = (ADMIN.queue.find(i => i.type === 'Programme payment terms') || {}).id; go('a-queue', { id: qid });
-    ok('E1 Finance item: proposal panel, Approve payment terms and Request changes displayed', shown($1('main .e1-q')) && shown($1('main .q-decide [data-a="approve"]')) && shown($1('main .q-decide [data-a="return"]')));
-    ok('E1 Finance item: no horizontal page overflow', appOver() <= 1, appOver());
-    ok('E1-R Finance item: the exact proposed schedule is displayed ("Proposed payment schedule", "Instalments 1–6: £400.00 each", total)', shown($1('main .e1-q .e1-sum')) && /Proposed payment schedule/.test($1('main .e1-q').textContent) && /Instalments 1–6: £400\.00 each/.test($1('main .e1-q .e1-sum').textContent) && /Total £2,400\.00/.test($1('main .e1-q .e1-sum').textContent));
+    ok('CB8 Finance item: package panel, Approve payment terms and Request changes displayed', shown($1('main .cb8-q')) && shown($1('main .q-decide [data-a="approve"]')) && shown($1('main .q-decide [data-a="return"]')));
+    ok('CB8 Finance item: no horizontal page overflow; no card overflow', appOver() <= 1 && !all('main .cb8-opt, main .cb8-pay').some(over), appOver());
+    ok('CB8 Finance item: the exact submitted package is displayed (both payment options with amounts and totals)', shown($1('main .cb8-q .cb8-opt')) && /Submitted package/.test($1('main .cb8-q').textContent) && /6 × £400\.00/.test($1('main .cb8-q').textContent) && /4 × £600\.00/.test($1('main .cb8-q').textContent) && /Total £2,400\.00/.test($1('main .cb8-q').textContent));
     click($1('main .q-decide [data-a="return"]')); ok('E1 Request changes dialog fits the viewport', !!$1('#modal-root #rsn') && !modalFits(), modalFits()); closeModal();
     // E1 review corrections: Finance's Edit plan stays in Finance; the queue list names each type
     nav('a-queue'); const qrow = all('main tbody tr').find(tr => tr.textContent.includes('AQ-7301'));
@@ -153,11 +158,13 @@
     // Level 3: two fee options share the programme's terms (Super Admin's plan step)
     setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-dashboard');
     const l3 = ch8Create({ title: 'Level 3 UI check programme', level: 'Level 3', ref: 'QN 610/7171/3', dur: '12 months', durV: { n: 12, unit: 'months' }, desc: '', price: 2400, support: 'Fully assisted', r1opts: [{ label: 'Self-Paced', fee: 2400, mode: 'Self-Paced' }, { label: 'Fully Assisted', fee: 2700, mode: 'Fully Assisted' }] });
+    delete l3.cb8; // CB8 (PD-CB-49): E1's single-method plan step still applies to programmes created before CB8 (fixture); packages are checked above
     go('a-programmes', { id: l3.id, tab: 'plan' }); click($1('main input[name="pp-meth"][value="both"]'));
     ok('E1 Level 3 plan step: both fee options listed with mode, fee and how learners pay', all('main .e1-sum tbody tr').filter(shown).length === 2 && /Self-Paced/.test($1('main .e1-sum').textContent) && /£2,700\.00 in one payment, or 6 monthly/.test($1('main .e1-sum').textContent));
     ok('E1 Level 3 plan step: deposit policy stated; no page overflow', /28 days or more/.test($1('main .e1-plan').textContent) && appOver() <= 1, appOver());
     // E1-R: three fee options that don't all split evenly — the exact schedules, the deposit as an alternative route, readable at every width
     const l3r = ch8Create({ title: 'Level 3 UI rounding programme', level: 'Level 3', ref: 'QN 610/7272/3', dur: '12 months', durV: { n: 12, unit: 'months' }, desc: '', price: 800, support: 'Fully assisted', r1opts: [{ label: 'Self-Paced', fee: 800, mode: 'Self-Paced' }, { label: 'Fully Assisted', fee: 1000, mode: 'Fully Assisted' }, { label: 'Fully Assisted — plus', fee: 1500, mode: 'Fully Assisted' }] });
+    delete l3r.cb8; // (pre-CB8 programme, as above)
     go('a-programmes', { id: l3r.id, tab: 'plan' }); const sumR = $1('main .e1-sum');
     ok('E1-R plan step: three options with exact schedules (£133.35, £166.65 finals; £250.00 each) and totals displayed', !!sumR && all('main .e1-sum tbody tr').filter(shown).length === 3 && /instalment 6 \(final\): £133\.35/.test(sumR.textContent) && /instalment 6 \(final\): £166\.65/.test(sumR.textContent) && /Instalments 1–6: £250\.00 each/.test(sumR.textContent) && /Total £1,000\.00/.test(sumR.textContent));
     ok('E1-R plan step: no divisibility error; deposit shown as the alternative route with the configured hold', !/divide|equal instalments|Needs configuration/.test(main()) && /Alternative to instalments: £300\.00 deposit, followed by the £700\.00 balance during the configured seat-hold period \(28 days\)\./.test(sumR.textContent) && shown($1('main .e1-sum-note')) && /at least 28 days away/.test($1('main .e1-sum-note').textContent));
@@ -306,6 +313,22 @@
     ok('CB6 Add observation event dialog fits', !!MODAL && !!$1('#modal-root #ev-n') && !modalFits(), modalFits());
     document.querySelectorAll('#modal-root .ev-c').forEach(c => { c.checked = true; }); document.querySelectorAll('#modal-root .ev-l[value="workplace"]').forEach(c => { c.checked = true; }); MODAL.actions.find(a => /primary/.test(a.cls || '')).fn(); closeModal();
     ok('CB6 Observation events: locations card and the events table displayed; no page overflow', shown($1('main .cb-locs')) && shown($1('main .cb-ev tbody tr')) && appOver() <= 1, appOver());
+    // CB8: a Level 3 package with three fee options, observation fees and several payment options — cards, not a cramped table, at every width
+    acaEnter('KA'); S.signedIn = true; S.portal = 'admin';
+    const p8 = ch8Create({ title: 'Level 3 UI package programme', level: 'Level 3', ref: 'QN 610/7373/3', dur: '6 months', durV: { n: 6, unit: 'months' }, desc: '', price: 1800, support: 'Fully assisted', r1opts: [{ label: 'Fully Assisted — standard', fee: 2400, mode: 'Fully Assisted' }, { label: 'Self-Paced — standard', fee: 1800, mode: 'Self-Paced' }, { label: 'Self-Paced — employer funded with a long name', fee: 1999.99, mode: 'Self-Paced' }] });
+    ACT.n5Settings({ dataset: { p: p8.id } }); ['n5-req:yes', 'n5-wp:Permitted', 'n5-off:Available'].forEach(x => { const [n, v] = x.split(':'), r = document.querySelector(`#modal-root input[name="${n}"][value="${v}"]`); if (r) r.checked = true; }); MODAL.actions.find(a => /primary/.test(a.cls || '')).fn(); closeModal();
+    cb8Work(p8).opts.forEach(o => { ACT.cb8Opt({ dataset: { p: p8.id, o: o.id } }); $1('#modal-root #c8-wp').value = '70'; $1('#modal-root #c8-off').value = '0'; MODAL.actions.find(a => /primary/.test(a.cls || '')).fn(); closeModal(); [1, 4, 7, 24].forEach(k => ACT.cb8PayAdd({ dataset: { p: p8.id, o: o.id, k: String(k) } })); });
+    go('a-programmes', { id: p8.id, tab: 'fees' }); const ov = el => !!el && el.scrollWidth - el.clientWidth > 1, cards = all('main .cb8-opt').filter(shown);
+    ok('CB8 Level 3 package: one card per fee option (3), each with its fees and 5 payment options; no table', cards.length === 3 && all('main .cb8-pay').filter(shown).length === 15 && !$1('main .cb8-opts table'));
+    ok('CB8 no card, fee box or payment row overflows; no page overflow', !all('main .cb8-opt, main .cb8-fees > div, main .cb8-pay').some(ov) && appOver() <= 1, appOver());
+    const cw = $1('main .cb8-opts').clientWidth, two = cw >= 2 * 420 + 12; // two cards fit side by side only from 852 px of content width
+    ok(two ? 'CB8 wide content area: cards side by side' : 'CB8 narrow content area (phone, tablet, desktop with the side menu): the cards stack in one full-width column', two ? cards[1].getBoundingClientRect().top === cards[0].getBoundingClientRect().top : cards.every(c => Math.abs(c.getBoundingClientRect().left - cards[0].getBoundingClientRect().left) < 2 && c.getBoundingClientRect().width >= cw - 2), `${cw}px: ` + cards.map(c => Math.round(c.getBoundingClientRect().left)).join(','));
+    click($1('main .cb8-pay[data-k="24"] .cb8-ex summary')); ok('CB8 24 dated payments open inside the card without overflow', shown($1('main .cb8-pay[data-k="24"] .cb8-dates')) && !ov($1('main .cb8-pay[data-k="24"]')) && appOver() <= 1, appOver());
+    click($1('main [data-act="cb8Opt"][data-o=""]')); ok('CB8 Add fee option dialog (name, mode, fee, both observation fees) fits', !!MODAL && !!$1('#modal-root #c8-wp') && !!$1('#modal-root #c8-off') && !modalFits(), modalFits()); closeModal();
+    go('a-programmes', { id: p8.id, tab: 'payhist' }); ok('CB8 Financial versions: displayed; no page overflow', shown($1('main .cb8-hist')) && appOver() <= 1, appOver());
+    setAdminIdentity('A'); S.portal = 'admin'; ACT.cb8SaApprove({ dataset: { p: p8.id } }); $1('#rsn').value = 'UI check'; MODAL.actions.find(a => /primary/.test(a.cls || '')).fn(); closeModal();
+    go('a-programmes', { id: p8.id, tab: 'letter' }); ok('CB8 Offer letter: the payment wording card is displayed; no page overflow', shown($1('main .cb8-lt')) && appOver() <= 1, appOver());
+    setAdminIdentity('FA'); S.portal = 'admin'; S.signedIn = true; go('f-plans', { tab: 'templates' }); click($1(`main [data-act="cb8ViewPkg"][data-p="${p8.id}"]`)); ok('CB8 Finance "View package" dialog fits', !!MODAL && !!$1('#modal-root .cb8-opt') && !modalFits(), modalFits()); closeModal();
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));
     ok('no script errors', !errs.length, errs.join(' | '));

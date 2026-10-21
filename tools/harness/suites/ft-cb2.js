@@ -32,7 +32,8 @@
     ok('CB2-A fields: course name, NVQ level, course code, qualification number / reference and awarding body (three separate fields), GLH, TQT, credits, duration (number + unit), description, observations Yes / No', fields.every(s => !!q(s)) && q('label[for="np-code"]').textContent === 'Course code' && q('label[for="np-r"]').textContent === 'Qualification number / reference' && q('label[for="np-q-body"]').textContent === 'Awarding body' && q('#np-code').value === '' && q('#np-r').value === '' && [...q('#np-du').options].map(o => o.textContent).join() === 'Days,Weeks,Months,Years');
     ok('CB2-A the observation question is prominent, required and unanswered at first', !!q('.cb-obs') && /Does this course contain observations\?/.test(q('.cb-obs legend').textContent) && /Required/.test(q('.cb-obs legend').textContent) && !q('#np-obs-yes').checked && !q('#np-obs-no').checked && q('.cb-det-form').firstElementChild === q('.cb-obs'));
     ok('CB2-A sections 2–7 can\'t be opened before saving (disabled, "After saving"); the header says "Not saved yet"', qa('.cb-nav .cb-sec').length === 7 && qa('.cb-nav .cb-sec[disabled]').length === 6 && /Not saved yet/.test(q('.page-h').textContent));
-    ok('CB2-A fees stay on the form for now, marked as moving to Fees & Payments (CB8)', /move to Section 5 — Fees & Payments \(CB8\)/.test(main()));
+    // CB8 (PD-CB-48) supersedes "fees stay on the form for now, marked as moving to Fees & Payments (CB8)": they are the starting fees, managed in Section 5 after saving
+    ok('CB2-A fees on the new-course form are the starting fees, then managed in Section 5 — Fees & Payments', /Starting fees\. After the course is saved, fees, fee options, observation fees and payment options are managed in Section 5 — Fees & Payments\./.test(main()));
   });
 
   await T('CB2-B validation before anything is created', async () => {
@@ -110,14 +111,19 @@
     ok('CB2-G back to Yes: required again, criteria still there, "Not applicable" gone', d().required === true && JSON.stringify(d().ia) === ia0 && !/Not applicable/.test((q('.cb-sec[data-tab="observations"]') || {}).textContent));
   });
 
+  // CB8 (PD-CB-52, PD-CB-53) supersedes the E1 proposal form: the creator submits the financial package from Section 5 (cb8Submit, was
+  // e1Submit); while Finance reviews, a level change is still refused on the form; after approval a fee change is made in Section 5
+  // (the Course Details price is read-only there) and still sends the terms back to Draft.
   await T('CB2-H existing Finance rules are retained', async () => {
-    fresh(); const pr = createL4('no', ACA, 'Level 4 CB2 Finance'); go('a-programmes', { id: pr.id, tab: 'plan' }); ACT.e1Submit({ dataset: { id: pr.id } }); press();
+    fresh(); const pr = createL4('no', ACA, 'Level 4 CB2 Finance'); go('a-programmes', { id: pr.id, tab: 'fees' }); ACT.cb8Submit({ dataset: { p: pr.id } }); press();
     ok('CB2-H the creator\'s terms go to Finance (Pending)', e1T(pr.id).status === 'Pending');
     go('a-programmes', { id: pr.id, tab: 'details' }); type('#np-l', 'Level 5'); type('#np-q-glh', '999'); q('#np-obs-yes').click(); q('[data-act="cbDetSave"]:not([data-next])').click();
     ok('CB2-H while Finance reviews, a level change is refused (E1) — and nothing else on the form is saved', pr.level === 'Level 4' && /with Finance for review/.test(main()) && pr.qual.glh === 320 && obsReq(pr) === false);
     FA(); const qi = ADMIN.queue.find(i => i.id === e1T(pr.id).qid); go('a-queue', { id: qi.id }); ACT.e1Decide({ dataset: { id: qi.id, a: 'approve' } }); reason('Approved');
-    ACA(); go('a-programmes', { id: pr.id, tab: 'details' }); type('#np-p', '2600'); q('[data-act="cbDetSave"]:not([data-next])').click();
-    ok('CB2-H after approval, a changed fee sends the terms back to Draft for approval (E1)', pr.price === 2600 && e1T(pr.id).status === 'Draft');
+    ACA(); go('a-programmes', { id: pr.id, tab: 'details' }); const p0 = pr.price;
+    ok('CB2-H after approval the Course Details price is read-only (changed in Section 5)', q('#np-p').readOnly && /Change it in Section 5/.test(main()));
+    ACT.cb8Opt({ dataset: { p: pr.id, o: cb8Work(pr).opts[0].id } }); document.querySelector('#modal-root #c8-f').value = '2600'; press();
+    ok('CB2-H after approval, a changed fee sends the terms back to Draft for approval (E1); the approved price stays in force until approved again', cb8Work(pr).opts[0].fee === 2600 && pr.price === p0 && e1T(pr.id).status === 'Draft');
   });
 
   await T('CB2-I authorized editors can edit; other roles can\'t (direct calls)', async () => {
