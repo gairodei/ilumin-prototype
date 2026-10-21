@@ -329,6 +329,28 @@
     setAdminIdentity('A'); S.portal = 'admin'; ACT.cb8SaApprove({ dataset: { p: p8.id } }); $1('#rsn').value = 'UI check'; MODAL.actions.find(a => /primary/.test(a.cls || '')).fn(); closeModal();
     go('a-programmes', { id: p8.id, tab: 'letter' }); ok('CB8 Offer letter: the payment wording card is displayed; no page overflow', shown($1('main .cb8-lt')) && appOver() <= 1, appOver());
     setAdminIdentity('FA'); S.portal = 'admin'; S.signedIn = true; go('f-plans', { tab: 'templates' }); click($1(`main [data-act="cb8ViewPkg"][data-p="${p8.id}"]`)); ok('CB8 Finance "View package" dialog fits', !!MODAL && !!$1('#modal-root .cb8-opt') && !modalFits(), modalFits()); closeModal();
+    // CB9: the learner's payment choice with the dated schedule, and Finance's agreed schedule, at every width
+    {
+      const f9 = o => Object.entries(o).forEach(([k, v]) => { $1(k).value = v; }), pr9 = () => MODAL && MODAL.actions.find(a => /primary|danger/.test(a.cls || '')), ok9 = () => { const a = pr9(); return a && a.fn ? a.fn() : undefined; };
+      setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true;
+      const p9 = ch8Create({ title: 'Level 4 UI schedule programme', level: 'Level 4', ref: 'QN 610/7474/4', dur: '6 months', durV: { n: 6, unit: 'months' }, desc: '', price: 2400, support: 'Fully assisted' }), id = p9.id;
+      ACT.n5Settings({ dataset: { p: id } }); const rq = $1('#modal-root input[name="n5-req"][value="no"]'); if (rq) rq.checked = true; ok9(); closeModal();
+      ACT.ch8AddUnit({ dataset: { id } }); f9({ '#u-c': 'U940', '#u-t': 'Practice' }); ok9(); ACT.ch8AddMod({ dataset: { id, u: 0 } }); f9({ '#m-t': 'Core', '#m-ab': 'C/650/9401' }); ok9(); ACT.ch8AddLo({ dataset: { id, u: 0, m: 0 } }); f9({ '#lo-t': 'Understand practice', '#lo-y': 'Knowledge' }); ok9(); ACT.ch8AddCrit({ dataset: { id, u: 0, m: 0, l: 0 } }); f9({ '#c-d': 'Describe practice', '#c-e': 'Written account' }); ok9(); closeModal();
+      ACT.chLetterUp({ dataset: { id } }); ACT.chLetterSample(); $1('#rsn').value = 'First version'; ok9(); closeModal();
+      const o9 = cb8Work(p9).opts[0].id; [1, 4].forEach(k => ACT.cb8PayAdd({ dataset: { p: id, o: o9, k: String(k) } })); ACT.cb8SaApprove({ dataset: { p: id } }); $1('#rsn').value = 'UI'; ok9(); closeModal();
+      ACT.ch8Publish({ dataset: { id } }); $1('#rsn').value = 'Ready'; ok9(); closeModal();
+      ADMIN.batches.push({ code: 'UI9-NOV26', label: 'UI schedule batch', course: p9.title, start: D(40, '09:00'), end: D(240, '17:00'), cap: 20, enrolled: 0, mode: 'Online', coord: '', teachers: [], assessors: [], status: 'Open', wait: [], roster: [] });
+      S.variant = 'F'; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; go('browse'); const c9 = CATALOGUE.find(x => x.kind === 'nvq' && x.title === p9.title); ACT.applyNvq({ dataset: { id: c9 && c9.id } }); const t9 = MODAL ? MODAL.title + ' | ' + (MODAL.actions || []).map(a => a.label).join(',') : 'no dialog'; ok9(); closeModal();
+      const w9 = STORE.worlds.F; // (W here is the viewport width)
+      ok('CB9 (setup) the learner sign-up started with the approved choices fixed', !!(w9.signup && w9.signup.plan && w9.signup.plan.cb8), t9);
+      const b9 = chBatch('UI9-NOV26'); chSetBatch(w9, b9); ACT.suNext(); w9.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w9.me.first + ' ' + w9.me.last); setUi('suDecl', true); ACT.suSign(); chSetBatch(w9, b9); setUi('cb9Pay', '6'); go('admission');
+      ok('CB9 payment step: the approved options (deposit, in full, 4, 6) and the chosen schedule displayed', all('main input[name="cb9-pay"]').filter(shown).length === 4 && shown($1('main .cb9-sched')) && all('main .cb9-sched tbody tr').length === 6);
+      ok('CB9 payment step: "Collected now" on payment 1; no table, option or page overflow', /Collected now/.test($1('main .cb9-sched').textContent) && !all('main .cb9-sched .tbl-wrap, main .cb9-opt').some(e => e.scrollWidth - e.clientWidth > 1) && appOver() <= 1, appOver());
+      click($1('main input[name="cb9-pay"][value="4"]')); ok('CB9 choosing another option shows its schedule (4 payments)', all('main .cb9-sched tbody tr').length === 4 && appOver() <= 1, appOver());
+      const _co = checkout; let g9 = null; checkout = o => { g9 = o; return _co(o); }; try { ACT.suPay(); } finally { checkout = _co; } if (g9) g9.onSuccess(g9.amount, 'TXN-UI9'); closeModal();
+      go('payments'); ok('CB9 learner Payments: the schedule note and row labels displayed; no page overflow', shown($1('main .cb9-note')) && /paid early at checkout/.test(main()) && appOver() <= 1, appOver());
+      setAdminIdentity('FA'); S.portal = 'admin'; S.signedIn = true; setUi('fpL', 'F'); go('f-plans'); ok('CB9 Finance → Learner schedules: the agreed schedule card displayed; no page overflow', shown($1('main .cb9-fin')) && appOver() <= 1, appOver());
+    }
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));
     ok('no script errors', !errs.length, errs.join(' | '));

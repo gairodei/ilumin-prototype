@@ -1406,3 +1406,12 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 .cb8-submit .row { flex-wrap: wrap; gap: 8px; align-items: center; }
 .cb8-ptxt { overflow-wrap: anywhere; }
 @media (max-width: 480px) { .cb8-opt { padding: 10px; } .cb8-pay { grid-template-columns: minmax(0, 1fr); } .cb8-pa { justify-items: start; text-align: left; } .cb8-del { grid-column: 1; justify-self: start; } }
+
+/* CB9 — the learner's payment choice and dated schedule */
+.cb9-opts .cb9-opt > span { min-width: 0; overflow-wrap: anywhere; }
+.cb9-sched { margin: 2px 0 8px 28px; display: grid; gap: 4px; min-width: 0; }
+.cb9-sched h3 { margin: 0; }
+.cb9-rows td, .cb9-rows th { white-space: normal; overflow-wrap: anywhere; }
+.cb9-rows td.nowrap { white-space: nowrap; }
+.cb9-lab { white-space: normal; }
+@media (max-width: 480px) { .cb9-sched { margin-left: 0; } .cb9-rows td, .cb9-rows th { padding: 6px 4px; font-size: .8rem; } }
