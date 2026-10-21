@@ -1328,3 +1328,7 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 .cb-sec[disabled] { cursor: not-allowed; opacity: .6; background: var(--surface-2); }
 .cb-sec[disabled]:hover { background: var(--surface-2); border-color: var(--line); }
 @container cb (max-width: 560px) { .cb-obs-opts { grid-template-columns: minmax(0, 1fr); } }
+
+/* CB3 — Offer Letter & Documents */
+.cb-contract-note { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--brand-soft); display: flex; gap: 6px; align-items: flex-start; }
+.cb-ckhist .tbl, .cb-signed .tbl { min-width: 520px; }

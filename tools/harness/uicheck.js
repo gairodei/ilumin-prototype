@@ -250,8 +250,9 @@
     click($1('main .cb-panels [data-tab="plan"]')); ok('CB1 Payment plan (read-only): the payment summary scrolls inside its box; no page overflow', shown($1('main .cb-plan .e1-sum')) && appOver() <= 1, appOver());
     click($1('main .page-h [data-tab="versions"]')); ok('CB1 Version history displayed with "Back to the course builder"; no page overflow', /Version 2 \(current\)/.test(main()) && shown($1('main .cb-sh .btn')) && appOver() <= 1, appOver());
     go('a-programmes', { id: 'NV-L3O' }); ok('CB1 retired programme: the read-only historical-record note displayed, no "Saving creates Version"; no write buttons; no page overflow', shown($1('main .cb-hist')) && !/Saving creates Version/.test($1('main .cb').textContent) && !$1('main .cb [data-act="chSupSave"], main .cb [data-act="newProgVersion"], main .cb [data-act="chLetterUp"]') && appOver() <= 1, appOver());
-    // CB2 (PD-CB-16): Course Details now keeps typed values instead of asking; the prompt still protects other sections' forms (the checklist)
-    setAdminIdentity('SY'); S.portal = 'admin'; go('a-programmes', { id: 'NV-N1', tab: 'docs' }); const nt = $1('main .ch8-doc:not(:checked)'); nt.checked = true; nt.dispatchEvent(new Event('change', { bubbles: true }));
+    // CB2 (PD-CB-16): Course Details now keeps typed values instead of asking; the prompt still protects other sections' forms — CB3
+    // (PD-CB-22): the CH-8 checklist boxes are gone, so the observation fee rate is used
+    setAdminIdentity('A'); S.portal = 'admin'; go('a-programmes', { id: 'NV-L3', tab: 'support' }); const nt = $1('main input[name="ch-sup"][value="Self-paced"]'); nt.checked = true; nt.dispatchEvent(new Event('change', { bubbles: true }));
     click($1('main .cb-sec[data-tab="review"]')); ok('CB1 unsaved changes: "Leave without saving?" dialog with both choices; the dialog fits', !!MODAL && MODAL.title === 'Leave without saving?' && all('#modal-root .modal button').filter(b => shown(b) && /Stay and save|Leave without saving/.test(b.textContent)).length === 2 && !modalFits(), modalFits());
     // CB2 (PD-CB-14) supersedes the CB1 dialog-label check: Course Details of an unsaved course, at every width
     closeModal(); CB_DIRTY = null; initStore(); setAdminIdentity('SY'); S.portal = 'admin'; S.signedIn = true; go('a-programmes'); click($1('main [data-act="chProgNew"]'));
@@ -268,6 +269,14 @@
     click($1('main .cb-sec[data-tab="details"]')); click($1('main #np-obs-no')); click($1('main [data-act="cbDetSave"]:not([data-next])'));
     ok('CB2 answer No saved: Observations marked "Not applicable" in the section bar; the unsaved marker gone; no page overflow', /Not applicable/.test($1('main .cb-sec[data-tab="observations"]').textContent) && !$1('main .cb-unsaved') && appOver() <= 1, appOver());
     go('a-programmes', { id: 'NV-L3', tab: 'details' }); ok('CB2 seeded programme: the same Course Details layout, read-only, with the reason; no page overflow', shown($1('main .cb-dl')) && !$1('main #np-t') && shown($1('main .cb-ro-why')) && appOver() <= 1, appOver());
+    // CB3: Offer Letter & Documents — the two areas, the letter's versions and signed copies, the checklist and its history, at every width
+    setAdminIdentity('A'); S.portal = 'admin'; go('a-programmes', { id: 'NV-L3', tab: 'documents' });
+    ok('CB3 Offer Letter & Documents: section named, both areas offered, the course-contract note and the template displayed; no page overflow', /Offer Letter & Documents/.test($1('main .cb-h').textContent) && all('main .cb-panels .tab').filter(shown).length === 2 && shown($1('main .cb-contract-note')) && shown($1('main .ch-letter')) && appOver() <= 1, appOver());
+    // CB3 correction (PD-CB-25): the seeded signature (Aisha) has no saved copy, so it offers "View historical template", never "View signed copy"
+    ok('CB3 offer letter: version history and "Who received and signed each version" displayed, the seeded signature marked template-only; no page overflow', shown($1('main .cb-signed')) && shown($1('main .cb-signed [data-act="cbHistTemplate"]')) && !$1('main .cb-signed tr[data-k="C"] [data-act="chSignedPdf"]') && appOver() <= 1, appOver());
+    click($1('main .cb-signed [data-act="cbHistTemplate"]')); ok('CB3 historical template dialog: says it is not the signed copy; the dialog fits the viewport', !!MODAL && /not the learner's signed copy/.test($1('#modal-root').textContent) && !modalFits(), modalFits()); closeModal();
+    click($1('main .cb-panels [data-tab="docs"]')); ok('CB3 Required enrolment documents: the checklist and its version history displayed; no page overflow', shown($1('main .s4-ck')) && shown($1('main .cb-ckhist')) && appOver() <= 1, appOver());
+    click($1('main .cb-ckhist [data-act="cbCkView"]')); ok('CB3 a checklist version opens read-only; the dialog fits', !!MODAL && /Required enrolment documents — version/.test(MODAL.title) && !modalFits(), modalFits()); closeModal();
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));
     ok('no script errors', !errs.length, errs.join(' | '));

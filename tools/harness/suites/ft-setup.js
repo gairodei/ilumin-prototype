@@ -631,7 +631,8 @@
     FA4(); go('a-admissions', { tab: 'builder' }); const n0 = s4List('NV-L3').items.length; ACT.s4CkAdd({ dataset: { p: 'NV-L3' } });
     ok('S4-05 (negative) Finance can\'t change a checklist (refused, logged)', !MODAL && s4List('NV-L3').items.length === n0 && ADMIN.audit[0].action === 'Blocked: change the document checklist');
     acaEnter('KA'); S.signedIn = true; go('a-programmes', { id: 'NV-N1', tab: 'docs' });
-    ok('S4-05 the wizard\'s checklist step uses the same list (quick picks + details)', document.querySelectorAll('.ch8-doc').length === 7 && !!document.querySelector('.s4-ck [data-act="s4CkAdd"][data-p="NV-N1"]'));
+    // CB3 (PD-CB-22) supersedes "quick picks + details": the CH-8 quick picks are no longer an editor; the same S4a list is the only one
+    ok('S4-05 the new programme\'s documents use the same list (Required enrolment documents only; no quick picks)', !document.querySelector('.ch8-doc') && !!document.querySelector('.s4-ck [data-act="s4CkAdd"][data-p="NV-N1"]'));
   });
 
   await T('S4-06 / S4-07 programme payment plans and the deposit default reach sign-up', async () => {

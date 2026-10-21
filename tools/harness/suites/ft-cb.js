@@ -68,7 +68,8 @@
     ok('CB1-C …Curriculum keeps Add unit / module / Learning Outcome / criterion', has('curriculum', 'structure', ['ch8AddUnit', 'ch8AddMod', 'ch8AddLo', 'ch8AddCrit']));
     ok('CB1-C …Observations keeps Edit settings', has('observations', 'obs', ['n5Settings']));
     ok('CB1-C …Fees & Payments: its existing Payment plan step (NV-N1 predates E1 terms: read-only, set by Finance or the Super Admin, as before)', has('payments', 'plan', []) && !!q('.e1-plan .e1-sumbox') && /Set by Finance or the Super Admin/.test(q('.e1-plan').textContent));
-    ok('CB1-C …Documents & Contract: Upload offer letter, and the document checklist', has('documents', 'letter', ['chLetterUp']) && has('documents', 'docs', ['ch8SaveDocs']));
+    // CB3 (PD-CB-22) supersedes "ch8SaveDocs": the Required enrolment documents list (s4CkAdd) is the one checklist editor
+    ok('CB1-C …Offer Letter & Documents: Upload offer letter, and the document checklist', has('documents', 'letter', ['chLetterUp']) && has('documents', 'docs', ['s4CkAdd']));
     open('NV-N1', 'review'); ok('CB1-C …Review & Publish: the existing review with Publish disabled while items are blocking; the blockers shown on their sections', !!q('[data-act="ch8Publish"][disabled]') && !!q('.cb-sec[data-tab="documents"] .cb-badge.bad') && !!q('.cb-sec[data-tab="review"] .cb-badge.bad'));
   });
 
@@ -79,9 +80,10 @@
     open('NV-L3', 'payments'); ok('CB1-D Fees & Payments: Fee options first, then Payment plan, then Observation fee rate', qa('.cb-panels .tab').map(t => t.dataset.tab).join() === 'fees,plan,support' && pan() === 'fees' && !!q('.r1-opts [data-act="r1OptAdd"]'));
     q('.cb-panels [data-tab="plan"]').click(); ok('CB1-D Payment plan: the plan in force read-only (version and payment summary), owned by Finance, editing here planned for CB8', !!q('.cb-plan .e1-sum') && /Version \d+ in force/.test(q('.cb-plan').textContent) && /Finance → Payment Plans/.test(q('.cb-plan').textContent) && /planned for CB8/.test(q('.cb-plan').textContent) && !qa('.cb-plan input').length);
     q('.cb-panels [data-tab="support"]').click(); ok('CB1-D Observation fee rate: the existing control (Fully assisted selected)', document.querySelector('input[name="ch-sup"][value="Fully assisted"]').checked && !!q('[data-act="chSupSave"]'));
-    open('NV-L3', 'documents'); ok('CB1-D Documents & Contract: offer letter current version and Upload new version', pan() === 'letter' && /Current version/.test(main()) && !!q('[data-act="chLetterUp"]'));
+    open('NV-L3', 'documents'); ok('CB1-D Offer Letter & Documents: offer letter current version and Upload new version', pan() === 'letter' && /Current version/.test(main()) && !!q('[data-act="chLetterUp"]'));
     q('.cb-panels [data-tab="docs"]').click(); ok('CB1-D …Enrolment documents: the programme\'s versioned checklist with Add item', !!q('.s4-ck') && !!q('[data-act="s4CkAdd"]'));
-    ok('CB1-D …the offer letter isn\'t presented as the learner contract: a separate contract is stated as not existing yet', !!q('.cb-contract') && /no learner contract separate from the offer letter/.test(q('.cb-contract').textContent));
+    // CB3 (PD-CB-20) supersedes the CB1 "no separate learner contract yet" card: the client confirmed the course contract IS the offer letter
+    q('.cb-panels [data-tab="letter"]').click(); ok('CB1-D …the offer letter is stated as the course contract; no separate contract card', !q('.cb-contract') && /This offer letter is the course contract/.test(q('.cb-contract-note').textContent) && !/Learner contract/.test(main()));
     open('NV-L3', 'review'); ok('CB1-D Review & Publish: says Version 2 is published and how to change it', /Version 2 is published/.test(q('.cb-body').textContent));
     q('.page-h [data-tab="versions"]').click(); ok('CB1-D Version history: the versions with the current one, and a way back', /Version 2 \(current\)/.test(main()) && !q('.cb-nav') && !!q('.cb-sh [data-tab="curriculum"]'));
     q('.cb-sh [data-tab="curriculum"]').click(); ok('CB1-D …"Back to the course builder" returns to Curriculum', cur() === 'curriculum');
@@ -185,15 +187,15 @@
 
   await T('CB1-L unsaved changes', async () => {
     // CB2 (PD-CB-16) supersedes the Course Details case: its typed values are now kept across sections (tested in ft-cb2). The prompt
-    // still protects the other sections' forms — here the enrolment-document checklist of a Draft
-    fresh(); SYS(); open('NV-N1', 'docs'); const was = ch8Docs('NV-N1').join(), box = q('.ch8-doc:not(:checked)');
+    // still protects the other sections' forms — CB3 (PD-CB-22): the CH-8 checklist boxes are gone, so here the observation fee rate
+    fresh(); SA(); open('NV-L3', 'support'); const was = chSupportOf('NV-L3'), box = q('input[name="ch-sup"][value="Self-paced"]');
     box.checked = true; box.dispatchEvent(new Event('change', { bubbles: true }));
     q('.cb-sec[data-tab="curriculum"]').click();
-    ok('CB1-L leaving a section with an unsaved change asks first, and stays on the section', !!MODAL && MODAL.title === 'Leave without saving?' && /Documents & Contract/.test(document.querySelector('#modal-root').textContent) && cur() === 'documents');
-    closeModal(); ok('CB1-L "Stay and save" keeps the ticked box', q('.ch8-doc[value="' + box.value + '"]').checked);
-    q('.cb-sec[data-tab="curriculum"]').click(); prim(); ok('CB1-L "Leave without saving" goes to the section and saves nothing', cur() === 'curriculum' && ch8Docs('NV-N1').join() === was);
-    open('NV-N1', 'docs'); const b2 = q('.ch8-doc:not(:checked)'); b2.checked = true; b2.dispatchEvent(new Event('change', { bubbles: true })); ACT.ch8SaveDocs({ dataset: { id: 'NV-N1' } });
-    q('.cb-sec[data-tab="curriculum"]').click(); ok('CB1-L after saving, leaving doesn\'t ask', !MODAL && cur() === 'curriculum' && ch8Docs('NV-N1').join() !== was);
+    ok('CB1-L leaving a section with an unsaved change asks first, and stays on the section', !!MODAL && MODAL.title === 'Leave without saving?' && /Fees & Payments/.test(document.querySelector('#modal-root').textContent) && cur() === 'payments');
+    closeModal(); ok('CB1-L "Stay and save" keeps the chosen rate', q('input[name="ch-sup"][value="Self-paced"]').checked);
+    q('.cb-sec[data-tab="curriculum"]').click(); prim(); ok('CB1-L "Leave without saving" goes to the section and saves nothing', cur() === 'curriculum' && chSupportOf('NV-L3') === was);
+    open('NV-L3', 'support'); const b2 = q('input[name="ch-sup"][value="Self-paced"]'); b2.checked = true; b2.dispatchEvent(new Event('change', { bubbles: true })); ACT.chSupSave({ dataset: { id: 'NV-L3' } }); reason('CB1-L');
+    q('.cb-sec[data-tab="curriculum"]').click(); ok('CB1-L after saving, leaving doesn\'t ask', !MODAL && cur() === 'curriculum' && chSupportOf('NV-L3') === 'Self-paced');
     open('NV-L3', 'observations'); const s = document.querySelector('main .dt input, main .dt-filt input'); if (s) { s.value = 'x'; s.dispatchEvent(new Event('input', { bubbles: true })); }
     q('.cb-sec[data-tab="review"]').click(); ok('CB1-L (negative) typing in a table search box doesn\'t count as unsaved work', !MODAL && cur() === 'review');
   });

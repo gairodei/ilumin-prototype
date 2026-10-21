@@ -2,7 +2,7 @@
    CB1 — Unified course builder shell (approved 20 Oct 2026; PD-CB-01 in PROVISIONAL-DECISIONS.md).
    One programme page for every NVQ programme — seeded (Level 2–5, drafts, retired) and created with "New NVQ programme" —
    with the seven approved sections: Course Details · Curriculum · Assessments · Observations · Fees & Payments ·
-   Documents & Contract · Review & Publish. It replaces the CH-8 step bar and the seeded programme's tab bar.
+   Offer Letter & Documents (named "Documents & Contract" until CB3) · Review & Publish. It replaces the CH-8 step bar and the seeded programme's tab bar.
    Shell only: each section shows the controls that already work today, rendered by the existing chain (setup-s3, s4a, r1,
    r5, e1, e2, n5a, w1 …), so every guard, rule and audit entry is theirs. Nothing is copied into a new store. Where a
    section has no working control yet, it says so and names the stage that adds it (CB2 details editing for seeded
@@ -13,7 +13,7 @@
    ============================================================ */
 'use strict';
 
-const CB_SECTIONS = [['details', 'Course Details'], ['curriculum', 'Curriculum'], ['assessments', 'Assessments'], ['observations', 'Observations'], ['payments', 'Fees & Payments'], ['documents', 'Documents & Contract'], ['review', 'Review & Publish']];
+const CB_SECTIONS = [['details', 'Course Details'], ['curriculum', 'Curriculum'], ['assessments', 'Assessments'], ['observations', 'Observations'], ['payments', 'Fees & Payments'], ['documents', 'Offer Letter & Documents'], ['review', 'Review & Publish']];
 // Route value (old tab / step, or a section) → [section, panel]; a null panel means the section's first panel
 const CB_ROUTE = {
   details: ['details', 'details'], curriculum: ['curriculum', null], tree: ['curriculum', 'structure'], structure: ['curriculum', 'structure'], types: ['curriculum', 'types'],
@@ -80,7 +80,8 @@ function cbPanels(pr, sec) {
       const plan = ['plan', 'Payment plan', nw ? L('plan') : H(() => cbPlanRO(pr))], rate = ['support', 'Observation fee rate', cbObsNo(pr) ? H(() => cbFeeNA(pr)) : nw ? H(() => chSupportTab(pr)) : L('support')];
       return nw ? [plan].concat(fees, [rate]) : fees.concat([plan, rate]);
     }
-    case 'documents': return [['letter', 'Offer letter', L('letter')], ['docs', 'Enrolment documents', nw ? L('docs') : H(() => s4ChecklistCard(pr, { title: 'Enrolment documents' }))]];
+    // CB3: the offer letter (the course contract) and the one required-documents checklist, for every programme (js/cb-documents.js)
+    case 'documents': return [['letter', 'Offer letter', H(() => cbLetterPanel(pr))], ['docs', 'Required enrolment documents', H(() => cbDocsPanel(pr))]];
     case 'review': return [['review', 'Review & publish', nw ? L('review') : H(() => cbSeededReview(pr))]];
     case 'versions': return [['versions', 'Version history', nw ? H(() => cbWizVersions(pr)) : L('versions')]];
   }
@@ -94,8 +95,7 @@ const cbLater = (what, stage) => `<p class="cb-later small">${chip('Not yet in t
 const cbObsNo = pr => { const d = typeof n5Shown === 'function' && n5CanView() ? n5Shown(pr) : null; return !!d && d.required === false; };
 const cbObsNA = pr => `<div class="note b-grey cb-na" role="status">${ic('info')}<div class="small"><strong>Not applicable — this course has no observations</strong> (Course Details). ${cbRetired(pr) ? '' : 'Nothing here is needed to publish. '}Any configuration below is kept for history and isn't used.</div></div>`;
 const cbFeeNA = pr => `<section class="card cb-na-fee"><h2>Observation fee rate</h2><p class="small">Not applicable — this course has no observations (Course Details), so no observation fee is asked for. The rate stored for the programme (${esc(chSupportOf(pr.id))}) is kept, not used.</p></section>`;
-// The offer letter isn't assumed to be the learner contract: say plainly that no separate contract exists yet
-const cbContract = () => `<section class="card cb-contract"><h2>Learner contract</h2><p class="small">This prototype has no learner contract separate from the offer letter. Applicants sign the offer letter above; whether a separate, versioned contract is needed, and what it contains, is an open client question.</p>${cbLater('A separate learner contract, if the client confirms one', 'a later stage, after the client decides')}</section>`;
+// CB3: no separate learner-contract card — the client confirmed the course contract is the offer letter
 function cbAssessments(pr) {
   const defs = (typeof s2Defs === 'function' ? s2Defs() : []).filter(d => d.programme === pr.title), can = typeof s2Can === 'function' && s2Can(), ret = cbRetired(pr);
   return `<section class="card cb-assess"><div class="row-b"><h2>Assignments</h2>${can ? `<button class="btn btn-sm" data-go="a-assignments">Open Assignments &amp; Criteria Mapping</button>` : ''}</div>
@@ -158,7 +158,7 @@ function cbPage(pr, tab) {
   const title = sec === 'versions' ? `<div class="row-b cb-sh"><h2 class="cb-h">Version history</h2><button class="btn btn-sm" data-go="a-programmes" data-id="${pr.id}" data-tab="${fallback}">Back to the course builder</button></div>` : `<h2 class="cb-h"><span class="cb-hn">${i + 1}</span> ${esc(CB_SECTIONS[i][1])}</h2>`;
   const steps = i < 0 ? '' : `<div class="row-b cb-foot">${i > 0 ? `<button class="btn" data-go="a-programmes" data-id="${pr.id}" data-tab="${CB_SECTIONS[i - 1][0]}">← ${esc(CB_SECTIONS[i - 1][1])}</button>` : '<span></span>'}${i < CB_SECTIONS.length - 1 ? `<button class="btn btn-primary" data-go="a-programmes" data-id="${pr.id}" data-tab="${CB_SECTIONS[i + 1][0]}">${esc(CB_SECTIONS[i + 1][1])} →</button>` : ''}</div>`;
   return `${pageA(esc(pr.title), `${esc(pr.level)}${pr.code ? ` · Course code <span class="mono cb-code">${esc(pr.code)}</span>` : ''} · <span class="mono">${esc(pr.ref || '—')}</span>`, chips, [['NVQ Programmes', 'a-programmes'], [esc(pr.title)]])}
-    <div class="cb" data-pid="${pr.id}" data-sec="${sec}"><div class="cb-ver">${ver}</div>${sec === 'versions' ? '' : nav}${title}${pnav}<div class="cb-body" data-label="${esc(sec === 'versions' ? 'Version history' : CB_SECTIONS[i][1] + (panels.length > 1 ? ' — ' + cur[1] : ''))}">${cur ? cur[2]() : ''}${sec === 'documents' ? cbContract() : ''}</div>${steps}</div>`;
+    <div class="cb" data-pid="${pr.id}" data-sec="${sec}"><div class="cb-ver">${ver}</div>${sec === 'versions' ? '' : nav}${title}${pnav}<div class="cb-body" data-label="${esc(sec === 'versions' ? 'Version history' : CB_SECTIONS[i][1] + (panels.length > 1 ? ' — ' + cur[1] : ''))}">${cur ? cur[2]() : ''}</div>${steps}</div>`;
 }
 // A link without a tab opens what it opened before: Curriculum (the Hierarchy builder) for seeded programmes, and Course Details
 // for programmes made with "New NVQ programme" (the route's default "tree" was their Details step)

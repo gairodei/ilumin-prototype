@@ -330,7 +330,7 @@
     fresh(); SA(); go('a-programmes', { id: 'NV-L3', tab: 'letter' });
     // CB1 (PD-CB-01) supersedes: was an "Offer letter" tab next to "Hierarchy builder"; now the old "letter" link opens Documents &
     // Contract → Offer letter, with Curriculum (the hierarchy builder) one of the seven sections
-    ok('CH-08 "Offer letter" panel of Documents & Contract, next to the other sections', !!app().querySelector('.cb-sec.cur[data-tab="documents"]') && !!app().querySelector('.cb-panels .tab[data-tab="letter"][aria-selected="true"]') && !!app().querySelector('.cb-sec[data-tab="curriculum"]'));
+    ok('CH-08 "Offer letter" panel of Offer Letter & Documents (CB3 name), next to the other sections', !!app().querySelector('.cb-sec.cur[data-tab="documents"]') && !!app().querySelector('.cb-panels .tab[data-tab="letter"][aria-selected="true"]') && !!app().querySelector('.cb-sec[data-tab="curriculum"]'));
     ok('CH-08 tab: merge fields, current version, template', /\{\{full_name\}\}/.test(main()) && /\{\{student_id\}\}/.test(main()) && /Version 1/.test(main()) && !!app().querySelector('main .ch-letter'));
     ok('CH-08 a letter for every NVQ course (retired one excepted)', ['NV-L2', 'NV-L3', 'NV-L4', 'NV-L5'].every(id => chLetters(id).length === 1) && !chLetters('NV-L3O').length);
     btnAct('chLetterPrev').click(); await wait(60); ok('CH-08 preview filled with a sample learner', !!MODAL && /Aisha Rahman/.test(mroot().textContent) && /IA-L-18022/.test(mroot().textContent)); closeModal();
@@ -1112,8 +1112,10 @@
     go('a-programmes', { id, tab: 'letter' }); ok('NP offer letter step: upload (existing tab)', !!app().querySelector('[data-act="chLetterUp"][data-id="' + id + '"]'));
     ACT.chLetterUp({ dataset: { id } }); ACT.chLetterSample(); document.querySelector('#rsn').value = 'First version'; press();
     go('a-programmes', { id, tab: 'letter' }); ok('NP offer letter uploaded: merge fields and preview', !!chLetterCur(id) && /\{\{full_name\}\}/.test(main()) && !!app().querySelector('[data-act="chLetterPrev"]'));
-    go('a-programmes', { id, tab: 'docs' }); ok('NP document checklist: choose required documents', document.querySelectorAll('.ch8-doc').length === 7);
-    document.querySelector('.ch8-doc[value="Employer reference letter"]').checked = true; ACT.ch8SaveDocs({ dataset: { id } }); ok('NP checklist saved, audited', ch8Docs(id).includes('Employer reference letter') && ADMIN.audit[0].action === 'Document checklist saved');
+    // CB3 (PD-CB-22) supersedes the CH-8 quick-pick checkboxes: the one Required enrolment documents checklist (S4a) is the editor
+    go('a-programmes', { id, tab: 'docs' }); ok('NP document checklist: the Required enrolment documents list (no quick-pick checkboxes)', !document.querySelector('.ch8-doc') && !!document.querySelector('.s4-ck [data-act="s4CkAdd"]'));
+    ACT.s4CkAdd({ dataset: { p: id } }); fill8({ '#ck-n': 'Employer reference letter', '#ck-g': 'Optional.' }); document.querySelector('#ck-m').value = '0'; document.querySelector('#rsn').value = 'Optional reference'; press();
+    ok('NP checklist saved, audited', ch8Docs(id).includes('Employer reference letter') && ADMIN.audit[0].action === 'Checklist item added');
     go('a-programmes', { id, tab: 'plan' }); ok('NP payment plan: Academic Admin read-only (Finance / Super Admin edit)', !document.querySelector('#pp-d') && /Set by Finance or the Super Admin/.test(main()));
     ACT.ch8SavePlan({ dataset: { id } }); ok('NP plan save refused for the Academic Admin (logged)', ADMIN.audit[0].action === 'Blocked: payment plan');
     // E2 (20 Oct 2026) supersedes: typing an amount while "Use the default deposit" is selected made it the programme's own deposit.
