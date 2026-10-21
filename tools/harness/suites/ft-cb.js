@@ -65,8 +65,8 @@
   await T('CB1-C existing drafts', async () => {
     fresh(); SA(); open('NV-L3D', 'observations');
     ok('CB1-C seeded Draft (NV-L3D): Draft chip; Observations editable (Edit settings); the version area keeps "Publish programme"', /Draft/.test(q('.page-h').textContent) && !!q('.cb-body [data-act="n5Settings"]') && !!q('.cb-ver [data-act="kPubProg"]'));
-    ok('CB1-C …the observation blocker is shown on the Observations and Review sections', !!q('.cb-sec[data-tab="observations"] .cb-badge.bad') && !!q('.cb-sec[data-tab="review"] .cb-badge.bad'));
-    q('.cb-sec[data-tab="review"]').click(); ok('CB1-C …Review & Publish lists the observation checks and points to the publish button; says the full review arrives in CB11', /Observation checks for Version 1/.test(main()) && /Blocking/.test(q('.cb-body').textContent) && /planned for CB11/.test(main()));
+    ok('CB1-C …the observation blocker is shown on the section that fixes it (Course Details — the Yes/No answer) and on Review', /* CB11 (PD-CB-73): was the Observations section badge */ !!q('.cb-sec[data-tab="details"] .cb-badge.bad') && !!q('.cb-sec[data-tab="review"] .cb-badge.bad'));
+    q('.cb-sec[data-tab="review"]').click(); ok('CB1-C …Review & Publish lists the observation check under Before publishing with a link to fix it', /* CB11 (PD-CB-73): was "Observation checks for Version 1" and "planned for CB11" */ /Before publishing/.test(main()) && /Blocking/.test(q('.cb-body').textContent) && /choose whether observation is required/i.test(q('.cb-rv-todo').textContent) && !!q('.cb-rv-fix') && !/planned for CB11/.test(main()));
     SYS(); open('NV-N1');
     ok('CB1-C new-programme Draft (NV-N1): opens on Course Details (as before) with its form', cur() === 'details' && !!q('#np-t'));
     const has = (sec, panel, acts) => { open('NV-N1', panel || sec); return acts.every(a => !!q(`.cb-body [data-act="${a}"]`)); };
@@ -75,7 +75,7 @@
     ok('CB1-C …Fees & Payments: its existing Payment plan step (NV-N1 predates E1 terms: read-only, set by Finance or the Super Admin, as before)', has('payments', 'plan', []) && !!q('.e1-plan .e1-sumbox') && /Set by Finance or the Super Admin/.test(q('.e1-plan').textContent));
     // CB3 (PD-CB-22) supersedes "ch8SaveDocs": the Required enrolment documents list (s4CkAdd) is the one checklist editor
     ok('CB1-C …Offer Letter & Documents: Upload offer letter, and the document checklist', has('documents', 'letter', ['chLetterUp']) && has('documents', 'docs', ['s4CkAdd']));
-    open('NV-N1', 'review'); ok('CB1-C …Review & Publish: the existing review with Publish disabled while items are blocking; the blockers shown on their sections', !!q('[data-act="ch8Publish"][disabled]') && !!q('.cb-sec[data-tab="documents"] .cb-badge.bad') && !!q('.cb-sec[data-tab="review"] .cb-badge.bad'));
+    open('NV-N1', 'review'); ok('CB1-C …Review & Publish: the existing review with Publish disabled while items are blocking; the blockers shown on their sections', !!q('[data-act="cbPublish"][disabled]') /* CB11 (PD-CB-77): was ch8Publish */ && !!q('.cb-sec[data-tab="documents"] .cb-badge.bad') && !!q('.cb-sec[data-tab="review"] .cb-badge.bad'));
   });
 
   await T('CB1-D published programme', async () => {

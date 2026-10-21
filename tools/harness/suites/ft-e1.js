@@ -52,7 +52,7 @@
       const pr = newProg('Level 4 Duration test ' + j, { n: k, unit });
       ok(`E1-A ${txt}: stored as number + unit and shown "${txt}"`, !!pr && pr.durV && pr.durV.n === k && pr.durV.unit === unit && pr.dur === txt);
     });
-    const pr = last(); go('a-programmes', { id: pr.id, tab: 'review' }); ok('E1-A review shows the formatted duration', main().includes('2 years · '));
+    const pr = last(); go('a-programmes', { id: pr.id, tab: 'review' }); ok('E1-A review shows the formatted duration', /* CB11 (PD-CB-73): was "2 years · <price>" in the CH-8 review line */ /Duration\s*2 years/.test(document.querySelector('main .cb-rv-sec[data-sec="details"]').textContent));
   });
   await T('E1-A duration (negative): zero, fractions, blanks and out-of-range values are refused', async () => {
     fresh(); SA(); const n0 = (STORE.chNewProgs || []).length;
@@ -185,7 +185,7 @@
     ACT.e1Draft({ dataset: { id: pr.id } });
     ok('E1-C save draft: kept, audited, still not sent (no notification, no queue item)', e1T(pr.id).prop.meth === 'both' && e1T(pr.id).status === 'Draft' && ADMIN.audit[0].action === 'Payment terms draft saved' && finNotifs().length === n0 && ADMIN.queue.length === q0);
     ok('E1-C the creator can\'t save the plan itself (G5.2, logged)', (ACT.ch8SavePlan({ dataset: { id: pr.id } }), ADMIN.audit[0].action === 'Blocked: payment plan'));
-    ready(pr); go('a-programmes', { id: pr.id, tab: 'review' }); const pub = app().querySelector('[data-act="ch8Publish"]');
+    ready(pr); go('a-programmes', { id: pr.id, tab: 'review' }); const pub = app().querySelector('[data-act="cbPublish"]'); /* CB11 (PD-CB-77): was ch8Publish */
     ok('E1-C review: "Payment terms not yet sent to Finance" is blocking; Publish disabled with a reason', /Payment terms not yet sent to Finance/.test(main()) && pub.disabled && !!pub.title);
     ACT.ch8Publish({ dataset: { id: pr.id } }); ok('E1-C (negative) publish refused while terms are unapproved (logged)', pr.status === 'Draft' && ADMIN.audit[0].action === 'Blocked: publish (items missing)'); closeModal();
     ok('E1-C stepper: the Payment plan step isn\'t marked done', (go('a-programmes', { id: pr.id, tab: 'details' }), !app().querySelector('.ch8-steps .step.done [data-tab="plan"]')));

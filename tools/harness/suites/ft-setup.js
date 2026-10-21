@@ -326,8 +326,11 @@
     const set = (u, lo) => { INP.loType({ value: 'Knowledge', dataset: { p: 'NV-L3D', u, lo } }); reason('Typed'); };
     set('U310', 'LO2'); set('U311', 'LO1');
     ok('S3-04 types set in NV-L3D only (Level 3 unaffected)', STORE.s3.trees['NV-L3D'].find(u => u.code === 'U311').mods[0].los[0].type === 'Knowledge' && !STORE.s3.drafts['NV-L3D']);
-    obsDecide('NV-L3D'); ACT.kPubProg({ dataset: { id: 'NV-L3D' } }); reason('Ready');
-    ok('S3-04 publishes once every Learning Outcome has a type', s3Pr('NV-L3D').status === 'Active' && ADMIN.audit[0].action === 'Programme published');
+    // CB11 (PD-CB-75) supersedes the direct publication: a seeded Draft needs payment terms in force first (Finance sets them)
+    obsDecide('NV-L3D'); ACT.kPubProg({ dataset: { id: 'NV-L3D' } }); ok('S3-04 (CB11) with every type set, publishing still waits for Finance: no payment terms in force (refused, logged)', s3Pr('NV-L3D').status === 'Draft' && /Finance approval is needed first/.test(mroot().textContent) && /no payment terms/.test(ADMIN.audit[0].action)); closeModal();
+    setAdminIdentity('FA'); S.portal = 'admin'; ACT.s4PlanEdit({ dataset: { p: 'NV-L3D' } }); const ppf = document.querySelector('#modal-root #pp-f'); if (ppf && !ppf.value) ppf.value = '2600'; reason('Plan for the 2027 update');
+    setAdminIdentity('A'); S.portal = 'admin'; ACT.kPubProg({ dataset: { id: 'NV-L3D' } }); reason('Ready');
+    ok('S3-04 publishes once every Learning Outcome has a type (and, CB11, a Finance plan is in force)', s3Pr('NV-L3D').status === 'Active' && ADMIN.audit[0].action === 'Programme published');
     acaEnter('KA'); S.signedIn = true; go('a-batches'); ACT.newBatch(); ok('S3-04 the published programme is offered when creating a batch', /2027 update/.test(mroot().textContent)); closeModal();
   });
 
@@ -440,7 +443,7 @@
     ok('Wizard (positive): with supported types (incl. the written custom type) Version 2 publishes', n2().version === 2 && !n2().nextDraft);
     // A Draft programme made with the wizard: the Publish button is disabled with the reason
     acaEnter('KA'); S.signedIn = true; ACT.ch8AddLo({ dataset: { id: 'NV-N1', u: 0, m: 0 } }); fill({ '#lo-t': 'Discuss leadership', '#lo-y': 'Professional discussion' }); prim();
-    go('a-programmes', { id: 'NV-N1', tab: 'review' }); const pub = app().querySelector('[data-act="ch8Publish"]');
+    go('a-programmes', { id: 'NV-N1', tab: 'review' }); const pub = app().querySelector('[data-act="cbPublish"]'); /* CB11 (PD-CB-77): was ch8Publish */
     ok('Wizard Draft programme (negative): Publish disabled, reason shown', !!pub && pub.disabled && /Assessment method not supported yet/.test(main()) && ch8Pr('NV-N1').status === 'Draft');
     // Hierarchy builder: a programme without learners still gets a draft version for an unsupported type, and can't publish it
     fresh(); SA(); addType('Professional discussion', 'Professional discussion'); pb('NV-L4', 'tree'); const cur = STORE.s3.trees['NV-L4'];

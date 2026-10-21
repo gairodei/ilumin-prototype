@@ -1415,3 +1415,28 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 .cb9-rows td.nowrap { white-space: nowrap; }
 .cb9-lab { white-space: normal; }
 @media (max-width: 480px) { .cb9-sched { margin-left: 0; } .cb9-rows td, .cb9-rows th { padding: 6px 4px; font-size: .8rem; } }
+
+/* CB11 — Review & Publish */
+.cb-rv { display: grid; gap: 12px; }
+.cb-rv h3 { margin: 0; font-size: 1rem; }
+.cb-rv-todo { display: grid; gap: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.cb-rv-grp h4 { margin: 0 0 4px; font-size: .9rem; }
+.cb-rv-grp .list { margin: 0; }
+.cb-rv-it { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; align-items: start; }
+.cb-rv-msg { min-width: 0; overflow-wrap: anywhere; }
+.cb-rv-it > .chip { justify-self: start; }
+.cb-rv-fix { grid-column: 2; justify-self: start; white-space: normal; text-align: left; padding-left: 0; }
+.cb-rv-secs { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 10px; }
+.cb-rv-sec { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-width: 0; display: grid; gap: 6px; align-content: start; }
+.cb-rv-sh { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; }
+.cb-rv-sh h3 { display: flex; gap: 8px; align-items: center; }
+.cb-rv-st { gap: 6px; flex-wrap: wrap; }
+.cb-rv-dl { margin: 0; font-size: .875rem; }
+.cb-rv-dl dd { min-width: 0; overflow-wrap: anywhere; }
+.cb-rv-opts { margin: 0; padding-left: 18px; }
+.cb-rv-pub { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
+.cb-rv-keep { margin: 0; padding-left: 18px; }
+.cb-rv-pubrow { flex-wrap: wrap; gap: 8px; align-items: center; }
+.cb-rv-why { color: var(--red); }
+.cb-badge.ok { background: var(--green-bg); color: var(--green); }
+@media (max-width: 640px) { .cb-rv-it { grid-template-columns: minmax(0, 1fr); } .cb-rv-fix { grid-column: 1; } .cb-rv-todo, .cb-rv-sec { padding: 10px; } }

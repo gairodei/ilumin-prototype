@@ -352,6 +352,10 @@
       setAdminIdentity('FA'); S.portal = 'admin'; S.signedIn = true; setUi('fpL', 'F'); go('f-plans'); ok('CB9 Finance → Learner schedules: the agreed schedule card displayed; no page overflow', shown($1('main .cb9-fin')) && appOver() <= 1, appOver());
       click($1('main [data-act="cb10Advance"][data-d="30"]')); click($1('main [data-act="cb10Advance"][data-d="30"]')); click($1('main [data-act="cb10Advance"][data-d="30"]'));
       ok('CB10 Payment reminders (simulated): the card, its controls and the log displayed; no page overflow', shown($1('main .cb10')) && /Simulated/.test($1('main .cb10').textContent) && all('main .cb10-ctl .btn').filter(shown).length >= 4 && shown($1('main .cb10-log')) && appOver() <= 1, appOver());
+      // CB11: Review & Publish — blockers with their links (NV-N1), and the published programme's summary
+      setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-programmes', { id: 'NV-N1', tab: 'review' });
+      ok('CB11 Review & Publish: blockers grouped with "Fix in Section N" links, six section summaries and a disabled Publish; nothing overflows', shown($1('main .cb-rv-todo')) && all('main .cb-rv-fix').filter(shown).length >= 2 && all('main .cb-rv-sec').filter(shown).length === 6 && $1('main [data-act="cbPublish"]').disabled && !all('main .cb-rv-it, main .cb-rv-sec').some(e => e.scrollWidth - e.clientWidth > 1) && appOver() <= 1, appOver());
+      go('a-programmes', { id: p9.id, tab: 'review' }); ok('CB11 a published programme: summary with the approved fee options, "Create new version"; no overflow', shown($1('main .cb-rv-sec[data-sec="payments"]')) && shown($1('main [data-act="s3WizVersion"]')) && appOver() <= 1, appOver());
     }
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));

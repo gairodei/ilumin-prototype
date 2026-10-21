@@ -1097,7 +1097,7 @@
   await T('New NVQ programme: structure, letter, documents, plan, review, publish', async () => {
     fresh(); acaEnter('KA'); S.signedIn = true; go('a-programmes'); ACT.chProgNew();
     fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600' }); create8('yes' /* CB4 (PD-CB-30): an Observation Learning Outcome is chosen below — only offered when the course has observations */); const pr = np(), id = pr.id;
-    go('a-programmes', { id, tab: 'review' }); const pub0 = app().querySelector('[data-act="ch8Publish"]');
+    go('a-programmes', { id, tab: 'review' }); const pub0 = app().querySelector('[data-act="cbPublish"]'); /* CB11 (PD-CB-77): was ch8Publish */
     ok('NP review: blocking items listed; Publish disabled with a reason', /Add at least one unit/.test(main()) && /No offer letter uploaded/.test(main()) && pub0.disabled && !!pub0.title);
     ACT.ch8Publish({ dataset: { id } }); ok('NP publish refused while items are missing (logged)', /Can't publish/.test(MODAL.title) && pr.status === 'Draft' && ADMIN.audit[0].action === 'Blocked: publish (items missing)'); closeModal();
     go('a-programmes', { id, tab: 'structure' });
@@ -1111,7 +1111,7 @@
     const t = ch8Tree(id);
     ok('NP structure: unit → module (awarding-body code) → Learning Outcomes → criteria', t.length === 1 && t[0].code === 'U410' && t[0].mods[0].ab === 'A/650/4101' && t[0].mods[0].los.length === 2 && t[0].mods[0].los[0].crit[0].ev === 'Written account');
     ACT.ch8Key({ dataset: { id, u: 0, m: 0 } }); ACT.ch8KeySample(); prim(); ok('NP answer key per module (optional)', t[0].mods[0].key && /sample/.test(t[0].mods[0].key.file));
-    go('a-programmes', { id, tab: 'review' }); ok('NP review: Learning Outcome without a type is blocking; uncovered criteria is a warning', /Learning Outcome without a type: U410 M1 LO2/.test(main()) && /not yet covered by assignments/.test(main()) && /Warning/.test(main()));
+    go('a-programmes', { id, tab: 'review' }); ok('NP review: Learning Outcome without a type is blocking; uncovered criteria is a warning', /Learning Outcome without a type: U410 M1 LO2/.test(main()) && /covered by an assignment yet/.test(main()) /* CB11 (PD-CB-74): was "not yet covered by assignments" (CH-8 counted every knowledge criterion) */ && /Warning/.test(main()));
     go('a-programmes', { id, tab: 'structure' }); const sel = document.querySelector('[data-onchange="ch8LoType"][data-l="1"]'); sel.value = 'Observation'; INP.ch8LoType(sel);
     ok('NP Learning Outcome type set, audited', t[0].mods[0].los[1].type === 'Observation' && ADMIN.audit.some(a => a.action === 'Learning Outcome type set'));
     go('a-programmes', { id, tab: 'letter' }); ok('NP offer letter step: upload (existing tab)', !!app().querySelector('[data-act="chLetterUp"][data-id="' + id + '"]'));
@@ -1133,7 +1133,7 @@
     go('a-programmes', { id, tab: 'fees' }); const r8 = app().querySelector('main input[name="e1-wdm"][value="own"]'); r8.checked = true; INP.e1DepMode(r8); app().querySelector('main #e1-d').value = '400'; ACT.cb8SaApprove({ dataset: { p: id } }); document.querySelector('#rsn').value = 'Own terms'; press();
     ok('NP Super Admin sets the terms in GBP (D8: approved at once), audited', pr.plan.deposit === 400 && pr.plan.inst === 8 && ADMIN.audit.some(a => a.action === 'Financial package approved'));
     FA(); go('f-plans'); ok('NP Finance → Payment Plans: "View package" for a package programme (not Edit plan)', !!app().querySelector('.ch8-plans [data-act="cb8ViewPkg"][data-p="' + id + '"]') && !app().querySelector('.ch8-plans [data-go="a-programmes"]') && !app().querySelector('.ch8-plans [data-act="s4PlanEdit"][data-p="' + id + '"]'));
-    acaEnter('KA'); S.signedIn = true; obsDecide(id); go('a-programmes', { id, tab: 'review' }); const pub = app().querySelector('[data-act="ch8Publish"]');
+    acaEnter('KA'); S.signedIn = true; obsDecide(id); go('a-programmes', { id, tab: 'review' }); const pub = app().querySelector('[data-act="cbPublish"]'); /* CB11 (PD-CB-77): was ch8Publish */
     ok('NP review: nothing blocking; Publish enabled', !pub.disabled && !/Blocking/.test(main()));
     ACT.ch8Publish({ dataset: { id } }); document.querySelector('#rsn').value = 'Ready'; press();
     ok('NP published: Active, Version 1, audited', pr.status === 'Active' && pr.version === 1 && ADMIN.audit.some(a => a.action === 'Programme published (Version 1)'));

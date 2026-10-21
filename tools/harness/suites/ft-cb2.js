@@ -104,7 +104,7 @@
     ok('CB2-G …Section 4 is marked "Not applicable" in the section bar', /Not applicable/.test(q('.cb-sec[data-tab="observations"] .cb-badge').textContent) && !q('.cb-sec[data-tab="observations"] .cb-badge.bad'));
     go('a-programmes', { id: pr.id, tab: 'observations' }); ok('CB2-G …the Observations section says it doesn\'t apply and keeps the configuration for history', /Not applicable — this course has no observations/.test(q('.cb-na').textContent) && /CB2 Academy criterion/.test(main()));
     go('a-programmes', { id: pr.id, tab: 'support' }); ok('CB2-G …no observation fee is asked for; the stored rate is kept, not used', !!q('.cb-na-fee') && !q('[data-act="chSupSave"]') && chSupportOf(pr.id) === 'Fully assisted');
-    go('a-programmes', { id: pr.id, tab: 'review' }); const rv = qa('.ch8-review li');
+    go('a-programmes', { id: pr.id, tab: 'review' }); const rv = qa('.cb-rv-todo li'); /* CB11 (PD-CB-73): was '.ch8-review li' */
     ok('CB2-G …Review lists no observation blocker, and says the kept Academy criterion isn\x27t used (N5a warning)', !rv.some(li => /Blocking/.test(li.textContent) && /observation/i.test(li.textContent)) && rv.some(li => /Warning/.test(li.textContent) && /kept in this version for history but not used/.test(li.textContent)), rv.map(li => li.textContent).join(' | '));
     ACT.n5Settings({ dataset: { p: pr.id } }); ok('CB2-G …the Observations section\'s own settings show the same answer (one field)', document.querySelector('#modal-root input[name="n5-req"][value="no"]').checked); closeModal();
     go('a-programmes', { id: pr.id, tab: 'details' }); q('#np-obs-yes').click(); q('[data-act="cbDetSave"]:not([data-next])').click();

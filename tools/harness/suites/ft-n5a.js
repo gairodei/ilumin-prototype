@@ -68,7 +68,7 @@
     ok('N5a-B4 new programme: Observations is section 4 (after Curriculum and Assessments), current, editable in the Draft', steps.length === 7 && steps[3].classList.contains('cur') && /Observations/.test(steps[3].textContent) && !!document.querySelector('main .n5-head') && !!document.querySelector('main [data-act="n5Settings"]') && !/undefined/.test(main()));
     ok('N5a-B4 …"Fees & Payments →" follows it', /Fees & Payments →/.test((document.querySelector('main .cb-foot') || {}).textContent || ''));
     go('a-programmes', { id: 'NV-N1', tab: 'review' });
-    ok('N5a-B5 wizard Review: an Observations line and the blocking "choose whether observation is required"', !!document.querySelector('main .n5-rev') && /Blocking\s*Observations: choose whether observation is required for Version 1 \(Yes or No\)/.test(document.querySelector('main .ch8-review').textContent));
+    ok('N5a-B5 wizard Review: an Observations line and the blocking "choose whether observation is required"', /* CB11 (PD-CB-73): was the CH-8 review's .n5-rev line and .ch8-review list */ !!document.querySelector('main .cb-rv-sec[data-sec="observations"]') && /Blocking\s*Choose whether observation is required for Version 1 \(Yes or No\)/.test(document.querySelector('main .cb-rv-todo').textContent));
     go('a-programmes', { id: 'NV-L3O', tab: 'obs' });
     ok('N5a-B6 retired programme: read-only, no edit controls', /Retired programme — read-only/.test(main()) && !document.querySelector('main [data-act^="n5"]'));
   });
@@ -201,7 +201,7 @@
     fresh(); SA(); const n1 = pr('NV-N1');
     // New programme (wizard Draft)
     go('a-programmes', { id: 'NV-N1', tab: 'review' });
-    ok('N5a-R1 new programme (negative): Publish disabled until "Observation required" is chosen', document.querySelector('main [data-act="ch8Publish"]').disabled && ch8Check(n1).block.some(b => /choose whether observation is required for Version 1/.test(b)));
+    ok('N5a-R1 new programme (negative): Publish disabled until "Observation required" is chosen', document.querySelector('main [data-act="cbPublish"]').disabled /* CB11 (PD-CB-77): was ch8Publish */ && ch8Check(n1).block.some(b => /choose whether observation is required for Version 1/.test(b)));
     settings('NV-N1', 'no');
     ok('N5a-R1 new programme (positive): "No" clears the observation blockers — no criteria or routes demanded (no Observation Learning Outcome)', !ch8Check(n1).block.some(b => /^Observations/.test(b)) && !ch8Check(n1).warn.some(w => /Review \(D5\)/.test(w)) && D('NV-N1').workplace === null && D('NV-N1').office === null);
     settings('NV-N1', 'yes'); ok('N5a-R1 new programme: "Yes" brings back the full validation (routes, NVQ criteria)', ch8Check(n1).block.some(b => /choose whether workplace observation is permitted/.test(b)) && ch8Check(n1).block.some(b => /no active NVQ observation criteria/.test(b)));
