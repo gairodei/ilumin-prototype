@@ -119,6 +119,8 @@ s2CopyTo = function (v, d) {
   const r = _copyCB5.apply(this, arguments); if (!r) return r;
   const a = STORE.worlds[v].assignments.find(x => x.id === d.id); if (!a) return r;
   a.qs.forEach(aq => { const q = d.qs.find(x => x.id === aq.id); if (q) { aq.attach = q.attach !== false; if (q.ev) aq.ev = q.ev; if (q.attMax) aq.attMax = q.attMax; if (q.attTypes) aq.attTypes = q.attTypes.slice(); } });
+  // S2 copies had no submission rules (the learner page showed "undefined"); they get the definition's own file rules
+  if (!a.rules) a.rules = `${d.files || 'PDF, DOCX, JPG or PNG · max 10 MB per file · up to 5 files'} · up to ${d.resubMax} resubmission${d.resubMax === 1 ? '' : 's'}`;
   if (d.refs) { a.refsOn = true; a.refRounds = []; }
   if (d.template === false) a.resources = a.resources.filter(x => !/Assignment template/i.test(x[0]));
   else if (d.template === true) a.resources = a.resources.map(x => /Assignment template/i.test(x[0]) ? ['Assignment template (DOCX) — optional'] : x);
@@ -140,6 +142,10 @@ INP.attach = el => {
   if (q && q.attTypes) { const ext = (/\.([a-z0-9]+)$/i.exec(f.name) || [])[1] || '', e = ext.toUpperCase() === 'JPEG' ? 'JPG' : ext.toUpperCase(); if (!q.attTypes.includes(e)) { toast(`${f.name}: this question accepts ${q.attTypes.join(', ')} only.`, 'err'); el.value = ''; return; } }
   return _attachCB5(el);
 };
+
+// No template: say so instead of an empty "Resources and templates" heading
+const _ahCB5 = asgHeader;
+asgHeader = function (a) { const h = _ahCB5.apply(this, arguments); return a && !a.resources.length ? h.replace('<h3>Resources and templates</h3><div class="row"></div>', '<h3>Answer template</h3><p class="small muted cb-notpl">No template — answer in the boxes below.</p>') : h; };
 
 /* ---------- References: a section after all the questions (assignments created from CB5) ---------- */
 const cbRefKey = a => `${a.id}.refs.${(a.refRounds || []).length}`;
