@@ -1138,7 +1138,7 @@
     ACT.ch8Publish({ dataset: { id } }); document.querySelector('#rsn').value = 'Ready'; press();
     ok('NP published: Active, Version 1, audited', pr.status === 'Active' && pr.version === 1 && ADMIN.audit.some(a => a.action === 'Programme published (Version 1)'));
     ok('NP available for sign-up (Browse) and fees', CATALOGUE.some(c => c.title === pr.title && c.kind === 'nvq' && c.price === 2600) && NVQ_FEES[pr.title] === 2600);
-    go('a-programmes', { id }); ok('NP after publishing: links to the existing screens (assignments, batches)', /Published \(Version 1\)/.test(main()) && !!app().querySelector('[data-act="newBatch"]') && !app().querySelector('[data-act="ch8AddUnit"]'));
+    go('a-programmes', { id }); ok('NP after publishing: links to the existing screens (assignments, batches)', /Version 1 is current/.test(main()) /* CB12 (PD-CB-79): was the CH-8 note "Published (Version 1)" */ && !!app().querySelector('.cb-vb [data-act="newBatch"]') && !app().querySelector('[data-act="ch8AddUnit"]'));
     ACT.newBatch(); ok('NP Create batch offers the new programme', [...document.querySelectorAll('#nb-co option')].some(o => o.textContent === pr.title)); closeModal();
     learner('A'); go('browse'); ok('NP learner Browse Courses lists it', /Level 4 Certificate in Care Leadership/.test(main()));
     fresh(); ok('NP reset removes created programmes (the two seeded ones stay)', !ADMIN.programmes.some(p => p.chNew && !p.seed) && ADMIN.programmes.filter(p => p.seed).length === 2 && !CATALOGUE.some(c => c.title === 'Level 4 Certificate in Care Leadership'));

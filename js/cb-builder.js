@@ -74,7 +74,6 @@ function cbPanels(pr, sec) {
     case 'details': return [['details', 'Course details', H(() => cbDetails(pr))]];
     // CB4: one curriculum editor for every programme (js/cb-curriculum.js); the shared assessment types after how this programme uses them
     case 'curriculum': return [['structure', 'Structure', H(() => cbCurriculum(pr))], ['types', 'Assessment types', H(() => cbCurTypesUse(pr) + s3TypesTab())]];
-    case 'assessments': return [['assessments', 'Assignments', H(() => cbAssessments(pr))]];
     case 'observations': { const na = cbObsNo(pr) ? cbObsNA(pr) : '', obs = L('obs'); return [['obs', 'Observation configuration', () => na + obs()]].concat(nw ? [] : [['library', 'Shared library (legacy)', L('library')]]); }
     case 'payments': {
       const fees = cbIsL3(pr) ? [['fees', 'Fee options', nw ? H(() => r1Card(pr.id)) : L('fees')]] : [];
@@ -83,42 +82,24 @@ function cbPanels(pr, sec) {
     }
     // CB3: the offer letter (the course contract) and the one required-documents checklist, for every programme (js/cb-documents.js)
     case 'documents': return [['letter', 'Offer letter', H(() => cbLetterPanel(pr))], ['docs', 'Required enrolment documents', H(() => cbDocsPanel(pr))]];
-    case 'review': return [['review', 'Review & publish', nw ? L('review') : H(() => cbSeededReview(pr))]];
     case 'versions': return [['versions', 'Version history', nw ? H(() => cbWizVersions(pr)) : L('versions')]];
   }
   return [];
 }
 
 /* ---------- Content for sections that have no working page of their own yet (read-only, stated as such) ---------- */
-const cbLater = (what, stage) => `<p class="cb-later small">${chip('Not yet in this section', 'grey')} ${esc(what)} <span class="muted">— planned for ${esc(stage)}.</span></p>`;
 // CB2: Section 1 is cbDetails (js/cb-details.js) for every programme — editable for a Draft, the same layout read-only otherwise
 // Observations answered "No" (N5a "Observation required: No"): the section and the observation fee rate say it doesn't apply
 const cbObsNo = pr => { const d = typeof n5Shown === 'function' && n5CanView() ? n5Shown(pr) : null; return !!d && d.required === false; };
 const cbObsNA = pr => `<div class="note b-grey cb-na" role="status">${ic('info')}<div class="small"><strong>Not applicable — this course has no observations</strong> (Course Details). ${cbRetired(pr) ? '' : 'Nothing here is needed to publish. '}Any configuration below is kept for history and isn't used.</div></div>`;
 const cbFeeNA = pr => `<section class="card cb-na-fee"><h2>Observation fee rate</h2><p class="small">Not applicable — this course has no observations (Course Details), so no observation fee is asked for. The rate stored for the programme (${esc(chSupportOf(pr.id))}) is kept, not used.</p></section>`;
-// CB3: no separate learner-contract card — the client confirmed the course contract is the offer letter
-function cbAssessments(pr) {
-  const defs = (typeof s2Defs === 'function' ? s2Defs() : []).filter(d => d.programme === pr.title), can = typeof s2Can === 'function' && s2Can(), ret = cbRetired(pr);
-  return `<section class="card cb-assess"><div class="row-b"><h2>Assignments</h2>${can ? `<button class="btn btn-sm" data-go="a-assignments">Open Assignments &amp; Criteria Mapping</button>` : ''}</div>
-    <p class="small muted">${ret ? 'Kept as a historical record: the assignments of this retired programme, listed read-only.' : 'Assignments for this programme are created and edited in Assignments &amp; Criteria Mapping, as before. They are listed here read-only.'}</p>
-    ${defs.length ? `<div class="tbl-wrap"><table class="tbl dense"><thead><tr><th>Assignment</th><th>Unit / module</th><th class="r">Questions</th><th>Status</th><th></th></tr></thead><tbody>${defs.map(d => `<tr><td><strong>${esc(d.title)}</strong></td><td class="small">${esc(d.unit || '—')}</td><td class="r">${(d.qs || []).length}</td><td>${chip(d.status, d.status === 'Published' ? 'green' : d.status === 'Draft' ? 'amber' : 'grey')}</td><td>${can ? `<button class="btn btn-sm btn-ghost" data-go="a-assignments" data-id="${esc(d.id)}">Open</button>` : ''}</td></tr>`).join('')}</tbody></table></div>` : '<p class="small">No assignments for this programme yet.</p>'}
-    ${ret ? '' : cbLater('Authoring assignments and questions here, the References section and optional templates', 'CB5 — Assessments')}</section>`;
-}
 function cbPlanRO(pr) {
   const p = s4PlanCur(pr.id), issue = s4TermsOf(pr.id).issue;
   if (cbRetired(pr)) return `<section class="card cb-plan"><div class="row-b"><h2>Payment plan</h2>${chip('Retired', 'grey')}</div><p class="small">This programme is retired, so it offers no payment plan to new learners and none can be set. Learners who studied it keep their own agreed terms and payment records.</p>${p ? `<div class="cb-sum">${e1Summary(pr, e1TermsOfPlan(p))}</div>` : ''}</section>`;
   return `<section class="card cb-plan"><div class="row-b"><h2>Payment plan</h2>${p ? chip('Version ' + p.v + ' in force', 'green') : chip('Not set up', 'red')}</div>
     <p class="small muted">${ic('lock', 12)} Owned by Finance Admins and the Super Administrator and edited in Finance → Payment Plans (Super Administrator: Finance → Instalment plans). Shown here read-only.</p>
     ${p ? `<div class="cb-sum">${e1Summary(pr, e1TermsOfPlan(p))}</div>` : `<p class="small">${issue ? esc(issue) : 'This programme has no payment plan in force.'}</p>`}
-    ${cbLater('Editing the payment plan from this section, through the Finance approval workflow', 'CB8 — Fees & Payments')}</section>`;
-}
-function cbSeededReview(pr) {
-  const dv = cbDraftV(pr), n = typeof n5Check === 'function' && typeof n5DraftV === 'function' && n5DraftV(pr) ? n5Check(pr) : null;
-  const items = n ? n.block.map(b => `<li class="li">${chip('Blocking', 'red')} ${esc(b.replace(/^Observations: /, 'Observations — '))}</li>`).concat((n.review || []).concat(n.warn || []).map(w => `<li class="li">${chip('Warning', 'amber')} ${esc(w)}</li>`)) : [];
-  return `<section class="card cb-review"><h2>Review &amp; publish</h2>
-    <p class="small">${cbRetired(pr) ? 'This programme is retired. It can\'t be published or changed.' : dv ? `Version ${dv} is a draft. Publish it with the button in the version area above; the existing checks run when you do.` : `Version ${pr.version} is published. To change the structure or the observation configuration, create a new version with the button above.`}</p>
-    ${dv && !cbRetired(pr) ? `<h3>Observation checks for Version ${dv}</h3><ul class="list small">${items.join('') || `<li class="li">${chip('OK', 'green')} Nothing missing in the observation configuration</li>`}</ul>` : ''}
-    ${cbRetired(pr) ? '' : cbLater('One grouped review of every section with links to fix each item', 'CB11 — Review & Publish')}</section>`;
+    </section>`;
 }
 // Version history of a programme made with "New NVQ programme" (Draft programmes have only Version 1, unpublished)
 function cbWizVersions(pr) {
@@ -129,14 +110,7 @@ function cbWizVersions(pr) {
 
 /* ---------- Section indicators (only what is true today) ---------- */
 function cbBadges(pr) {
-  const b = {}, add = (s, h) => { (b[s] = b[s] || []).push(h); }, draft = !cbRetired(pr) && !!cbDraftV(pr);
-  if (draft) {
-    const block = pr.chNew ? ch8Check(pr).block : (typeof n5DraftV === 'function' && n5DraftV(pr) ? n5Check(pr).block : []);
-    const where = m => /^Observations|observation/i.test(m) ? 'observations' : /offer letter/i.test(m) ? 'documents' : /payment|finance/i.test(m) ? 'payments' : /unit|Learning Outcome|assessment method|type/i.test(m) ? 'curriculum' : 'review';
-    const n = {}; block.forEach(m => { const s = where(m); n[s] = (n[s] || 0) + 1; });
-    Object.entries(n).forEach(([s, k]) => add(s, `<span class="cb-badge bad">${k} to fix</span>`));
-    if (block.length) add('review', `<span class="cb-badge bad">${block.length} blocking</span>`);
-  }
+  const b = {}, add = (s, h) => { (b[s] = b[s] || []).push(h); };
   if (typeof CB_CACHE !== 'undefined' && CB_CACHE[pr.id]) add('details', '<span class="cb-badge warn">Unsaved</span>');
   else if (!pr.chNew) add('details', '<span class="cb-badge">Read-only</span>');
   add('assessments', '<span class="cb-badge">Read-only</span>');
@@ -151,9 +125,8 @@ function cbPage(pr, tab) {
   const fallback = pr.chNew ? 'details' : 'curriculum', route = CB_ROUTE[tab] || CB_ROUTE[fallback], sec = route[0];
   const panels = cbPanels(pr, sec), cur = panels.find(p => p[0] === route[1]) || panels[0], i = CB_SECTIONS.findIndex(s => s[0] === sec);
   const dv = cbDraftV(pr), badges = cbBadges(pr);
-  const top = cbLegacy(pr, pr.chNew ? (sec === 'versions' ? 'details' : 'review') : (sec === 'versions' ? 'versions' : 'tree')).pre;
   const chips = `${chip(pr.status, { Active: 'green', Draft: 'amber', Suspended: 'amber', Retired: 'grey' }[pr.status] || 'grey')}<span class="typebadge">Version ${pr.version}</span>${dv && pr.status !== 'Draft' ? chip('Version ' + dv + ' draft', 'amber') : ''}<button class="btn btn-sm cb-vh" data-go="a-programmes" data-id="${pr.id}" data-tab="versions">${ic('layers', 14)}Version history</button>`;
-  const ver = cbRetired(pr) ? cbHistNote(pr) : cbHtml(top, pr);
+  const ver = cbRetired(pr) ? cbHistNote(pr) : cbVerBar(pr, sec);
   const nav = `<nav class="cb-nav" aria-label="Course builder sections"><ol>${CB_SECTIONS.map(([k, l], n) => `<li><button class="cb-sec${k === sec ? ' cur' : ''}" data-go="a-programmes" data-id="${pr.id}" data-tab="${k}" ${k === sec ? 'aria-current="page"' : ''}><span class="cb-n" aria-hidden="true">${n + 1}</span><span class="cb-l">${esc(l)}</span>${(badges[k] || []).join('')}</button></li>`).join('')}</ol></nav>`;
   const pnav = panels.length > 1 ? `<div class="cb-panels" role="tablist" aria-label="${esc(sec === 'versions' ? 'Version history' : CB_SECTIONS[i][1])}">${panels.map(([k, l]) => `<button class="tab" role="tab" aria-selected="${k === cur[0]}" data-go="a-programmes" data-id="${pr.id}" data-tab="${k}">${esc(l)}</button>`).join('')}</div>` : '';
   const title = sec === 'versions' ? `<div class="row-b cb-sh"><h2 class="cb-h">Version history</h2><button class="btn btn-sm" data-go="a-programmes" data-id="${pr.id}" data-tab="${fallback}">Back to the course builder</button></div>` : `<h2 class="cb-h"><span class="cb-hn">${i + 1}</span> ${esc(CB_SECTIONS[i][1])}</h2>`;

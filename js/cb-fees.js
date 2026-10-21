@@ -152,8 +152,10 @@ function cb8View(pr, P, o = {}) {
   const opts = P.opts.filter(x => x.status === 'Active').concat(P.opts.filter(x => x.status !== 'Active'));
   return `<div class="cb8-pkg" data-pid="${pr.id}"><p class="small muted cb8-basis">Course duration: <strong>${esc(b.dur ? e1DurFmt(b.dur) : 'not set')}</strong> · observations: <strong>${b.req === true ? `yes — ${esc([b.wp && 'workplace', b.off && 'Academy office'].filter(Boolean).join(' and ') || 'no location permitted')}` : b.req === false ? 'no' : 'not answered'}</strong>. Payment 1 is due at batch start; the first payment is collected at checkout. One observation fee per learner per course, priced by the location of the first confirmed observation (PD-CB-11).</p>
     <div class="cb8-opts">${opts.map(x => cb8OptHtml(pr, x, b, anchor, !!o.ed, iss)).join('')}</div>
-    <div class="cb8-dep"><h3>Deposit <span class="xs muted">a separate route, not combined with payment options</span></h3><p class="small">${P.dep.mode === 'none' ? 'Not available — learners pay by one of the payment options.' : `${money(dep, 'GBP')} — ${P.dep.mode === 'default' ? 'Academy default' : 'custom amount for this programme'}. Offered only when the learner's batch starts in ${CH_HOLD_DAYS} days or more (CH-10); the balance is paid in one payment within the ${hold}-day seat hold.`}</p></div></div>`;
+    ${o.noDep ? '' : `<div class="cb8-dep"><h3>Deposit <span class="xs muted">a separate route, not combined with payment options</span></h3><p class="small">${cb8DepSum(P, dep, hold)}</p></div>`}</div>`;
 }
+// What the deposit setting means for learners (one sentence, shown once)
+const cb8DepSum = (P, dep, hold) => (P.dep.mode === 'none' ? 'Not available — learners pay by one of the payment options.' : `${money(dep, 'GBP')} — ${P.dep.mode === 'default' ? 'Academy default' : 'custom amount for this programme'}. Offered only when the learner's batch starts in ${CH_HOLD_DAYS} days or more (CH-10); the balance is paid in one payment within the ${hold}-day seat hold.`);
 
 /* ---------- Section 5 ---------- */
 const CB8_ST = { legacy: ['Terms in force (before financial packages)', 'grey'], Draft: ['Draft — not yet sent to Finance', 'grey'], Pending: ['Waiting for Finance review', 'amber'], Changes: ['Changes requested by Finance', 'red'], Approved: ['Approved', 'green'] };
@@ -173,11 +175,11 @@ function cb8Panel(pr) {
   const dm = P.dep.mode, sa = isSA();
   const submit = !ed ? '' : `<div class="cb8-submit">${iss.length ? `<h3>Before submitting</h3><ul class="list small cb8-blk">${iss.map(x => `<li class="li">${chip('To fix', 'red')} ${esc(x.msg)}</li>`).join('')}</ul>` : `<p class="small">${ic('check', 14)} Ready to ${sa ? 'approve' : 'submit'}: every fee option has a fee, its applicable observation fees and at least one valid payment option.</p>`}
       <div class="row">${sa ? `<button class="btn btn-primary" data-act="cb8SaApprove" data-p="${pr.id}">Approve and put in force</button><span class="xs muted">Super Administrator — your own terms need no Finance approval (D8).</span>` : `<button class="btn btn-primary" data-act="cb8Submit" data-p="${pr.id}">Submit to Finance for review</button>`}</div></div>`;
-  const dep = ed ? `<div class="cb8-depf"><h3>Deposit</h3>${e1DepFields('e1', 'wdm', 'd', dm, P.dep.amount)}<button class="btn btn-sm" data-act="cb8Dep" data-p="${pr.id}">Save deposit setting</button></div>` : '';
+  const dep = ed ? `<div class="cb8-depf"><h3>Deposit <span class="xs muted">a separate route, not combined with payment options</span></h3><p class="small cb8-depnow">${cb8DepSum(P, cb8DepEff(P), chHoldDays())}</p>${e1DepFields('e1', 'wdm', 'd', dm, P.dep.amount).replace('<legend class="lbl">Deposit</legend>', '<legend class="sr">Deposit setting</legend>')}<button class="btn btn-sm" data-act="cb8Dep" data-p="${pr.id}">Save deposit setting</button></div>` : '';
   return `<section class="card cb8-sec"><div class="row-b"><h2>Fees &amp; payment options</h2>${ed && cb8L3(pr) ? `<button class="btn btn-sm btn-primary" data-act="cb8Opt" data-p="${pr.id}" data-o="">${ic('plus', 14)}Add fee option</button>` : ''}</div>
     ${cb8StateNote(pr, wf)}${pend ? '<h3 class="cb8-subh">Submitted package (read-only)</h3>' : ''}
     ${!cb8L3(pr) ? `<p class="xs muted">${esc(pr.level)}: one programme fee (multiple fee options are a Level 3 feature — Q-CB-10). Its payment options and observation fees work the same way.</p>` : ''}
-    ${cb8AnchorPick(pr)}${cb8View(pr, P, { ed })}${dep}${submit}
+    ${cb8AnchorPick(pr)}${cb8View(pr, P, { ed, noDep: ed })}${dep}${submit}
     ${!can ? `<p class="xs muted">${ic('lock', 12)} Set by the Super Admin, Academic Admin or System Admin; approved by Finance.</p>` : ''}</section>`;
 }
 // Programmes on terms from before packages: the way to start one (or why it can't start)

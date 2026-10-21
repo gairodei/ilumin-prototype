@@ -1440,3 +1440,13 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 .cb-rv-why { color: var(--red); }
 .cb-badge.ok { background: var(--green-bg); color: var(--green); }
 @media (max-width: 640px) { .cb-rv-it { grid-template-columns: minmax(0, 1fr); } .cb-rv-fix { grid-column: 1; } .cb-rv-todo, .cb-rv-sec { padding: 10px; } }
+
+/* CB12 — version bar, Fees & Payments home */
+.cb-vb { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.cb-vb-t { flex: 1 1 320px; min-width: 0; }
+.cb-vb-a { flex: 0 0 auto; }
+.cb-vb-n { font-weight: 600; }
+.cb-vb-n.bad { color: var(--red); }
+.cb-vb-n.ok { color: var(--green); }
+.cb-home { margin: 0 0 10px; }
+.cb-feelink { margin-left: 4px; }

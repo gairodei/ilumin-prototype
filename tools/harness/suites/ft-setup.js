@@ -303,7 +303,7 @@
   await T('S3-03 Create new version → edit → Publish version; learners stay on theirs', async () => {
     fresh(); pb('NV-L3', 'versions'); ACT.newProgVersion({ dataset: { id: 'NV-L3' } }); reason('Spec update');
     const dv = STORE.s3.drafts['NV-L3'];
-    ok('S3-03 Create new version: a real Version 3 draft (a copy of the current tree)', !!dv && dv.v === 3 && dv.tree !== STORE.worlds.C.tree && dv.tree.length === 7 && /Version 3 \(draft\)/.test(main()) && !!app().querySelector('[data-act="kPubProg"]'));
+    ok('S3-03 Create new version: a real Version 3 draft (a copy of the current tree)', !!dv && dv.v === 3 && dv.tree !== STORE.worlds.C.tree && dv.tree.length === 7 && /Version 3 \(draft\)/.test(main()) && !!app().querySelector('.cb-vb [data-tab="review"]') /* CB12 (PD-CB-79): was a kPubProg button in the version area */);
     pb('NV-L3', 'tree'); dlg('s3Rename', { p: 'NV-L3', u: 'U301' }, { '#rn-t': 'Communication in care settings (2027)' });
     ok('S3-03 the draft is edited; the current version is not', dv.tree[0].title === 'Communication in care settings (2027)' && STORE.worlds.C.tree[0].title !== dv.tree[0].title);
     obsDecide('NV-L3'); ACT.kPubProg({ dataset: { id: 'NV-L3' } }); reason('Publish 2027 wording'); const pr = s3Pr('NV-L3');
@@ -509,12 +509,12 @@
     ok('C: Letter tab, no draft: "Create new version", no Publish button', !!app().querySelector('[data-act="newProgVersion"]') && !app().querySelector('[data-act="kPubProg"]') && /Version 2 is current/.test(main()) && !/Publish version/.test(main()));
     pb('NV-L3', 'support'); ok('C: Support type tab: the same header', !!app().querySelector('[data-act="newProgVersion"]') && !app().querySelector('[data-act="kPubProg"]'));
     ACT.newProgVersion({ dataset: { id: 'NV-L3' } }); reason('Draft'); pb('NV-L3', 'letter');
-    ok('C: with a draft: "Publish version 3" (and no "Create new version")', /Publish version 3/.test((app().querySelector('[data-act="kPubProg"]') || {}).textContent || '') && !app().querySelector('[data-act="newProgVersion"]') && /editing Version 3 \(draft\)/.test(main()));
-    pb('NV-L3D', 'support'); ok('C: Draft programme: "Publish programme"', /Publish programme/.test((app().querySelector('[data-act="kPubProg"]') || {}).textContent || ''));
+    ok('C: with a draft: "Review & Publish" for Version 3 (and no "Create new version")', /* CB12 (PD-CB-79): was "Publish version 3" (kPubProg) in the version area */ !!app().querySelector('.cb-vb [data-tab="review"]') && !app().querySelector('[data-act="newProgVersion"]') && /editing Version 3 \(draft\)/.test(main()));
+    pb('NV-L3D', 'support'); ok('C: Draft programme: "Review & Publish"', /* CB12 (PD-CB-79): was "Publish programme" (kPubProg) in the version area */ /Draft — Version 1, not yet published/.test(app().querySelector('.cb-vb').textContent) && !!app().querySelector('.cb-vb [data-tab="review"]'));
     // CB1 final review (PD-CB-03) supersedes the wording only: was "Retired programme — read-only"; now the version area is one note,
     // "Retired — a read-only historical record" (nothing can be saved, no new version). Read-only and no version buttons are unchanged.
     pb('NV-L3O', 'letter'); ok('C: Retired programme: read-only, no version buttons', /Retired — a read-only historical record/.test(main()) && !app().querySelector('[data-act="kPubProg"], [data-act="newProgVersion"]'));
-    pb('NV-L3', 'tree'); ok('C: builder tabs show the same header', /editing Version 3 \(draft\)/.test(main()) && app().querySelectorAll('.s3-vh').length === 1);
+    pb('NV-L3', 'tree'); ok('C: builder tabs show the same header', /editing Version 3 \(draft\)/.test(main()) && app().querySelectorAll('.cb-vb').length === 1 /* CB12 (PD-CB-79): was S3's header (.s3-vh) */);
   });
 
   await T('S3 correction D — Move preview uses the selected programme\'s own evidence', async () => {

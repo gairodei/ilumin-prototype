@@ -177,7 +177,6 @@ cbPanels = function (pr, sec) {
 const _badgesCB11 = cbBadges;
 cbBadges = function (pr) {
   const b = _badgesCB11.apply(this, arguments);
-  Object.keys(b).forEach(k => { b[k] = b[k].filter(h => !/cb-badge bad/.test(h)); if (!b[k].length) delete b[k]; });
   if (!cbRvKind(pr)) return b;
   const c = cbRvChecks(pr), n = {}; c.block.forEach(x => { n[x.sec] = (n[x.sec] || 0) + 1; });
   Object.entries(n).forEach(([s, k]) => { if (s !== 'review') (b[s] = b[s] || []).unshift(`<span class="cb-badge bad">${k} to fix</span>`); });

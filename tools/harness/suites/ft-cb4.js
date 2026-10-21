@@ -245,7 +245,7 @@
     ok('CB4-J the new actions are part of the builder\'s write list (hidden on read-only pages)', CB_WRITE.includes('cbCurEdit') && CB_WRITE.includes('cbCurMove'));
     // S3 scenario #28 and the version header still work
     ACT.s3Sc28Edit(); ok('CB4-J Scenario #28: U308 in the Level 3 draft, shown in Section 2', !!s3Draft('NV-L3') && s3Draft('NV-L3').tree.some(u => u.code === 'U308') && /U308/.test(q('.cb-cur-tree').textContent));
-    ok('CB4-J the version area keeps "Publish version 3"', !!q('.cb-ver [data-act="kPubProg"]'));
+    ok('CB4-J the version bar links to Review & Publish for Version 3', /* CB12 (PD-CB-79): was the version area's "Publish version 3" (kPubProg) */ !!q('.cb-ver [data-tab="review"]') && /Version 3 \(draft\)/.test(q('.cb-ver').textContent));
     // Wizard Review still counts the structure (ch8Check unchanged)
     SYS(); open('NV-N1', 'review'); ok('CB4-J new programme Review still checks the structure (Learning Outcome without a type blocks)', /Learning Outcome without a type: U401 M1 LO2/.test(main()));
     open('NV-N1'); ok('CB4-J curriculum badge on the section bar still shows the structure blocker', !!q('.cb-sec[data-tab="curriculum"] .cb-badge.bad'));
