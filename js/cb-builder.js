@@ -72,7 +72,8 @@ function cbPanels(pr, sec) {
   const nw = !!pr.chNew;
   switch (sec) {
     case 'details': return [['details', 'Course details', H(() => cbDetails(pr))]];
-    case 'curriculum': return [['structure', 'Structure', L(nw ? 'structure' : 'tree')], ['types', 'Assessment types', nw ? H(() => s3TypesTab()) : L('types')]];
+    // CB4: one curriculum editor for every programme (js/cb-curriculum.js); the shared assessment types after how this programme uses them
+    case 'curriculum': return [['structure', 'Structure', H(() => cbCurriculum(pr))], ['types', 'Assessment types', H(() => cbCurTypesUse(pr) + s3TypesTab())]];
     case 'assessments': return [['assessments', 'Assignments', H(() => cbAssessments(pr))]];
     case 'observations': { const na = cbObsNo(pr) ? cbObsNA(pr) : '', obs = L('obs'); return [['obs', 'Observation configuration', () => na + obs()]].concat(nw ? [] : [['library', 'Shared library (legacy)', L('library')]]); }
     case 'payments': {

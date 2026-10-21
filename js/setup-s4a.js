@@ -28,7 +28,8 @@ const s4Seed = () => ({ cfg: { deposit: CH_DEP, hold: CH_HOLD_DAYS, hist: [] }, 
 const S4 = () => (STORE.s4 = STORE.s4 || s4Seed());
 const s4Pr = id => s3Pr(id);
 const s4PidOfTitle = t => (s3Progs().find(p => p.title === t) || {}).id;
-const s4PidOfW = w => (w && w.signup && w.signup.prog) || s4PidOfTitle(w && w.nvq && w.nvq.title) || 'NV-L3';
+// CB4 correction (PD-CB-32): by ID or an unambiguous title; null when unresolved — never Level 3
+const s4PidOfW = w => (chProgResolve(w).pr || {}).id || null;
 // A reset restores the programme fees and Browse prices a plan change may have updated
 const S4_FEES0 = { ...NVQ_FEES }, S4_CAT0 = CATALOGUE.filter(c => c.kind === 'nvq').map(c => [c, c.price]);
 const _isS4 = initStore; initStore = function () { STORE.s4 = null; Object.assign(NVQ_FEES, S4_FEES0); S4_CAT0.forEach(([c, p]) => { c.price = p; }); const r = _isS4.apply(this, arguments); s4Init(); return r; };
@@ -115,7 +116,7 @@ ch8PlanStep = function (pr) { let h = _ch8PlanS4.apply(this, arguments); const t
   return t.issue ? h.replace('</section>', `<div class="note b-red s4-planerr">${ic('alert')}<div class="small"><strong>Needs configuration.</strong> ${esc(t.issue)}</div></div></section>`) : h; };
 const _ch8CreateS4 = ch8Create; ch8Create = function () { const pr = _ch8CreateS4.apply(this, arguments); s4SeedProg(pr); s4Accessors(pr); return pr; };
 // Learners who started a sign-up before plans were pinned keep the plan in force today
-const s4PinSeeded = () => Object.values(STORE.worlds || {}).forEach(w => { if (w.signup && w.nvq && !w.signup.plan) w.signup.plan = Object.freeze({ ...s4TermsOf(s4PidOfW(w)) }); });
+const s4PinSeeded = () => Object.values(STORE.worlds || {}).forEach(w => { if (w.signup && w.nvq && !w.signup.plan && s4PidOfW(w)) w.signup.plan = Object.freeze({ ...s4TermsOf(s4PidOfW(w)) }); });
 const S4_CFG = 'Deposit minimum and seat-hold days';
 // The seat hold is 1–28 days: a conservative prototype choice (no longer than the 28-day deposit eligibility, CH-10) — to confirm with the client if longer holds are wanted
 const S4_HOLD_MAX = 28;

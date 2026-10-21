@@ -1332,3 +1332,28 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 /* CB3 — Offer Letter & Documents */
 .cb-contract-note { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--brand-soft); display: flex; gap: 6px; align-items: flex-start; }
 .cb-ckhist .tbl, .cb-signed .tbl { min-width: 520px; }
+
+/* CB4 — Curriculum */
+.cb-cur .tree summary { grid-template-columns: 18px minmax(0, 1fr) auto; align-items: start; }
+.cb-cur-t { min-width: 0; overflow-wrap: anywhere; }
+.cb-acts { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; justify-content: flex-end; }
+.cb-cur-mod { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 6px 12px; border-bottom: 1px dashed var(--line); }
+.cb-cur-lo { border-top: 1px solid var(--line); padding: 10px 12px; display: grid; gap: 6px; }
+.cb-cur-loh { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; align-items: start; }
+.cb-cur-ty { width: auto; max-width: 100%; padding: 4px 8px; }
+.cb-cur-guide { margin: 0; }
+.cb-cur-crit { list-style: none; margin: 0; padding: 0 0 0 12px; border-left: 2px solid var(--line); display: grid; gap: 2px; }
+.cb-cur-c { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 6px 0; }
+.cb-cur-vers, .cb-cur-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.cb-cur-sum { margin: 0; }
+.cb-cur-hist > summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
+.cb-ctx { display: grid; gap: 4px; padding: 8px 12px; margin-bottom: 12px; border-radius: 8px; background: var(--brand-soft); border-left: 3px solid var(--brand); }
+.cb-ctx-path { margin: 0; padding-left: 18px; display: grid; gap: 2px; overflow-wrap: anywhere; }
+.cb-ro { padding: 6px 0; }
+.cb-obs-hint { color: var(--amber, #8a5a00); }
+@media (max-width: 760px) {
+  .cb-cur .tree summary { grid-template-columns: 18px minmax(0, 1fr); }
+  .cb-cur .tree summary .cb-acts { grid-column: 2; justify-content: flex-start; }
+  .cb-cur-loh, .cb-cur-c { grid-template-columns: minmax(0, 1fr); }
+  .cb-cur-loh .cb-acts, .cb-cur-c .cb-acts { justify-content: flex-start; }
+}

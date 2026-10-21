@@ -45,11 +45,20 @@ function chLetterSeed() {
   });
   return L;
 }
-const chProgOf = w => (ADMIN.programmes || []).find(p => p.title === w.nvq.title) || { id: 'NV-L3', title: w.nvq.title };
+// CB4 correction (PD-CB-32): a learner record's programme — by the stable programme ID it carries (sign-ups since CH-8 keep
+// signup.prog), else by an exact title that matches exactly one programme (historical records that only have a title).
+// Anything else is unresolved: never Level 3 or another programme.
+function chProgResolve(w) {
+  const ps = (typeof ADMIN !== 'undefined' && ADMIN && ADMIN.programmes) || [], id = w && w.signup && w.signup.prog;
+  if (id) { const p = ps.find(x => x.id === id); return p ? { pr: p, how: 'id' } : { pr: null, why: `the programme ID it records (${id}) doesn't exist` }; }
+  const t = w && w.nvq && w.nvq.title; if (!t) return { pr: null, why: 'it records no programme' };
+  const m = ps.filter(x => x.title === t); return m.length === 1 ? { pr: m[0], how: 'title' } : { pr: null, why: m.length ? `its programme title matches ${m.length} programmes` : 'no programme has its programme title' };
+}
+const chProgOf = w => chProgResolve(w).pr || { id: null, title: w && w.nvq ? w.nvq.title : '', unresolved: true };
 const chLetters = id => (STORE.chLetters = STORE.chLetters || chLetterSeed())[id] || [];
 const chLetterCur = id => { const l = chLetters(id); return l[l.length - 1]; };
 // The version the learner signs: the one current when they started their sign-up (a new version is for new applicants)
-const chLetterFor = w => { const id = chProgOf(w).id, l = chLetters(id); return l.find(x => x.v === (w.signup.letterV || (w.signup.letterV = (chLetterCur(id) || {}).v))) || chLetterCur(id); };
+const chLetterFor = w => { const id = chProgOf(w).id; if (!id) return null; const l = chLetters(id); return l.find(x => x.v === (w.signup.letterV || (w.signup.letterV = (chLetterCur(id) || {}).v))) || chLetterCur(id); };
 const chMerge = (s, name, sid) => esc(s).replace(/\{\{full_name\}\}/g, name).replace(/\{\{student_id\}\}/g, sid);
 function chLetterHtml(letter, { name, sid, raw } = {}) {
   if (!letter) return '<p class="small muted">No offer letter has been uploaded for this course.</p>';

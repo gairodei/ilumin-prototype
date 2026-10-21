@@ -252,7 +252,7 @@
     ok('S3-01 NV-L3D: Level 3 plus U310 and U311 (its own tree, not Level 3\'s)', tr['NV-L3D'] !== tr['NV-L3'] && tr['NV-L3D'].map(u => u.code).slice(-2).join() === 'U310,U311' && !tr['NV-L3'].some(u => u.code === 'U310'));
     pb('NV-L4', 'tree'); ok('S3-01 the builder shows the programme\'s own units (Level 4)', /U401/.test(main()) && /Outcome-based practice/.test(main()) && !/U301/.test(main()) && app().querySelectorAll('[data-onchange="chModCode"][data-p="NV-L4"]').length === 3);
     pb('NV-L5', 'tree'); ok('S3-01 Level 5 shows U501–U503', /U501/.test(main()) && /U503/.test(main()) && !/U401/.test(main()));
-    pb('NV-L3', 'tree'); ok('S3-01 Level 3 builder unchanged: 9 module codes, 9 answer-key buttons', app().querySelectorAll('[data-onchange="chModCode"]').length === 9 && app().querySelectorAll('[data-act="chAnsUp"]').length === 9);
+    pb('NV-L3', 'tree'); /* CB4 correction (PD-CB-33) supersedes "9 module codes" on the published version: codes are corrected in a draft version only */ ok('S3-01 Level 3 builder: 9 answer-key buttons; module codes shown, not editable on the published version', app().querySelectorAll('[data-onchange="chModCode"]').length === 0 && app().querySelectorAll('[data-act="chAnsUp"]').length === 9 && /H\/652\/0101/.test(main()));
     pb('NV-L4', 'tree'); const inp = app().querySelector('[data-onchange="chModCode"][data-k="U401 M1"]'); inp.value = 'D/650/4499'; INP.chModCode(inp);
     ok('S3-01 module code is per programme (Level 4 changed, Level 3 not)', tr['NV-L4'][0].mods[0].ab === 'D/650/4499' && STORE.worlds.C.tree[0].mods[0].ab !== 'D/650/4499' && /D\/650\/4499/.test(main()) && ADMIN.audit[0].action === 'Module awarding-body code changed' && /NV-L4/.test(ADMIN.audit[0].target || ADMIN.audit[0].item || JSON.stringify(ADMIN.audit[0])));
     pb('NV-L2', 'tree'); ACT.chAnsUp({ dataset: { k: 'U303 M1', p: 'NV-L2' } }); ACT.chAnsSample(); reason('Level 2 guidance');
@@ -566,8 +566,9 @@
     pb('NV-L3', 'tree'); ACT.s3KeyRemove({ dataset: { k: 'U302 M1', p: 'NV-L3' } }); reason('Outdated');
     const keyIn = v => STORE.worlds[v].resources.some(g => /^U302/.test(g.unit) && g.items.some(i => i.id === 'ak-U302-M1'));
     ok('E2E-11/12: Level 3 key removed from Aisha only; Grace keeps the Level 2 key; history kept', !keyIn('C') && keyIn('D') && STORE.s3.keys['NV-L3']['U302 M1'][0].removed && STORE.s3.keys['NV-L2']['U302 M1'].length === 1);
-    pb('NV-L2', 'tree'); const c2 = app().querySelector('[data-onchange="chModCode"][data-k="U302 M1"][data-p="NV-L2"]'); c2.value = 'Q/650/2001'; INP.chModCode(c2);
-    ok('E2E-12: Level 2 module code doesn\'t leak into Level 3', STORE.worlds.D.tree.find(u => u.code === 'U302').mods[0].ab === 'Q/650/2001' && STORE.worlds.C.tree.find(u => u.code === 'U302').mods[0].ab !== 'Q/650/2001');
+    // CB4 correction (PD-CB-33) supersedes the correction on Level 2's published version (it rewrote Grace's record): it goes into a draft version
+    if (!s3Draft('NV-L2')) s3NewVersion(s3Pr('NV-L2'), 'E2E-12', true); pb('NV-L2', 'tree'); const c2 = app().querySelector('[data-onchange="chModCode"][data-k="U302 M1"][data-p="NV-L2"]'); c2.value = 'Q/650/2001'; INP.chModCode(c2);
+    ok('E2E-12: Level 2 module code (draft version) doesn\'t leak into Level 3 or into Grace\'s record', s3Draft('NV-L2').tree.find(u => u.code === 'U302').mods[0].ab === 'Q/650/2001' && STORE.worlds.D.tree.find(u => u.code === 'U302').mods[0].ab !== 'Q/650/2001' && STORE.worlds.C.tree.find(u => u.code === 'U302').mods[0].ab !== 'Q/650/2001');
     // Access restrictions
     role('finA'); const n0 = STORE.s3.trees['NV-L4'].length; ACT.nodeAdd({ dataset: { p: 'NV-L4', lvl: 'unit' } });
     ok('Access: Finance can\'t change the structure (refused, logged)', !MODAL && STORE.s3.trees['NV-L4'].length === n0 && ADMIN.audit[0].action === 'Blocked: change the structure');

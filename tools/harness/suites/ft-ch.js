@@ -507,12 +507,17 @@
     ok('CH-15 assignment header shows the module and its code', /U302 · Module 1 — AC M12 Ways of working in adult care \(T\/652\/0001\)/.test(main()));
     go('assignment', { id: 'a6' }); ok('CH-18 no answer key button when the module has none', !app().querySelector('[data-act="chAnsDl"]'));
     go('progress'); ok('CH-15 progress tree: module codes', /AC M12 Ways of working in adult care \(T\/652\/0001\)/.test(main()) && /Safe working \(R\/652\/0701\)/.test(main()));
+    // CB4 correction (PD-CB-33) supersedes CH-15 corrections on the published version that were copied into learners' records: the code
+    // is corrected in a draft version only; the published version and Aisha's record keep their code. Answer keys stay on the published version (CH-18).
     role('acaA'); go('a-programmes', { id: 'NV-L3', tab: 'tree' });
-    ok('CH-15 structure builder: editable code per module; CH-18 answer key per module', app().querySelectorAll('[data-onchange="chModCode"]').length === 9 && app().querySelectorAll('[data-act="chAnsUp"]').length === 9 && /AC M12 Ways of Working/.test(main()));
-    const inp = app().querySelector('[data-onchange="chModCode"][data-k="U307 M1"]'); inp.value = 'bad'; INP.chModCode(inp); ok('CH-15 code format checked', STORE.worlds.C.tree.find(u => u.code === 'U307').mods[0].ab === 'R/652/0701');
-    inp.value = 'Y/652/0799'; INP.chModCode(inp); ok('CH-15 code saved, audited, shown to learners', STORE.worlds.C.tree.find(u => u.code === 'U307').mods[0].ab === 'Y/652/0799' && ADMIN.audit[0].action === 'Module awarding-body code changed');
-    ACT.chAnsUp({ dataset: { k: 'U307 M1' } }); $('#rsn').value = 'New guidance'; ok('CH-18 upload needs a file', prim() === false); ACT.chAnsSample(); prim(); closeModal();
-    learner('C'); go('resources'); ok('CH-18 uploaded answer key appears under its module for learners', W.resources.some(g => /^U307/.test(g.unit) && g.items.some(i => i.kind === 'key' && /Knowledge Answer Key \(updated\)/.test(i.title))) && /Safe working \(Y\/652\/0799\)/.test(main()));
+    ok('CH-15 published Level 3: codes shown read-only (no correction field); CH-18 answer key per module', app().querySelectorAll('[data-onchange="chModCode"]').length === 0 && app().querySelectorAll('[data-act="chAnsUp"]').length === 9 && /R\/652\/0701/.test(main()) && /AC M12 Ways of Working/.test(main()));
+    ACT.newProgVersion({ dataset: { id: 'NV-L3' } }); document.querySelector('#rsn').value = 'Code correction'; prim(); closeModal(); go('a-programmes', { id: 'NV-L3', tab: 'tree' });
+    ok('CH-15 structure builder (draft version): editable code per module', app().querySelectorAll('[data-onchange="chModCode"]').length === 9);
+    const dt = () => s3Draft('NV-L3').tree.find(u => u.code === 'U307').mods[0].ab; const inp = app().querySelector('[data-onchange="chModCode"][data-k="U307 M1"]'); inp.value = 'bad'; INP.chModCode(inp); ok('CH-15 code format checked', dt() === 'R/652/0701' && STORE.worlds.C.tree.find(u => u.code === 'U307').mods[0].ab === 'R/652/0701');
+    inp.value = 'Y/652/0799'; INP.chModCode(inp); ok('CH-15 code saved in the draft version, audited; the published version and Aisha\'s record keep R/652/0701', dt() === 'Y/652/0799' && STORE.worlds.C.tree.find(u => u.code === 'U307').mods[0].ab === 'R/652/0701' && ADMIN.audit[0].action === 'Module awarding-body code changed');
+    // CB4 (PD-CB-29) supersedes the call without a programme (it fell back to Level 3): the programme is given
+    ACT.chAnsUp({ dataset: { k: 'U307 M1', p: 'NV-L3' } }); $('#rsn').value = 'New guidance'; ok('CH-18 upload needs a file', prim() === false); ACT.chAnsSample(); prim(); closeModal();
+    learner('C'); go('resources'); ok('CH-18 uploaded answer key appears under its module for learners', W.resources.some(g => /^U307/.test(g.unit) && g.items.some(i => i.kind === 'key' && /Knowledge Answer Key \(updated\)/.test(i.title))) && /Safe working \(R\/652\/0701\)/.test(main()) /* CB4 correction (PD-CB-33): the learner keeps her code */);
     fresh();
   });
 
@@ -1091,7 +1096,7 @@
 
   await T('New NVQ programme: structure, letter, documents, plan, review, publish', async () => {
     fresh(); acaEnter('KA'); S.signedIn = true; go('a-programmes'); ACT.chProgNew();
-    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600' }); create8(); const pr = np(), id = pr.id;
+    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600' }); create8('yes' /* CB4 (PD-CB-30): an Observation Learning Outcome is chosen below — only offered when the course has observations */); const pr = np(), id = pr.id;
     go('a-programmes', { id, tab: 'review' }); const pub0 = app().querySelector('[data-act="ch8Publish"]');
     ok('NP review: blocking items listed; Publish disabled with a reason', /Add at least one unit/.test(main()) && /No offer letter uploaded/.test(main()) && pub0.disabled && !!pub0.title);
     ACT.ch8Publish({ dataset: { id } }); ok('NP publish refused while items are missing (logged)', /Can't publish/.test(MODAL.title) && pr.status === 'Draft' && ADMIN.audit[0].action === 'Blocked: publish (items missing)'); closeModal();

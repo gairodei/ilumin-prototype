@@ -61,7 +61,7 @@
     go('a-programmes', { id: 'NV-L3', tab: 'fees' }); ok('N5a-B2 …the old "fees" link opens the Level 3 fee options', !!document.querySelector('main .cb-panels [data-tab="fees"][aria-selected="true"]') && !!document.querySelector('main .r1-opts'));
     go('a-programmes', { id: 'NV-L5', tab: 'obs' });
     ok('N5a-B2 Level 5: its own NVQ criteria (501 2.1…), no Level 3 codes, no Academy criteria', !!document.querySelector('main .n5-nvq tr[data-code="501 2.1"]') && !document.querySelector('main .n5-nvq tr[data-code="301 2.1"]') && /No Academy criteria in this version/.test(document.querySelector('main .n5-ia').textContent));
-    go('a-programmes', { id: 'NV-L3', tab: 'tree' }); ok('N5a-B3 other sections unchanged: the hierarchy still renders (Curriculum) with Observations as another section', /Hierarchy/.test(main()) && !!document.querySelector('main .cb-sec.cur[data-tab="curriculum"]') && !!document.querySelector('main .cb-sec[data-tab="observations"]:not(.cur)'));
+    go('a-programmes', { id: 'NV-L3', tab: 'tree' }); /* CB4 (PD-CB-26) supersedes "Hierarchy": the one curriculum editor is titled "Curriculum structure" */ ok('N5a-B3 other sections unchanged: the hierarchy still renders (Curriculum) with Observations as another section', /Curriculum structure/.test(main()) && !!document.querySelector('main .cb-sec.cur[data-tab="curriculum"]') && !!document.querySelector('main .cb-sec[data-tab="observations"]:not(.cur)'));
     go('a-programmes', { id: 'NV-N1', tab: 'obs' }); const steps = [...document.querySelectorAll('main .cb-nav .cb-sec')];
     ok('N5a-B4 new programme: Observations is section 4 (after Curriculum and Assessments), current, editable in the Draft', steps.length === 7 && steps[3].classList.contains('cur') && /Observations/.test(steps[3].textContent) && !!document.querySelector('main .n5-head') && !!document.querySelector('main [data-act="n5Settings"]') && !/undefined/.test(main()));
     ok('N5a-B4 …"Fees & Payments →" follows it', /Fees & Payments →/.test((document.querySelector('main .cb-foot') || {}).textContent || ''));
@@ -99,7 +99,11 @@
     SA(); const n1 = pr('NV-N1'); settings('NV-N1', 'yes', 'Permitted', 'Available');
     ok('N5a-S7 required but no NVQ observation criteria: blocking in the wizard Review (ch8Check)', ch8Check(n1).block.some(b => /no active NVQ observation criteria/.test(b)));
     settings('NV-N1', 'no'); ok('N5a-S8 observation not required and no Observation criteria: no observation blockers', !n5Check(n1).block.length && !ch8Check(n1).block.some(b => /^Observations/.test(b)));
-    INP.ch8LoType({ value: 'Observation', dataset: { id: 'NV-N1', u: '0', m: '0', l: '1' } }); if (MODAL) reason('Observation LO');
+    // CB4 (PD-CB-30) supersedes choosing the Observation type while "Not required": that is now refused (logged) and the type is
+    // unchanged; the D5 review is still reached the way it arises now — the type chosen while observation is required, then "No"
+    const a9 = ADMIN.audit.length; INP.ch8LoType({ value: 'Observation', dataset: { id: 'NV-N1', u: '0', m: '0', l: '1' } }); if (MODAL) reason('Observation LO');
+    ok('N5a-S9 (CB4) "Not required": choosing the Observation type is refused and logged; the type is unchanged', ch8Tree('NV-N1')[0].mods[0].los[1].type !== 'Observation' && ADMIN.audit.slice(0, ADMIN.audit.length - a9).some(a => a.action === 'Blocked: Observation type (course has no observations)'));
+    settings('NV-N1', 'yes'); INP.ch8LoType({ value: 'Observation', dataset: { id: 'NV-N1', u: '0', m: '0', l: '1' } }); if (MODAL) reason('Observation LO'); settings('NV-N1', 'no');
     ok('N5a-S9 giving a Learning Outcome the Observation type adds its criteria (401 2.1) — and "Not required" is flagged for review', n5Nvq(n1, D('NV-N1')).some(c => c.code === '401 2.1') && n5Check(n1).review.some(r => /U401 LO2/.test(r)) && !n5Check(n1).block.length && ch8Check(n1).warn.some(w => /Review \(D5\)/.test(w)));
     const na = ADMIN.audit.length; settings('NV-N1', null); ok('N5a-S10 "Nothing has changed" leaves the draft as it was (no audit entry)', D('NV-N1').required === false && ADMIN.audit.length === na && !!MODAL); closeModal();
   });

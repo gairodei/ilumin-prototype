@@ -47,7 +47,8 @@
     fresh(); SA();
     ['NV-L2', 'NV-L3', 'NV-L4', 'NV-L5'].forEach(id => {
       const pr = s3Pr(id); open(id);
-      ok(`CB1-B ${id} (${pr.status}): the list link opens the course builder on Curriculum (the hierarchy, as before)`, cur() === 'curriculum' && pan() === 'structure' && /Hierarchy/.test(main()));
+      // CB4 (PD-CB-26) supersedes "Hierarchy" (the S3 card title): one curriculum editor for every programme, titled "Curriculum structure"
+      ok(`CB1-B ${id} (${pr.status}): the list link opens the course builder on Curriculum (the curriculum hierarchy)`, cur() === 'curriculum' && pan() === 'structure' && /Curriculum structure/.test(main()) && !!q('.cb-cur-tree'));
       const seen = SECS.map(k => { q(`.cb-sec[data-tab="${k}"]`).click(); return cur() === k && q('.cb-sec.cur').getAttribute('aria-current') === 'page' && main().trim().length > 200 && !/undefined|We can't find that page/.test(main()) && oldNav() === 0; });
       ok(`CB1-B ${id}: each of the seven sections opens by clicking, current and marked, with content, no old navigation`, seen.every(Boolean), seen.join());
     });

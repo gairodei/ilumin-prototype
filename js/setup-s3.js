@@ -30,9 +30,11 @@ const s3Pr = id => s3Progs().find(p => p.id === id);
 // Version history per programme. Versions that existed before this prototype's audit trail are demo fixtures:
 // they carry no date, author or action. A wizard programme's Version 1 uses its own recorded publish date.
 const s3Hist = pr => (S3().hist[pr.id] = S3().hist[pr.id] || Array.from({ length: pr.version || 1 }, (_, k) => k === 0 && pr.chNew && pr.published ? { v: 1, at: pr.published, by: pr.by || '', note: 'Published from the new-programme wizard' } : { v: k + 1, fixture: true }));
-const s3Tree = pid => { const pr = s3Pr(pid); return pr && pr.chNew ? ch8Tree(pid) : (S3().trees[pid] = S3().trees[pid] || s3Clone(STORE.worlds.C.tree)); };
-const s3ProgOfW = w => { const t = w && w.nvq && w.nvq.title, p = t && s3Progs().find(x => x.title === t); return p ? p.id : 'NV-L3'; };
-const s3Worlds = pid => { const pr = s3Pr(pid); return Object.values(STORE.worlds || {}).filter(w => w.nvq && w.tree && pr && w.nvq.title === pr.title); };
+// CB4 (PD-CB-29): a programme without a stored tree gets an empty one — never a copy of Level 3's
+const s3Tree = pid => { const pr = s3Pr(pid); return pr && pr.chNew ? ch8Tree(pid) : (S3().trees[pid] = S3().trees[pid] || []); };
+// CB4 correction (PD-CB-32): the learner's programme by ID or an unambiguous title (chProgResolve); null when unresolved — never Level 3
+const s3ProgOfW = w => { const r = chProgResolve(w); return r.pr ? r.pr.id : null; };
+const s3Worlds = pid => { const pr = s3Pr(pid); return Object.values(STORE.worlds || {}).filter(w => w.nvq && w.tree && pr && s3ProgOfW(w) === pr.id); };
 const s3HasLearners = pid => { const pr = s3Pr(pid); return !!pr && pr.status !== 'Draft' && ((pr.learners || 0) > 0 || s3Worlds(pid).length > 0); };
 const s3Log = (pr, action, before, after, r) => logA('NVQ Programmes', `${pr.title} (${pr.id})`, action, before, after, r || '');
 const _isS3 = initStore; initStore = function () { STORE.s3 = null; const r = _isS3.apply(this, arguments); s3Init(); return r; };
@@ -42,10 +44,10 @@ const _baS3 = buildAdmin; buildAdmin = function () { const r = _baS3.apply(this,
 const s3Keys = pid => (S3().keys[pid] = S3().keys[pid] || {});
 const s3KeyCur = (pid, key) => { const l = s3Keys(pid)[key] || []; return l[0] && !l[0].removed ? l[0] : null; };
 // chAnsFor() (learner screens) reads the keys of the current learner's programme
-function s3KeyProxy() { return new Proxy({ __s3: true }, { get: (t, k) => { if (k === '__s3') return true; if (typeof k !== 'string') return undefined; const pid = s3ProgOfW(W), f = s3KeyCur(pid, k); return f ? [f] : undefined; } }); }
+function s3KeyProxy() { return new Proxy({ __s3: true }, { get: (t, k) => { if (k === '__s3') return true; if (typeof k !== 'string') return undefined; const pid = s3ProgOfW(W); if (!pid) return undefined; const f = s3KeyCur(pid, k); return f ? [f] : undefined; } }); }
 chSyncAnsKeys = function (w) {
   if (!w || !w.flags || !w.flags.nvq || !w.tree || !w.resources) return;
-  const pid = s3ProgOfW(w);
+  const pid = s3ProgOfW(w); if (!pid) return; // unresolved programme: no answer keys (never another programme's)
   Object.entries(s3Keys(pid)).forEach(([key, list]) => {
     const [uc, mc] = key.split(' '), u = w.tree.find(x => x.code === uc), m = u && u.mods.find(x => x.code === mc); if (!m) return;
     const id = 'ak-' + key.replace(' ', '-'), cur = list[0] && !list[0].removed ? list[0] : null;
@@ -64,14 +66,14 @@ chModAdmin = function (u, m) {
     <span class="small">${ic('key', 13)} Answer key: ${f ? `<span class="mono">${esc(f.file)}</span> <span class="xs muted">· ${esc(f.by)}, ${fd(f.at)}</span>` : '<span class="muted">none</span>'}</span><button type="button" class="btn btn-sm" data-act="chAnsUp" data-k="${key}" data-p="${pid}">${ic('upload', 13)}${f ? 'Replace answer key' : 'Upload answer key'}</button>${f ? `<button type="button" class="btn btn-sm" data-act="s3KeyRemove" data-k="${key}" data-p="${pid}">Remove</button>` : ''}</div>`;
 };
 INP.chModCode = el => {
-  const v = el.value.trim(), key = el.dataset.k, pid = el.dataset.p || 'NV-L3', pr = s3Pr(pid), [uc, mc] = key.split(' ');
+  const v = el.value.trim(), key = el.dataset.k, pid = el.dataset.p, pr = s3Pr(pid), [uc, mc] = key.split(' ');
   const trees = [s3Tree(pid)].concat(S3().drafts[pid] ? [S3().drafts[pid].tree] : []).concat(s3Worlds(pid).map(w => w.tree));
   const mods = Array.from(new Set(trees.flatMap(t => t.filter(u => u.code === uc).flatMap(u => u.mods.filter(x => x.code === mc))))), old = (mods[0] || {}).ab || '—';
   if (!/^[A-Z]\/\d{3}\/\d{4}$/.test(v)) { toast('Use the awarding-body format, for example T/652/0001.', 'err'); el.value = old === '—' ? '' : old; return; }
   mods.forEach(m => { m.ab = v; }); logA('NVQ Programmes', `${pr ? pr.id + ' · ' : ''}${key}`, 'Module awarding-body code changed', old, v, 'Structure builder'); render(); toast(`${key}: code saved (${v}).`);
 };
 ACT.chAnsUp = el => {
-  const key = el.dataset.k, pid = el.dataset.p || 'NV-L3'; setUi('chAnsFile', '');
+  const key = el.dataset.k, pid = el.dataset.p; setUi('chAnsFile', '');
   reasonDlg({ title: 'Answer key — ' + esc(key), ok: 'Upload answer key', label: 'Note (required)', extra: `<div class="field"><label for="ak-f">Answer key (PDF or DOCX)</label><input class="input" type="file" id="ak-f" accept=".pdf,.docx" data-onchange="chAnsFile"><span class="hint">Learners on this programme see it in Resources under this module and on its assignments. <span id="ak-fname">No file chosen</span></span><button type="button" class="linklike small" data-act="chAnsSample">Prototype: use a sample PDF</button></div>`,
     onOk: r => { const f = ui('chAnsFile', ''); if (!f) { fieldErr('#ak-f', 'Choose a PDF or DOCX file'); return false; } if (!/\.(pdf|docx)$/i.test(f)) { fieldErr('#ak-f', 'Upload a PDF or DOCX file'); return false; }
       const list = s3Keys(pid)[key] = s3Keys(pid)[key] || [], prev = s3KeyCur(pid, key); list.unshift({ file: f, at: now().toISOString(), by: ADMIN.me.name }); chSyncAll();
@@ -88,7 +90,7 @@ function s3MergeLib() {
   K.obsLib = ia.concat([{ code: 'IA-5', title: 'Uses moving and handling equipment as per the care plan', desc: 'Uses the equipment named in the care plan, safely.', cat: 'Care standards', status: 'Active', progs: [], version: 1, form: false }, { code: 'IA-6', title: 'Records care accurately and on time', desc: 'Records care accurately and on time.', cat: 'Care standards', status: 'Retired', progs: [], version: 1, form: false }], old);
 }
 const s3Lib = () => { s3MergeLib(); return (STORE.aca && STORE.aca.obsLib) || []; };
-function s3SyncIA() { Object.values(STORE.worlds || {}).forEach(w => { if (!Array.isArray(w.iaCriteria)) return; const pid = s3ProgOfW(w), on = s3Lib().filter(c => c.form && c.status === 'Active' && c.progs.includes(pid)).map(c => [c.code, c.title]); w.iaCriteria.splice(0, w.iaCriteria.length, ...on); }); }
+function s3SyncIA() { Object.values(STORE.worlds || {}).forEach(w => { if (!Array.isArray(w.iaCriteria)) return; const pid = s3ProgOfW(w); if (!pid) return; const on = s3Lib().filter(c => c.form && c.status === 'Active' && c.progs.includes(pid)).map(c => [c.code, c.title]); w.iaCriteria.splice(0, w.iaCriteria.length, ...on); }); }
 function s3Init() { if (!STORE.worlds || !s3Progs().length) return; S3(); if (!(STORE.chAnsKeys && STORE.chAnsKeys.__s3)) STORE.chAnsKeys = s3KeyProxy(); s3MergeLib(); s3SyncIA(); chSyncAll(); }
 function s3LibTable() {
   return dt({ id: 'kobslib', name: 'Observation criteria library', rows: s3Lib(), rid: c => c.code, search: c => c.code + c.title + c.desc, filters: [{ k: 'c', l: 'Category', get: c => c.cat, opts: ['Professional conduct', 'Care standards', 'Safeguarding', 'Other'] }, { k: 's', l: 'Status', get: c => c.status, opts: ['Active', 'Draft', 'Retired'] }],
@@ -197,7 +199,7 @@ ACT.nodeState = el => {
 };
 ACT.s3Up = el => { const d = s3Ds(el), pr = s3Pr(d.p || s3Cur); if (!s3Guard(pr)) return; const tree = s3EditTree(pr.id, true), arr = d.m ? s3Find(tree, d.u).u.mods : tree, i = arr.findIndex(x => x.code === (d.m || d.u)), j = i + +d.dir; if (i < 0 || j < 0 || j >= arr.length) return; [arr[i], arr[j]] = [arr[j], arr[i]]; s3Log(pr, d.m ? 'Modules reordered' : 'Units reordered', '—', arr.map(x => x.code).join(' → ')); render(); };
 ACT.loMove = el => {
-  const d = s3Ds(el), pr = s3Pr(d.p || s3Cur) || s3Pr('NV-L3'); if (!s3Guard(pr)) return; const view = s3ViewTree(pr.id), cur = s3Find(view, d.u, d.m, d.lo); if (!cur.lo) return;
+  const d = s3Ds(el), pr = s3Pr(d.p || s3Cur); if (!s3Guard(pr)) return; const view = s3ViewTree(pr.id), cur = s3Find(view, d.u, d.m, d.lo); if (!cur.lo) return;
   const ev = s3LoEvidence(pr.id, cur.lo), targets = view.flatMap(x => x.mods.map(m => [x.code + ' ' + m.code, `${x.code} · ${m.title}`])).filter(t => t[0] !== d.u + ' ' + d.m);
   reasonDlg({ title: `Move ${cur.lo.code} — ${esc(cur.lo.title)}`, ok: 'Move learning outcome', danger: !!ev.n, label: 'Reason (required)', extra: `<div class="field"><label for="lom-t">Move to module</label><select class="select" id="lom-t">${targets.map(t => `<option value="${t[0]}">${esc(t[1])}</option>`).join('')}</select></div>
     <div class="note ${ev.n ? 'b-amber' : 'b-grey'}">${ic('alert')}<div class="small"><strong>Impact preview (${esc(pr.title)}):</strong> ${cur.lo.crit.length} criteria · ${ev.judged} with learner judgements · ${ev.mapped} mapped to assignment questions · ${ev.learners} learner record(s) affected.${ev.n ? '<br>This learning outcome has evidence, so it can be moved or retired but never deleted.' : '<br>No learner evidence on this programme for these criteria.'}</div></div>
@@ -244,7 +246,7 @@ function s3TreeTab(pr) {
 function s3VersionsTab(pr) {
   const h = s3Hist(pr).slice().reverse(), dv = s3Draft(pr.id);
   return `<section class="card"><div class="row-b"><h2>Versions</h2>${pr.status === 'Retired' ? '' : dv ? `<button class="btn btn-sm btn-primary" data-act="kPubProg" data-id="${pr.id}">Publish version ${dv.v}</button>` : `<button class="btn btn-sm btn-primary" data-act="newProgVersion" data-id="${pr.id}">Create new version</button>`}</div><div class="note b-blue">${ic('info')}<div class="small">Enrolled learners stay on their version. Migrating a cohort is an explicit, audited decision.</div></div>
-    <ul class="list">${dv ? `<li class="li"><div class="li-b"><strong>Version ${dv.v} (draft)</strong><span class="xs muted">Created ${fd(dv.at)} by ${esc(dv.by)} · edited in the Hierarchy builder</span></div>${chip('Draft', 'amber')}</li>` : ''}${h.map(x => `<li class="li"><div class="li-b"><strong>Version ${x.v}${x.v === pr.version ? ' (current)' : ''}</strong><span class="xs muted">${x.fixture ? 'Demo fixture — existed before this prototype\'s audit trail (no recorded date or author)' : `${fd(x.at)}${x.by ? ' · ' + esc(x.by) : ''} · ${esc(x.note)}`}${pr.perVersion && pr.perVersion[x.v] !== undefined ? ` · ${pr.perVersion[x.v]} learners` : ''}</span></div>${chip(x.v === pr.version ? 'Current' : 'Superseded', x.v === pr.version ? 'green' : 'grey')}</li>`).join('')}</ul>
+    <ul class="list">${dv ? `<li class="li"><div class="li-b"><strong>Version ${dv.v} (draft)</strong><span class="xs muted">Created ${fd(dv.at)} by ${esc(dv.by)} · edited in Section 2 — Curriculum</span></div>${chip('Draft', 'amber')}</li>` : ''}${h.map(x => `<li class="li"><div class="li-b"><strong>Version ${x.v}${x.v === pr.version ? ' (current)' : ''}</strong><span class="xs muted">${x.fixture ? 'Demo fixture — existed before this prototype\'s audit trail (no recorded date or author)' : `${fd(x.at)}${x.by ? ' · ' + esc(x.by) : ''} · ${esc(x.note)}`}${pr.perVersion && pr.perVersion[x.v] !== undefined ? ` · ${pr.perVersion[x.v]} learners` : ''}</span></div>${chip(x.v === pr.version ? 'Current' : 'Superseded', x.v === pr.version ? 'green' : 'grey')}</li>`).join('')}</ul>
     ${isSA() ? '<button class="btn" data-act="migrateCohort">Migrate a cohort to the current version…</button>' : `<p class="small muted">${ic('lock', 14)} Cohort migration — Super Administrator only</p>`}</section>${auditPanel(a => a.module === 'NVQ Programmes' && String(a.entity || '').includes('(' + pr.id + ')') && /Version|published/i.test(a.action), 'Version history — audit')}`;
 }
 // One header for every tab: Draft programme → "Publish programme"; draft version → "Publish version N"; otherwise the current
@@ -342,7 +344,7 @@ SC_LIST = function () {
   const x = (text, r, t, act) => ({ text, r, t, act });
   return _scListS3().concat([['28', 'Change a programme\'s structure with a new version', 'Setup S3', [
     x('The Super Admin opens Level 3 → Versions and chooses "Create new version" — a draft copy of the current structure.', 'admin', 'a-programmes.NV-L3.versions', 's3Sc28Ver'),
-    x('In the Hierarchy builder, a unit is added to the draft (U308 Health and safety).', 'admin', 'a-programmes.NV-L3.tree', 's3Sc28Edit'),
+    x('In Section 2 — Curriculum, a unit is added to the draft (U308 Health and safety).', 'admin', 'a-programmes.NV-L3.tree', 's3Sc28Edit'),
     x('"Publish version 3" — checked against the draft\'s own structure.', '', '', 's3Sc28Pub'),
     x('Aisha Rahman stays on her version: her progress shows the same units.', '', '', 's3Sc28Learner'),
     x('In the Observation Criteria Library, IA-5 is ticked "On observation forms" and attached to Level 3 — the assessor\'s observation form lists it.', 'staff', 't-obs', 's3Sc28Obs')]]]);
