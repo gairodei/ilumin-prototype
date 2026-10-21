@@ -13,19 +13,20 @@
   const errs = []; window.addEventListener('error', e => errs.push(e.message));
   try {
     closeModal(); S.ui = {}; initStore();
-    // 1. New NVQ programme wizard (Super Admin): Level 3 fee options, then Level 4 single price
+    // 1. New NVQ programme (Super Admin): Level 3 fee options, then Level 4 single price — CB2 (PD-CB-14): on the Course Details page of an
+    //    unsaved course, not in a dialog (selectors main, not #modal-root; "the dialog fits" → no page overflow)
     setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-dashboard'); nav('a-programmes');
-    ok('wizard: "New NVQ programme" button opens the dialog', click($1('main [data-act="chProgNew"]')) && !!$1('#modal-root #np-t'));
-    click($1('#modal-root [data-act="r1NpAdd"]')); click($1('#modal-root [data-act="r1NpAdd"]'));
+    ok('New NVQ programme: the button opens Course Details of an unsaved course (no dialog)', click($1('main [data-act="chProgNew"]')) && !MODAL && !!$1('main .cb-new #np-t'));
+    click($1('main [data-act="r1NpAdd"]')); click($1('main [data-act="r1NpAdd"]'));
     ok('wizard (Level 3): Price (GBP) is not displayed', !shown($1('#np-p')));
-    ok('wizard (Level 3): three fee-option rows displayed, each with label, fee and mode', all('#modal-root .r1-np-row').filter(shown).length === 3 && all('#modal-root .r1-np-row').every(r => shown(r.querySelector('.r1-np-l')) && shown(r.querySelector('.r1-np-f')) && shown(r.querySelector('.r1-np-m'))));
-    ok('wizard (Level 3): no delivery-mode or class-pattern selector; the mode comes from the fee option; no Pending label displayed', !shown($1('#modal-root .r1-np-sup')) && !all('#modal-root input[name="np-s"]').some(shown) && shown($1('#modal-root .r1-np-modes')) && /comes from the fee option/.test($1('#modal-root .r1-np-modes').textContent) && !all('#modal-root .tbd').some(shown));
-    ok('wizard (Level 3): the dialog fits the viewport', !modalFits(), modalFits());
-    ok('wizard (Level 3, E1 clarification): fee guidance displayed — payment methods and instalments are configured in the Payment Plan step; no instalment count stated', shown($1('#modal-root .e1-step1-fees')) && /Payment methods and instalments are configured in the Payment Plan step/.test($1('#modal-root .e1-step1-fees').textContent) && !/split evenly|unless changed/.test($1('#modal-root .r1-np-opts').textContent));
-    ok('wizard: every fee-option control has an accessible name', all('#modal-root .r1-np-row input, #modal-root .r1-np-row select, #modal-root .r1-np-row button').every(e => (e.getAttribute('aria-label') || '').trim()));
+    ok('wizard (Level 3): three fee-option rows displayed, each with label, fee and mode', all('main .r1-np-row').filter(shown).length === 3 && all('main .r1-np-row').every(r => shown(r.querySelector('.r1-np-l')) && shown(r.querySelector('.r1-np-f')) && shown(r.querySelector('.r1-np-m'))));
+    ok('wizard (Level 3): no delivery-mode or class-pattern selector; the mode comes from the fee option; no Pending label displayed', !shown($1('main .r1-np-sup')) && !all('main input[name="np-s"]').some(shown) && shown($1('main .r1-np-modes')) && /comes from the fee option/.test($1('main .r1-np-modes').textContent) && !all('main .tbd').some(shown));
+    ok('Course Details (Level 3): no page overflow', appOver() <= 1, appOver());
+    ok('wizard (Level 3, E1 clarification): fee guidance displayed — payment methods and instalments are configured in the Payment Plan step; no instalment count stated', shown($1('main .e1-step1-fees')) && /Payment methods and instalments are configured in the Payment Plan step/.test($1('main .e1-step1-fees').textContent) && !/split evenly|unless changed/.test($1('main .r1-np-opts').textContent));
+    ok('wizard: every fee-option control has an accessible name', all('main .r1-np-row input, main .r1-np-row select, main .r1-np-row button').every(e => (e.getAttribute('aria-label') || '').trim()));
     const lv = $1('#np-l'); lv.value = 'Level 4'; lv.dispatchEvent(new Event('change', { bubbles: true }));
-    ok('wizard (Level 4): single Price displayed, fee options and the Level 3 text hidden, P-31 wording shown', shown($1('#np-p')) && !shown($1('#modal-root .r1-np-l3')) && !shown($1('#modal-root span.small.r1-np-m3')) && all('#modal-root .tbd').some(shown));
-    ok('wizard (Level 4): the dialog fits the viewport', !modalFits(), modalFits()); closeModal();
+    ok('wizard (Level 4): single Price displayed, fee options and the Level 3 text hidden, P-31 wording shown', shown($1('#np-p')) && !shown($1('main .r1-np-l3')) && !shown($1('main span.small.r1-np-m3')) && all('main .tbd').some(shown));
+    ok('Course Details (Level 4): no page overflow', appOver() <= 1, appOver()); closeModal();
     // 2. Finance → Instalment plans → Add fee option (dialog)
     go('a-finance', { tab: 'plans' }); ok('fee options: card displayed with Add fee option', shown($1('main .r1-opts [data-act="r1OptAdd"]')));
     click($1('main .r1-opts [data-act="r1OptAdd"]')); ok('fee options: Add fee option dialog fits the viewport', !!$1('#modal-root #fo-l') && !modalFits(), modalFits()); closeModal();
@@ -117,8 +118,8 @@
     const set = (s, v) => { const e = $1(s); e.value = v; e.dispatchEvent(new Event('change', { bubbles: true })); };
     set('#np-l', 'Level 4'); set('#np-t', 'Level 4 UI check programme'); set('#np-r', 'QN 610/8888/1'); set('#np-d', '18'); set('#np-du', 'months'); set('#np-p', '2400');
     ok('E1 wizard: duration number and unit displayed side by side, unit readable', shown($1('#np-d')) && shown($1('#np-du')) && $1('#np-du').getBoundingClientRect().width >= 90 && Math.abs($1('#np-d').getBoundingClientRect().top - $1('#np-du').getBoundingClientRect().top) < 4, Math.round($1('#np-du').getBoundingClientRect().width));
-    ok('E1 wizard: the dialog fits the viewport', !modalFits(), modalFits());
-    click(all('#modal-root .modal button').find(b => b.textContent.trim() === 'Create draft')); click($1('main .cb-nav .cb-sec[data-tab="payments"]')); // CB1 (PD-CB-01): the Fees & Payments section (was the wizard's Payment plan step)
+    ok('E1 Course Details: no page overflow', appOver() <= 1, appOver()); // CB2 (PD-CB-14): the page, not the dialog
+    $1('main #np-code').value = 'UI-L4'; click($1('main #np-obs-no')); click($1('main [data-act="cbDetCreate"]')); click($1('main .cb-nav .cb-sec[data-tab="payments"]')); // CB1 (PD-CB-01): the Fees & Payments section (was the wizard's Payment plan step)
     ok('E1 plan step: Draft status and three clearly labelled payment choices', /Draft — not yet submitted/.test(main()) && all('main input[name="e1-meth"]').filter(shown).length === 3);
     click($1('main input[name="e1-meth"][value="one-time"]')); ok('E1 plan step: "One payment" hides the instalment count', !shown($1('#e1-n')));
     click($1('main input[name="e1-meth"][value="both"]')); ok('E1 plan step: "Both" shows the count; the summary follows', shown($1('#e1-n')) && /in one payment, or/.test($1('main .e1-sumbox').textContent));
@@ -249,9 +250,24 @@
     click($1('main .cb-panels [data-tab="plan"]')); ok('CB1 Payment plan (read-only): the payment summary scrolls inside its box; no page overflow', shown($1('main .cb-plan .e1-sum')) && appOver() <= 1, appOver());
     click($1('main .page-h [data-tab="versions"]')); ok('CB1 Version history displayed with "Back to the course builder"; no page overflow', /Version 2 \(current\)/.test(main()) && shown($1('main .cb-sh .btn')) && appOver() <= 1, appOver());
     go('a-programmes', { id: 'NV-L3O' }); ok('CB1 retired programme: the read-only historical-record note displayed, no "Saving creates Version"; no write buttons; no page overflow', shown($1('main .cb-hist')) && !/Saving creates Version/.test($1('main .cb').textContent) && !$1('main .cb [data-act="chSupSave"], main .cb [data-act="newProgVersion"], main .cb [data-act="chLetterUp"]') && appOver() <= 1, appOver());
-    setAdminIdentity('SY'); S.portal = 'admin'; go('a-programmes', { id: 'NV-N1', tab: 'details' }); const nt = $1('#np-t'); nt.value += ' x'; nt.dispatchEvent(new Event('input', { bubbles: true }));
+    // CB2 (PD-CB-16): Course Details now keeps typed values instead of asking; the prompt still protects other sections' forms (the checklist)
+    setAdminIdentity('SY'); S.portal = 'admin'; go('a-programmes', { id: 'NV-N1', tab: 'docs' }); const nt = $1('main .ch8-doc:not(:checked)'); nt.checked = true; nt.dispatchEvent(new Event('change', { bubbles: true }));
     click($1('main .cb-sec[data-tab="review"]')); ok('CB1 unsaved changes: "Leave without saving?" dialog with both choices; the dialog fits', !!MODAL && MODAL.title === 'Leave without saving?' && all('#modal-root .modal button').filter(b => shown(b) && /Stay and save|Leave without saving/.test(b.textContent)).length === 2 && !modalFits(), modalFits());
-    closeModal(); CB_DIRTY = null; go('a-programmes'); click($1('main [data-act="chProgNew"]')); ok('CB1 New NVQ programme dialog: "Section 1 — Course Details" displayed; the dialog fits', /Section 1 — Course Details/.test($1('#modal-root').textContent) && !modalFits(), modalFits()); closeModal();
+    // CB2 (PD-CB-14) supersedes the CB1 dialog-label check: Course Details of an unsaved course, at every width
+    closeModal(); CB_DIRTY = null; initStore(); setAdminIdentity('SY'); S.portal = 'admin'; S.signedIn = true; go('a-programmes'); click($1('main [data-act="chProgNew"]'));
+    const ns = all('main .cb-nav .cb-sec');
+    ok('CB2 new course: Course Details page (no dialog), all seven sections displayed within the viewport, sections 2–7 shown as not yet available; no page overflow', !MODAL && ns.length === 7 && ns.every(inView) && ns.filter(b => b.disabled).length === 6 && shown($1('main .cb-sec.cur')) && appOver() <= 1, appOver());
+    ok('CB2 new course: the observation question displayed prominently with both answers and their explanations; every field labelled', shown($1('main .cb-obs')) && ['#np-obs-yes', '#np-obs-no'].every(s => shown($1('main ' + s)) && !!$1('main ' + s).closest('label')) && ['np-t', 'np-code', 'np-r', 'np-q-body', 'np-q-glh', 'np-q-tqt', 'np-q-credits', 'np-ds'].every(id => !!$1(`main label[for="${id}"]`)) && shown($1('main [data-act="cbDetCreate"]')));
+    click($1('main [data-act="cbDetCreate"]')); ok('CB2 new course: "Save and continue" on an empty form shows the error next to the name; nothing created; no page overflow', shown($1('main .field .err')) && /Enter a title/.test(main()) && !(STORE.chNewProgs || []).some(p => !p.seed) && appOver() <= 1, appOver());
+    const t2 = (s, v) => { const e = $1(s); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); };
+    t2('#np-t', 'Level 3 UI CB2 course'); t2('#np-code', 'UI-CB2'); t2('#np-r', 'QN 603/9191/3'); const r0 = $1('main .r1-np-row'); r0.querySelector('.r1-np-l').value = 'Self-Paced'; r0.querySelector('.r1-np-f').value = '1800'; r0.querySelector('.r1-np-m').value = 'Self-Paced';
+    click($1('main #np-obs-yes')); click($1('main [data-act="cbDetCreate"]')); const cp = (STORE.chNewProgs || []).slice(-1)[0];
+    ok('CB2 Save and continue: the Draft opens on Curriculum; no page overflow', !!cp && cp.title === 'Level 3 UI CB2 course' && !!$1('main .cb-sec.cur[data-tab="curriculum"]') && appOver() <= 1, appOver());
+    click($1('main .cb-sec[data-tab="details"]')); ok('CB2 Draft Course Details: the form with the saved values and both save buttons; no page overflow', $1('#np-t').value === 'Level 3 UI CB2 course' && $1('#np-obs-yes').checked && shown($1('main [data-act="cbDetSave"][data-next]')) && appOver() <= 1, appOver());
+    t2('#np-t', 'Level 3 UI CB2 course (edited)'); click($1('main .cb-sec[data-tab="review"]')); ok('CB2 unsaved Course Details: moving to another section asks nothing; Course Details marked "Unsaved"', !MODAL && shown($1('main .cb-sec[data-tab="details"] .cb-badge.warn')));
+    click($1('main .cb-sec[data-tab="details"]')); click($1('main #np-obs-no')); click($1('main [data-act="cbDetSave"]:not([data-next])'));
+    ok('CB2 answer No saved: Observations marked "Not applicable" in the section bar; the unsaved marker gone; no page overflow', /Not applicable/.test($1('main .cb-sec[data-tab="observations"]').textContent) && !$1('main .cb-unsaved') && appOver() <= 1, appOver());
+    go('a-programmes', { id: 'NV-L3', tab: 'details' }); ok('CB2 seeded programme: the same Course Details layout, read-only, with the reason; no page overflow', shown($1('main .cb-dl')) && !$1('main #np-t') && shown($1('main .cb-ro-why')) && appOver() <= 1, appOver());
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));
     ok('no script errors', !errs.length, errs.join(' | '));

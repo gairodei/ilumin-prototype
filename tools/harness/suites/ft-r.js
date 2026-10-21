@@ -449,10 +449,13 @@
 
   /* ================= R1 (final review) — fee options for every Level 3 programme ================= */
   const vis = el => !!el && !el.closest('[hidden]');
-  const npOpen = () => { SA(); go('a-programmes'); ACT.chProgNew(); };
-  const npRow = (k, o) => { const r = document.querySelectorAll('#modal-root .r1-np-row')[k]; r.querySelector('.r1-np-l').value = o.l; r.querySelector('.r1-np-f').value = String(o.f); r.querySelector('.r1-np-m').value = o.m; };
+  // CB2 (PD-CB-14) supersedes the creation dialog: "New NVQ programme" opens Course Details of an unsaved course (selectors: main, not
+  // #modal-root); the observation question is required (answered No here); "Save and continue" (ACT.cbDetCreate) replaces the dialog button
+  let npN = 0;
+  const npOpen = () => { SA(); go('a-programmes'); ACT.chProgNew(); const o = document.querySelector('#np-obs-no'); if (o) o.checked = true; const c = document.querySelector('#np-code'); if (c) c.value = 'R1F' + (++npN); /* CB2 correction: course code required */ };
+  const npRow = (k, o) => { const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = o.l; r.querySelector('.r1-np-f').value = String(o.f); r.querySelector('.r1-np-m').value = o.m; };
   // A new Level 3 programme through the wizard, with fee options (rows: [{l, f, m}])
-  const newL3 = (title, rows) => { npOpen(); fill({ '#np-t': title, '#np-r': 'QN 610/' + (1000 + title.length) + '/3', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */ }); rows.forEach((o, k) => { if (k) ACT.r1NpAdd(); npRow(k, o); }); const r = prim(); if (r === false) return null; closeModal(); return (STORE.chNewProgs || []).slice(-1)[0]; };
+  const newL3 = (title, rows) => { npOpen(); fill({ '#np-t': title, '#np-r': 'QN 610/' + (1000 + title.length) + '/3', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */ }); rows.forEach((o, k) => { if (k) ACT.r1NpAdd(); npRow(k, o); }); const r = ACT.cbDetCreate(); if (r === false) return null; closeModal(); return (STORE.chNewProgs || []).slice(-1)[0]; };
   const add8 = (act, ds, o) => { ACT[act]({ dataset: ds }); fill(o); return prim(); };
   // Publish with the existing wizard steps: one unit / module / outcome / criterion, an offer letter
   const pubNew = pr => { const id = pr.id; go('a-programmes', { id, tab: 'structure' }); add8('ch8AddUnit', { id }, { '#u-c': 'U370', '#u-t': 'Practice' }); add8('ch8AddMod', { id, u: 0 }, { '#m-t': 'Core practice', '#m-ab': 'C/650/3701' }); add8('ch8AddLo', { id, u: 0, m: 0 }, { '#lo-t': 'Understand practice', '#lo-y': 'Knowledge' }); add8('ch8AddCrit', { id, u: 0, m: 0, l: 0 }, { '#c-d': 'Describe practice', '#c-e': 'Written account' });
@@ -469,18 +472,18 @@
 
   await T('R1 (final) wizard: a Level 3 programme is created with several fee options; other levels keep one price', async () => {
     fresh(); npOpen();
-    ok('R1f wizard (Level 3): fee options instead of the single price', vis(document.querySelector('#modal-root .r1-np-l3')) && !vis(document.querySelector('#np-p')) && !!document.querySelector('#modal-root .r1-np-row'));
-    ok('R1f wizard (Level 3): no delivery-mode / class-pattern selector; the mode comes from the fee option; no "Pending" label shown', !vis(document.querySelector('#modal-root .r1-np-sup')) && /comes from the fee option/.test(document.querySelector('#modal-root .r1-np-modes').textContent) && /Self-Paced and Fully Assisted learners/.test(document.querySelector('#modal-root .r1-np-modes').textContent) && !vis(document.querySelector('#modal-root .tbd')));
+    ok('R1f wizard (Level 3): fee options instead of the single price', vis(document.querySelector('main .r1-np-l3')) && !vis(document.querySelector('#np-p')) && !!document.querySelector('main .r1-np-row'));
+    ok('R1f wizard (Level 3): no delivery-mode / class-pattern selector; the mode comes from the fee option; no "Pending" label shown', !vis(document.querySelector('main .r1-np-sup')) && /comes from the fee option/.test(document.querySelector('main .r1-np-modes').textContent) && /Self-Paced and Fully Assisted learners/.test(document.querySelector('main .r1-np-modes').textContent) && !vis(document.querySelector('#modal-root .tbd')));
     fill({ '#np-t': 'Level 3 Certificate in Support Work', '#np-r': 'QN 610/5555/3', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */ });
-    ok('R1f (negative) at least one complete option (label required)', prim() === false && !(STORE.chNewProgs || []).some(p => p.title === 'Level 3 Certificate in Support Work'));
+    ok('R1f (negative) at least one complete option (label required)', ACT.cbDetCreate() === false && !(STORE.chNewProgs || []).some(p => p.title === 'Level 3 Certificate in Support Work'));
     // E1 clarification (20 Oct 2026) supersedes: "a fee that doesn't divide into the instalments is refused" (£500 against 6, at Step 1).
     // Step 1 now checks the amount only; the split is checked in the Payment Plan step against the configured method (ft-e1.js, E1-CL).
-    npRow(0, { l: 'Self-Paced', f: '12.345', m: 'Self-Paced' }); ok('R1f (negative) an invalid fee amount is refused (part pennies)', prim() === false);
-    npRow(0, { l: 'Self-Paced', f: 600, m: '' }); ok('R1f (negative) the delivery mode is required', prim() === false);
-    npRow(0, { l: 'Self-Paced', f: 600, m: 'Self-Paced' }); ACT.r1NpAdd(); npRow(1, { l: 'self-paced', f: 1200, m: 'Fully Assisted' }); ok('R1f (negative) labels must differ', prim() === false);
+    npRow(0, { l: 'Self-Paced', f: '12.345', m: 'Self-Paced' }); ok('R1f (negative) an invalid fee amount is refused (part pennies)', ACT.cbDetCreate() === false);
+    npRow(0, { l: 'Self-Paced', f: 600, m: '' }); ok('R1f (negative) the delivery mode is required', ACT.cbDetCreate() === false);
+    npRow(0, { l: 'Self-Paced', f: 600, m: 'Self-Paced' }); ACT.r1NpAdd(); npRow(1, { l: 'self-paced', f: 1200, m: 'Fully Assisted' }); ok('R1f (negative) labels must differ', ACT.cbDetCreate() === false);
     npRow(1, { l: 'Fully Assisted', f: 1200, m: 'Fully Assisted' }); ACT.r1NpAdd(); npRow(2, { l: 'Self-Paced plus', f: 900, m: 'Self-Paced' }); ACT.r1NpAdd(); ACT.r1NpAdd();
-    ok('R1f any number of options can be added (no maximum)', document.querySelectorAll('#modal-root .r1-np-row').length === 5);
-    prim(); closeModal(); const pr = (STORE.chNewProgs || []).find(p => p.title === 'Level 3 Certificate in Support Work'), o = pr && r1Opts(pr.id);
+    ok('R1f any number of options can be added (no maximum)', document.querySelectorAll('main .r1-np-row').length === 5);
+    ACT.cbDetCreate(); closeModal(); const pr = (STORE.chNewProgs || []).find(p => p.title === 'Level 3 Certificate in Support Work'), o = pr && r1Opts(pr.id);
     ok('R1f created: Level 3 Draft with 3 options (empty rows ignored), stable IDs under the programme ID', !!pr && pr.level === 'Level 3' && o.length === 3 && o.map(x => x.id).join() === [1, 2, 3].map(n => pr.id + '-FO-00' + n).join() && o.every(x => x.pid === pr.id) && o.map(x => x.mode).join() === 'Self-Paced,Fully Assisted,Self-Paced');
     ok('R1f the plan keeps its deposit and instalments; its reference fee is the lowest option fee', s4TermsOf(pr.id).fee === 600 && s4TermsOf(pr.id).inst === 6 && r1Eligible(pr.id).length === 3 && ADMIN.audit.some(a => a.action === 'Fee option added' && a.entity.includes(pr.id + '-FO-001')));
     go('a-programmes', { id: pr.id, tab: 'details' }); ok('R1f the Draft\'s details list its options (managed under Finance)', /Managed under Finance → Instalment plans/.test(main()) && main().includes(pr.id + '-FO-002'));
@@ -490,12 +493,12 @@
     go('a-programmes', { id: 'NV-L3D', tab: 'support' }); ok('R1f Support tab of a built-in Level 3 programme (2027 draft): the confirmed learner-level rule is stated; open P-31 questions keep their tag', !!app().querySelector('.r1-sup3') && !!app().querySelector('.tbd'));
     // Level 4: unchanged single price and delivery mode (with its P-31 wording)
     npOpen(); const lv = document.querySelector('#np-l'); lv.value = 'Level 4'; INP.r1NpLevel(lv);
-    ok('R1f wizard (Level 4): single price and default delivery mode (P-31 wording) as before', vis(document.querySelector('#np-p')) && !vis(document.querySelector('#modal-root .r1-np-l3')) && vis(document.querySelector('#modal-root .r1-np-o3 .tbd')));
-    ok('R1f wizard (Level 4): the delivery-mode selector is shown, with its choices', vis(document.querySelector('#modal-root .r1-np-sup')) && document.querySelectorAll('#modal-root input[name="np-s"]').length >= 2 && !vis(document.querySelector('#modal-root .r1-np-modes')));
-    ['Level 2', 'Level 5'].forEach(L => { lv.value = L; INP.r1NpLevel(lv); ok('R1f wizard (' + L + '): unchanged — single price and the delivery-mode selector', vis(document.querySelector('#np-p')) && vis(document.querySelector('#modal-root .r1-np-sup')) && !vis(document.querySelector('#modal-root .r1-np-l3'))); });
-    lv.value = 'Level 3'; INP.r1NpLevel(lv); ok('R1f wizard: switching back to Level 3 hides the selector again', !vis(document.querySelector('#modal-root .r1-np-sup')) && vis(document.querySelector('#modal-root .r1-np-l3')));
+    ok('R1f wizard (Level 4): single price and default delivery mode (P-31 wording) as before', vis(document.querySelector('#np-p')) && !vis(document.querySelector('main .r1-np-l3')) && vis(document.querySelector('main .r1-np-o3 .tbd')));
+    ok('R1f wizard (Level 4): the delivery-mode selector is shown, with its choices', vis(document.querySelector('main .r1-np-sup')) && document.querySelectorAll('main input[name="np-s"]').length >= 2 && !vis(document.querySelector('main .r1-np-modes')));
+    ['Level 2', 'Level 5'].forEach(L => { lv.value = L; INP.r1NpLevel(lv); ok('R1f wizard (' + L + '): unchanged — single price and the delivery-mode selector', vis(document.querySelector('#np-p')) && vis(document.querySelector('main .r1-np-sup')) && !vis(document.querySelector('main .r1-np-l3'))); });
+    lv.value = 'Level 3'; INP.r1NpLevel(lv); ok('R1f wizard: switching back to Level 3 hides the selector again', !vis(document.querySelector('main .r1-np-sup')) && vis(document.querySelector('main .r1-np-l3')));
     lv.value = 'Level 4'; INP.r1NpLevel(lv);
-    fill({ '#np-t': 'Level 4 Certificate in Team Leading', '#np-r': 'QN 610/4444/4', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600' }); prim(); closeModal();
+    fill({ '#np-t': 'Level 4 Certificate in Team Leading', '#np-r': 'QN 610/4444/4', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600' }); ACT.cbDetCreate(); closeModal();
     const p4 = (STORE.chNewProgs || []).find(x => x.title === 'Level 4 Certificate in Team Leading');
     ok('R1f Level 4 created with its price and no fee options', !!p4 && p4.price === 2600 && !r1IsL3Pid(p4.id) && !r1Opts(p4.id).length);
     go('a-finance', { tab: 'plans' }); const cards = [...app().querySelectorAll('.r1-opts')].map(c => c.dataset.pid);

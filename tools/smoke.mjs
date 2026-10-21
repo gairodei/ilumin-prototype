@@ -70,7 +70,7 @@ document.getElementById('f').addEventListener('load', () => setTimeout(() => {
     n.q('main table tbody a[data-go="a-programmes"][data-id]').click();
     r.navOpen = !n.is404() && /^#a-programmes\\.NV-/.test(cw.location.hash) && d.querySelectorAll('main .cb-nav .cb-sec[data-tab]').length === 7; // CB1 (PD-CB-01): the seven course-builder sections (was the tab bar)
     n.side(); n.q('main [data-act="chProgNew"]').click();
-    r.navWizard = /Section 1 — Course Details/.test(n.q('#modal-root').textContent) && !!n.q('#modal-root #np-t'); cw.eval('closeModal()');
+    r.navWizard = !cw.eval('MODAL') && /#a-programmes\\.new\\.details$/.test(cw.location.hash) && !!n.q('main .cb-new #np-t') && !!n.q('main #np-obs-yes'); // CB2 (PD-CB-14): Course Details of an unsaved course, not a dialog
     r.errs = (cw.__smokeErrs || []).slice();
     r.scripts = d.querySelectorAll('script[src]').length;
     r.loaded = cw.performance.getEntriesByType('resource').filter(e => /\\.js$/.test(e.name)).length;
@@ -122,7 +122,7 @@ async function served() {
   ok('served: Demo Scenarios — all 30 listed and rendered', r.scen === 30 && r.scList === 30, r.scen + ' rendered / ' + r.scList + ' listed');
   ok('served: a Level 3 batch Schedule tab renders (unified Schedule area)', r.sched === true);
   ok('served: System Admin → sidebar NVQ Programmes (clicked) shows the programme list, not Error 404', r.navList === true);
-  ok('served: a programme opens from the list, and New NVQ programme opens the wizard', r.navOpen === true && r.navWizard === true);
+  ok('served: a programme opens from the list, and New NVQ programme opens Course Details of a new course', r.navOpen === true && r.navWizard === true);
   ok('served: after a reload on a programme that isn\'t in the fresh data, signing in shows the list with a note (no Error 404)', r.navReloadSignin === true && r.navStale === true, r.navStaleInfo);
   ok('served: changing the address to a programme tab opens it (direct navigation)', r.navDirect === true);
   ok('served: no script errors after the reload', !(r.errs3 || []).length, (r.errs3 || []).join(' | '));

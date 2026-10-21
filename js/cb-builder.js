@@ -71,13 +71,13 @@ function cbPanels(pr, sec) {
   const L = tab => () => cbHtml(cbLegacy(pr, tab).body, pr), H = f => () => { const d = document.createElement('div'); d.innerHTML = f(); return cbHtml(d, pr); };
   const nw = !!pr.chNew;
   switch (sec) {
-    case 'details': return [['details', 'Course details', nw ? L('details') : H(() => cbDetailsRO(pr))]];
+    case 'details': return [['details', 'Course details', H(() => cbDetails(pr))]];
     case 'curriculum': return [['structure', 'Structure', L(nw ? 'structure' : 'tree')], ['types', 'Assessment types', nw ? H(() => s3TypesTab()) : L('types')]];
     case 'assessments': return [['assessments', 'Assignments', H(() => cbAssessments(pr))]];
-    case 'observations': return [['obs', 'Observation configuration', L('obs')]].concat(nw ? [] : [['library', 'Shared library (legacy)', L('library')]]);
+    case 'observations': { const na = cbObsNo(pr) ? cbObsNA(pr) : '', obs = L('obs'); return [['obs', 'Observation configuration', () => na + obs()]].concat(nw ? [] : [['library', 'Shared library (legacy)', L('library')]]); }
     case 'payments': {
       const fees = cbIsL3(pr) ? [['fees', 'Fee options', nw ? H(() => r1Card(pr.id)) : L('fees')]] : [];
-      const plan = ['plan', 'Payment plan', nw ? L('plan') : H(() => cbPlanRO(pr))], rate = ['support', 'Observation fee rate', nw ? H(() => chSupportTab(pr)) : L('support')];
+      const plan = ['plan', 'Payment plan', nw ? L('plan') : H(() => cbPlanRO(pr))], rate = ['support', 'Observation fee rate', cbObsNo(pr) ? H(() => cbFeeNA(pr)) : nw ? H(() => chSupportTab(pr)) : L('support')];
       return nw ? [plan].concat(fees, [rate]) : fees.concat([plan, rate]);
     }
     case 'documents': return [['letter', 'Offer letter', L('letter')], ['docs', 'Enrolment documents', nw ? L('docs') : H(() => s4ChecklistCard(pr, { title: 'Enrolment documents' }))]];
@@ -89,11 +89,11 @@ function cbPanels(pr, sec) {
 
 /* ---------- Content for sections that have no working page of their own yet (read-only, stated as such) ---------- */
 const cbLater = (what, stage) => `<p class="cb-later small">${chip('Not yet in this section', 'grey')} ${esc(what)} <span class="muted">— planned for ${esc(stage)}.</span></p>`;
-function cbDetailsRO(pr) {
-  return `<section class="card cb-details"><h2>Course details</h2>
-    <dl class="kv"><dt>Title</dt><dd>${esc(pr.title)}</dd><dt>Level</dt><dd>${esc(pr.level)}</dd><dt>Awarding-body reference</dt><dd class="mono">${esc(pr.ref || '—')}</dd><dt>Duration</dt><dd>${typeof e1DurHtml === 'function' ? e1DurHtml(pr) : esc(pr.dur || '—')}</dd><dt>Status</dt><dd>${esc(pr.status)} · Version ${pr.version}</dd>${pr.desc ? `<dt>Description</dt><dd>${esc(pr.desc)}</dd>` : ''}</dl>
-    ${cbRetired(pr) ? '' : cbLater('Editing these details (with the course code, qualification information and the "Does this course contain observations?" question)', 'CB2 — Course Details')}</section>`;
-}
+// CB2: Section 1 is cbDetails (js/cb-details.js) for every programme — editable for a Draft, the same layout read-only otherwise
+// Observations answered "No" (N5a "Observation required: No"): the section and the observation fee rate say it doesn't apply
+const cbObsNo = pr => { const d = typeof n5Shown === 'function' && n5CanView() ? n5Shown(pr) : null; return !!d && d.required === false; };
+const cbObsNA = pr => `<div class="note b-grey cb-na" role="status">${ic('info')}<div class="small"><strong>Not applicable — this course has no observations</strong> (Course Details). ${cbRetired(pr) ? '' : 'Nothing here is needed to publish. '}Any configuration below is kept for history and isn't used.</div></div>`;
+const cbFeeNA = pr => `<section class="card cb-na-fee"><h2>Observation fee rate</h2><p class="small">Not applicable — this course has no observations (Course Details), so no observation fee is asked for. The rate stored for the programme (${esc(chSupportOf(pr.id))}) is kept, not used.</p></section>`;
 // The offer letter isn't assumed to be the learner contract: say plainly that no separate contract exists yet
 const cbContract = () => `<section class="card cb-contract"><h2>Learner contract</h2><p class="small">This prototype has no learner contract separate from the offer letter. Applicants sign the offer letter above; whether a separate, versioned contract is needed, and what it contains, is an open client question.</p>${cbLater('A separate learner contract, if the client confirms one', 'a later stage, after the client decides')}</section>`;
 function cbAssessments(pr) {
@@ -136,9 +136,10 @@ function cbBadges(pr) {
     Object.entries(n).forEach(([s, k]) => add(s, `<span class="cb-badge bad">${k} to fix</span>`));
     if (block.length) add('review', `<span class="cb-badge bad">${block.length} blocking</span>`);
   }
-  if (!pr.chNew) add('details', '<span class="cb-badge">Read-only</span>');
+  if (typeof CB_CACHE !== 'undefined' && CB_CACHE[pr.id]) add('details', '<span class="cb-badge warn">Unsaved</span>');
+  else if (!pr.chNew) add('details', '<span class="cb-badge">Read-only</span>');
   add('assessments', '<span class="cb-badge">Read-only</span>');
-  const d = typeof n5Shown === 'function' && n5CanView() ? n5Shown(pr) : null; if (d && d.required === false) add('observations', '<span class="cb-badge">Not required</span>');
+  const d = typeof n5Shown === 'function' && n5CanView() ? n5Shown(pr) : null; if (d && d.required === false) add('observations', '<span class="cb-badge">Not applicable</span>');
   return b;
 }
 
@@ -156,7 +157,7 @@ function cbPage(pr, tab) {
   const pnav = panels.length > 1 ? `<div class="cb-panels" role="tablist" aria-label="${esc(sec === 'versions' ? 'Version history' : CB_SECTIONS[i][1])}">${panels.map(([k, l]) => `<button class="tab" role="tab" aria-selected="${k === cur[0]}" data-go="a-programmes" data-id="${pr.id}" data-tab="${k}">${esc(l)}</button>`).join('')}</div>` : '';
   const title = sec === 'versions' ? `<div class="row-b cb-sh"><h2 class="cb-h">Version history</h2><button class="btn btn-sm" data-go="a-programmes" data-id="${pr.id}" data-tab="${fallback}">Back to the course builder</button></div>` : `<h2 class="cb-h"><span class="cb-hn">${i + 1}</span> ${esc(CB_SECTIONS[i][1])}</h2>`;
   const steps = i < 0 ? '' : `<div class="row-b cb-foot">${i > 0 ? `<button class="btn" data-go="a-programmes" data-id="${pr.id}" data-tab="${CB_SECTIONS[i - 1][0]}">← ${esc(CB_SECTIONS[i - 1][1])}</button>` : '<span></span>'}${i < CB_SECTIONS.length - 1 ? `<button class="btn btn-primary" data-go="a-programmes" data-id="${pr.id}" data-tab="${CB_SECTIONS[i + 1][0]}">${esc(CB_SECTIONS[i + 1][1])} →</button>` : ''}</div>`;
-  return `${pageA(esc(pr.title), `${esc(pr.level)} · <span class="mono">${esc(pr.ref || '—')}</span>`, chips, [['NVQ Programmes', 'a-programmes'], [esc(pr.title)]])}
+  return `${pageA(esc(pr.title), `${esc(pr.level)}${pr.code ? ` · Course code <span class="mono cb-code">${esc(pr.code)}</span>` : ''} · <span class="mono">${esc(pr.ref || '—')}</span>`, chips, [['NVQ Programmes', 'a-programmes'], [esc(pr.title)]])}
     <div class="cb" data-pid="${pr.id}" data-sec="${sec}"><div class="cb-ver">${ver}</div>${sec === 'versions' ? '' : nav}${title}${pnav}<div class="cb-body" data-label="${esc(sec === 'versions' ? 'Version history' : CB_SECTIONS[i][1] + (panels.length > 1 ? ' — ' + cur[1] : ''))}">${cur ? cur[2]() : ''}${sec === 'documents' ? cbContract() : ''}</div>${steps}</div>`;
 }
 // A link without a tab opens what it opened before: Curriculum (the Hierarchy builder) for seeded programmes, and Course Details
@@ -205,9 +206,6 @@ Object.entries(CB_ROLE).forEach(([name, what]) => {
   ACT[name] = function (el) { if (!cbAdmin()) { const pr = cbPr(cbPidOf(name, el)); s3Refuse(what, pr ? cbEnt(pr) : '—'); return; } return f.apply(this, arguments); };
 });
 
-/* ---------- "New NVQ programme": the dialog is Course Details, not "Step 1 of 6" ---------- */
-const _newCB = ACT.chProgNew;
-ACT.chProgNew = function () { const r = _newCB.apply(this, arguments); if (MODAL && /^Step 1 of \d+/.test(MODAL.sub || '')) { MODAL.sub = 'Section 1 — Course Details'; renderModal(); } return r; };
 
 /* ---------- Records ---------- */
 UXC.push(['CB1', 'Unified course builder shell (approved 20 Oct 2026)', [

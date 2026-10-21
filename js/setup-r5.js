@@ -208,7 +208,7 @@ ch8DetailsFields = function (d) {
   return h.replace('<div class="r1-np-list">', '<p class="xs muted r1-np-modes">Each learner\'s delivery mode comes from the fee option they choose, so one batch can hold Self-Paced and Fully Assisted learners.</p><div class="r1-np-list">');
 };
 const _npLevelR5 = INP.r1NpLevel;
-INP.r1NpLevel = el => { _npLevelR5(el); $$('#modal-root .r1-np-sup').forEach(x => { x.hidden = el.value === 'Level 3'; }); };
+INP.r1NpLevel = el => { _npLevelR5(el); $$(`${r1Sc()} .r1-np-sup`).forEach(x => { x.hidden = el.value === 'Level 3'; }); };
 // Review step: no class-pattern row for Level 3
 const _ch8ReviewR5 = ch8ReviewStep;
 ch8ReviewStep = function (pr) { const h = _ch8ReviewR5.apply(this, arguments); return pr && r1IsL3Pid(pr.id) ? h.replace(/<dt>Default class pattern<\/dt><dd>[\s\S]*?<\/dd>/, '<dt>Delivery mode</dt><dd>From each learner\'s fee option</dd>') : h; };

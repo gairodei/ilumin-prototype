@@ -12,6 +12,10 @@
   // Attachments are read and hashed asynchronously: wait until none is still being read (no fixed delay — the load on the machine varies)
   const settle = async () => { for (let k = 0; k < 3000 && Object.values(w0S().files).some(r => r.status === 'Reading' || (r.blob && r.sha256 === null)); k++) await wait(10); };
   const prim = () => { const a = MODAL && MODAL.actions.find(x => x.cls && /primary/.test(x.cls)); return a && a.fn ? a.fn() : undefined; };
+  // CB2 (PD-CB-14) supersedes the creation dialog: Course Details of an unsaved course; the observation question is required; "Save and
+  // continue" (ACT.cbDetCreate) creates the Draft
+  let codeN = 0; // CB2 correction: a course code is required for a new course (unique per test programme)
+  const create = (obs = 'no') => { const r = document.querySelector('#np-obs-' + obs); if (r) r.checked = true; const c = document.querySelector('#np-code'); if (c && !c.value) c.value = 'TC' + (++codeN); return ACT.cbDetCreate(); };
   const press = () => { const a = MODAL && MODAL.actions.find(x => x.cls && /primary|danger/.test(x.cls)); const r = a && a.fn ? a.fn() : undefined; if (r !== false && MODAL) closeModal(); return r; };
   const fill = o => Object.entries(o).forEach(([k, v]) => { const e = document.querySelector(k); e.value = v; });
   const reason = (r = 'W0 test') => { const t = document.querySelector('#rsn'); if (t) t.value = r; return press(); };
@@ -67,7 +71,7 @@
           fresh(); cf(); lt = null; const a0 = ADMIN.audit.length, s0 = ADMIN.security.length, e0 = (ADMIN.learners[0].email || '');
           af();
           const refused = !MODAL && ((lt && lt[1] === 'err') || blockedSince(a0)), logged = blockedSince(a0) || ADMIN.security.length > s0;
-          const allowed = applies ? !refused && ADMIN.audit.slice(0, ADMIN.audit.length - a0).some(x => x.action === 'Contact details updated') : !!MODAL || (an.includes('ch8SavePlan') && !refused);
+          const allowed = applies ? !refused && ADMIN.audit.slice(0, ADMIN.audit.length - a0).some(x => x.action === 'Contact details updated') : !!MODAL || (an.includes('ch8SavePlan') && !refused) || (an.includes('chProgNew') && !refused && S.route === 'a-programmes' && S.params.id === 'new'); // CB2 (PD-CB-14): New NVQ programme opens the unsaved Course Details page (was a dialog)
           if (allow.includes(k) ? !allowed : !(refused && logged)) bad.push(cn + (allow.includes(k) ? ' (should be allowed)' : ' (should be refused and logged)'));
           closeModal(); document.querySelectorAll('.w0-tmp').forEach(x => x.remove());
         });
@@ -97,7 +101,7 @@
     fresh(); SA(); const v0 = s4Plans('NV-L2').length; ACT.s4PlanEdit({ dataset: { p: 'NV-L2' } }); fill({ '#pp-n': '4' }); reason('D8 save');
     ok('W0-A Super Admin plan save applies immediately as a new version (D8, G5.2)', s4Plans('NV-L2').length === v0 + 1 && s4PlanCur('NV-L2').inst === 4);
     FA(); ACT.s4PlanEdit({ dataset: { p: 'NV-L2' } }); fill({ '#pp-n': '5' }); reason('Finance save'); ok('W0-A Finance Admin plan save: a new version (G5.2)', s4Plans('NV-L2').length === v0 + 2 && s4PlanCur('NV-L2').inst === 5);
-    ACA(); const pr = (() => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': 'Level 4 Certificate in W0 Terms', '#np-l': 'Level 4', '#np-r': 'QN 610/7000/4', '#np-d': '12', '#np-du': 'months', '#np-p': '2400' }); prim(); closeModal(); return (STORE.chNewProgs || []).slice(-1)[0]; })();
+    ACA(); const pr = (() => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': 'Level 4 Certificate in W0 Terms', '#np-l': 'Level 4', '#np-r': 'QN 610/7000/4', '#np-d': '12', '#np-du': 'months', '#np-p': '2400' }); create(); return (STORE.chNewProgs || []).slice(-1)[0]; })();
     go('a-programmes', { id: pr.id, tab: 'plan' }); ACT.e1Submit({ dataset: { id: pr.id } }); press(); const qid = e1T(pr.id).qid;
     ok('W0-A CR-E1-01: the creator\'s terms go to Finance (Pending)', !!qid && e1T(pr.id).status === 'Pending');
     FA(); ACT.switchRole({ dataset: { r: 'coord' } }); S.signedIn = true; ACT.e1Decide({ dataset: { id: qid, a: 'approve' } }); if (MODAL) reason('From the wrong portal');
@@ -201,8 +205,8 @@
   });
 
   /* ================= 4. Checkout reconciles with the learner's pinned terms ================= */
-  const npRow = (k, o) => { const r = document.querySelectorAll('#modal-root .r1-np-row')[k]; r.querySelector('.r1-np-l').value = o.l; r.querySelector('.r1-np-f').value = String(o.f); r.querySelector('.r1-np-m').value = o.m; };
-  const newL3 = (title, rows) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (7100 + title.length) + '/3', '#np-d': '12', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l')); rows.forEach((o, k) => { if (k) ACT.r1NpAdd(); npRow(k, o); }); prim(); closeModal(); return (STORE.chNewProgs || []).slice(-1)[0]; };
+  const npRow = (k, o) => { const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = o.l; r.querySelector('.r1-np-f').value = String(o.f); r.querySelector('.r1-np-m').value = o.m; };
+  const newL3 = (title, rows) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (7100 + title.length) + '/3', '#np-d': '12', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l')); rows.forEach((o, k) => { if (k) ACT.r1NpAdd(); npRow(k, o); }); create(); return (STORE.chNewProgs || []).slice(-1)[0]; };
   const add8 = (act, ds, o) => { ACT[act]({ dataset: ds }); fill(o); return prim(); };
   const obsDecide = id => { ACT.n5Settings({ dataset: { p: id } }); const r = document.querySelector('#modal-root input[name="n5-req"][value="no"]'); if (r && MODAL) { r.checked = true; prim(); } closeModal(); };
   const pubNew = pr => { const id = pr.id; go('a-programmes', { id, tab: 'structure' }); add8('ch8AddUnit', { id }, { '#u-c': 'U370', '#u-t': 'Practice' }); add8('ch8AddMod', { id, u: 0 }, { '#m-t': 'Core', '#m-ab': 'C/650/3701' }); add8('ch8AddLo', { id, u: 0, m: 0 }, { '#lo-t': 'Understand practice', '#lo-y': 'Knowledge' }); add8('ch8AddCrit', { id, u: 0, m: 0, l: 0 }, { '#c-d': 'Describe practice', '#c-e': 'Written account' });

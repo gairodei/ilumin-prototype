@@ -40,8 +40,9 @@
       history.back(); await new Promise(res => setTimeout(res, 50));
       ok(`NAV ${who}: Back returns to the list`, listShown() && location.hash === '#a-programmes', location.hash);
       clickEl(q('main [data-act="chProgNew"]'));
-      const m = q('#modal-root');
-      ok(`NAV ${who}: New NVQ programme opens the wizard (CB1 supersedes "Step 1 of 6 — Details": now "Section 1 — Course Details"; title / level / reference / duration / fee fields)`, !!MODAL && /Section 1 — Course Details/.test(m.textContent) && ['#np-t', '#np-l', '#np-r', '#np-d', '#np-p'].every(s => m.querySelector(s)), m.textContent.slice(0, 120));
+      // CB2 (PD-CB-14) supersedes the creation dialog (CB1: a dialog labelled "Section 1 — Course Details"): the button opens Course Details of an unsaved course
+      const m = q('main');
+      ok(`NAV ${who}: New NVQ programme opens Course Details of an unsaved course (no dialog; title / level / reference / duration / fee fields and the observation question)`, !MODAL && location.hash === '#a-programmes.new.details' && /Course Details/.test(m.textContent) && ['#np-t', '#np-l', '#np-r', '#np-d', '#np-p', '#np-obs-yes'].every(s => m.querySelector(s)), location.hash + ' ' + m.textContent.slice(0, 120));
       closeModal();
     });
   }
@@ -60,18 +61,22 @@
 
   await T('NAV refresh after creating a programme (the reported 404)', async () => {
     reload(); await viaPanel('sysA'); await clickSide('a-programmes'); clickEl(q('main [data-act="chProgNew"]'));
-    Object.entries({ '#np-t': 'Level 4 Certificate in Navigation Checks', '#np-l': 'Level 4', '#np-r': 'QN 610/5040/1', '#np-d': '12', '#np-du': 'months', '#np-p': '2400' }).forEach(([s, v]) => { const e = q('#modal-root ' + s); if (e) e.value = v; });
-    clickEl([...document.querySelectorAll('#modal-root button')].find(b => /Create draft/.test(b.textContent))); await tick();
+    Object.entries({ '#np-t': 'Level 4 Certificate in Navigation Checks', '#np-l': 'Level 4', '#np-r': 'QN 610/5040/1', '#np-d': '12', '#np-du': 'months', '#np-p': '2400' }).forEach(([s, v]) => { const e = q('main ' + s); if (e) e.value = v; });
+    // CB2 (PD-CB-14): the page's "Save and continue" (was the dialog's "Create draft"); the observation question is required
+    q('main #np-code').value = 'NAV-L4'; clickEl(q('main #np-obs-no')); clickEl(q('main [data-act="cbDetCreate"]')); await tick();
     const id = S.params.id;
-    ok('NAV the wizard creates the draft and opens it at #a-programmes.<new id>.structure', /^NV-N\d+$/.test(id || '') && location.hash === `#a-programmes.${id}.structure` && !is404(), location.hash);
+    ok('NAV Save and continue creates the draft and opens it at #a-programmes.<new id>.curriculum (CB2: Section 2; was .structure)', /^NV-N\d+$/.test(id || '') && location.hash === `#a-programmes.${id}.curriculum` && !is404(), location.hash);
     reload(location.hash); await viaPanel('sysA');
     ok('NAV after a reload the created programme is gone, and signing in shows the NVQ programme list — not Error 404', listShown(), `h1 "${h1()}"`);
     ok('NAV (negative) no Error 404 page after the reload', !is404());
     ok('NAV a note says the programme isn\'t in this demo and why', /That programme isn't available/.test(main()) && main().includes(id) && /kept only until the page is reloaded/.test(main()) && !!q(`main [data-nvq-gone="${id}"]`));
     ok('NAV the address is corrected to #a-programmes and NVQ Programmes stays selected', location.hash === '#a-programmes' && S.route === 'a-programmes' && !S.params.id && (q('#app nav [aria-current="page"]') || {}).textContent.trim() === 'NVQ Programmes', location.hash);
-    ok('NAV the list keeps New NVQ programme, and it still opens the wizard', (clickEl(q('main [data-act="chProgNew"]')), !!MODAL && /Section 1 — Course Details/.test(q('#modal-root').textContent))); closeModal();
-    reload(location.hash); await viaPanel('sysA');
+    ok('NAV the list keeps New NVQ programme, and it still opens Course Details of a new course', (clickEl(q('main [data-act="chProgNew"]')), !MODAL && location.hash === '#a-programmes.new.details' && !!q('main #np-t'))); closeModal();
+    // CB2: the previous check opened the new-course page (#a-programmes.new.details); the further reload is of the list address, as before
+    reload('#a-programmes'); await viaPanel('sysA');
     ok('NAV a further reload stays on the list, without the note', listShown() && !/That programme isn't available/.test(main()));
+    reload('#a-programmes.new.details'); await viaPanel('sysA');
+    ok('NAV CB2: reloading on the unsaved-course address opens an empty Course Details of a new course after sign-in (no Error 404, nothing created)', !is404() && !!q('main .cb-new #np-t') && q('main #np-t').value === '' && !(STORE.chNewProgs || []).some(p => !p.seed), location.hash);
     await clickSide('a-programmes'); ok('NAV the sidebar link still opens the list', listShown());
   });
 

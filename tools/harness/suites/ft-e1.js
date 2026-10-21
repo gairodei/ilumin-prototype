@@ -23,9 +23,13 @@
   const reason = (r = 'E1 test') => { const t = document.querySelector('#rsn'); if (t) t.value = r; return press(); };
   const rebuildA = () => { INP.adminVariant({ value: Object.keys(ADMIN_VARIANTS).find(k => k !== 'A') }); INP.adminVariant({ value: 'A' }); };
   const last = () => (STORE.chNewProgs || []).slice(-1)[0];
+  // CB2 (PD-CB-14) supersedes the creation dialog: "New NVQ programme" opens Course Details of an unsaved course, the observation
+  // question is required, and "Save and continue" (ACT.cbDetCreate) creates the Draft — false when refused, as the dialog's button was
+  let codeN = 0; // CB2 correction: a course code is required for a new course (unique per test programme)
+  const create = (obs = 'no') => { const r = document.querySelector('#np-obs-' + obs); if (r) r.checked = true; const c = document.querySelector('#np-code'); if (c && !c.value) c.value = 'TC' + (++codeN); return ACT.cbDetCreate(); };
   const meth = (px, m) => { const r = document.querySelector(`input[name="${px}-meth"][value="${m}"]`); r.checked = true; INP.e1Meth(r); };
   // A new programme through the wizard dialog (Level 2/4/5: one price); returns the programme or null
-  const newProg = (title, o = {}) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': o.level || 'Level 4', '#np-r': 'QN 610/' + (2000 + title.length) + '/1', '#np-d': String(o.n ?? 12), '#np-du': o.unit || 'months', '#np-p': String(o.price || 2400) }); const n0 = (STORE.chNewProgs || []).length; prim(); closeModal(); return (STORE.chNewProgs || []).length > n0 ? last() : null; };
+  const newProg = (title, o = {}) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': o.level || 'Level 4', '#np-r': 'QN 610/' + (2000 + title.length) + '/1', '#np-d': String(o.n ?? 12), '#np-du': o.unit || 'months', '#np-p': String(o.price || 2400) }); const n0 = (STORE.chNewProgs || []).length; create(); return (STORE.chNewProgs || []).length > n0 ? last() : null; };
   const add8 = (act, ds, o) => { ACT[act]({ dataset: ds }); fill(o); return prim(); };
   // The other publishing requirements (structure with a typed Learning Outcome, an offer letter)
   const ready = pr => { const id = pr.id; obsDecide(id); go('a-programmes', { id, tab: 'structure' }); add8('ch8AddUnit', { id }, { '#u-c': 'U480', '#u-t': 'Practice' }); add8('ch8AddMod', { id, u: 0 }, { '#m-t': 'Core', '#m-ab': 'C/650/4801' }); add8('ch8AddLo', { id, u: 0, m: 0 }, { '#lo-t': 'Understand practice', '#lo-y': 'Knowledge' }); add8('ch8AddCrit', { id, u: 0, m: 0, l: 0 }, { '#c-d': 'Describe practice', '#c-e': 'Written account' }); ACT.chLetterUp({ dataset: { id } }); ACT.chLetterSample(); document.querySelector('#rsn').value = 'First version'; press(); };
@@ -39,7 +43,7 @@
   /* ================= A. Structured duration ================= */
   await T('E1-A duration: number and unit in the wizard; days, weeks, months and years', async () => {
     fresh(); SA(); go('a-programmes'); ACT.chProgNew();
-    const n = document.querySelector('#modal-root #np-d'), u = document.querySelector('#modal-root #np-du');
+    const n = document.querySelector('main #np-d'), u = document.querySelector('main #np-du');
     ok('E1-A wizard: Duration is a whole-number field and a unit (Days, Weeks, Months, Years); new programmes start at 12 months', n && n.type === 'number' && u && u.tagName === 'SELECT' && [...u.options].map(o => o.textContent).join('|') === 'Days|Weeks|Months|Years' && n.value === '12' && u.value === 'months');
     closeModal();
     [[90, 'days', '90 days'], [1, 'weeks', '1 week'], [18, 'months', '18 months'], [2, 'years', '2 years']].forEach(([k, unit, txt], j) => {
@@ -52,7 +56,7 @@
     fresh(); SA(); const n0 = (STORE.chNewProgs || []).length;
     [['0', 'Enter the duration as a whole number'], ['1.5', 'whole number'], ['1000', 'from 1 to 999'], ['', 'Enter the duration']].forEach(([v, msg]) => {
       go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': 'Level 4 Bad duration', '#np-l': 'Level 4', '#np-r': 'QN 610/1/1', '#np-p': '2400' }); document.querySelector('#np-d').value = v;
-      const r = prim(); ok(`E1-A duration "${v || '(blank)'}" refused with a message`, r === false && !!MODAL && mroot().textContent.includes(msg)); closeModal();
+      const r = create(); ok(`E1-A duration "${v || '(blank)'}" refused with a message`, r === false && main().includes(msg));
     });
     ok('E1-A nothing created by refused durations', (STORE.chNewProgs || []).length === n0);
   });
@@ -142,8 +146,8 @@
   await T('E1-B Level 3: every fee option uses the programme\'s method; a fee that doesn\'t split is named', async () => {
     fresh(); SA(); go('a-programmes'); ACT.chProgNew();
     fill({ '#np-t': 'Level 3 Certificate in E1 Care', '#np-l': 'Level 3', '#np-r': 'QN 610/3131/3', '#np-d': '12', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
-    const row = (k, l, f, m) => { const r = document.querySelectorAll('#modal-root .r1-np-row')[k]; r.querySelector('.r1-np-l').value = l; r.querySelector('.r1-np-f').value = f; r.querySelector('.r1-np-m').value = m; };
-    row(0, 'Self-Paced', '2400', 'Self-Paced'); ACT.r1NpAdd(); row(1, 'Fully Assisted', '2700', 'Fully Assisted'); prim(); closeModal(); const pr = last();
+    const row = (k, l, f, m) => { const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = l; r.querySelector('.r1-np-f').value = f; r.querySelector('.r1-np-m').value = m; };
+    row(0, 'Self-Paced', '2400', 'Self-Paced'); ACT.r1NpAdd(); row(1, 'Fully Assisted', '2700', 'Fully Assisted'); create(); const pr = last();
     ok('E1-L3 programme created with two options; the Super Admin\'s terms are approved at once (D8)', r1Opts(pr.id).length === 2 && e1T(pr.id).status === 'Approved' && !ADMIN.queue.some(i => i.type === 'Programme payment terms'));
     go('a-programmes', { id: pr.id, tab: 'plan' });
     ok('E1-L3 payment summary lists each option with its mode, fee and how its learners pay', document.querySelectorAll('.e1-sum tbody tr').length === 2 && /Self-Paced/.test(main()) && /Fully Assisted/.test(main()) && /6 monthly instalments of £400\.00/.test(main()) && /6 monthly instalments of £450\.00/.test(main()));
@@ -350,24 +354,24 @@
   });
 
   /* ================= E1 clarification (20 Oct 2026): administrators configure the methods; learners use only those ================= */
-  const l3Wizard = (title, rows) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (4000 + title.length) + '/3', '#np-d': '12', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l')); rows.forEach(([l, f, m], k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('#modal-root .r1-np-row')[k]; r.querySelector('.r1-np-l').value = l; r.querySelector('.r1-np-f').value = f; r.querySelector('.r1-np-m').value = m; }); };
+  const l3Wizard = (title, rows) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (4000 + title.length) + '/3', '#np-d': '12', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l')); rows.forEach(([l, f, m], k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = l; r.querySelector('.r1-np-f').value = f; r.querySelector('.r1-np-m').value = m; }); };
   const payOpts = () => [...document.querySelectorAll('main input[name="su-opt"]')].map(x => x.value).sort().join();
   await T('E1-CL Step 1: concise fee guidance; no instalment assumption before the Payment Plan step', async () => {
     fresh(); ACA(); go('a-programmes'); ACT.chProgNew(); INP.r1NpLevel(Object.assign(document.querySelector('#np-l'), { value: 'Level 3' }));
-    const t = document.querySelector('#modal-root .r1-np-opts').textContent;
+    const t = document.querySelector('main .r1-np-opts').textContent;
     ok('E1-CL Step 1 Level 3 fee options: "Add the available fees and delivery modes … configured in the Payment Plan step."', /Add the available fees and delivery modes for this programme\. Payment methods and instalments are configured in the Payment Plan step\./.test(t));
     ok('E1-CL Step 1 no longer states six (or any) instalments or the split rule', !/instalments \(|split evenly|unless changed|\b6\b/.test(t)); closeModal();
-    l3Wizard('Level 3 Certificate in Pay Config', [['Self-Paced', '500', 'Self-Paced']]); const n0 = (STORE.chNewProgs || []).length; prim();
+    l3Wizard('Level 3 Certificate in Pay Config', [['Self-Paced', '500', 'Self-Paced']]); const n0 = (STORE.chNewProgs || []).length; create();
     const pr = last(); closeModal();
     ok('E1-CL Step 1 accepts a fee that doesn\'t split into 6 (£500) — the split is checked against the configured method later', (STORE.chNewProgs || []).length === n0 + 1 && pr.title === 'Level 3 Certificate in Pay Config' && r1Opts(pr.id)[0].fee === 500);
-    ['0', '12.345', String(R1_FEE_MAX + 1)].forEach(f => { l3Wizard('Level 3 Bad fee ' + f, [['Self-Paced', f, 'Self-Paced']]); ok(`E1-CL (negative) Step 1 still refuses an invalid fee amount (${f})`, prim() === false && /Enter a fee/.test(mroot().textContent)); closeModal(); });
+    ['0', '12.345', String(R1_FEE_MAX + 1)].forEach(f => { l3Wizard('Level 3 Bad fee ' + f, [['Self-Paced', f, 'Self-Paced']]); ok(`E1-CL (negative) Step 1 still refuses an invalid fee amount (${f})`, create() === false && /Enter a fee/.test(main())); });
     // E1 rounding (20 Oct 2026, PD-E1-15) supersedes: "a fee option added later ... (6 instalments: £500 refused)". £500 over 6 is now
     // 5 × £83.33 + £83.35; a later option is still checked against the plan in force — here, the deposit (£300) must be below the fee.
     FA(); ACT.r1OptAdd({ dataset: { p: 'NV-L3' } }); ok('E1-CL (negative) a fee option added later still checks against the plan in force (£250 is not above the £300 deposit)', (fill({ '#fo-l': 'Bad', '#fo-f': '250', '#fo-m': 'Self-Paced' }), reason() === false) && /must be below the fee/.test(mroot().textContent)); closeModal();
     FA(); ACT.r1OptAdd({ dataset: { p: 'NV-L3' } }); ok('E1-R a fee option of £500 is accepted against 6 instalments (5 × £83.33 + £83.35); the form states the rounding', /final one adjusted so they total the fee exactly/.test(mroot().textContent) && (fill({ '#fo-l': 'Rounded', '#fo-f': '500', '#fo-m': 'Self-Paced' }), reason() !== false) && r1Opts('NV-L3').some(o => o.label === 'Rounded' && o.fee === 500 && !r1TermsOf(o).issue) && e1SchedTxt(500, 6) === '5 × £83.33 + £83.35'); closeModal();
   });
   await T('E1-CL the creator configures the method; Finance approval gates it; the split is checked for the method chosen', async () => {
-    fresh(); ACA(); l3Wizard('Level 3 Certificate in One Payment', [['Self-Paced', '500', 'Self-Paced'], ['Fully Assisted', '1000', 'Fully Assisted']]); prim(); closeModal(); const pr = last(), v0 = s4Plans(pr.id).length;
+    fresh(); ACA(); l3Wizard('Level 3 Certificate in One Payment', [['Self-Paced', '500', 'Self-Paced'], ['Fully Assisted', '1000', 'Fully Assisted']]); create(); const pr = last(), v0 = s4Plans(pr.id).length;
     go('a-programmes', { id: pr.id, tab: 'plan' }); const q0 = ADMIN.queue.length;
     ok('E1-CL plan step: three configurations offered to the creator (one payment, instalments, both)', ['one-time', 'instalments', 'both'].every(m => !!document.querySelector(`input[name="e1-meth"][value="${m}"]`)));
     // E1 rounding (20 Oct 2026, PD-E1-15) supersedes: "instalments × 6 refused for £500 / £1,000, naming the option". They now open
@@ -424,7 +428,7 @@
     ok('E1-R split in two: £166.67 → £83.34 + £83.33; £0.01 can\'t be split', JSON.stringify(e1Halves(166.67)) === '[83.34,83.33]' && JSON.stringify(e1Halves(250)) === '[125,125]' && e1Halves(0.01) === null);
   });
   await T('E1-R payment summary: three Level 3 fee options with exact schedules and the deposit as an alternative route', async () => {
-    fresh(); SA(); l3Wizard('Level 3 Certificate in Rounding', [['Self-Paced', '800', 'Self-Paced'], ['Fully Assisted', '1000', 'Fully Assisted'], ['Fully Assisted — plus', '1500', 'Fully Assisted']]); prim(); closeModal(); const pr = last();
+    fresh(); SA(); l3Wizard('Level 3 Certificate in Rounding', [['Self-Paced', '800', 'Self-Paced'], ['Fully Assisted', '1000', 'Fully Assisted'], ['Fully Assisted — plus', '1500', 'Fully Assisted']]); create(); const pr = last();
     go('a-programmes', { id: pr.id, tab: 'plan' }); const sum = () => (document.querySelector('main .e1-sum') || {}).textContent || '', note = () => (document.querySelector('main .e1-sum-note') || {}).textContent || '';
     ok('E1-R summary columns: fee option, delivery mode, total fee, payment methods, instalment schedule, deposit (alternative route)', [...document.querySelectorAll('main .e1-sum thead th')].map(x => x.textContent).join('|') === 'Fee option|Delivery mode|Total fee|Payment methods|Instalment schedule|Deposit (alternative route)' && document.querySelectorAll('main .e1-sum tbody tr').length === 3);
     ok('E1-R £800: "Instalments 1–5: £133.33 each · instalment 6 (final): £133.35", Total £800.00', /Instalments 1–5: £133\.33 each · instalment 6 \(final\): £133\.35/.test(sum()) && /Total £800\.00/.test(sum()));
@@ -440,7 +444,7 @@
     meth('pp', 'one-time'); ok('E1-R one payment: no instalments; the deposit stays an alternative to paying in full (PD-E1-05, provisional)', /None — one payment/.test(sum()) && /Alternative to paying in full: £300\.00 deposit/.test(sum()) && !/Instalments 1–/.test(sum()));
   });
   await T('E1-R Finance reviews the exact proposed schedule; a frozen copy stays with the proposal and the plan version', async () => {
-    fresh(); ACA(); l3Wizard('Level 3 Certificate in Review Rounding', [['Self-Paced', '800', 'Self-Paced'], ['Fully Assisted', '1000', 'Fully Assisted']]); prim(); closeModal(); const pr = last(), v0 = s4Plans(pr.id).length;
+    fresh(); ACA(); l3Wizard('Level 3 Certificate in Review Rounding', [['Self-Paced', '800', 'Self-Paced'], ['Fully Assisted', '1000', 'Fully Assisted']]); create(); const pr = last(), v0 = s4Plans(pr.id).length;
     go('a-programmes', { id: pr.id, tab: 'plan' }); meth('e1', 'instalments'); fill({ '#e1-n': '6' }); ACT.e1Submit({ dataset: { id: pr.id } });
     ok('E1-R submit dialog shows the exact schedules before sending', !!MODAL && /£133\.33 each · instalment 6 \(final\): £133\.35/.test(mroot().textContent) && /£166\.67 each · instalment 6 \(final\): £166\.65/.test(mroot().textContent));
     press(); const i = ADMIN.queue.find(x => x.id === e1T(pr.id).qid), S = i && i.data.sched;
@@ -467,7 +471,7 @@
     ACA(); ACT.s4PlanEdit({ dataset: { p: pr.id } }); ok('E1-R (negative) an Academic Admin can\'t open Finance\'s plan editor (refused, logged)', !MODAL && ADMIN.audit[0].action === 'Blocked: change payment plans'); closeModal();
   });
   await T('E1-R approval of changed terms: exactly one new plan version carrying the reviewed schedule', async () => {
-    fresh(); ACA(); l3Wizard('Level 3 Certificate in Both Rounding', [['Self-Paced', '800', 'Self-Paced'], ['Fully Assisted', '1000', 'Fully Assisted']]); prim(); closeModal(); const pr = last(), v0 = s4Plans(pr.id).length;
+    fresh(); ACA(); l3Wizard('Level 3 Certificate in Both Rounding', [['Self-Paced', '800', 'Self-Paced'], ['Fully Assisted', '1000', 'Fully Assisted']]); create(); const pr = last(), v0 = s4Plans(pr.id).length;
     go('a-programmes', { id: pr.id, tab: 'plan' }); meth('e1', 'both'); fill({ '#e1-n': '6' }); ACT.e1Submit({ dataset: { id: pr.id } }); press();
     const i = ADMIN.queue.find(x => x.id === e1T(pr.id).qid), S = i.data.sched;
     FA(); const a0 = ADMIN.audit.length; ACT.e1Decide({ dataset: { id: i.id, a: 'approve' } }); reason('Both agreed.');

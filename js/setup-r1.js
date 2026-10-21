@@ -225,28 +225,30 @@ ch8DetailsFields = function (d) {
     h = h.slice(0, i) + `<span class="r1-np-o3" ${l3 ? 'hidden' : ''}>${h.slice(i, e)}</span><span class="small r1-np-m3" ${l3 ? '' : 'hidden'}>${esc(R1_NP_MODE)}</span>` + h.slice(e); }
   return h;
 };
-INP.r1NpLevel = el => { const l3 = el.value === 'Level 3'; $$('#modal-root .r1-np-price, #modal-root .r1-np-o3').forEach(x => { x.hidden = l3; }); $$('#modal-root .r1-np-l3, #modal-root .r1-np-m3').forEach(x => { x.hidden = !l3; }); };
-ACT.r1NpAdd = () => { const l = $('#modal-root .r1-np-list'); if (l) l.insertAdjacentHTML('beforeend', r1NpRow()); };
-ACT.r1NpDel = el => { const row = el.closest('.r1-np-row'), l = $('#modal-root .r1-np-list'); if (row && l && l.querySelectorAll('.r1-np-row').length > 1) row.remove(); else toast('A Level 3 programme needs at least one fee option.', 'err'); };
+// CB2: the creation form is a dialog (older flows) or the Course Details page of a new course; these helpers act on whichever is shown
+const r1Sc = () => (MODAL || !document.querySelector('main .cb-new') ? '#modal-root' : 'main .cb-new');
+INP.r1NpLevel = el => { const l3 = el.value === 'Level 3'; $$(`${r1Sc()} .r1-np-price, ${r1Sc()} .r1-np-o3`).forEach(x => { x.hidden = l3; }); $$(`${r1Sc()} .r1-np-l3, ${r1Sc()} .r1-np-m3`).forEach(x => { x.hidden = !l3; }); };
+ACT.r1NpAdd = () => { const l = $(`${r1Sc()} .r1-np-list`); if (l) l.insertAdjacentHTML('beforeend', r1NpRow()); };
+ACT.r1NpDel = el => { const row = el.closest('.r1-np-row'), l = $(`${r1Sc()} .r1-np-list`); if (row && l && l.querySelectorAll('.r1-np-row').length > 1) row.remove(); else toast('A Level 3 programme needs at least one fee option.', 'err'); };
 // Read and check the option rows (Level 3 creation only); returns the list or null with the field marked
 function r1NpRead() {
-  const rows = $$('#modal-root .r1-np-row'), out = [], seen = new Set();
+  const rows = $$(`${r1Sc()} .r1-np-row`), out = [], seen = new Set();
   for (const r of rows) {
     const L = r.querySelector('.r1-np-l'), F = r.querySelector('.r1-np-f'), M = r.querySelector('.r1-np-m'), label = L.value.trim().replace(/\s+/g, ' ');
     if (!label && !F.value && !M.value && rows.length > 1) continue; // an empty extra row is ignored
-    const mark = (el, msg) => { $$('#modal-root .r1-np-err').forEach(x => x.remove()); el.setAttribute('aria-invalid', 'true'); r.insertAdjacentHTML('afterend', `<span class="err r1-np-err" role="alert">${ic('alert', 14)}${msg}</span>`); el.focus(); return null; };
+    const mark = (el, msg) => { $$(`${r1Sc()} .r1-np-err`).forEach(x => x.remove()); el.setAttribute('aria-invalid', 'true'); r.insertAdjacentHTML('afterend', `<span class="err r1-np-err" role="alert">${ic('alert', 14)}${msg}</span>`); el.focus(); return null; };
     if (!label) return mark(L, 'Enter a label');
     if (seen.has(label.toLowerCase())) return mark(L, 'Each option needs its own label'); seen.add(label.toLowerCase());
     const why = r1FeeWhy(F.value.trim(), null); if (why) return mark(F, why);
     if (!R1_MODES.includes(M.value)) return mark(M, 'Choose Self-Paced or Fully Assisted');
     out.push({ label, fee: Math.round(+F.value * 100) / 100, mode: M.value });
   }
-  if (!out.length) { const L = $('#modal-root .r1-np-l'); if (L) L.focus(); toast('Add at least one fee option.', 'err'); return null; }
+  if (!out.length) { const L = $(`${r1Sc()} .r1-np-l`); if (L) L.focus(); toast('Add at least one fee option.', 'err'); return null; }
   return out;
 }
 const _npReadR1 = ch8ReadDetails;
 ch8ReadDetails = function (pr) {
-  const lv = ($('#np-l') || {}).value, l3new = !pr && lv === 'Level 3' && $('#modal-root .r1-np-list');
+  const lv = ($('#np-l') || {}).value, l3new = !pr && lv === 'Level 3' && $(`${r1Sc()} .r1-np-list`);
   if (!l3new) return _npReadR1.apply(this, arguments);
   const P = $('#np-p'), keep = P.value; P.value = '1'; // the single price isn't used for Level 3: the other details are checked first
   const d = _npReadR1.apply(this, arguments); P.value = keep; if (!d) return null;

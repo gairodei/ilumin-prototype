@@ -1311,3 +1311,20 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
   .cb-badge { grid-column: 1; justify-self: center; font-size: .62rem; padding: 0 4px; }
   .cb-foot .btn { flex: 1 1 auto; }
 }
+
+/* CB2 — Course Details: the observation question, qualification details, unsaved state, sections not yet open */
+.cb-det-form { display: grid; gap: 14px; min-width: 0; }
+.cb-obs { border: 2px solid var(--brand); border-radius: 10px; padding: 12px 14px; background: var(--brand-soft); margin: 0; min-width: 0; }
+.cb-obs legend { font-weight: 700; padding: 0 4px; }
+.cb-obs[disabled] { border-color: var(--line-2); background: var(--surface-2); }
+.cb-req { font-size: .72rem; font-weight: 600; color: var(--red); margin-left: 4px; }
+.cb-obs-opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 6px 0; }
+.cb-obs-opt { align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.cb-qual-h { margin-top: 4px; }
+.cb-interim { margin: 0; }
+.cb-det-acts { gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.cb-ro-why { margin: 0 0 8px; }
+.cb-badge.warn { background: var(--amber-bg); color: var(--amber); }
+.cb-sec[disabled] { cursor: not-allowed; opacity: .6; background: var(--surface-2); }
+.cb-sec[disabled]:hover { background: var(--surface-2); border-color: var(--line); }
+@container cb (max-width: 560px) { .cb-obs-opts { grid-template-columns: minmax(0, 1fr); } }

@@ -1064,6 +1064,10 @@
   const np = () => (STORE.chNewProgs || []).slice(-1)[0];
   const fill8 = o => Object.entries(o).forEach(([k, v]) => { const e = document.querySelector(k); e.value = v; });
   const add8 = (act, ds, vals) => { ACT[act]({ dataset: ds }); fill8(vals); return prim(); };
+  // CB2 (PD-CB-14) supersedes the creation dialog: "New NVQ programme" opens Course Details of an unsaved course (no dialog); the
+  // observation question is required; "Save and continue" (ACT.cbDetCreate) creates the Draft and returns false when refused
+  let codeN = 0; // CB2 correction: a course code is required for a new course
+  const create8 = (obs = 'no') => { const r = document.querySelector('#np-obs-' + obs); if (r) r.checked = true; const c = document.querySelector('#np-code'); if (c && !c.value) c.value = 'NP' + (++codeN); return ACT.cbDetCreate(); };
 
   await T('New NVQ programme: who, details, Draft Version 1', async () => {
     fresh(); acaEnter('KA'); S.signedIn = true; go('a-programmes');
@@ -1072,10 +1076,10 @@
     role('sysA'); go('a-programmes'); ok('NP System Admin: button shown', !!app().querySelector('[data-act="chProgNew"]'));
     role('finA'); ACT.chProgNew(); ok('NP Finance can\'t create a programme (refused, logged)', !MODAL && ADMIN.audit[0].action === 'Blocked: create programme');
     acaEnter('KA'); S.signedIn = true; go('a-programmes'); ACT.chProgNew();
-    ok('NP details: title, level, reference, duration, description, price (GBP), Support type with the P-31 tag', ['#np-t', '#np-l', '#np-r', '#np-d', '#np-ds', '#np-p'].every(s => document.querySelector(s)) && document.querySelectorAll('input[name="np-s"]').length === 2 && /Pending client: Fully assisted vs self-paced/.test(mroot().textContent));
-    prim(); ok('NP required fields', !!MODAL && /Enter a title/.test(mroot().textContent));
-    closeModal(); ACT.chProgNew(); fill8({ '#np-t': 'Level 3 Diploma in Adult Care (England)', '#np-r': 'QN 1', '#np-p': '2000' }); prim(); ok('NP title must be unique', !!MODAL && /already exists/.test(mroot().textContent) && !(STORE.chNewProgs || []).some(p => !p.seed)); closeModal(); ACT.chProgNew();
-    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600', '#np-ds': 'For team leaders.' }); document.querySelector('input[name="np-s"][value="Self-paced"]').checked = true; prim();
+    ok('NP details (Course Details page, not a dialog): title, level, reference, duration, description, price (GBP), Support type with the P-31 tag, the observation question', !MODAL && S.params.id === 'new' && ['#np-t', '#np-l', '#np-r', '#np-d', '#np-ds', '#np-p', '#np-obs-yes', '#np-obs-no'].every(s => document.querySelector(s)) && document.querySelectorAll('input[name="np-s"]').length === 2 && /Pending client: Fully assisted vs self-paced/.test(main()));
+    ok('NP required fields', ACT.cbDetCreate() === false && /Enter a title/.test(main()));
+    ACT.chProgNew(); fill8({ '#np-t': 'Level 3 Diploma in Adult Care (England)', '#np-r': 'QN 1', '#np-p': '2000' }); ok('NP title must be unique', create8() === false && /already exists/.test(main()) && !(STORE.chNewProgs || []).some(p => !p.seed)); ACT.chProgNew();
+    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600', '#np-ds': 'For team leaders.' }); document.querySelector('input[name="np-s"][value="Self-paced"]').checked = true; create8();
     const pr = np();
     ok('NP created as Draft, Version 1, with details and Support type', !!pr && pr.status === 'Draft' && pr.version === 1 && pr.price === 2600 && pr.level === 'Level 4' && chSupportOf(pr.id) === 'Self-paced' && S.route === 'a-programmes' && S.params && true);
     ok('NP audited', ADMIN.audit.some(a => a.module === 'NVQ Programmes' && a.action === 'Programme created (Draft, Version 1)' && a.entity.includes(pr.id)));
@@ -1087,7 +1091,7 @@
 
   await T('New NVQ programme: structure, letter, documents, plan, review, publish', async () => {
     fresh(); acaEnter('KA'); S.signedIn = true; go('a-programmes'); ACT.chProgNew();
-    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600' }); prim(); const pr = np(), id = pr.id;
+    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600' }); create8(); const pr = np(), id = pr.id;
     go('a-programmes', { id, tab: 'review' }); const pub0 = app().querySelector('[data-act="ch8Publish"]');
     ok('NP review: blocking items listed; Publish disabled with a reason', /Add at least one unit/.test(main()) && /No offer letter uploaded/.test(main()) && pub0.disabled && !!pub0.title);
     ACT.ch8Publish({ dataset: { id } }); ok('NP publish refused while items are missing (logged)', /Can't publish/.test(MODAL.title) && pr.status === 'Draft' && ADMIN.audit[0].action === 'Blocked: publish (items missing)'); closeModal();

@@ -28,15 +28,17 @@
   await T('CB1-A create-programme entry point', async () => {
     fresh();
     [['Super Admin', SA], ['System Admin', SYS], ['Academic Admin', ACA]].forEach(([who, enter]) => { enter(); go('a-programmes'); ok(`CB1-A ${who}: "New NVQ programme" on the list`, !!q('[data-act="chProgNew"]')); });
+    // CB2 (PD-CB-14) supersedes the dialog checks: "New NVQ programme" opens Section 1 — Course Details of an unsaved course;
+    // "Save and continue" (was the dialog's "Create draft") creates the Draft and opens Curriculum
     SYS(); go('a-programmes'); q('[data-act="chProgNew"]').click();
-    ok('CB1-A the dialog is labelled "Section 1 — Course Details" (not "Step 1 of 6")', !!MODAL && MODAL.sub === 'Section 1 — Course Details' && !/Step 1 of/.test(document.querySelector('#modal-root').textContent));
+    ok('CB1-A "New NVQ programme" opens Section 1 — Course Details of an unsaved course (no dialog, no "Step 1 of 6")', !MODAL && S.params.id === 'new' && cur() === 'details' && !/Step 1 of/.test(main()));
     const set = (s, v) => { const e = document.querySelector(s); e.value = v; e.dispatchEvent(new Event('change', { bubbles: true })); };
-    set('#np-l', 'Level 4'); set('#np-t', 'Level 4 CB1 programme'); set('#np-r', 'QN 610/7777/1'); set('#np-d', '12'); set('#np-du', 'months'); set('#np-p', '2400');
-    prim(); const pr = (STORE.chNewProgs || []).slice(-1)[0];
-    ok('CB1-A "Create draft" opens the new programme in the course builder (Curriculum, as before), seven sections, Draft, Version 1', !!pr && pr.title === 'Level 4 CB1 programme' && S.params.id === pr.id && cur() === 'curriculum' && qa('.cb-nav .cb-sec').length === 7 && /Draft/.test(q('.page-h').textContent) && /Version 1/.test(q('.page-h').textContent));
+    set('#np-l', 'Level 4'); set('#np-t', 'Level 4 CB1 programme'); set('#np-r', 'QN 610/7777/1'); set('#np-d', '12'); set('#np-du', 'months'); set('#np-p', '2400'); set('#np-code', 'CB1-L4'); q('#np-obs-no').click();
+    q('[data-act="cbDetCreate"]').click(); const pr = (STORE.chNewProgs || []).slice(-1)[0];
+    ok('CB1-A "Save and continue" opens the new programme in the course builder (Curriculum, as before), seven sections, Draft, Version 1', !!pr && pr.title === 'Level 4 CB1 programme' && S.params.id === pr.id && cur() === 'curriculum' && qa('.cb-nav .cb-sec').length === 7 && /Draft/.test(q('.page-h').textContent) && /Version 1/.test(q('.page-h').textContent));
     ok('CB1-A header: title, level, reference, status, version and "Version history"', q('.page-h h1').textContent === pr.title && /Level 4/.test(q('.page-h').textContent) && /QN 610\/7777\/1/.test(q('.page-h').textContent) && !!q('.page-h [data-tab="versions"]'));
     ok('CB1-A no old step bar or tab bar anywhere', oldNav() === 0);
-    q('.cb-sec[data-tab="details"]').click(); ok('CB1-A Course Details: the existing details form, editable while Draft', cur() === 'details' && !!q('#np-t') && !!q('[data-act="ch8SaveDetails"]'));
+    q('.cb-sec[data-tab="details"]').click(); ok('CB1-A Course Details: the details form, editable while Draft (CB2: "Save details" / "Save and continue")', cur() === 'details' && !!q('#np-t') && !!q('[data-act="cbDetSave"]'));
     q('.cb-sec[data-tab="payments"]').click(); ok('CB1-A Fees & Payments: the creator\'s payment-terms proposal (Save draft / Submit to Finance), Draft — not yet submitted', pan() === 'plan' && !!q('[data-act="e1Submit"]') && !!q('[data-act="e1Draft"]') && /Draft — not yet submitted/.test(main()));
     FA(); go('a-programmes'); ok('CB1-A (negative) Finance can\'t open NVQ Programmes (unchanged)', /permission/i.test(main()) && !q('[data-act="chProgNew"]') && !q('.cb-nav'));
   });
@@ -49,7 +51,8 @@
       const seen = SECS.map(k => { q(`.cb-sec[data-tab="${k}"]`).click(); return cur() === k && q('.cb-sec.cur').getAttribute('aria-current') === 'page' && main().trim().length > 200 && !/undefined|We can't find that page/.test(main()) && oldNav() === 0; });
       ok(`CB1-B ${id}: each of the seven sections opens by clicking, current and marked, with content, no old navigation`, seen.every(Boolean), seen.join());
     });
-    open('NV-L3', 'details'); ok('CB1-B published Course Details: read-only (no inputs), says editing arrives in CB2', !qa('.cb-body input, .cb-body select, .cb-body textarea').length && /planned for CB2/.test(q('.cb-body').textContent) && /QN 603\/2851\/9/.test(main()));
+    // CB2 (PD-CB-15) supersedes "says editing arrives in CB2": seeded programmes' details stay read-only and say why
+    open('NV-L3', 'details'); ok('CB1-B published seeded Course Details: read-only (no inputs) with the reason; nothing promised for CB2', !qa('.cb-body input, .cb-body select, .cb-body textarea').length && /existed before the course builder are read-only/.test(q('.cb-body').textContent) && !/planned for CB2/.test(main()) && /QN 603\/2851\/9/.test(main()));
     open('NV-L3', 'assessments'); ok('CB1-B Assessments: the programme\'s assignments listed read-only, link to Assignments & Criteria Mapping, says authoring arrives in CB5', qa('.cb-assess tbody tr').length >= 5 && !!q('.cb-assess [data-go="a-assignments"]') && /planned for CB5/.test(main()) && !!q('.cb-sec[data-tab="assessments"] .cb-badge'));
     q('.cb-assess [data-go="a-assignments"][data-id]').click(); ok('CB1-B …"Open" opens that assignment in Assignments & Criteria Mapping', S.route === 'a-assignments' && !!S.params.id && !/We can't find that page/.test(main()));
   });
@@ -82,7 +85,7 @@
     open('NV-L3', 'review'); ok('CB1-D Review & Publish: says Version 2 is published and how to change it', /Version 2 is published/.test(q('.cb-body').textContent));
     q('.page-h [data-tab="versions"]').click(); ok('CB1-D Version history: the versions with the current one, and a way back', /Version 2 \(current\)/.test(main()) && !q('.cb-nav') && !!q('.cb-sh [data-tab="curriculum"]'));
     q('.cb-sh [data-tab="curriculum"]').click(); ok('CB1-D …"Back to the course builder" returns to Curriculum', cur() === 'curriculum');
-    SA(); const pr = (() => { go('a-programmes'); ACT.chProgNew(); const f = (s, v) => { document.querySelector(s).value = v; }; f('#np-t', 'Level 3 CB1 options'); f('#np-l', 'Level 3'); INP.r1NpLevel(document.querySelector('#np-l')); f('#np-r', 'QN 603/7777/3'); f('#np-d', '6'); f('#np-du', 'months'); const r = document.querySelector('#modal-root .r1-np-row'); r.querySelector('.r1-np-l').value = 'Self-Paced'; r.querySelector('.r1-np-f').value = '1800'; r.querySelector('.r1-np-m').value = 'Self-Paced'; prim(); return (STORE.chNewProgs || []).slice(-1)[0]; })();
+    SA(); const pr = (() => { go('a-programmes'); ACT.chProgNew(); const f = (s, v) => { document.querySelector(s).value = v; }; f('#np-t', 'Level 3 CB1 options'); f('#np-l', 'Level 3'); INP.r1NpLevel(document.querySelector('#np-l')); f('#np-r', 'QN 603/7777/3'); f('#np-d', '6'); f('#np-du', 'months'); const r = document.querySelector('main .r1-np-row'); r.querySelector('.r1-np-l').value = 'Self-Paced'; r.querySelector('.r1-np-f').value = '1800'; r.querySelector('.r1-np-m').value = 'Self-Paced'; document.querySelector('#np-obs-yes').checked = true; document.querySelector('#np-code').value = 'CB1-L3'; ACT.cbDetCreate(); return (STORE.chNewProgs || []).slice(-1)[0]; })(); // CB2 (PD-CB-14): the Course Details page, not the dialog
     open(pr.id, 'payments'); ok('CB1-D new Level 3 programme: Fees & Payments now also shows its fee options and observation fee rate (no screen before)', qa('.cb-panels .tab').map(t => t.dataset.tab).join() === 'plan,fees,support');
     q('.cb-panels [data-tab="fees"]').click(); ok('CB1-D …its fee options card lists its option', !!q('.r1-opts') && main().includes(pr.id + '-FO-001'));
     q('.cb-panels [data-tab="support"]').click(); document.querySelector('input[name="ch-sup"][value="Self-paced"]').checked = true; ACT.chSupSave({ dataset: { id: pr.id } }); reason('CB1 rate');
@@ -181,14 +184,16 @@
   });
 
   await T('CB1-L unsaved changes', async () => {
-    fresh(); SYS(); open('NV-N1', 'details'); const pr = s3Pr('NV-N1'), was = pr.title, t = q('#np-t');
-    t.value = was + ' (edited)'; t.dispatchEvent(new Event('input', { bubbles: true }));
+    // CB2 (PD-CB-16) supersedes the Course Details case: its typed values are now kept across sections (tested in ft-cb2). The prompt
+    // still protects the other sections' forms — here the enrolment-document checklist of a Draft
+    fresh(); SYS(); open('NV-N1', 'docs'); const was = ch8Docs('NV-N1').join(), box = q('.ch8-doc:not(:checked)');
+    box.checked = true; box.dispatchEvent(new Event('change', { bubbles: true }));
     q('.cb-sec[data-tab="curriculum"]').click();
-    ok('CB1-L leaving a section with an unsaved change asks first, and stays on the section', !!MODAL && MODAL.title === 'Leave without saving?' && /Course Details/.test(document.querySelector('#modal-root').textContent) && cur() === 'details');
-    closeModal(); ok('CB1-L "Stay and save" keeps the typed value', q('#np-t').value === was + ' (edited)');
-    q('.cb-sec[data-tab="curriculum"]').click(); prim(); ok('CB1-L "Leave without saving" goes to the section and saves nothing', cur() === 'curriculum' && pr.title === was);
-    open('NV-N1', 'details'); q('#np-t').value = was + ' (saved)'; q('#np-t').dispatchEvent(new Event('input', { bubbles: true })); ACT.ch8SaveDetails({ dataset: { id: 'NV-N1' } });
-    q('.cb-sec[data-tab="curriculum"]').click(); ok('CB1-L after saving, leaving doesn\'t ask', !MODAL && cur() === 'curriculum' && pr.title === was + ' (saved)');
+    ok('CB1-L leaving a section with an unsaved change asks first, and stays on the section', !!MODAL && MODAL.title === 'Leave without saving?' && /Documents & Contract/.test(document.querySelector('#modal-root').textContent) && cur() === 'documents');
+    closeModal(); ok('CB1-L "Stay and save" keeps the ticked box', q('.ch8-doc[value="' + box.value + '"]').checked);
+    q('.cb-sec[data-tab="curriculum"]').click(); prim(); ok('CB1-L "Leave without saving" goes to the section and saves nothing', cur() === 'curriculum' && ch8Docs('NV-N1').join() === was);
+    open('NV-N1', 'docs'); const b2 = q('.ch8-doc:not(:checked)'); b2.checked = true; b2.dispatchEvent(new Event('change', { bubbles: true })); ACT.ch8SaveDocs({ dataset: { id: 'NV-N1' } });
+    q('.cb-sec[data-tab="curriculum"]').click(); ok('CB1-L after saving, leaving doesn\'t ask', !MODAL && cur() === 'curriculum' && ch8Docs('NV-N1').join() !== was);
     open('NV-L3', 'observations'); const s = document.querySelector('main .dt input, main .dt-filt input'); if (s) { s.value = 'x'; s.dispatchEvent(new Event('input', { bubbles: true })); }
     q('.cb-sec[data-tab="review"]').click(); ok('CB1-L (negative) typing in a table search box doesn\'t count as unsaved work', !MODAL && cur() === 'review');
   });
