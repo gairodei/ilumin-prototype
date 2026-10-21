@@ -350,6 +350,8 @@
       const _co = checkout; let g9 = null; checkout = o => { g9 = o; return _co(o); }; try { ACT.suPay(); } finally { checkout = _co; } if (g9) g9.onSuccess(g9.amount, 'TXN-UI9'); closeModal();
       go('payments'); ok('CB9 learner Payments: the schedule note and row labels displayed; no page overflow', shown($1('main .cb9-note')) && /paid early at checkout/.test(main()) && appOver() <= 1, appOver());
       setAdminIdentity('FA'); S.portal = 'admin'; S.signedIn = true; setUi('fpL', 'F'); go('f-plans'); ok('CB9 Finance → Learner schedules: the agreed schedule card displayed; no page overflow', shown($1('main .cb9-fin')) && appOver() <= 1, appOver());
+      click($1('main [data-act="cb10Advance"][data-d="30"]')); click($1('main [data-act="cb10Advance"][data-d="30"]')); click($1('main [data-act="cb10Advance"][data-d="30"]'));
+      ok('CB10 Payment reminders (simulated): the card, its controls and the log displayed; no page overflow', shown($1('main .cb10')) && /Simulated/.test($1('main .cb10').textContent) && all('main .cb10-ctl .btn').filter(shown).length >= 4 && shown($1('main .cb10-log')) && appOver() <= 1, appOver());
     }
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));

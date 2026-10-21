@@ -404,6 +404,17 @@ Superseded test expectations (CB8), each rewritten with a PD-CB citation in the 
 
 No test expectation was superseded by CB9: learners in the existing suites who sign up to package programmes now get the default approved choice, with the same amounts.
 
+**CB10 — Simulated payment reminders** (built 21 Oct 2026): `js/cb-rem.js` (loads after `js/cb-pin.js`). Tests: `ft-cb10.js` and the CB10 check in `uicheck.js`.
+
+| ID | Provisional decision | Why | Where | To change when confirmed |
+|---|---|---|---|---|
+| PD-CB-67 | **Only pinned schedules produce reminders:** learners with an agreed dated schedule (CB9). No reminder for an unapproved or unchosen option, a learner on older terms (e.g. the seeded overdue learners), a deposit balance or a paid / awaiting-confirmation payment. | "The learner's pinned payment schedule is the only source." | `cb10Run` | — |
+| PD-CB-68 | **Kinds and days:** upcoming 7 days before the due date (provisional lead time, Q-CB-04), on the due date, then Day 15 and Day 30 overdue (the existing policy days). | PD-CB-06. | `CB10_KINDS` | Q-CB-04. |
+| PD-CB-69 | **A deterministic simulated daily job** walks one day at a time from its last run to the simulation date; each (learner, schedule, payment, kind) is recorded at most once by key, so re-renders, rebuilds and identity switches never duplicate. The simulation date is the demo "today" plus an offset moved by Finance ("+1 / +7 / +15 / +30 days", "Back to today", audited); the real date, payment statuses and the existing overdue process don't change; "Back to today" keeps the log and nothing is sent twice. | Deterministic simulation; no duplicates. | `cb10Run`, `ACT.cb10Advance`, `ACT.cb10Reset` | Replaced by a real scheduled job. |
+| PD-CB-70 | **Delivery is simulated and labelled:** an in-app learner notice ("… (simulated)", "no email or SMS is sent"), a reminder log in Finance → Payment Plans → Learner schedules, and the learner's Payments page. No claim of email or SMS delivery. | Requirement. | `cb10Card`, `planCard` | Q-CB-04 (channels). |
+| PD-CB-71 | **"Send payment reminder now"** for a learner with an agreed schedule records a manual simulated reminder (logged, labelled); for learners on older terms the button is unchanged. | Replace a toast-only action where the schedule is known. | `ACT.finRemind` | — |
+| PD-CB-72 | **Day 30 access pausing is not extended** to these learners: the reminder is recorded; the existing overdue process (which pauses access for its own learners) is unchanged. | Don't extend policies beyond what is asked. | — | Client: should Day 30 pause access for every learner with an agreed schedule? |
+
 Open items (CB): late-enrolment, batch-date-change, reminder lead time and channels, deposit-with-instalments and observation-location-change rules remain client questions (Q-CB-01…14 in the delivery plan). *(The earlier open item about a separate learner contract is closed: the course contract is the offer letter — PD-CB-20.)*
 
 ## Pending client clarification: confirmed as not decided in the prototype
