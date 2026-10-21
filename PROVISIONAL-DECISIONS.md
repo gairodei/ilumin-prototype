@@ -362,6 +362,15 @@ Superseded test expectations (CB5): `ft-cb` CB1-B "Assessments read-only … aut
 
 Superseded test expectations (CB6): `ft-n5a` N5a-B1 panel list (PD-CB-40: "Observation events" joins the section); the `configure` helper and the wizard lifecycle (N5a-W2b…W3) add an observation event, because a valid required configuration now needs one (PD-CB-41).
 
+**CB7 — Duration-based schedule engine** (built 21 Oct 2026): `js/cb-sched.js` (loads after `js/e1-sched.js`). Pure functions: no screen, no store, no change to any existing schedule. Tests: `ft-cb7.js` (every approved vector of the delivery plan, section C).
+
+| ID | Provisional decision | Why | Where | To change when confirmed |
+|---|---|---|---|---|
+| PD-CB-44 | **Counts 1–24, refused only when two payments would share a day.** Payment 1 is due on the batch start; with durations in months or years that divide by the count, payments are whole months apart, each from the anchor (month-end clamp); otherwise, and always for days and weeks, payment i is due floor(i·T/k) days after the start (T = the real number of days in the duration, 29 Feb included). k > T is refused; every schedule is also checked for distinct, increasing dates inside [start, course end). No minimum interval beyond one day is imposed (Q-CB-09 open: e.g. 6 payments over 30 days is accepted). | Approved algorithm (plan C, PD-CB-08); "reject schedules that generate duplicate due dates". | `cbSchedDates`, `cbOptWhy` | Add a minimum interval or a different maximum if the client sets one (Q-CB-09). |
+| PD-CB-45 | **Calendar dates only** ("YYYY-MM-DD", Europe/London). No times are stored, and dates are shown with a fixed-zone formatter, so a viewer's time zone or a clock change never moves a due date. | Calendar-safe handling. | `cbFd`, `cbToday` | — |
+| PD-CB-46 | **The rule is versioned:** every schedule records `CB-SCHED-1`. Approved packages and learners' pinned schedules keep the rule that made them, so a later algorithm can't change approved or agreed terms. | Preserve historical schedules. | `CB_SCHED_RULE` | — |
+| PD-CB-47 | **Amounts are E1's rule unchanged** (`e1SchedP`: integer pence, the last payment absorbs the rounding, the total equals the fee). Validity of a count is checked without a batch by trying every start date of a four-year cycle (proves the result instead of assuming it). | One amount rule. | `cbSched`, `cbOptWhy` | — |
+
 Open items (CB): late-enrolment, batch-date-change, reminder lead time and channels, deposit-with-instalments and observation-location-change rules remain client questions (Q-CB-01…14 in the delivery plan). *(The earlier open item about a separate learner contract is closed: the course contract is the offer letter — PD-CB-20.)*
 
 ## Pending client clarification: confirmed as not decided in the prototype
