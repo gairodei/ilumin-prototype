@@ -99,6 +99,9 @@ function dLearnerCard() {
     <ul class="list">${ctx.evs.map(e => { const st = dState(w, ctx, e), s = dSel(w, e.id), r = st.req;
       return `<li class="li" data-e="${e.id}"><div class="li-b"><strong>${esc(e.name)}</strong><span class="small">${s ? `Location: ${esc(dTxtLoc(s.loc))}` : 'Location not chosen yet'}</span>${r && r.status === 'Awaiting consent' && r.lid === w.me.id ? `<span class="row"><button class="btn btn-sm btn-primary" data-act="chOrConsent" data-id="${r.id}" data-a="accept">Agree to the Academy office</button><button class="btn btn-sm" data-act="chOrConsent" data-id="${r.id}" data-a="decline">Decline</button></span>` : ''}</div>${chip(st.t, st.tone)}</li>`; }).join('')}</ul></section>`;
 }
+// For a learner on the event journey, Academy-office observations are agreed per event (above); the older free-standing
+// request card would duplicate the consent buttons, so it isn't shown to them (other learners keep it)
+if (typeof chOrLearnerCard === 'function') { const _orCardD = chOrLearnerCard; chOrLearnerCard = function () { return dCtx(W) ? '' : _orCardD.apply(this, arguments); }; }
 const _obsListD = obsList;
 obsList = function () { return dLearnerCard() + _obsListD.apply(this, arguments); };
 
@@ -117,8 +120,10 @@ tasObs = function () {
 function dFillEv() {
   const box = document.querySelector('#modal-root #d-ev'); if (!box) return;
   const lid = mval('#op-l'), w = dW(lid), ctx = dCtx(w), crit = document.querySelector('#modal-root .op-c') && document.querySelector('#modal-root .op-c').closest('fieldset'), ia = document.getElementById('op-ia'), send = document.getElementById('op-send');
-  if (!ctx) { box.innerHTML = ''; if (crit) crit.hidden = false; return; }
-  if (crit) crit.hidden = true; if (ia) ia.hidden = true;
+  // (style, not the hidden attribute: these elements' own display rules would override it)
+  const show = (x, on) => { if (x) { x.hidden = !on; x.style.display = on ? '' : 'none'; } };
+  if (!ctx) { box.innerHTML = ''; show(crit, true); return; }
+  show(crit, false); show(ia, false);
   const opts = ctx.evs.map(e => ({ e, st: dState(w, ctx, e) })), ready = opts.filter(x => x.st.k === 'ready');
   box.innerHTML = `<div class="field d-evf"><label for="d-ev-s">Observation (from the learner's Version ${ctx.v})</label><select class="select" id="d-ev-s" data-onchange="dEvPick">${opts.map(x => `<option value="${x.e.id}" ${x.st.k === 'ready' ? '' : 'disabled'}>${esc(x.e.name)} — ${esc(x.st.t)}</option>`).join('')}</select><span class="hint">Only observations whose location the Coordinator has chosen, and that are approved or permitted there, can be proposed.</span></div><div id="d-ev-info" class="small"></div>`;
   const sel = document.getElementById('d-ev-s'); if (ready.length) sel.value = ready[0].e.id;
@@ -131,7 +136,7 @@ INP.dEvPick = el => {
   const s = dSel(w, e.id), office = s.loc === 'office', c = dEvCrit(ctx, e), send = document.getElementById('op-send');
   document.querySelectorAll('#modal-root input[name="op-lt"]').forEach(r => { r.checked = (r.value === 'office') === office; r.disabled = r.value === 'office' ? !office : office; });
   const loc = document.getElementById('op-loc'); if (loc) { loc.value = office ? 'Academy office' : (w.workplace || {}).name || ''; loc.readOnly = true; }
-  const ia = document.getElementById('op-ia'); if (ia) ia.hidden = true;
+  const ia = document.getElementById('op-ia'); if (ia) { ia.hidden = true; ia.style.display = 'none'; }
   if (!office) { const p = document.getElementById('op-perm'); if (p) p.innerHTML = dPerm(w) === 'Granted' ? `<p class="small" style="color:var(--green)">✓ Workplace permission granted</p>` : ''; }
   if (send) send.disabled = false;
   document.getElementById('d-ev-info').innerHTML = `<dl class="kv d-evkv"><dt>Location</dt><dd>${esc(dTxtLoc(s.loc))} <span class="xs muted">(chosen by ${esc(s.by)})</span></dd><dt>NVQ criteria</dt><dd class="mono">${esc(c.nvq.join(', ') || '—')}</dd>${office ? '' : `<dt>Academy criteria</dt><dd class="mono">${esc(c.ia.join(', ') || '—')}</dd>`}<dt>Evidence permitted</dt><dd>${esc(n5EvTxt({ types: e.ev }))}</dd></dl>`;

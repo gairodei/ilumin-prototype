@@ -140,6 +140,9 @@
     TAS('S'); ACT.obPropose({ dataset: { l: P.lid } }); const refused = !MODAL; closeModal();
     ok('D1-B (negative) another assessor (not allocated) can\'t propose for this learner', refused);
     TAS('T'); ok('D1-B (negative) the Teacher-only persona has no observation list for this learner', !tasObs().some(o => o.lid === P.lid));
+    TAS('A'); ACT.obPropose({ dataset: { l: P.lid } }); document.querySelector('#op-l').value = P.lid; INP.obPerm(document.querySelector('#op-l'));
+    const fs = document.querySelector('#modal-root .op-c').closest('fieldset'), iaBox = document.getElementById('op-ia');
+    ok('D1-B the proposal dialog shows the event picker and hides the free criteria list and the default Academy criteria (not displayed)', !!document.getElementById('d-ev-s') && getComputedStyle(fs).display === 'none' && (!iaBox || getComputedStyle(iaBox).display === 'none')); closeModal();
     propose(P, 'EV-1'); const o = recOf(P, 'EV-1');
     ok('D1-B Sarah (allocated observation assessor) proposes EV-1: tied to the event, version and workplace; scope = the event\'s NVQ criteria; Academy criteria of the version', !!o && o.status === 'Proposed' && o.dV === P.ctx.v && o.locType === 'work' && o.scope === P.c1 && J(o.dIa) === J(['IA-16']) && o.loc === P.w.workplace.name, J(o));
     TAS('A'); ok('D1-B the proposal is in Sarah\'s observation list (before, only the seeded learner\'s were)', !!o && tasObs().some(x => x.id === rowId(P, o)));
@@ -166,6 +169,7 @@
     ok('D1-C choosing EV-2 → Academy office raises the existing office request for that event, awaiting the learner\'s agreement', !!rq && rq.dEv === 'EV-2' && rq.status === 'Awaiting consent' && rq.source === 'coord');
     propose(P, 'EV-2'); ok('D1-C (negative) the assessor can\'t propose it before consent and approval', !recOf(P, 'EV-2'));
     learner(wk(P)); go('observations'); ok('D1-C the learner sees "Agree to the Academy office" on EV-2', !!q('.d-learner [data-e="EV-2"] [data-act="chOrConsent"][data-a="accept"]'));
+    ok('D1-C …once only: the older free-standing office card is not shown to a learner on the event journey', qa('[data-act="chOrConsent"][data-a="accept"]').length === 1 && !q('.ch-orcard'));
     ACT.chOrConsent({ dataset: { id: rq.id, a: 'accept' } }); prim(); closeModal();
     ok('D1-C the learner agrees: the request goes to the Academic Admin (PD-W0-05), not the Coordinator', rq.status === 'Pending approval' && qItem(rq.qid).first === 'Rachel Hughes');
     COO('A'); go('c-learner', { id: P.lid, tab: 'observations' }); const a0 = ADMIN.audit.length; ACT.dObsLoc({ dataset: { l: P.lid, e: 'EV-2', loc: 'workplace' } });

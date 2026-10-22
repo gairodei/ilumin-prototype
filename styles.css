@@ -1450,3 +1450,20 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 .cb-vb-n.ok { color: var(--green); }
 .cb-home { margin: 0 0 10px; }
 .cb-feelink { margin-left: 4px; }
+
+/* D1 — observation events */
+.d-coord td.d-pick { white-space: normal; }
+.d-pick { min-width: 0; }
+.d-pick .select { width: auto; max-width: 100%; margin-right: 6px; }
+.d-coord .d-pick > * { vertical-align: middle; }
+.d-evkv { margin: 4px 0 0; }
+.d-ov-note { margin: 6px 0; }
+.d-ov-btn { margin: 4px 0 8px; }
+@media (max-width: 640px) { .d-pick .select { width: 100%; margin: 0 0 6px; } }
+@media (max-width: 640px) {
+  .d-coord .tbl-wrap { overflow: visible; }
+  .d-coord table, .d-coord tbody, .d-coord tr, .d-coord td { display: block; width: 100%; }
+  .d-coord thead { display: none; }
+  .d-coord tr { border-bottom: 1px solid var(--line); padding: 8px 0; }
+  .d-coord td { border: 0; padding: 3px 0; white-space: normal; }
+}
