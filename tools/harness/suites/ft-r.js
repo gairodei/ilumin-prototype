@@ -234,7 +234,7 @@
   const sendAll = (s, item) => { const d = dft(s.key); markable(tasAsg(s)).forEach(q => { d.items[q.id] = { ...item }; }); ACT.mkRelease({ dataset: { k: s.key } }); prim(); };
   // (the release confirmation navigates back to the Release queue on a 0 ms timer — let it run so it doesn't fire in a later test)
   const relAs = async (coo, key) => { COO(coo); ACT.relOne({ dataset: { k: key } }); prim(); await wait(20); };
-  const declare = (key, res, r = 'Assessed against the brief') => { ACT.r3Declare({ dataset: { k: key } }); if (!MODAL) return false; if (res) { const x = document.querySelector(`input[name="r3-res"][value="${res}"]`); if (x) x.checked = true; } rsn(r); return press(); };
+  const declare = (key, res, r = 'Assessed against the brief') => { ACT.r3Declare({ dataset: { k: key } }); if (!MODAL) return false; if (res) { const x = document.querySelector(`input[name="r3-res"][value="${res}"]`); if (x) x.checked = true; } const fb = document.querySelector('#d-ofb'); if (fb) fb.value = 'Overall feedback for the learner.' /* D2 (PD-D-12): the declaration now requires overall feedback; was rationale only */; rsn(r); return press(); };
 
   await T('R3 Assessor judgements: Met / Partially Met / Not Met, recorded with evaluator, role, time, assignment, criterion and round', async () => {
     fresh(); const s = liveSub(); ok('R3 a live submission allocated to Sarah', !!s); if (!s) return;
