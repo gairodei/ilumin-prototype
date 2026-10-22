@@ -33,11 +33,16 @@ const dLocs = (ctx, e) => (e.loc || []).filter(k => cbLocOk(ctx.cfg, k));
 const dRecs = (w, ctx, e) => (w.observations || []).filter(o => o.dEv === e.id && o.dV === ctx.v);
 const dReq = (w, e) => chOrs().filter(r => r.lid === w.me.id && r.dEv === e.id).slice(-1)[0] || null;
 const dPerm = w => (w.workplace ? w.workplace.perm : 'Not entered');
+const D_OPEN = ['Awaiting consent', 'Pending approval'];
+const dOpenReq = (w, e) => { const r = dReq(w, e); return r && D_OPEN.includes(r.status) ? r : null; };
 // The state of one event for one learner
 function dState(w, ctx, e) {
   const recs = dRecs(w, ctx, e), done = recs.find(o => o.status === 'Completed'); if (done) return { k: 'done', t: 'Completed', tone: 'green', rec: done };
   const act = recs.find(o => ['Proposed', 'Confirmed'].includes(o.status)); if (act) return { k: 'active', t: act.status === 'Proposed' ? 'Date proposed' : 'Confirmed', tone: 'blue', rec: act };
-  const s = dSel(w, e.id); if (!s) return { k: 'nosel', t: 'Location to be chosen by the Coordinator', tone: 'amber' };
+  const s = dSel(w, e.id), open = dOpenReq(w, e);
+  // a learner's own request for the Academy office (CH-37) is shown whatever is selected, until it is decided
+  if (open && open.source === 'learner') return { k: 'wait', t: open.status === 'Pending approval' ? 'Learner asked for the Academy office — waiting for the Coordinator' : 'Waiting for the learner', tone: 'amber', req: open };
+  if (!s) return { k: 'nosel', t: 'Location to be chosen by the Coordinator', tone: 'amber' };
   if (s.loc === 'workplace') return dPerm(w) === 'Granted' ? { k: 'ready', t: 'Ready to schedule — workplace', tone: 'green' } : { k: 'wait', t: `Waiting for workplace permission (${String(dPerm(w)).replace('Permission ', '')})`, tone: 'amber' };
   const r = dReq(w, e);
   if (!r) return { k: 'wait', t: 'Academy-office request not raised', tone: 'amber' };
@@ -54,7 +59,7 @@ function dCoordCard(lid) {
   const w = dW(lid), ctx = dCtx(w); if (!ctx) return '';
   const can = chIsMyBatchLid(lid);
   const rows = ctx.evs.map(e => {
-    const st = dState(w, ctx, e), s = dSel(w, e.id), locs = dLocs(ctx, e), lock = ['active', 'done'].includes(st.k) || (st.req && ['Awaiting consent', 'Pending approval'].includes(st.req.status));
+    const st = dState(w, ctx, e), s = dSel(w, e.id), locs = dLocs(ctx, e), lock = ['active', 'done'].includes(st.k) || !!dOpenReq(w, e);
     const pick = !can || lock ? `<strong>${s ? esc(dTxtLoc(s.loc)) : '—'}</strong>` : `<label class="sr" for="d-loc-${e.id}">Location for ${esc(e.name)}</label><select class="select d-loc" id="d-loc-${e.id}" data-cb-keep>${s ? '' : '<option value="">Choose…</option>'}${locs.map(k => `<option value="${k}" ${s && s.loc === k ? 'selected' : ''}>${dTxtLoc(k)}</option>`).join('')}</select><button class="btn btn-sm btn-primary" data-act="dObsLoc" data-l="${esc(lid)}" data-e="${e.id}">Save</button>`;
     return `<tr data-e="${e.id}"><td><strong>${esc(e.name)}</strong><div class="xs muted">Permitted: ${esc(locs.map(dTxtLoc).join(', ') || 'none')}</div></td><td class="nowrap d-pick">${pick}</td><td>${chip(st.t, st.tone)}${s ? `<div class="xs muted">Chosen by ${esc(s.by)}, ${fdt(s.at)}</div>` : ''}</td></tr>`;
   }).join('');
@@ -72,7 +77,7 @@ ACT.dObsLoc = el => {
   if (!dLocs(ctx, e).includes(loc)) return no(`Location not permitted for ${e.name}`, 'Choose one of the permitted locations.');
   const st = dState(w, ctx, e), s = dSel(w, e.id);
   if (['active', 'done'].includes(st.k)) return no(`${e.name} is ${st.t.toLowerCase()}`, `${e.name} is already ${st.t.toLowerCase()}: its location can't change. The assessor cancels the proposal first.`);
-  if (st.req && ['Awaiting consent', 'Pending approval'].includes(st.req.status)) return no('Academy-office request open', 'An Academy-office request for this observation is waiting for the learner or the Academic Admin. Change the location after it is decided.');
+  if (dOpenReq(w, e)) return no('Academy-office request open', 'An Academy-office request for this observation is waiting for the learner or the Academic Admin. Change the location after it is decided.');
   if (s && s.loc === loc && st.k !== 'refused') { toast('Nothing has changed.', 'info'); return; }
   const at = now().toISOString(), by = CME().name, hist = (s && s.hist ? s.hist.slice() : []).concat([[at, by, 'Location chosen', dTxtLoc(loc)]]);
   (w.dObs = w.dObs || {})[e.id] = { loc, by, at, v: ctx.v, hist };
@@ -97,8 +102,43 @@ function dLearnerCard() {
   const w = W, ctx = dCtx(w); if (!ctx) return '';
   return `<section class="card d-learner"><h2>Your required observations — Version ${ctx.v}</h2><p class="small muted">Set by your programme. Your Academic Coordinator chooses where each takes place; your observation assessor proposes the date.</p>
     <ul class="list">${ctx.evs.map(e => { const st = dState(w, ctx, e), s = dSel(w, e.id), r = st.req;
-      return `<li class="li" data-e="${e.id}"><div class="li-b"><strong>${esc(e.name)}</strong><span class="small">${s ? `Location: ${esc(dTxtLoc(s.loc))}` : 'Location not chosen yet'}</span>${r && r.status === 'Awaiting consent' && r.lid === w.me.id ? `<span class="row"><button class="btn btn-sm btn-primary" data-act="chOrConsent" data-id="${r.id}" data-a="accept">Agree to the Academy office</button><button class="btn btn-sm" data-act="chOrConsent" data-id="${r.id}" data-a="decline">Decline</button></span>` : ''}</div>${chip(st.t, st.tone)}</li>`; }).join('')}</ul></section>`;
+      return `<li class="li" data-e="${e.id}"><div class="li-b"><strong>${esc(e.name)}</strong><span class="small">${s ? `Location: ${esc(dTxtLoc(s.loc))}` : 'Location not chosen yet'}</span>${r && r.status === 'Awaiting consent' && r.lid === w.me.id ? `<span class="row"><button class="btn btn-sm btn-primary" data-act="chOrConsent" data-id="${r.id}" data-a="accept">Agree to the Academy office</button><button class="btn btn-sm" data-act="chOrConsent" data-id="${r.id}" data-a="decline">Decline</button></span>` : ''}${dCanAsk(w, ctx, e) ? `<span class="row"><button class="btn btn-sm" data-act="dObsReq" data-e="${e.id}">Ask for the Academy office</button></span>` : ''}</div>${chip(st.t, st.tone)}</li>`; }).join('')}</ul></section>`;
 }
+/* ---------- The learner's own Academy-office request, per event (CH-37 learner route, preserved) ----------
+   Only for an event of their pinned version that permits the Academy office; one open request per event, whoever raised it.
+   It goes to the learner's Coordinator, as the existing learner-initiated route does; approval sets the event's location. */
+function dCanAsk(w, ctx, e) {
+  if (!dLocs(ctx, e).includes('office') || dOpenReq(w, e)) return false;
+  const st = dState(w, ctx, e), s = dSel(w, e.id); if (['active', 'done'].includes(st.k)) return false;
+  return !(s && s.loc === 'office' && st.k === 'ready');
+}
+ACT.dObsReq = el => {
+  const w = W, ctx = dCtx(w), e = ctx && ctx.evs.find(x => x.id === (el && el.dataset && el.dataset.e));
+  const no = (why, msg) => { logA('Observations', w && w.me ? `${chFullName(w)} (${w.me.id})` : '—', 'Blocked: Academy-office request', '—', '—', why); toast(msg, 'err'); return false; };
+  if (S.portal && S.portal !== 'learner') return no('Only the learner asks for an Academy-office observation here', 'Only the learner can ask for this.');
+  if (!ctx || !e) return no('No observation event for this learner', 'Observation not found.');
+  if (!dLocs(ctx, e).includes('office')) return no(`${e.name}: the Academy office isn't permitted by Version ${ctx.v}`, `${e.name} can't take place at an Academy office under your programme version.`);
+  if (dOpenReq(w, e)) return no(`${e.name}: a request is already open`, 'There is already an open Academy-office request for this observation.');
+  if (!dCanAsk(w, ctx, e)) return no(`${e.name}: not open for a request`, `${e.name} can't be changed now.`);
+  openModal({ title: 'Ask for an Academy-office observation', sub: esc(e.name), body: `<p class="small">Your Academic Coordinator decides. If approved, this observation takes place at an Academy office and your observation assessor proposes a date. No extra fee.</p><div class="field"><label for="d-or-r">Reason (required)</label><textarea class="textarea" id="d-or-r"></textarea></div>`,
+    actions: [{ label: 'Cancel' }, { label: 'Send request', cls: 'btn-primary', fn: () => {
+      const rsn = mval('#d-or-r').trim(); if (!rsn) { fieldErr('#d-or-r', 'Say why you need an Academy-office observation'); return false; }
+      if (dOpenReq(w, e) || !dCanAsk(w, ctx, e)) { toast('There is already an open request for this observation.', 'err'); return false; }
+      const r = chOrCreate(w.me.id, 'learner', `${e.name}: ${rsn}`, w.me.first + ' ' + w.me.last); r.dEv = e.id; r.dV = ctx.v;
+      render(); toast('Request sent to your Academic Coordinator.');
+    } }] });
+};
+// Without an event the free-standing request isn't tied to anything the learner must do: event-journey learners use the event
+const _orReqD = ACT.chOrRequest;
+ACT.chOrRequest = el => { if (dCtx(W)) { logA('Observations', `${chFullName(W)} (${W.me.id})`, 'Blocked: Academy-office request', '—', '—', 'Not tied to an observation event'); toast('Ask for the Academy office on the observation itself (Your required observations).', 'err'); return; } return _orReqD(el); };
+// An approved learner request sets the event's location to the Academy office (the Coordinator's own choice already has)
+const _orEffD = CH7_EFFECTS[CH_OR_T];
+CH7_EFFECTS[CH_OR_T] = (i, a, rsn) => {
+  const r0 = _orEffD(i, a, rsn), r = chOrOf((i.data || {}).req); if (!r || !r.dEv || r.status !== 'Approved' || r.source !== 'learner') return r0;
+  const w = dW(r.lid); if (!w) return r0; const at = now().toISOString(), s = dSel(w, r.dEv);
+  (w.dObs = w.dObs || {})[r.dEv] = { loc: 'office', by: ADMIN.me.name, at, v: r.dV, src: 'learner request ' + r.id, hist: (s && s.hist ? s.hist.slice() : []).concat([[at, ADMIN.me.name, 'Academy office approved (learner request ' + r.id + ')', 'Academy office']]) };
+  return r0;
+};
 // For a learner on the event journey, Academy-office observations are agreed per event (above); the older free-standing
 // request card would duplicate the consent buttons, so it isn't shown to them (other learners keep it)
 if (typeof chOrLearnerCard === 'function') { const _orCardD = chOrLearnerCard; chOrLearnerCard = function () { return dCtx(W) ? '' : _orCardD.apply(this, arguments); }; }

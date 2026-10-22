@@ -479,6 +479,17 @@ Gap assessment (code): R3 already provided Coordinator Met / Partially Met / Not
 | PD-D-14 | **No late submissions, enforced in the action:** submitting after the deadline — the extended deadline when an extension moved it, or the resubmission deadline — is refused and logged, also when the dialog was opened before the deadline. This is the rule already stated to learners ("No late submissions…"). | W0 deferred item; existing policy. | `ACT.reviewSubmit`, `startUndo` wrappers | — |
 | PD-D-15 | **Teacher role:** no override and no final outcome (the R3 rule, retested). | Requirement. | `r3MarkWhy`, `r3OutWhy` | — |
 
+**Batch D final correction — workplace permission and office requests for every learner** (built and accepted 22 Oct 2026): `js/d-wpc.js` (loads after `js/d-asm.js`), the `wpcSync` loop and withdrawal match in `js/workplace.js`, office-request changes in `js/d-obs.js`. Tests: `ft-d1f.js`; `ft-d1.js` setup now enters and grants the learner's own workplace (cited PD-D-16).
+Root cause: sign-up to a builder programme (`ch8StartSignup`) copied the template learner's workplace ("Willowbrook", granted by Mrs Joanne Whitley) and Academy criteria into every new learner, and the secure-link journey (`wpcSync`) only ran for the seeded learners C and D.
+
+| ID | Provisional decision | Why | Where | To change when confirmed |
+|---|---|---|---|---|
+| PD-D-16 | **A new sign-up starts with no workplace** ("Not entered") and no seeded Academy criteria. The learner enters their own employer and contact; saving sends the existing permission request. | Never substitute another learner's contact or consent. | `ch8StartSignup` wrapper | — |
+| PD-D-17 | **The secure-link journey runs for every enrolled learner** with workplace details (permission request, reminder and expiry, grant, decline, withdrawal; visit proposed, accepted, alternative, confirmed, cancelled). Each link is scoped to one learner and one request; the assessor named is the learner's allocated observation assessor (seeded links unchanged). | Requirement. | `wpcSync` (workplace.js) | — |
+| PD-D-18 | **Withdrawal needs a valid granted permission link** (a missing, invalid, declined, superseded or already-withdrawn link, or a visit link, is refused and logged) and cancels only that learner's planned workplace visits, matched by learner ID (before: by name). | Token scope; W0 deferred item. | `SUBMIT.wpcWithdraw` wrapper, workplace.js | — |
+| PD-D-19 | **Learner-initiated Academy-office requests are kept, per event:** an event-journey learner asks for the office on an event their pinned version permits it for (CH-37 learner route: their Coordinator decides); approval sets that event's location. The free-standing request without an event is refused for them. The Coordinator's own office choice keeps its route (learner consent, then the Academic Admin — the adviser can't approve, PD-W0-05). **One open request per event,** whichever side raised it: the other side can't add a second while it is open. | Requirement. | `ACT.dObsReq`, `dOpenReq`, `CH7_EFFECTS[CH_OR_T]` wrapper (d-obs.js) | — |
+| PD-D-20 | **"What will be observed"** on the learner's workplace page lists their own version's Academy criteria. | No seeded criteria. | `workplaceSection` wrapper | — |
+
 ## Pending client clarification: confirmed as not decided in the prototype
 
 | Topic | What the prototype does now | Register entry |

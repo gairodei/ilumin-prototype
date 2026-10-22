@@ -71,9 +71,11 @@ function wNewLink(o) { const l = { tz: 'Europe/London', status: 'Active', ...o, 
 /* Reconcile links/emails with the shared learner + observation data (learner resends, assessor reschedules/cancels, learner responds first) */
 function wpcSync() {
   if (!STORE.wpc) return;
-  ['C', 'D'].forEach(v => {
-    const w = STORE.worlds[v]; if (!w || !w.workplace || !w.flags.admitted) return;
-    const wp = w.workplace, base = { v, learner: VNAME(v), lid: w.me.id, qual: w.nvq.title, home: wp.name, address: wp.address + ', ' + wp.postcode, contact: { name: wp.cname, title: wp.ctitle, email: wp.cemail, phone: wp.cphone }, assessor: 'James Pryce' };
+  // D1 final correction: every enrolled learner with workplace details (not only the seeded C and D)
+  Object.keys(STORE.worlds || {}).forEach(v => {
+    const w = STORE.worlds[v], seeded = v === 'C' || v === 'D';
+    if (!w || !w.workplace || !w.nvq || !w.flags || w.workplace.perm === 'Not entered' || !(w.flags.admitted || (!seeded && w.signup && w.signup.done))) return;
+    const wp = w.workplace, base = { v, learner: VNAME(v), lid: w.me.id, qual: w.nvq.title, home: wp.name, address: wp.address + ', ' + wp.postcode, contact: { name: wp.cname, title: wp.ctitle, email: wp.cemail, phone: wp.cphone }, assessor: seeded ? 'James Pryce' : ((typeof chEff === 'function' && chEff(w.me.id, 'obs')) || null) };
     if (wp.perm === 'Permission Pending') {
       const key = v + ':perm:' + wp.sent;
       if (!wLinkByKey(key)) {
@@ -317,7 +319,7 @@ SUBMIT.wpcWithdraw = f => {
   if (STORE.wpc.failNext || S.offline) { STORE.wpc.failNext = false; toast('We couldn\'t send this. Try again — your reason is kept.', 'err'); return; }
   l.status = 'Withdrawn'; l.used.withdrawnAt = wIso(); l.used.withdrawReason = r; let n = 0;
   if (l.v) { const w = STORE.worlds[l.v]; w.workplace.perm = 'Withdrawn'; w.workplace.withdrawReason = r; w.observations.filter(o => ['Proposed', 'Confirmed'].includes(o.status) && o.locType !== 'office').forEach(o => { n++; o.status = 'Cancelled'; o.reason = 'Cancelled: workplace permission withdrawn.'; }); w.events = w.events.filter(e => !(e.type === 'obs' && e.loc !== 'Academy office' && new Date(e.start) > now())); notifyLearner(l.v, 'Schedule', 'Workplace permission withdrawn', `${l.contact.name} withdrew permission${r ? ': ' + r : ''}. ${n ? n + ' planned workplace visit' + (n === 1 ? ' is' : 's are') + ' cancelled. ' : ''}Your Academic Coordinator may advise an Academy office observation — you\'ll be asked to agree first.` /* CH-43 */, 'observations..workplace'); }
-  (STORE.tas ? STORE.tas.obs : []).filter(o => o.learner === l.learner && o.locType !== 'office' && ['Proposed', 'Confirmed'].includes(o.status)).forEach(o => { n++; o.status = 'Cancelled'; o.perm = 'Withdrawn'; });
+  (STORE.tas ? STORE.tas.obs : []).filter(o => (o.lid && l.lid ? o.lid === l.lid : o.learner === l.learner) && o.locType !== 'office' && ['Proposed', 'Confirmed'].includes(o.status)).forEach(o => { n++; o.status = 'Cancelled'; o.perm = 'Withdrawn'; });
   tasNotifyW('Workplace permission withdrawn', `${l.learner} · ${l.home}${n ? ` — ${n} planned workplace visit${n === 1 ? '' : 's'} cancelled` : ''}. The learner\'s Coordinator is told and may advise an Academy office observation (the learner must agree).` /* CH-43 */, 't-obs'); logW(l, 'Permission withdrawn (secure link)', 'Granted', 'Withdrawn', r || 'No reason given');
   S.wpcOutcome = { t: l.token, k: 'withdrawn' }; go('w-withdraw', { id: l.token });
 };
