@@ -204,5 +204,58 @@
     learner('F'); setUi('cb9Pay', '1'); setUi('suMethod', 'card'); render(); const _co = checkout; let g = null; checkout = o => { g = o; return _co(o); }; try { ACT.suPay(); } finally { checkout = _co; }
     ok('EA-D F\'s paused sign-up can continue to payment again', !!g);
   });
+  /* ================= EA-E archive halfway through delivery (final Batch E correction) ================= */
+  const TCH = v => { S.tas.v = v; tasEnter(); S.signedIn = true; };
+  const draftAsg = (pr, title) => {   // an assignment defined (Draft, with a mapped question) but not yet released
+    go('a-programmes', { id: pr.id, tab: 'assessments' }); ACT.cbAsgNew({ dataset: { p: pr.id } }); if (!MODAL) return null;
+    fill({ '#cna-t': title, '#cna-d': '2026-12-20T21:59' }); press(); const d = s2Defs().find(x => x.title === title); if (!d) return null;
+    ACT.s2QAdd({ dataset: { id: d.id } }); fill({ '#aq-t': 'Describe how you support independence.', '#aq-ev': 'An example from practice', '#aq-n': '1' }); document.querySelectorAll('#modal-root .aq-ty').forEach(c => { c.checked = c.value === 'PDF'; }); press();
+    INP.mapChange({ checked: true, dataset: { id: d.id, q: d.qs[0].id, c: s2Crit(d).find(c => c.type === 'Knowledge').code } }); return d;
+  };
+  const submitAs = (v, a, resub) => { learner(v); ACT.reviewSubmit({ dataset: { id: a.id } }); const s = MODAL && MODAL.actions.find(x => x.label === 'Submit'); if (!s) return false; s.fn(); clearTimer('undo'); closeModal(); finaliseSubmit(a, !!resub, now().toISOString()); closeModal(); return true; };
+  const subOf = (lid, title) => tasSubs(true).find(x => x.L && x.L.lid === lid && x.a && x.a.title === title);
+  const markRel = (lid, title, item) => { TCH('A'); const s = subOf(lid, title); if (!s) return null; const d = dft(s.key); markable(tasAsg(s)).forEach(q => { d.items[q.id] = { ...item }; }); ACT.mkRelease({ dataset: { k: s.key } }); prim(); closeModal(); COO('A'); ACT.relOne({ dataset: { k: s.key } }); prim(); closeModal(); return s; };
+
+  await T('EA-E archive halfway through an active batch', async () => {
+    fresh(); const P = scene(), pr = P.pr, A = P.w, v = wk(P), lid = P.lid;
+    ACA(); const a1 = author(pr, 'EA-E Assignment 1 — released before archive'); const d2 = draftAsg(pr, 'EA-E Assignment 2 — not yet released');
+    const A1 = A.assignments.find(x => x.title === a1.title);
+    ok('EA-E (setup) halfway: Assignment 1 released to the learner (open); Assignment 2 defined but not released', !!A1 && A1.status === 'Not Started' && !!d2 && d2.status === 'Draft' && !A.assignments.some(x => x.title === d2.title));
+    const snap0 = J({ sig: A.signup.sig, pin: A.signup.plan, plans: s4Plans(pr.id), letters: chLetters(pr.id), tree: ch8Tree(pr.id), snaps: s3Snap(pr), cfg: n5ConfigFor(pr.id, 1), events: cbEvOf(n5ConfigFor(pr.id, 1)) });
+    archive(pr);
+    // 1. new business blocked
+    learner('E'); const c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === pr.title), a0 = ADMIN.audit.length; ACT.applyNvq({ dataset: { id: c.id } });
+    ACA(); ACT.addToBatch({ dataset: { id: P.bt.code } }); agyEnter('AG-02', true); ACT.agBuy({ dataset: { id: 'CAT-EA' } });
+    ok('EA-E 1. new admissions, learner allocations and agency sales are refused (logged)', !STORE.worlds.E.signup && ADMIN.audit.slice(0, ADMIN.audit.length - a0).filter(x => /^Blocked: (start sign-up|add a learner|buy a bundle)/.test(x.action)).length === 3);
+    // 2. the next existing assignment is released (published) by its authorized role; the learner receives it from the pinned curriculum
+    ACA(); go('a-programmes', { id: pr.id, tab: 'assessments' }); ACT.pubAsg({ dataset: { id: d2.id } }); reason('Release for the next unit');
+    const A2 = A.assignments.find(x => x.title === d2.title);
+    ok('EA-E 2. the already-defined Assignment 2 is released after archiving and reaches the enrolled learner (their version\'s criteria)', d2.status === 'Published' && !!A2 && A2.status === 'Not Started' && A2.qs.length === 1);
+    COO('A'); const p0 = d2.status; ACT.pubAsg({ dataset: { id: d2.id } }); ok('EA-E 2. (negative) the Coordinator can\'t publish assignment definitions (existing role rule)', !MODAL || !/^Publish/.test(MODAL.title)); closeModal();
+    // 3–4. submit, mark (resubmission), resubmit, mark, final outcome with feedback
+    ok('EA-E 3. the learner submits Assignment 1', submitAs(v, A1) && A1.status === 'Submitted');
+    const s1 = markRel(lid, A1.title, { exit: 'resub', rag: 'R', fb: 'Add a workplace example.', met: 'Not Met', corrections: 'Add an example from practice', days: 7 });
+    ok('EA-E 4. the allocated Assessor marks it and the Coordinator releases it: Resubmission Required', !!s1 && A1.status === 'Resubmission Required', A1.status);
+    ok('EA-E 3. the learner resubmits', submitAs(v, A1, true) && A1.status === 'Submitted' && A1.resubUsed === 1);
+    const s2 = markRel(lid, A1.title, { exit: 'pass', rag: 'G', fb: 'Now evidenced.', met: 'Met', verified: true, vby: 'Sarah Okonkwo', vat: now().toISOString() });
+    TCH('A'); ACT.r3Declare({ dataset: { k: s2.key } }); const x = document.querySelector('input[name="r3-res"][value="Pass"]'); if (x) x.checked = true; const fb = document.querySelector('#d-ofb'); if (fb) fb.value = 'Well evidenced after resubmission.'; const rs = document.querySelector('#rsn'); if (rs) rs.value = 'Meets the brief'; prim(); closeModal();
+    ok('EA-E 4. the Assessor declares the final outcome (Pass, with overall feedback)', r3Out(s2.key) && r3Out(s2.key).result === 'Pass' && r3Out(s2.key).feedback === 'Well evidenced after resubmission.');
+    TCH('T'); const o0 = J(r3Out(s2.key)); ACT.r3Declare({ dataset: { k: s2.key } }); ok('EA-E 7. (negative) the Teacher can\'t declare an outcome (refused, logged)', !MODAL && J(r3Out(s2.key)) === o0);
+    // 5. observations, sessions, payments continue
+    const ob = recOf(P, 'EV-1'); accept(P, ob); TCH('A'); go('t-obsrec', { id: rowId(P, ob) }); [['nvq', P.c1], ['ia', 'IA-16']].forEach(([s, c]) => ['o', 'c'].forEach(k => ACT.orT({ dataset: { s, c, k, v: '1' } }))); document.querySelector('main .d-evt').checked = true; INP.dEvt(); ACT.orSign({ dataset: { id: rowId(P, ob) } }); prim(); closeModal();
+    ok('EA-E 5. the remaining observation is confirmed, recorded and signed off', ob.status === 'Completed' && ob.report.dEv.id === 'EV-1');
+    ACA(); ACT.n3Weekly({ dataset: { b: P.bt.code } }); const sess = !!MODAL; closeModal(); learner(v); go('payments');
+    ok('EA-E 5. sessions can still be scheduled; outstanding payments are still payable', sess && A.plans.find(p => p.e === 'nvq').rows.some(r => r.status !== 'Paid') && /Pay now/.test(main()));
+    // 6. frozen records unchanged
+    ok('EA-E 6. signed letter, pinned terms, plan versions, offer letters, curriculum and observation configuration are unchanged', J({ sig: A.signup.sig, pin: A.signup.plan, plans: s4Plans(pr.id), letters: chLetters(pr.id), tree: ch8Tree(pr.id), snaps: s3Snap(pr), cfg: n5ConfigFor(pr.id, 1), events: cbEvOf(n5ConfigFor(pr.id, 1)) }) === snap0);
+    // 7. configuration stays frozen (direct calls refused and logged)
+    ACA(); const a1b = ADMIN.audit.length;
+    ACT.cbAsgNew({ dataset: { p: pr.id } }); const n1 = !!MODAL; closeModal();
+    ACT.newAsg(); const sel = document.querySelector('#modal-root #na-p'); if (sel) { sel.insertAdjacentHTML('beforeend', `<option>${esc(pr.title)}</option>`); sel.value = pr.title; } fill({ '#na-t': 'EA-E forced new assignment', '#na-d': '2026-12-20T21:59' }); const nr = prim(); closeModal();
+    ACT.kEditBrief({ dataset: { id: d2.id } }); const n3 = !!MODAL; closeModal();
+    ACT.s3WizVersion({ dataset: { id: pr.id } }); const n4 = !!MODAL; closeModal();
+    ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const n5 = !!MODAL; closeModal();
+    ok('EA-E 7. (negative) no new assignment (builder or Assignments page, even forced), no new brief version, no new programme version, no fee change — all refused and logged', !n1 && nr === false && !n3 && !n4 && !n5 && !s2Defs().some(d => d.title === 'EA-E forced new assignment') && ADMIN.audit.slice(0, ADMIN.audit.length - a1b).filter(x => /^Blocked/.test(x.action)).length >= 5);
+  });
   const pre = document.createElement('pre'); pre.id = 'ft-out'; pre.textContent = R.join('\n'); document.body.appendChild(pre);
 })();

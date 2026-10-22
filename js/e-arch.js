@@ -96,6 +96,22 @@ CB_WRITE.filter(n => !['eArchive', 'eReactivate'].includes(n)).forEach(name => {
   ACT[name] = function (el) { const pr = cbPr(cbPidOf(name, el)); if (eArch(pr)) return eNo('NVQ Programmes', eEnt(pr), name + ' (programme archived)', 'Programme archived — read-only', 'This programme is archived, so it is read-only.'); return f.apply(this, arguments); };
 });
 
+/* ---------- Assessment definitions: no new or changed definitions on an archived programme ----------
+   Already-defined assignments are still published / released and taught as usual (delivery continues); a brand-new definition,
+   or a new version of a published one, would be new programme configuration, so it is refused (logged), also by direct call. */
+const _newAsgE = ACT.newAsg;
+ACT.newAsg = function () {
+  const r = _newAsgE.apply(this, arguments), a = MODAL && /^New assignment/.test(MODAL.title || '') && MODAL.actions.find(x => x.cls && /primary/.test(x.cls));
+  if (a && a.fn && !a._eArch) { const f = a.fn; a._eArch = true; a.fn = function () { const pr = eProgByTitle(mval('#na-p')); if (eArch(pr)) { eNo('Assignments', eEnt(pr), 'create an assignment (programme archived)', 'Programme archived — no new assessment definitions', `${pr.title} is archived: new assignments can't be created. Existing assignments can still be published and taught.`); return false; } return f.apply(this, arguments); }; }
+  return r;
+};
+const _briefE = ACT.kEditBrief;
+if (typeof _briefE === 'function') ACT.kEditBrief = el => {
+  const d = (typeof s2Defs === 'function' ? s2Defs() : []).find(x => x.id === (el && el.dataset && el.dataset.id)), pr = d && (cbPr(cbAsgPid(d)) || eProgByTitle(d.programme));
+  if (eArch(pr)) return eNo('Assignments', `${d.title} (${d.id})`, 'edit the brief (new version) — programme archived', 'Programme archived — published assessment definitions are frozen', `${pr.title} is archived: published assignments can't get a new version.`);
+  return _briefE(el);
+};
+
 /* ---------- New enrolments stop: catalogue, sign-up, batches, waitlist, agency ---------- */
 const _catE = catCard;
 catCard = function (c) { return c && c.kind === 'nvq' && eArchTitle(c.title) ? '' : _catE.apply(this, arguments); };
