@@ -29,7 +29,7 @@ const cbRvL = s => (s && s.status !== 'Retired');
 function cbRvWhere(pr, m) {
   const t = String(m);
   if (/choose whether observation is required|Does this course contain observations|course duration|Duration "/i.test(t)) return ['details', 'details'];
-  if (/Assessment method not supported|give a Learning Outcome the Observation type/i.test(t)) return ['curriculum', 'structure'];
+  if (/Assessment method not supported|give a Learning Outcome the Observation type|^Review \(D5\)/i.test(t)) return ['curriculum', 'structure'];
   if (/^Payment|payment terms|payment plan|Finance|fee option|deposit|observation fee/i.test(t)) return ['payments', cb8Managed(pr) ? 'fees' : 'plan'];
   if (/offer letter/i.test(t)) return ['documents', 'letter'];
   if (/required document|checklist/i.test(t)) return ['documents', 'docs'];
