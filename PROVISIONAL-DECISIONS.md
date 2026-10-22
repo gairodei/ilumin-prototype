@@ -507,6 +507,27 @@ Gap assessment (code): programmes had Draft, Active, Suspended and Retired, but 
 | PD-E-08 | **Agency bundles** that include an archived programme aren't offered or sold; existing purchased seats and assignments are unchanged; no new seat assignment to it. | Requirement. | `AGY_CATALOGUE`, `agyDoAssign` wrappers | Client: refunds or substitution for unused seats. |
 | PD-E-09 | **Retired and Suspended data are unchanged**; neither can be archived. | Preserve until their rules are agreed. | — | Suspended lifecycle decision. |
 
+**E-B — Access control, batch eligibility and integration** (built 22 Oct 2026): `js/e-sec.js` (loads last). Tests: `ft-eb.js`.
+Gap assessment (code):
+- IQA: `qEditF` and `qClose` had no role, author or closed check; adding to a sample set ignored the conflict rule; IQA live records covered only the seeded learners C and D.
+- Agency: `agCorrect`, `agResendPw` and `agUnassign` had no roster check, and seat assignment didn't verify the bundle belonged to the agency.
+- Batch eligibility: Add learner and waitlist offers had no programme-match, completed-sign-up or programme-status check (the open S5c / S5e item).
+- G4: reject, return and decline weren't self-blocked, and refusals before the dialog weren't logged.
+- Stale links: every entity screen except NVQ programmes returned Error 404.
+- Workplace tokens after D3: already scoped (see `ft-d1f`); re-verified.
+
+| ID | Provisional decision | Why | Where | To change when confirmed |
+|---|---|---|---|---|
+| PD-E-10 | **IQA actions need the IQA role** (admin portal): record, edit and close findings; create, use, finalise, duplicate, export and change sample sets. Refusals are logged as security events. | Action-level permission. | `e-sec.js` IQA wrappers | — |
+| PD-E-11 | **Conflict rule everywhere it decides:** nobody adds work to a sample set, records on, or closes a finding for work in a batch where they hold an allocation (the existing `iqaConflict`). | G4 / IQA independence. | `qAddToSet`, `ACT.qClose` | — |
+| PD-E-12 | **A finding is edited only by its author and never once closed;** closing twice is refused. | Integrity of findings. | `ACT.qEditF`, `ACT.qClose` | Client: whether another IQA may edit. |
+| PD-E-13 | **IQA records include every enrolled learner's** marked work and completed observations (event name, assessor, programme level). | The seeded-only defect, as in D1. | `liveRecords` wrapper | — |
+| PD-E-14 | **Agency roster and bundles:** correction requests, set-password resends and seat removals only for learners on the agency's roster; seats only from the agency's own bundles, only to its roster. | Cross-roster access. | agency wrappers, `agyDoAssign` | — |
+| PD-E-15 | **Batch eligibility (provisional, reversible):** Add learner and waitlist offers need an Active programme (Archived, Suspended, Draft and Retired are refused); a learner who signed up joins only a batch of their own programme, after completing sign-up; a learner with an active NVQ enrolment on another programme can't join; the W1 fee-option rule is unchanged. Payment status for admin-enrolled learners isn't checked (agency licences and invoices vary). | Requirement; S5c item 1/7. | `eEligWhy` | Client: the full admission / enrolment / payment eligibility rule. |
+| PD-E-16 | **G4:** reject, return (request changes) and decline are refused for the item's own raiser, as approve already was; each module's routing rules are unchanged (e.g. any Active Finance Admin decides payment terms, E1). Refusals are logged also when the dialog isn't opened (Approvals Queue and payment-terms decisions). Superseded check: `ft-e1` E1-C, the creator's own return may now be refused by this guard first (cited). | Complete separation of duties. | `eSelfVerb`, `applyDecision`, `ACT.qDo`, `ACT.e1Decide` | — |
+| PD-E-17 | **Stale links:** a link to a record that no longer exists opens the screen's own list (or its list route, e.g. a-learner → a-learners) with a note naming the missing ID; never another record, never a bare 404; the address is corrected. Permission pages are unchanged. | Generalizes the NVQ fix (6ee3a65). | `SCREENS` wrappers | — |
+| PD-E-18 | **Workplace tokens after D3** re-verified: one learner and one request per token; cross-learner and visit/permission token misuse refused (`ft-d1f`, `ft-eb`). | Requirement. | — | — |
+
 ## Pending client clarification: confirmed as not decided in the prototype
 
 | Topic | What the prototype does now | Register entry |

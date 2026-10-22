@@ -209,7 +209,7 @@
   await T('E1-C permissions: only a Finance Admin decides; never the creator; no rejecting', async () => {
     fresh(); ACA(); const pr = newProg('Level 4 Permission test', { price: 2400 }); go('a-programmes', { id: pr.id, tab: 'plan' }); ACT.e1Submit({ dataset: { id: pr.id } }); press(); const i = ADMIN.queue.find(x => x.id === e1T(pr.id).qid);
     ok('E1-C (negative) the creator can\'t approve their own terms', applyDecision(i, 'approve', 'mine') === false && i.status === 'Pending' && e1T(pr.id).status === 'Pending');
-    ok('E1-C (negative) the creator can\'t request changes either (logged)', applyDecision(i, 'return', 'mine') === false && i.status === 'Pending' && ADMIN.audit[0].action === 'Blocked: decide payment terms');
+    ok('E1-C (negative) the creator can\'t request changes either (logged)', applyDecision(i, 'return', 'mine') === false && i.status === 'Pending' && /^Blocked: (decide payment terms|self-approval)$/.test(ADMIN.audit[0].action) /* E-B (PD-E-16): the G4 raiser guard may refuse it first; was 'Blocked: decide payment terms' */);
     role('sysA'); ok('E1-C (negative) a System Admin can\'t decide payment terms', applyDecision(i, 'approve', 'sys') === false && i.status === 'Pending');
     ACT.e1Decide({ dataset: { id: i.id, a: 'approve' } }); ok('E1-C (negative) the decision dialog isn\'t opened for a System Admin', !MODAL);
     FA(); ok('E1-C (negative) Finance can\'t reject outright or ask for info — approve or request changes only', applyDecision(i, 'reject', 'no') === false && applyDecision(i, 'info', 'q') === false && i.status === 'Pending');
