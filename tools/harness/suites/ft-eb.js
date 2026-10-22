@@ -203,7 +203,7 @@
 
   await T('EB-F stale links', async () => {
     fresh(); SA(); go('a-batches', { id: 'GONE-404' });
-    ok('EB-F a link to a batch that no longer exists opens the Batches list with a note — no 404, no other batch', !/Error 404/.test(main()) && !!q('.e-gone') && /Batches/.test(q('h1').textContent));
+    ok('EB-F a link to a batch that no longer exists opens the Batches list with a note — no 404, no other batch', !/Error 404/.test(main()) && !!q('.e-gone') && /Batches/.test(q('h1').textContent) && q('.page-h').nextElementSibling === q('.e-gone'));
     go('a-learner', { id: 'IA-L-00000' }); ok('EB-F …the same for a learner record', !/Error 404/.test(main()) && !!q('.e-gone'));
     FA(); go('a-programmes', { id: 'NV-L3' }); ok('EB-F a permission page stays a permission page (Finance on NVQ Programmes)', !q('.e-gone'));
   });

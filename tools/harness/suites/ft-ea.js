@@ -160,6 +160,7 @@
     ok('EA-B (negative) a direct sign-up call is refused and logged', !MODAL && !STORE.worlds.E.signup && blocked(a0, /start sign-up/));
     learner('F'); const a1 = ADMIN.audit.length; setUi('cb9Pay', '1'); setUi('suMethod', 'card'); ACT.suPay();
     ok('EA-B (negative) F\'s sign-up can\'t be paid / completed while archived; it is kept', !F.signup.done && !!F.signup && blocked(a1, /complete sign-up/));
+    go('admission'); ok('EA-B the paused learner Admission page says why, below the header; the sign-up is kept', !!q('.e-paused') && q('.page-h').nextElementSibling === q('.e-paused'));
     ACA(); go('a-batches'); ACT.newBatch(); const opts = [...document.querySelectorAll('#modal-root #nb-co option')].map(o => o.value); closeModal();
     ok('EA-B Create batch doesn\'t offer it', !opts.includes(pr.title));
     ACT.newBatch(); fill({ '#nb-c': 'EA-NEW' }); const co = document.querySelector('#nb-co'); co.insertAdjacentHTML('beforeend', `<option>${esc(pr.title)}</option>`); co.value = pr.title; INP.n2NbCourse(co); document.querySelector('#nb-m').value = 'Online'; prim(); fill({ '#nb-ac': 'Dr Helen Carter' }); prim(); prim(); prim(); const a2 = ADMIN.audit.length; prim(); closeModal();

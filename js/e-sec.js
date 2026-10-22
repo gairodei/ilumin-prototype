@@ -139,7 +139,7 @@ Object.keys(SCREENS).forEach(route => {
     for (const r of [route, route + 's']) { const g = r === route ? f : SCREENS[r]; if (typeof g !== 'function') continue; try { const x = g({}); if (x && !E_404.test(x)) { base = x; to = r; break; } } catch (e) { /* try the next */ } }
     if (!base) return h;
     const id = p.id; S.params = {}; if (to !== route) S.route = to; try { history.replaceState(null, '', '#' + to); } catch (e) { /* sandboxed */ }
-    const k = base.indexOf('</div>', base.indexOf('class="page-h"')); return k > 0 ? base.slice(0, k + 6) + eGoneNote(id) + base.slice(k + 6) : eGoneNote(id) + base;
+    return eAfterHead(base, eGoneNote(id));
   };
 });
 

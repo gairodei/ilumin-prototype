@@ -143,6 +143,18 @@ AGY_CATALOGUE = function () { return _catAgE.apply(this, arguments).filter(c => 
 const _assignE = agyDoAssign;
 agyDoAssign = function (b, course) { const pr = eProgByTitle(course); if (eArch(pr)) { eNo('Agency seats', AGN(), 'assign seats', `${eEnt(pr)} is archived`, eArchMsg(pr)); return 0; } return _assignE.apply(this, arguments); };
 
+// Insert a note right after a page's header (DOM-based, so the header's own layout is untouched)
+function eAfterHead(html, note) {
+  const t = document.createElement('template'); t.innerHTML = html; const h = t.content.querySelector('.page-h');
+  if (!h) return note + html; h.insertAdjacentHTML('afterend', note); return t.innerHTML;
+}
+// The learner whose sign-up is paused is told why, on their Admission page
+const _admE = SCREENS.admission;
+SCREENS.admission = p => {
+  const h = _admE(p), pr = eSuProg(W); if (!eArch(pr)) return h;
+  return eAfterHead(h, `<div class="note b-amber e-paused" role="status">${ic('archive')}<div class="small"><strong>${esc(pr.title)} isn't taking new enrolments at the moment.</strong> Your sign-up is kept exactly as it is, but it can't be completed or paid for now. If the programme reopens, you can continue from here. Contact the Academy if you have questions.</div></div>`);
+};
+
 /* ---------- Records ---------- */
 UXC.push(['E-A', 'Programme lifecycle — archive (22 Oct 2026)', [
   'An Active programme can be archived by the Super Admin, an Academic Admin or a System Admin, with a reason, from the programme page ("Archive…"); the dialog shows what continues and what stops. Archived is its own state — not Suspended, not Retired.',
