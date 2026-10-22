@@ -450,6 +450,23 @@ Root cause: for a published programme CB8 built, froze and checked the package a
 
 Open items (CB): late-enrolment, batch-date-change, reminder lead time and channels, deposit-with-instalments and observation-location-change rules remain client questions (Q-CB-01…14 in the delivery plan). *(The earlier open item about a separate learner contract is closed: the course contract is the offer letter — PD-CB-20.)*
 
+## Batch D: Observations and assessments (Oct 2026)
+
+**D1 — the learner-specific observation journey** (built 22 Oct 2026): `js/d-obs.js` (loads last). Tests: `ft-d1.js`.
+Gap assessment (code): the pinned version (`w.nvq.progVersion`), per-version observation configuration and events (N5a, CB6), workplace permission gating, CH-37 office requests with learner consent and Academic Admin approval (PD-W0-05), allocated-assessor scoping (CH-17) and the one-per-course fee from the pin (CH-38, CB9) already worked. Disconnected: the assessor's list (`tasObs`) only included the seeded learner's world; proposals and records took criteria and Academy criteria from the seeded learner for everyone; `n5Checklist` was used only in the configuration preview. Missing: the Coordinator's per-event location choice and the learner's notice, proposals tied to events, and event checklists.
+
+| ID | Provisional decision | Why | Where | To change when confirmed |
+|---|---|---|---|---|
+| PD-D-01 | **Scope:** the event journey applies to a learner whose pinned version has a recorded configuration with "Observation required: Yes" and at least one event. Others (seeded learners, versions configured before N5) keep the existing flow unchanged. | No migration of historical observation records. | `dCtx` | Client: whether seeded learners should be mapped to events. |
+| PD-D-02 | **The Coordinator chooses each event's location** from the locations both the event and the version permit, on the learner's Observations tab (only the learner's own Coordinator; refused and logged otherwise). The choice is audited; the learner gets one notice; the observation assessor is told. It can change until a date is proposed (or while no office request is waiting), never after completion. | Requirement. | `ACT.dObsLoc`, `dCoordCard` | — |
+| PD-D-03 | **Academy office per event:** choosing the office raises the existing CH-37 request for that event (`r.dEv`) — learner consent, then the Academic Admin (PD-W0-05). The learner agrees from the event on their Observations page. A declined or rejected request lets the Coordinator choose again. | Reuse the approved safeguards. | `dState`, `dReq` | — |
+| PD-D-04 | **Workplace:** an event chosen for the workplace can be proposed only while the workplace's permission is Granted (existing gate). | Requirement. | `dState` | — |
+| PD-D-05 | **Proposals are tied to an event:** only the learner's allocated observation assessor (CH-17) proposes, and only for an event whose location is ready; the location is the Coordinator's choice; the scope is the event's NVQ criteria (and, at the workplace, its Academy criteria). | Requirement. | `ACT.obPropose` wrapper | — |
+| PD-D-06 | **The record checklist is the event's own,** built from the pinned version's frozen configuration (`n5Checklist`): its NVQ criteria with their evidence requirements and the evidence types permitted, and at the workplace the version's Academy criteria in the event. Sign-off needs every criterion set and at least one permitted evidence type recorded; it locks the record as before and keeps the event, version, location, results and evidence. | Requirement. | `dChecklist`, `dRecScreen`, `ACT.orSign` wrapper | — |
+| PD-D-07 | **The assessor's list covers every allocated learner's observations** (it listed only the seeded learner's). | Defect. | `tasObs` wrapper | — |
+| PD-D-08 | **Fees unchanged:** one fee per learner per course, decided at the first confirmed observation from the learner's pinned terms and the location of that observation (CH-38, CB9); £0 is no charge; a later observation at another location raises nothing. | Use the existing configuration; no parallel pricing. | `chFeeSync`, `chFeeRaise` (unchanged) | Q-CB observation-location-change rule. |
+| PD-D-09 | **Learner-facing:** the learner's Observations page lists their required observations with the chosen location and state. | Requirement. | `dLearnerCard` | — |
+
 ## Pending client clarification: confirmed as not decided in the prototype
 
 | Topic | What the prototype does now | Register entry |
