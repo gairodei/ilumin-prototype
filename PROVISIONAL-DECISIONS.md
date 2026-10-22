@@ -490,6 +490,23 @@ Root cause: sign-up to a builder programme (`ch8StartSignup`) copied the templat
 | PD-D-19 | **Learner-initiated Academy-office requests are kept, per event:** an event-journey learner asks for the office on an event their pinned version permits it for (CH-37 learner route: their Coordinator decides); approval sets that event's location. The free-standing request without an event is refused for them. The Coordinator's own office choice keeps its route (learner consent, then the Academic Admin — the adviser can't approve, PD-W0-05). **One open request per event,** whichever side raised it: the other side can't add a second while it is open. | Requirement. | `ACT.dObsReq`, `dOpenReq`, `CH7_EFFECTS[CH_OR_T]` wrapper (d-obs.js) | — |
 | PD-D-20 | **"What will be observed"** on the learner's workplace page lists their own version's Academy criteria. | No seeded criteria. | `workplaceSection` wrapper | — |
 
+## Batch E: Programme lifecycle and security integration (Oct 2026)
+
+**E-A — Programme archive** (built 22 Oct 2026): `js/e-arch.js` (loads after `js/d-wpc.js`). Tests: `ft-ea.js`.
+Gap assessment (code): programmes had Draft, Active, Suspended and Retired, but no archive. Create batch filtered Active programmes only in its course list, with no check at the create step. Sign-up, sign-up completion, Add learner, waitlist offers, next intake, agency purchases and agency seat assignment never checked the programme's status.
+
+| ID | Provisional decision | Why | Where | To change when confirmed |
+|---|---|---|---|---|
+| PD-E-01 | **Archived is a distinct state** (`pr.status = 'Archived'`, with `pr.archived` = who, when, why, previous status and history). It is not Suspended (rules still to be agreed) and not Retired (a closed historical record): the retired read-only rule and wording don't apply. | Don't equate states. | `eArch` | — |
+| PD-E-02 | **Who archives:** an Active programme only, by the Super Administrator, an Academic Admin or a System Administrator (the publishing roles), in the admin portal, with a required reason; the impact is shown first (active batches and learners that continue, sign-ups in progress that pause, waitlists, agency bundles). Draft, Suspended and Retired programmes can't be archived. | Authorized lifecycle action. | `ACT.eArchive` | Client: which roles archive. |
+| PD-E-03 | **Nothing new starts, by any route (refused in the action, logged):** catalogue listing, starting a sign-up, completing (paying) a sign-up not yet done, Create batch (checked at the final step as well as the list), Add learner, waitlist offer, move to next intake, agency purchase of a bundle including it (catalogue, buy, payment, bank transfer), agency seat assignment. | Requirement. | `e-arch.js` wrappers | — |
+| PD-E-04 | **Sign-ups in progress pause, not cancel:** the learner is told once; their sign-up, documents and signed letter are kept and can be completed if the programme is reactivated. | Reversible; no data loss. | `ACT.suPay`, `chComplete` wrappers | Client: whether in-progress sign-ups should be allowed to complete. |
+| PD-E-05 | **Everyone already on it carries on, unchanged:** batches and their scheduling, sessions, assignments and marking, observations and their fee, payments and reminders, certificates, signed letters, pinned terms, versions and financial history. Transfers between batches of the same programme are unchanged. | Requirement. | — | — |
+| PD-E-06 | **The archived programme is read-only** in the builder (every programme write action refuses it, logged): no new versions, packages, letters, checklists, structure, assessments or observation changes. | Preserve versions and records. | `CB_WRITE` wrappers, `cbPanels` | Client: whether assignments may still be authored for existing learners. |
+| PD-E-07 | **Reactivation:** the Super Administrator only, with a reason, and only when valid to sell — a published version, payment terms in force (an approved financial package for a package programme) and a current offer letter. History keeps both events. | Explicit, validated action. | `ACT.eReactivate`, `eReactWhy` | — |
+| PD-E-08 | **Agency bundles** that include an archived programme aren't offered or sold; existing purchased seats and assignments are unchanged; no new seat assignment to it. | Requirement. | `AGY_CATALOGUE`, `agyDoAssign` wrappers | Client: refunds or substitution for unused seats. |
+| PD-E-09 | **Retired and Suspended data are unchanged**; neither can be archived. | Preserve until their rules are agreed. | — | Suspended lifecycle decision. |
+
 ## Pending client clarification: confirmed as not decided in the prototype
 
 | Topic | What the prototype does now | Register entry |

@@ -1467,3 +1467,7 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
   .d-coord tr { border-bottom: 1px solid var(--line); padding: 8px 0; }
   .d-coord td { border: 0; padding: 3px 0; white-space: normal; }
 }
+
+/* E-A — version bar actions wrap (three buttons on a published programme) */
+.cb-vb-a { display: flex; flex-wrap: wrap; gap: 6px; max-width: 100%; min-width: 0; }
+@media (max-width: 640px) { .cb-vb-a { flex: 1 1 100%; } }
