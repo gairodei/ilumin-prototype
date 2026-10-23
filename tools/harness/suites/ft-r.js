@@ -25,12 +25,15 @@
   const farBatch = (title, code) => code ? ADMIN.batches.find(b => b.code === code) : ADMIN.batches.find(b => b.course === title && ['Open', 'Planned'].includes(b.status) && daysTo(b.start) >= 30 && b.enrolled < b.cap);
   // A fee option through the admin card (add), returning its ID
   const optAdd = (label, fee, mode, r = 'R1 test') => { ACT.r1OptAdd(); fill({ '#fo-l': label, '#fo-f': String(fee), '#fo-m': mode }); const x = reason(r); return x === false ? null : r1Opts().find(o => o.label === label && o.status === 'Active').id; };
+  // PD-M-11: options created later are no longer accepted by existing batches automatically; this suite's journeys assume they are, so an
+  // administrator accepts them explicitly on the open Level 3 Diploma batches (the audited Change-dialog path) — assertions unchanged
+  const m11Accept = () => { mFreezeAll(); ADMIN.batches.filter(b => w1L3(b) && r2Pid(b) === 'NV-L3' && !w1Closed(b)).forEach(b => { const add = r1Opts('NV-L3').filter(o => o.status === 'Active' && !b.w1opts.includes(o.id)).map(o => o.id); if (add.length) mApply(b, b.w1opts.concat(add), 'Accepted explicitly (test fixture, PD-M-11)'); }); };
   // A learner without an NVQ starts the Level 3 sign-up from Browse and picks an option (by ID)
   const apply3 = (v, optId) => { learner(v); go('browse'); const c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === T3); ACT.applyNvq({ dataset: { id: c.id } }); if (optId) { const r = document.querySelector(`input[name="r1-opt"][value="${optId}"]`); if (r) r.checked = true; } const res = prim(); if (res !== false) closeModal(); return W; };
   // (the details step assigns the nearest batch for the learner's country — CH-42 — so a chosen batch is set after the letter, as in the N2 test)
   // Sign up to any Level 3 programme from Browse, choosing one of its options
   const apply3x = (v, pr, optId) => { learner(v); go('browse'); const c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === pr.title); ACT.applyNvq({ dataset: { id: c.id } }); if (optId) { const r = document.querySelector(`input[name="r1-opt"][value="${optId}"]`); if (r) r.checked = true; } const res = prim(); if (res !== false) closeModal(); return W; };
-  const finish = (w, opt, batch) => { chSetBatch(w, batch || farBatch(T3)); ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); if (batch) chSetBatch(w, batch); setUi('suOpt', opt || 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal(); return w; };
+  const finish = (w, opt, batch) => { m11Accept(); chSetBatch(w, batch || farBatch(T3)); ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); if (batch) chSetBatch(w, batch); setUi('suOpt', opt || 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal(); return w; };
 
   /* ================= R1 — Level 3 fee options ================= */
   await T('R1 seed: one legacy option; existing Level 3 learners keep their exact fee, mode, deposit and payments', async () => {
@@ -697,7 +700,7 @@
     ACT.s4bSessEdit({ dataset: { id: tok.id } }); const te = snap(); fill({ '#se-r': 'Look' }); r = prim(); n = 0; while (r === false && MODAL && n++ < 3) r = prim(); if (MODAL) closeModal();
     ok('R2 unified: a stored whole-mode audience shows its Self-Paced options ticked and is not rewritten by an unchanged save', te.on === [basic, plus].sort().join() && JSON.stringify(tok.aud) === '["mode:Self-Paced"]', te.on);
     // 8. a fee option added later: explicit audiences don't take it in; dynamic (all-participants) ones do
-    const prem = optAdd('Self-Paced Premium', 1200, 'Self-Paced'); SA(); ACT.addToBatch({ dataset: { id: MIXB } }); document.querySelector('#r2-ab-o').value = prem; const fq = [...document.querySelectorAll('#ab-l option')].find(o => o.value && o.value !== lp && !/ — in /.test(o.textContent)); document.querySelector('#ab-l').value = fq.value; const lq = fq.value; prim(); closeModal(); // a learner new to the batch
+    const prem = optAdd('Self-Paced Premium', 1200, 'Self-Paced'); m11Accept(); SA(); ACT.addToBatch({ dataset: { id: MIXB } }); document.querySelector('#r2-ab-o').value = prem; const fq = [...document.querySelectorAll('#ab-l option')].find(o => o.value && o.value !== lp && !/ — in /.test(o.textContent)); document.querySelector('#ab-l').value = fq.value; const lq = fq.value; prim(); closeModal(); // a learner new to the batch
     ok('R2 unified: an option added later doesn\'t change explicit audiences (one-off, weekly) — its learner isn\'t in', r2Same(s1.aud, [plus, fa]) && !n4Eligible(s1).includes(lq) && wcls.every(x => !n4Eligible(x).includes(lq)));
     ok('R2 unified: …while an all-participants session includes them (dynamic)', n4Eligible(old).includes(lq));
     ACT.s4bSessEdit({ dataset: { id: s1.id } }); ok('R2 unified: the edit dialog lists the new option, unticked', !!document.querySelector(`#modal-root .r2-g[value="${prem}"]`) && !document.querySelector(`#modal-root .r2-g[value="${prem}"]:checked`)); closeModal();
@@ -713,7 +716,7 @@
   });
 
   await T('R2 unified: every Level 3 session-creation entry point opens the common selector; the Schedule area', async () => {
-    fresh(); SA(); const sp = optAdd('Self-Paced Basic', 600, 'Self-Paced'), fa = optAdd('Fully Assisted', 1800, 'Fully Assisted');
+    fresh(); SA(); const sp = optAdd('Self-Paced Basic', 600, 'Self-Paced'), fa = optAdd('Fully Assisted', 1800, 'Fully Assisted'); m11Accept();
     const common = () => !!document.querySelector('#modal-root .r2-aud') && (document.querySelector('#modal-root .r2-aud legend') || {}).textContent === 'Who should attend?' && !document.querySelector('#modal-root input[name="r2-aud"]') && !!document.querySelector('#modal-root [data-act="r2AudAll"]');
     go('a-batches', { id: MIXB, tab: 'schedule' });
     const sec = app().querySelector('.r2-sched'), acts = sec && sec.querySelector('.r2-sched-acts');

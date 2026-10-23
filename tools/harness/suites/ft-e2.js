@@ -32,7 +32,10 @@
   const newProg = (title, level = 'Level 4', price = 2400) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': level, '#np-r': 'QN 610/' + (5000 + title.length) + '/1', '#np-d': '12', '#np-du': 'months', '#np-p': String(price) }); const n0 = (STORE.chNewProgs || []).length; create(); return (STORE.chNewProgs || []).length > n0 ? last() : null; };
   const l3Wizard = (title, rows) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (6000 + title.length) + '/3', '#np-d': '12', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l')); rows.forEach(([l, f, m], k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = l; r.querySelector('.r1-np-f').value = f; r.querySelector('.r1-np-m').value = m; }); create(); return last(); };
   const optOf = fee => r1Opts('NV-L3').find(o => o.fee === fee);
-  const addOpt = (fee, label = 'Self-Paced — E2') => { SA(); r1AddOpt('NV-L3', { label, fee, mode: 'Self-Paced' }, 'E2', 'Added'); return optOf(fee).id; };
+  const addOpt = (fee, label = 'Self-Paced — E2') => { SA(); r1AddOpt('NV-L3', { label, fee, mode: 'Self-Paced' }, 'E2', 'Added'); m11Accept(); return optOf(fee).id; };
+  // PD-M-11: options created later are no longer accepted by existing batches automatically; this suite's journeys assume they are, so an
+  // administrator accepts them explicitly on the open Level 3 Diploma batches (the audited Change-dialog path) — assertions unchanged
+  const m11Accept = () => { mFreezeAll(); ADMIN.batches.filter(b => w1L3(b) && r2Pid(b) === 'NV-L3' && !w1Closed(b)).forEach(b => { const add = r1Opts('NV-L3').filter(o => o.status === 'Active' && !b.w1opts.includes(o.id)).map(o => o.id); if (add.length) mApply(b, b.w1opts.concat(add), 'Accepted explicitly (test fixture, PD-M-11)'); }); };
   const payWith = (w, opt, method = 'bank') => { setUi('suOpt', opt); setUi('suMethod', method); render(); const _co = checkout; let g = null; checkout = o => { g = o; return _co(o); }; try { ACT.suPay(); } finally { checkout = _co; } if (g) g.onSuccess(g.amount, 'TXN-E2'); return w.plans.find(x => x.e === 'nvq'); };
 
   // CB8 (PD-CB-48, PD-CB-52) supersedes the creator's E1 Payment plan step (its live summary .e1-sumbox and e1Draft / e1Submit): a new programme's
@@ -60,7 +63,7 @@
     tryDep('799.99'); ok('E2 a custom deposit below every option (£799.99) is saved in the draft package', cb8Work(pr).dep.mode === 'own' && cb8Work(pr).dep.amount === 799.99);
     FA(); ok('E2 (negative) Finance editor: a custom deposit at or above a fee is refused', depEdit('NV-L2', 'own', 1800) === false && /must be below the fee/.test(mroot().textContent)); closeModal();
     ok('E2 (negative) Finance editor: a custom deposit must be entered', depEdit('NV-L2', 'own', '') === false && /Enter a custom deposit above £0/.test(mroot().textContent)); closeModal();
-    SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — low', fee: 250, mode: 'Self-Paced' }, 'E2', 'Added'); FA();
+    SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — low', fee: 250, mode: 'Self-Paced' }, 'E2', 'Added'); m11Accept(); FA();
     ok('E2 (negative) the Academy default can\'t be set at or above a Level 3 option of a programme using it', cfgSet(250) === false && /Level 3 Diploma in Adult Care/.test(mroot().textContent) && S4().cfg.deposit === 300); closeModal();
   });
   await T('E2 deposit not available: learners are never offered or charged one', async () => {

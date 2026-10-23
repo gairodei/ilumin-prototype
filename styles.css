@@ -1473,3 +1473,12 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 /* E-A — version bar actions wrap (three buttons on a published programme) */
 .cb-vb-a { display: flex; flex-wrap: wrap; gap: 6px; max-width: 100%; min-width: 0; }
 @media (max-width: 640px) { .cb-vb-a { flex: 1 1 100%; } }
+
+/* M — delivery modes a batch accepts: each mode's fee options sit under its checkbox */
+.m-mode, .m-leg { margin-top: 8px; }
+.m-mh { align-items: center; }
+.m-mh .r2-gh { font-size: .8rem; color: var(--fg); }
+.m-opts { display: grid; gap: 4px; margin: 4px 0 2px 25px; min-width: 0; }
+.m-opts .check span { overflow-wrap: anywhere; }
+.m-sum { margin-top: 8px; }
+@media (max-width: 640px) { .m-opts { margin-left: 30px; } }

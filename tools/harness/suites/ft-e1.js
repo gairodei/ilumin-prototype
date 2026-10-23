@@ -4,6 +4,9 @@
 // through the screen or handler, then checks the consuming screen or record, and includes the negative case.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // PD-M-11: options created later are no longer accepted by existing batches automatically; this suite's journeys assume they are, so an
+  // administrator accepts them explicitly on the open Level 3 Diploma batches (the audited Change-dialog path) — assertions unchanged
+  const m11Accept = () => { mFreezeAll(); ADMIN.batches.filter(b => w1L3(b) && r2Pid(b) === 'NV-L3' && !w1Closed(b)).forEach(b => { const add = r1Opts('NV-L3').filter(o => o.status === 'Active' && !b.w1opts.includes(o.id)).map(o => o.id); if (add.length) mApply(b, b.w1opts.concat(add), 'Accepted explicitly (test fixture, PD-M-11)'); }); };
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const app = () => document.getElementById('app');
   const mroot = () => document.getElementById('modal-root');
@@ -389,20 +392,20 @@
     ok('E1-CL Finance\'s fee-options form states no instalment split for a one-payment plan', (ACT.r1OptAdd({ dataset: { p: pr.id } }), /how learners pay \(one payment\)/.test(mroot().textContent) && !/divide into those instalments/.test(mroot().textContent) && /must be above the deposit/.test(mroot().textContent))); closeModal();
   });
   await T('E1-CL learners see only the approved methods; the instalment count is fixed; the fee option is separate', async () => {
-    fresh(); SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — standard', fee: 3000, mode: 'Self-Paced' }, 'E1-CL', 'Added'); const o2 = r1Opts('NV-L3').find(o => o.fee === 3000);
+    fresh(); SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — standard', fee: 3000, mode: 'Self-Paced' }, 'E1-CL', 'Added'); m11Accept(); const o2 = r1Opts('NV-L3').find(o => o.fee === 3000);
     // Full payment only
     FA(); planEdit('NV-L3', 'one-time', null, 'One payment only'); let w = toPay('NV-L3', o2.id);
     ok('E1-CL one payment only: "Pay in full" (and the eligible deposit); no instalment choice, no count to edit', payOpts() === 'deposit,full' && !document.querySelector('main input[type="number"]') && !/monthly payments/.test(main()));
     setUi('suOpt', 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); let pl = w.plans.find(x => x.e === 'nvq');
     ok('E1-CL (negative) a forced "instalment" choice is ignored: paid in full, one row of the option\'s fee', w.signup.done && w.signup.pay.full && pl.rows.length === 1 && pl.rows[0].amount === 3000);
     // Instalments only
-    fresh(); SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — standard', fee: 3000, mode: 'Self-Paced' }, 'E1-CL', 'Added');
+    fresh(); SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — standard', fee: 3000, mode: 'Self-Paced' }, 'E1-CL', 'Added'); m11Accept();
     FA(); planEdit('NV-L3', 'instalments', 4, 'Instalments only'); w = toPay('NV-L3', r1Opts('NV-L3').find(o => o.fee === 3000).id);
     ok('E1-CL instalments only: the approved 4 monthly payments (and the deposit); no "Pay in full"; no count to edit', payOpts() === 'deposit,instalment' && /4 monthly payments of £750.00/.test(main()) && !/Pay in full/.test(main()) && !document.querySelector('main input[type="number"]'));
     setUi('suOpt', 'full'); setUi('suMethod', 'bank'); render(); ACT.suPay(); pl = w.plans.find(x => x.e === 'nvq');
     ok('E1-CL (negative) a forced "full" choice is ignored: exactly the approved 4 instalments', w.signup.done && !w.signup.pay.full && pl.rows.length === 4 && pl.rows.every(r => r.amount === 750) && w.signup.plan.inst === 4);
     // Both
-    fresh(); SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — standard', fee: 3000, mode: 'Self-Paced' }, 'E1-CL', 'Added');
+    fresh(); SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — standard', fee: 3000, mode: 'Self-Paced' }, 'E1-CL', 'Added'); m11Accept();
     const snap = () => JSON.stringify(['B', 'C'].map(k => [STORE.worlds[k].signup.plan, STORE.worlds[k].plans, STORE.worlds[k].admission.deposit]));
     const hist0 = snap(); FA(); planEdit('NV-L3', 'both', 4, 'Both'); w = toPay('NV-L3', r1Opts('NV-L3').find(o => o.fee === 3000).id);
     ok('E1-CL both: "Pay in full" and "4 monthly payments" offered; the count is fixed (no input)', payOpts() === 'deposit,full,instalment' && /Pay in full — £3,000.00 now/.test(main()) && /4 monthly payments of £750.00/.test(main()) && !document.querySelector('main input[type="number"]'));
@@ -488,7 +491,7 @@
     ok('E1-R NV-N2 £900 over 7 saved and listed as "6 × £128.57 + £128.58"; Level 3 still "6 × £400.00"', s4PlanCur('NV-N2').inst === 7 && !!row && /6 × £128\.57 \+ £128\.58/.test(row.textContent) && !!l3r && /6 × £400\.00/.test(l3r.textContent), `inst ${s4PlanCur('NV-N2').inst} row ${row && row.textContent.slice(0, 160)} l3 ${l3r && l3r.textContent.slice(0, 120)} audit ${ADMIN.audit[0].action}`);
   });
   await T('E1-R learner checkout shows and records the exact amounts; the deposit route is unchanged', async () => {
-    fresh(); SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — rounded', fee: 1000, mode: 'Self-Paced' }, 'E1-R', 'Added'); const oid = r1Opts('NV-L3').find(o => o.fee === 1000).id;
+    fresh(); SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — rounded', fee: 1000, mode: 'Self-Paced' }, 'E1-R', 'Added'); m11Accept(); const oid = r1Opts('NV-L3').find(o => o.fee === 1000).id;
     const others = () => JSON.stringify(Object.keys(STORE.worlds).filter(k => k !== 'A').map(k => [k, STORE.worlds[k].plans, STORE.worlds[k].signup && STORE.worlds[k].signup.plan, STORE.worlds[k].admission && STORE.worlds[k].admission.deposit])), hist0 = others();
     let w = toPay('NV-L3', oid); setUi('suOpt', 'instalment'); setUi('suMethod', 'card'); render();
     ok('E1-R payment step: "6 monthly payments (5 × £166.67 and a final £166.65)"; first instalment £166.67 now', /Instalments — 6 monthly payments \(5 × £166\.67 and a final £166\.65\)/.test(main()) && /Pay the first instalment \(£166\.67\) now/.test(main()) && /Pay £166\.67 by card/.test(main()));
@@ -506,7 +509,7 @@
     ACA(); const n7 = pl.rows.length; ACT.finAdjust({ dataset: { v, e: 'nvq' } }); ok('E1-R (negative) an Academic Admin can\'t adjust a schedule (refused, logged)', !MODAL && pl.rows.length === n7 && /^Blocked: adjust/.test(ADMIN.audit[0].action)); closeModal();
     ok('E1-R other learners\' plans, pinned terms and deposits are untouched', others() === hist0);
     // Deposit route: one balance row, the configured hold, eligibility at 28 days, seat release keeps the deposit
-    fresh(); SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — rounded', fee: 1000, mode: 'Self-Paced' }, 'E1-R', 'Added'); S4().cfg.hold = 21;
+    fresh(); SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — rounded', fee: 1000, mode: 'Self-Paced' }, 'E1-R', 'Added'); m11Accept(); S4().cfg.hold = 21;
     w = toPay('NV-L3', r1Opts('NV-L3').find(o => o.fee === 1000).id); setUi('suOpt', 'deposit'); setUi('suMethod', 'card'); render();
     ok('E1-R deposit option unchanged: "£300.00 now", then the £700.00 balance within the 21-day hold', /Deposit \(holds your seat\) — £300\.00 now/.test(main()) && /Then pay the £700\.00 balance within 21 days/.test(main()));
     { const _co = checkout; let g = null; checkout = o => { g = o; return _co(o); }; try { ACT.suPay(); } finally { checkout = _co; } if (g) g.onSuccess(g.amount, 'TXN-E1R-D'); }
@@ -525,7 +528,7 @@
     ok('E1-R seeded plan versions are not given a schedule snapshot (not mutated)', vers.every(([, p]) => !('sched' in p)));
     const rows = Object.values(STORE.worlds).flatMap(w => (w.plans || []).flatMap(pl => pl.rows || []));
     ok('E1-R seeded learners\' payment rows keep their recorded amounts (whole pence, unchanged by the helper)', rows.length > 0 && rows.every(r => Math.abs(r.amount * 100 - Math.round(r.amount * 100)) < 1e-6));
-    SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — rounded', fee: 1000, mode: 'Self-Paced' }, 'E1-R', 'Added'); const oid = r1Opts('NV-L3').find(o => o.fee === 1000).id;
+    SA(); r1AddOpt('NV-L3', { label: 'Self-Paced — rounded', fee: 1000, mode: 'Self-Paced' }, 'E1-R', 'Added'); m11Accept(); const oid = r1Opts('NV-L3').find(o => o.fee === 1000).id;
     const w = toPay('NV-L3', oid); const pin = JSON.stringify(w.signup.plan);
     FA(); planEdit('NV-L3', 'instalments', 4, 'Four instalments for new sign-ups');
     ok('E1-R a plan change after the learner\'s sign-up started doesn\'t reprice them (pinned: 6 instalments of the £1,000 option)', JSON.stringify(w.signup.plan) === pin && w.signup.plan.inst === 6 && w.signup.plan.fee === 1000);

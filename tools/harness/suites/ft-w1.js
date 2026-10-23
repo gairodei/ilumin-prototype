@@ -49,7 +49,9 @@
     const f = document.querySelector('#nb-dm').closest('.field');
     ok('W1-A the delivery-mode field is shown only for standard-fee learners (while that option is ticked)', f.style.display !== 'none' && /Delivery mode for standard-fee learners/.test(f.textContent));
     document.querySelector(`.w1-nb-o[value="${o.std}"]`).checked = false; INP.w1NbStd(); ok('W1-A …and hidden when the Standard programme fee is unticked', f.style.display === 'none');
-    ticks.forEach(x => { x.checked = false; }); fill({ '#nb-c': 'W1-NONE' }); ok('W1-A (negative) at least one fee option is required', prim() === false && /Choose at least one fee option/.test(mroot().textContent)); closeModal();
+    // PD-M-03 supersedes the message — was: /Choose at least one fee option/ — now: "Choose at least one delivery mode … (with at least one fee option)"
+    ticks.forEach(x => { x.checked = false; }); fill({ '#nb-c': 'W1-NONE' });
+    ok('W1-A (negative) at least one fee option is required', prim() === false && /Choose at least one delivery mode — Self-Paced, Fully Assisted or both \(with at least one fee option\)/.test(mroot().textContent)); closeModal();
     const a0 = ADMIN.audit.length, r1 = nb('W1-MIX', T3, { opts: [o.sp, o.fa] }), b = r1.b;
     ok('W1-A review step: "Fee options" and "From each learner\'s fee option" (no single delivery mode)', /Fee options/.test(r1.rev) && /Self-Paced: Self-Paced — W1/.test(r1.rev) && /From each learner's fee option/.test(r1.rev) && !/standard-fee learners:/.test(r1.rev));
     ok('W1-A created: accepts exactly the ticked options; no batch delivery mode stored', JSON.stringify(b.w1opts) === JSON.stringify([o.sp, o.fa]) && b.dmode === undefined && b.dmodeSrc === undefined);
@@ -186,7 +188,9 @@
     const k0 = keep(), o = opts(), b = nb('W1-H', T3, { opts: [o.sp, o.fa] }).b; finish(apply3('A', o.sp), b); finish(apply3('F', o.fa), b); SA(); addL('W1-H', freeL().id, o.fa); go('a-batches'); go('a-batches', { id: 'W1-H' }); COO('A'); go('c-batches', { id: 'W1-H' });
     const k1 = JSON.parse(keep()), z = JSON.parse(k0); k1[1] = k1[1].filter(x => !String(x[0]).startsWith('W1-'));
     ok('W1-G seeded learners\' fee snapshots, payment rows and modes; seeded batches (no fee-option list, stored modes); raised observation fees — all unchanged', JSON.stringify(k1) === JSON.stringify(z));
-    ok('W1-G seeded Level 3 batches accept every option of their programme (no list stored)', ADMIN.batches.filter(x => x.course === T3 && !x.code.startsWith('W1-')).every(x => !x.w1opts && w1Accepts(x, o.sp) && w1Accepts(x, o.fa) && w1Accepts(x, 'L3-FO-STD')));
+    // PD-M-11 supersedes PD-W1-01's fallback — was: seeded batches store no list and accept every option (o.sp, o.fa) — now: an explicit list
+    // fixed before options are created later: the Standard programme fee only, so the options added afterwards aren't accepted
+    ok('W1-G seeded Level 3 batches keep the Standard programme fee and don\'t take options created later (PD-M-11)', ADMIN.batches.filter(x => x.course === T3 && !x.code.startsWith('W1-')).every(x => JSON.stringify(x.w1opts) === '["L3-FO-STD"]' && !w1Accepts(x, o.sp) && !w1Accepts(x, o.fa) && w1Accepts(x, 'L3-FO-STD')));
     ok('W1-G observation fee (W6 dependency, documented): still the programme rate, not the learner\'s mode — NV-L3 is "Fully assisted" for every learner', chSupportOfCourse(T3) === 'Fully assisted' && chFeeAmt(chSupportOfCourse(T3)) === 70);
   });
 
