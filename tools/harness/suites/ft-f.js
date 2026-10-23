@@ -304,12 +304,55 @@
       ok(`F-M (negative) ${n}: each attempt is logged (security event and audit)`, ADMIN.security.length >= s0 + routes.length && blocked(a0, /open IQA workspace/)); });
     FA(); go('q-portfolios', { id: 'IA-L-18022' }); ok('F-M the denied page offers the role\'s own home (Finance Dashboard)', !!q('.f-iqa-deny [data-go="f-dashboard"]'));
     [['learner', () => learner('C')], ['Teacher', () => TCH('T')], ['Coordinator', () => COO('A')], ['agency', () => agyEnter('AG-02', true)]].forEach(([n, enter]) => {
-      const res = routes.map(([r, p]) => { enter(); S.signedIn = true; go(r, p); return (!!q('.f-iqa-deny') || !/^q-/.test(S.route)) && !q('.tree') && !main().includes('Sample evidence across the whole qualification'); });
+      const res = routes.map(([r, p]) => { enter(); S.signedIn = true; go(r, p); return (!!q('.f-iqa-deny') || !!q('.rg-deny') || !/^q-/.test(S.route)) && !q('.tree') && !main().includes('Sample evidence across the whole qualification'); });
+      // F-N: in the learner portal the cross-portal route guard (.rg-deny) now refuses before the IQA screen's own denied state (.f-iqa-deny)
       ok(`F-M (negative) ${n} portal: no IQA page renders (access-denied state, or the portal's own redirect)`, res.every(Boolean), J(res)); });
     IQA('QA'); ok('F-M an IQA still opens all of them', routes.every(([r, p]) => { go(r, p); return shown(); }));
     SA(); ok('F-M the Super Administrator still opens all of them', routes.every(([r, p]) => { go(r, p); return shown(); }));
     IQA('QC'); const conf = allIqaRecords().find(r => iqaConflict(r)), s2 = ADMIN.security.length; qAddToSet([conf.id]);
     ok('F-M the IQA conflict-of-interest guard is unchanged (refused, logged)', !MODAL && ADMIN.security.length === s2 + 1);
+  });
+
+  await T('F-N cross-portal route safeguard (direct navigation)', async () => {
+    fresh(); const C = STORE.worlds.C, D = STORE.worlds.D, SY = () => { ACT.switchRole({ dataset: { r: 'sysA' } }); S.signedIn = true; };
+    // the outcome of typing a route: "deny" (access-denied page), "home" (the portal returned to its own dashboard) or "open"
+    const nav = (enter, r, p = {}) => { enter(); go(r, p); const h = ((q('h1') || {}).textContent || ''); return S.route !== r ? 'home' : (/permission/i.test(h) || !!q('.lockpage')) ? 'deny' : 'open'; };
+    const refused = (enter, r, p) => ['deny', 'home'].includes(nav(enter, r, p));
+    const L = () => learner('C'), aisha = C.me.email, grace = D.me.email;
+    // 1. Admin audit records
+    ok('F-N (negative) admin audit: learner, Finance, Academic, Business, IQA, Coordinator, Teacher/Assessor and agency are refused', [L, FA, ACA, BA, () => IQA('QA'), () => COO('A'), () => TCH('A'), () => agyEnter('AG-02', true)].every(e => refused(e, 'a-audit')));
+    ok('F-N …the Super Administrator and System Admin open it', nav(SA, 'a-audit') === 'open' && nav(SY, 'a-audit') === 'open');
+    // 2. Finance ledger and payment-plan management
+    ok('F-N (negative) Finance ledger and Payment Plans: learner, Academic, Business, IQA, Coordinator, Teacher/Assessor and agency are refused', ['f-ledger', 'f-plans'].every(r => [L, ACA, BA, () => IQA('QA'), () => COO('A'), () => TCH('A'), () => agyEnter('AG-02', true)].every(e => refused(e, r))));
+    ok('F-N …Finance opens both, the Super Administrator both, System Admin the ledger (its existing scope)', nav(FA, 'f-ledger') === 'open' && nav(FA, 'f-plans') === 'open' && nav(SA, 'f-plans') === 'open' && nav(SY, 'f-ledger') === 'open');
+    // 3. IQA portfolios
+    ok('F-N (negative) IQA portfolio: learner, Finance, Business, Academic, System Admin, Coordinator and agency are refused', [L, FA, BA, ACA, SY, () => COO('A'), () => agyEnter('AG-02', true)].every(e => refused(e, 'q-portfolios', { id: 'IA-L-18022' })));
+    ok('F-N …IQA and the Super Administrator open it', nav(() => IQA('QA'), 'q-portfolios', { id: 'IA-L-18022' }) === 'open' && nav(SA, 'q-portfolios', { id: 'IA-L-18022' }) === 'open');
+    // 4. Assessor marking queue
+    const sub = (TCH('A'), tasSubs(true).find(x => x.toMark));
+    ok('F-N (negative) marking queue and a marking page: learner, Teacher-only, Coordinator, admin and agency are refused', ['t-queue', 't-mark'].every(r => [L, () => TCH('T'), () => COO('A'), SA, FA, () => agyEnter('AG-02', true)].every(e => refused(e, r, r === 't-mark' ? { id: sub.key } : {}))));
+    ok('F-N …the allocated Assessor opens the queue and the submission', nav(() => TCH('A'), 't-queue') === 'open' && nav(() => TCH('A'), 't-mark', { id: sub.key }) === 'open');
+    // 5. Coordinator learner records
+    ok('F-N (negative) a Coordinator learner record: learner, Teacher/Assessor, admin personas and agency are refused', [L, () => TCH('A'), SA, FA, ACA, () => agyEnter('AG-02', true)].every(e => refused(e, 'c-learner', { id: C.me.id })));
+    COO('B'); go('c-learner', { id: C.me.id }); const cB = !main().includes(aisha); COO('A'); go('c-learner', { id: C.me.id }); const cA = main().includes(aisha);
+    ok('F-N …Aisha\'s own Coordinator opens it; another batch\'s Coordinator sees nothing of hers', cA && cB);
+    // 6. Agency rosters
+    agyEnter('AG-02', true); const mine = agyRoster()[0];
+    ok('F-N (negative) the agency roster and an agency learner: learner, Coordinator, Teacher/Assessor and admin personas are refused', ['g-learners', 'g-learner'].every(r => [L, () => COO('A'), () => TCH('A'), SA, FA, BA].every(e => refused(e, r, r === 'g-learner' ? { id: mine.id } : {}))));
+    agyEnter('AG-03', true); go('g-learner', { id: mine.id }); const other = !main().includes(mine.email); agyEnter('AG-02', true); go('g-learner', { id: mine.id });
+    ok('F-N …the agency opens its own learner; another agency sees nothing of them', main().includes(mine.email) && other);
+    // 7. Learner-specific private records
+    ok('F-N (negative) a learner can\'t open another learner\'s admin, Finance, Coordinator or agency record (Grace)', [['a-learner', { id: D.me.id }], ['f-learner', { id: D.me.id }], ['c-learner', { id: D.me.id }], ['g-learner', { id: D.me.id }]].every(([r, p]) => { learner('C'); go(r, p); return !!q('.rg-deny') && !main().includes(grace); }));
+    learner('C'); const ownOk = ['payments', 'assignments', 'observations', 'profile'].every(r => { go(r); return !q('.rg-deny') && !main().includes(grace); });
+    ok('F-N …her own Payments, Assignments, Observations and Profile still open, with nothing of Grace\'s', ownOk);
+    // logging, stale links, legitimate navigation unchanged
+    learner('C'); const s0 = ADMIN.security.length, a0 = ADMIN.audit.length; go('a-audit'); render(); render();
+    ok('F-N a refused route is logged once per attempt (security event and audit), not on every re-render', ADMIN.security.length === s0 + 1 && blocked(a0, /open screen/));
+    learner('C'); go('a-learner', { id: 'IA-L-GONE9' }); ok('F-N (negative) a stale admin link typed by a learner is refused — no fallback to a list or another record', !!q('.rg-deny') && !q('.e-gone') && !main().includes(grace));
+    SA(); go('a-learner', { id: 'IA-L-GONE9' }); ok('F-N …the same stale link for an admin still opens the list with a note', !!q('.e-gone') && !q('.rg-deny'));
+    const navOk = [[L, ['dashboard', 'courses', 'payments', 'calendar', 'messages', 'w-inbox']], [FA, ['f-dashboard', 'f-ledger', 'a-queue']], [ACA, ['k-dashboard', 'a-learners', 'a-programmes', 'k-staff']], [BA, ['b-dashboard', 'a-agencies', 'b-licences']]].every(([e, rs]) => rs.every(r => nav(e, r) === 'open'));
+    ok('F-N every role\'s own navigation still opens (sample per role)', navOk);
+    ACA(); go('a-learner', { id: C.me.id }); ok('F-N (negative) W0 action guards unchanged: a learner calling an admin action is still refused', (learner('C'), ACT.eArchive({ dataset: { id: 'NV-L3' } }), !MODAL));
   });
 
   const pre = document.createElement('pre'); pre.id = 'ft-out'; pre.textContent = R.join('\n'); document.body.appendChild(pre);

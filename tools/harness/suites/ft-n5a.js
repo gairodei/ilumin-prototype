@@ -268,7 +268,8 @@
     SA(); nvqEv('NV-L3D', '310 1.1', ['notes']); ok('N5a-A4 Super Admin can change it', d.nvq['310 1.1'].types.join() === 'notes');
     // A dialog opened by an administrator can't be saved after the role changes
     ACA(); ACT.n5Settings({ dataset: { p: 'NV-L3D' } }); radio('n5-req', 'no'); FA(); const r = press();
-    ok('N5a-A5 a dialog saved after the role changed: refused, logged, nothing saved', r === false && d.required === true && audit0().action === 'Blocked: save observation configuration');
+    // PD-F-10: Finance is now also refused the Academic screen still on the route (logged too), so the save refusal is among the latest entries rather than always first
+    ok('N5a-A5 a dialog saved after the role changed: refused, logged, nothing saved', r === false && d.required === true && ADMIN.audit.slice(0, 3).some(x => x.action === 'Blocked: save observation configuration'));
     SA(); ACT.n5Settings({ dataset: { p: 'NV-L3O' } }); ok('N5a-A6 retired programme: refused, logged', !MODAL && audit0().action === 'Blocked: change observation settings' && audit0().reason === 'Retired programme');
     ACT.n5Settings({ dataset: { p: 'NV-ZZ' } }); ok('N5a-A7 unknown programme: nothing opens', !MODAL);
     ok('N5a-A8 the publish check isn\'t bypassed by role: Finance can\'t publish (existing refusal kept)', (FA(), ACT.kPubProg({ dataset: { id: 'NV-L3D' } }), pr('NV-L3D').status === 'Draft'));
