@@ -400,6 +400,19 @@
     S.variant = 'C'; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; go('course', { id: STORE.worlds.C.nvq.id });
     const ppl = all('main section.card').find(x => /Your people/.test(x.textContent));
     ok('MC learner "Your people": their own Coordinator with an email link; no other Coordinator; no overflow', !!ppl && /UI Coord A/.test(ppl.textContent) && shown(ppl.querySelector('.mc-contact')) && !/Helen Carter/.test(ppl.textContent) && appOver() <= 1, appOver());
+    // MC demo: Demo controls → load the 10-Coordinator batch; the wizard with ten ticked; the Coordinator roster; a learner's contacts
+    closeModal(); initStore(); setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-batches');
+    S.demoOpen = true; renderDemo(); ok('MC demo: the Multi-Coordinator demo section in Demo controls displayed', shown($1('#demo-root .mc-demo')) && shown($1('#demo-root [data-act="mcDemoLoad"]')));
+    click($1('#demo-root [data-act="mcDemoLoad"]')); S.demoOpen = false; renderDemo();
+    click($1('main [data-act="newBatch"]')); $1('#modal-root #nb-c').value = 'UI-MC10'; click($1('#modal-root .modal-f .btn-primary'));
+    MCD_COORDS.forEach(c => click(all('#modal-root .mc-nb-c').find(i => i.value === c.name)));
+    ok('MC demo wizard: ten Coordinators ticked, "10 Academic Coordinators selected" displayed; the dialog fits', /10 Academic Coordinators selected/.test(($1('#modal-root .mc-nb-n') || {}).textContent || '') && shown($1('#modal-root .mc-nb-n')) && !modalFits(), modalFits()); closeModal();
+    S.demoOpen = true; renderDemo(); click($1('#demo-root [data-act="mcDemoOpen"][data-t="coord"][data-k="1"]')); S.demoOpen = false; renderDemo();
+    ok('MC demo Coordinator 1 roster: Total batch learners 101 and My learners 11 figures, My learners selected, 11 tags; no page overflow', /Total batch learners\s*101/.test($1('main .mc-kpis').textContent) && /My learners\s*11/.test($1('main .mc-kpis').textContent) && $1('main [data-act="mcScope"][data-k="mine"]').getAttribute('aria-selected') === 'true' && all('main .mc-tag .chip').filter(shown).length === 11 && appOver() <= 1, appOver());
+    click($1('main [data-act="mcScope"][data-k="all"]')); ok('MC demo All batch learners: "of 101" pager and tags; no page overflow', /of 101/.test(main()) && all('main .mc-tag').filter(shown).length > 0 && appOver() <= 1, appOver());
+    S.demoOpen = true; renderDemo(); click($1('#demo-root [data-act="mcDemoOpen"][data-t="learner"][data-k="10"]')); S.demoOpen = false; renderDemo();
+    const dppl = all('main section.card').find(x => /Your people/.test(x.textContent));
+    ok('MC demo learner of Coordinator 10: "Your people" shows Julia Moretti (demo) with her email link, no other demo Coordinator; no overflow', !!dppl && /Julia Moretti \(demo\)/.test(dppl.textContent) && shown(dppl.querySelector('.mc-contact')) && !MCD_COORDS.slice(0, 9).some(c => dppl.textContent.includes(c.name)) && appOver() <= 1, appOver());
     closeModal(); initStore();
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));

@@ -61,7 +61,8 @@
   await T('MC-2', async () => {
     fresh(); mkCoords(10); const names = Array.from({ length: 10 }, (_, k) => CN(k + 1));
     const r = nb('MC-TEN', T2, names[0], names.slice(1));
-    ok('MC-2 Create batch step 2: "More Academic Coordinators" offers a checkbox for each active Coordinator', /More Academic Coordinators/.test(r.step2) && names.every(n => r.step2.includes(`value="${n}"`)));
+    // superseded wording (MC UI verification): one "Academic Coordinators (required — choose one or more)" list, was "More Academic Coordinators"
+    ok('MC-2 Create batch step 2: one "Academic Coordinators — choose one or more" list with a checkbox for each active Coordinator', /Academic Coordinators \(required — choose one or more\)/.test(r.step2) && names.every(n => r.step2.includes(`value="${n}"`)));
     ok('MC-2 Review lists all ten Coordinators; the batch is created with them in that order; audited', r.b && /Academic Coordinators/.test(r.rev) && J(mcList(r.b)) === J(names) && ADMIN.audit.some(a => a.action === 'Academic Coordinators set' && a.entity.includes('MC-TEN')));
     const b = r.b; enrol(b, 100); const c = counts(b);
     ok('MC-2 100 learners and 10 Coordinators → 10 each', names.every(n => c[n] === 10) && Object.keys(c).length === 10, J(c));
@@ -98,6 +99,9 @@
   await T('MC-6', async () => {
     fresh(); mkCoords(3); const r = nb('MC-ROS', T2, CN(1), [CN(2), CN(3)]), b = r.b; enrol(b, 9);
     COO('M2'); go('c-batches', { id: 'MC-ROS', tab: 'roster' });
+    ok('MC-6 the roster opens on My learners (default): only the three allocated learners, each tagged', document.querySelector('main [data-act="mcScope"][data-k="mine"]').getAttribute('aria-selected') === 'true' && document.querySelectorAll('main .mc-tag').length === 3 && document.querySelectorAll('main .mc-tag .chip').length === 3);
+    ok('MC-6 the figures: Total batch learners 9, My learners 3, learners of other Coordinators 6', /Total batch learners\s*9/.test(main()) && /My learners\s*3/.test(main()) && /Other Coordinators' learners\s*6/.test(main()));
+    document.querySelector('main [data-act="mcScope"][data-k="all"]').click(); // superseded default (MC UI verification): All batch learners was the default
     const tags = document.querySelectorAll('main .mc-tag .chip').length;
     ok('MC-6 a second Coordinator sees the batch in My Batches and its full roster (9 learners)', myBatches().some(x => x.code === 'MC-ROS') && myLearners(true).filter(l => l.batch === b).length === 9);
     ok('MC-6 "3 of 9 learners are allocated to you" and three "My learner" tags; the others name their Coordinator', /3 of 9 learners are allocated to you/.test(main()) && tags === 3 && /Coordinator: MC Coord 01/.test(main()));
@@ -312,7 +316,8 @@
     ok('MC-14 admin roster: demonstration rows are labelled "Demonstration only" and are not members', [...document.querySelectorAll('main .mc-r-d')].every(x => !mcLids(b).includes((x.querySelector('a') || {}).dataset ? x.querySelector('a').dataset.id : '')) && chips('Demonstration only') === mcRosterView(b).demo.length);
     ok('MC-14 admin: the count note names 6 identified members against the recorded 9/' + b.cap, /6 identified batch members/.test(main()) && main().includes(`(${b.enrolled}/${b.cap})`));
     COO('M1'); go('c-batches', { id: 'MC-HIST', tab: 'roster' });
-    ok('MC-14 Coordinator roster: the same 6 members ("2 of 6"), the same note; the historical row tagged "not allocated"', /2 of 6 learners are allocated to you/.test(main()) && /6 identified batch members/.test(main()) && /Unresolved roster entry — not allocated/.test(main()));
+    ACT.mcScope({ dataset: { t: 'roster-MC-HIST', k: 'all' } });
+    ok('MC-14 Coordinator roster (All batch learners): the same 6 members ("2 of 6"), the same note; the historical row tagged "not allocated"', /2 of 6 learners are allocated to you/.test(main()) && /6 identified batch members/.test(main()) && /Unresolved roster entry — not allocated/.test(main()));
     // Seeded batches: the admin and Coordinator member counts agree
     SA(); const diffs = ADMIN.batches.filter(x => mcList(x).length).filter(x => { go('a-batches', { id: x.code }); const m = /(\d+) identified batch members?/.exec(main()); return !m || +m[1] !== mcLids(x).length; }).map(x => x.code);
     ok('MC-14 every batch with a Coordinator: the admin roster states the same member count the Coordinator portal allocates', !diffs.length, diffs.join(', '));
@@ -352,6 +357,72 @@
     COO('M9'); ok('MC-15 (negative) the tenth Coordinator no longer messages her; her earlier feedback is unchanged', !cooRecipients().includes(chFullName(STORE.worlds.C) + ' (Learner)') && s.live.coordAll.some(c => c.by === 'Dr Helen Carter'));
     // Single-Coordinator batch: unchanged
     ok('MC-15 one-Coordinator batch (Croydon Cohort 4): the seeded request and contact stay with Michael Osei', chOrOf('OR-101').coord === 'Michael Osei' && (learner('D'), render(), STORE.worlds.D.nvq.people.some(([y, n]) => y === 'Academic Coordinator' && n === 'Michael Osei')));
+  });
+
+  /* ================= 16. The multi-Coordinator demo scenario (demo data, real screens) ================= */
+  await T('MC-16', async () => {
+    fresh(); SA(); const seedL = J(ADMIN.learners), seedB = J(ADMIN.batches.map(b => [b.code, b.coords, b.mcA, b.coh, b.roster])), seedW = J(Object.keys(STORE.worlds));
+    S.demoOpen = true; renderDemo(); const load = document.querySelector('#demo-root .mc-demo [data-act="mcDemoLoad"]');
+    ok('MC-16 Demo controls: the "Multi-Coordinator demo — demonstration data" section with a Load button', !!load && /demonstration data/.test(document.querySelector('#demo-root .mc-demo').textContent));
+    load.click(); const b = mcdBatch(), names = MCD_COORDS.map(c => c.name), c = counts(b);
+    ok('MC-16 loaded: DEMO-MC101 with the 10 demo Coordinators in order and 101 identified learners', !!b && J(mcList(b)) === J(names) && mcLids(b).length === 101);
+    ok('MC-16 allocation by the normal rule: Coordinator 1 has 11, the other nine 10 each', c[names[0]] === 11 && names.slice(1).every(n => c[n] === 10), J(c));
+    ok('MC-16 marked as demo data: batch label, (demo) names, demo.example emails, demo staff accounts', /demo data/.test(b.label) && b.demo && mcLids(b).every(l => { const L = ADMIN.learners.find(x => x.id === l); return L.demo && /\(demo\)$/.test(L.name) && /@demo\.example$/.test(L.email); }) && names.every(n => ADMIN.staff.some(s => s.name === n && s.demo && s.roles.includes('Academic Coordinator'))));
+    const ws = ['DL1', 'DL5', 'DL10'].map(k => STORE.worlds[k]);
+    ok('MC-16 no documents, payments, observations or outcomes in the demo learner accounts', ws.every(w => !w.docs.length && !w.tx.length && !w.plans.length && !w.observations.length && w.assignments.every(a => a.status === 'Not Started' && a.qs.every(q => !q.rounds.length && !q.fb.length)) && w.tree.every(u => u.mods.every(m => m.los.every(lo => lo.crit.every(x => x.st === 'Not Started'))))));
+    ok('MC-16 seed records untouched (learners, batches, learner accounts)', J(ADMIN.learners.filter(l => !l.demo)) === seedL && J(ADMIN.batches.filter(x => !x.demo).map(x => [x.code, x.coords, x.mcA, x.coh, x.roster])) === seedB && J(Object.keys(STORE.worlds).filter(k => !/^DL/.test(k))) === seedW);
+    go('a-batches', { id: MCD_CODE, tab: 'staff' });
+    ok('MC-16 Batch → Staff: the demo note, 10 Coordinators with active learners 11 / 10 …', /Demonstration data/.test(main()) && /Academic Coordinators \(10\)/.test(main()) && [...document.querySelectorAll('main .mc-load tbody tr')].map(r => r.children[1].textContent).join() === '11,10,10,10,10,10,10,10,10,10');
+    // The wizard with all ten demo Coordinators ticked (clicks)
+    ACT.newBatch(); qm('#nb-c').value = 'MC-TEN-UI'; prim(); names.forEach(n => qma('.mc-nb-c').find(i => i.value === n).click());
+    ok('MC-16 Create batch: ten Coordinators ticked by click — "10 Academic Coordinators selected" with their names', /10 Academic Coordinators selected/.test(qm('.mc-nb-n').textContent) && names.every(n => qm('.mc-nb-n').textContent.includes(n)) && qm('#nb-ac').value === names[0]);
+    prim(); prim(); prim(); const rev = mroot().textContent;
+    ok('MC-16 Review & create lists all ten Coordinators', /Academic Coordinators \(10\)/.test(rev) && names.every(n => rev.includes(n)));
+    prim(); closeModal(); ok('MC-16 created with the ten Coordinators in that order', J(mcList(B('MC-TEN-UI'))) === J(names));
+    // Coordinator 1, 5 and 10 through the demo buttons
+    const shown = () => document.querySelectorAll('main .mc-tag').length, myTags = () => document.querySelectorAll('main .mc-tag .chip').length;
+    renderDemo(); document.querySelector('#demo-root [data-act="mcDemoOpen"][data-t="coord"][data-k="1"]').click();
+    ok('MC-16 Coordinator 1: the roster opens on My learners — Total batch learners 101, My learners 11, 11 tagged rows', S.route === 'c-batches' && /Total batch learners\s*101/.test(main()) && /My learners\s*11/.test(main()) && shown() === 11 && myTags() === 11);
+    document.querySelector('main [data-act="mcScope"][data-k="all"]').click();
+    ok('MC-16 All batch learners: 101 records (paged), my learners tagged, the others name their Coordinator', /of 101/.test(main()) && myTags() >= 1 && /Coordinator: Ben Hartley \(demo\)/.test(main()));
+    go('c-dashboard'); ok('MC-16 discoverable: the dashboard My caseload card links to the roster (11 of 101 learners are mine)', /11 of 101 learners are mine/.test(main()) && !!document.querySelector(`main .mc-caseload [data-go="c-batches"][data-id="${MCD_CODE}"]`));
+    go('c-learners'); ok('MC-16 discoverable: Learners (sidebar) opens on My learners — 11', /My learners\s*11/.test(main()) && shown() === 11);
+    S.demoOpen = true; renderDemo(); document.querySelector('#demo-root [data-act="mcDemoOpen"][data-t="coord"][data-k="5"]').click();
+    ok('MC-16 Coordinator 5: My learners 10 of 101', /My learners\s*10/.test(main()) && /10 of 101 learners are allocated to you/.test(main()));
+    // PD session not scheduled: "Not scheduled" with no date, in the Coordinator's PD overview (display only)
+    const dw = STORE.worlds.DL1, dAt = dw.pd.session.at;
+    go('c-batches', { id: MCD_CODE, tab: 'obs' });
+    ok('MC-16 Coordinator PD overview: the PD session of the demo learner reads "Not scheduled" with no date', /Not scheduled/.test(main()) && !main().includes(fdt(dAt)));
+    // Academic access across the batch; designated actions only for the learner's own Coordinator
+    const other = mcLids(b).find(l => mcOf(l, b) === names[0] && !chWorldKey(l)), o = ADMIN.learners.find(x => x.id === other), sub = mySubmissions(true).find(s => s.L.batch === b && s.at && mcOf(s.L.lid, b) !== names[4]);
+    go('c-learner', { id: other }); ok('MC-16 Coordinator 5 opens a learner of Coordinator 1: academic record, contact withheld, no Message', /Academic CoordinatorAmara Okoye \(demo\)/.test(main()) && !main().includes(o.email) && !document.querySelector('main [data-act="cooCompose"][data-l]'));
+    go('c-learner', { id: other, tab: 'progress' }); ok('MC-16 … and their academic progress', /U301/.test(main()));
+    STORE.coo.drafts[sub.key] = { text: 'Demo feedback from Coordinator 5', scope: 'Overall submission' }; ACT.cfPost({ dataset: { k: sub.key } }); press();
+    ok('MC-16 Coordinator 5 posts feedback on another Coordinator\'s learner\'s submission', STORE.coo.fb.some(f => f.key === sub.key && f.by === names[4]));
+    const a0 = ADMIN.audit.length; ACT.chOrAdvise({ dataset: { id: other } }); ok('MC-16 (negative) … but can\'t advise an observation for them (designated Coordinator only)', !MODAL && blocked(a0));
+    ok('MC-16 (negative) … and can\'t message them', !cooRecipients().includes(o.name + ' (Learner)'));
+    ACT.viewFile({ dataset: { f: 'passport_raman.pdf' } }); ok('MC-16 (negative) an admission document is refused', !MODAL);
+    // Learners of Coordinators 1, 5 and 10: their own Coordinator only, everywhere
+    const others = k => names.filter((n, i) => i !== k - 1);
+    [1, 5, 10].forEach(k => {
+      S.demoOpen = true; renderDemo(); document.querySelector(`#demo-root [data-act="mcDemoOpen"][data-t="learner"][data-k="${k}"]`).click();
+      const card = [...document.querySelectorAll('main section.card')].find(x => /Your people/.test(x.textContent)), own = MCD_COORDS[k - 1];
+      ok(`MC-16 learner of Coordinator ${k}: "Your people" shows ${own.name} with ${own.email}`, S.portal === 'learner' && !!card && card.textContent.includes(own.name) && card.textContent.includes(own.email));
+      const leak = []; ['dashboard', 'courses', 'messages', 'notifications', 'profile', 'calendar', 'progress', 'assignments'].filter(r => SCREENS[r]).concat(['course']).forEach(r => { go(r, r === 'course' ? { id: 'nvq' } : {}); if (others(k).some(n => main().includes(n))) leak.push(r); });
+      ACT.compose({ dataset: {} }); const opts = qma('#m-to option').map(x => x.textContent); closeModal();
+      ok(`MC-16 learner of Coordinator ${k}: none of the other nine on any learner screen or in the recipients`, !leak.length && opts.filter(x => /Academic Coordinator/.test(x)).join() === own.name + ' (Academic Coordinator)', leak.join());
+      if (k === 1) { go('progress', { tab: 'pd' }); const sec = document.querySelector('main .mc-pd-none');
+        ok('MC-16 learner PD session: "Not scheduled", no date, no Zoom link, no "alternative requested"', !!sec && /Not scheduled/.test(sec.textContent) && !main().includes(fdl(dAt)) && !/Zoom link|Alternative requested/.test(main()));
+        ok('MC-16 the stored PD record is unchanged', STORE.worlds.DL1.pd.session.at === dAt && STORE.worlds.DL1.pd.session.status === 'Not scheduled'); }
+      go('c-batches', { id: MCD_CODE }); ok(`MC-16 (negative) learner of Coordinator ${k}: the Coordinator batch page by direct link is refused`, /You don't have permission/.test(main()));
+    });
+    learner('C'); go('progress', { tab: 'pd' }); ok('MC-16 a real PD session (seeded learner) still shows its date and actions', !document.querySelector('main .mc-pd-none') && main().includes(fdl(STORE.worlds.C.pd.session.at)));
+    // An admin rebuild keeps the demo; Reset demo removes it all
+    buildAdmin('B'); buildAdmin('A'); ok('MC-16 an admin rebuild keeps the demo batch and its Coordinator accounts', !!mcdBatch() && names.every(n => ADMIN.staff.some(s => s.name === n)));
+    SA(); ACT.resetDemo();
+    ok('MC-16 Reset demo: the demo batch, learners, Coordinator accounts and personas and learner accounts are gone', !mcdBatch() && !ADMIN.learners.some(l => l.demo) && !ADMIN.staff.some(s => s.demo) && !Object.keys(COO_USERS).some(k => /^DM/.test(k)) && !Object.keys(STORE.worlds).some(k => /^DL/.test(k)) && !VARIANT_INFO.DL1);
+    ok('MC-16 after the reset the seed is as before', J(ADMIN.learners) === seedL);
+    S.demoOpen = false;
   });
 
   const out = document.createElement('pre'); out.id = 'ft-out'; out.textContent = R.join('\n'); document.body.appendChild(out);

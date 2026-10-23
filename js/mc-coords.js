@@ -344,17 +344,34 @@ const _omMC = openModal;
 openModal = function (m) {
   if (m && MC_NB && /^Create batch — step 1 of 5$/.test(m.title || '')) (m.actions || []).forEach(a => { if (a.fn && a.cls && /primary/.test(a.cls)) { const g = a.fn; a.fn = (...x) => { MC_NB.code = (mval('#nb-c') || '').toUpperCase(); return g(...x); }; } });
   if (m && MC_NB && /^Create batch — step 2 of 5$/.test(m.title || '') && typeof m.body === 'string') {
+    // One list: tick every Coordinator of the batch. The legacy single select stays in the form (hidden) as the first ticked one,
+    // so the existing checks (P-33, required Coordinator) read it; its errors show inside this fieldset.
     const names = ADMIN.staff.filter(s => s.roles.includes('Academic Coordinator') && s.status === 'Active').map(s => s.name);
-    m.body = m.body.replace(/(<label for="nb-ac">)Academic Coordinator \(required\)(<\/label>)/, '$1Academic Coordinator (required)$2').replace(/(<select class="select" id="nb-ac">[\s\S]*?<\/select><\/div>)/, `$1<fieldset class="field full mc-nb" style="border:0;padding:0"><legend class="lbl">More Academic Coordinators (optional)</legend><p class="xs muted">Each learner gets one designated Coordinator. Learners are shared out as they join — whoever has the fewest active learners.</p><div class="row">${names.map(n => `<label class="check"><input type="checkbox" class="mc-nb-c" value="${esc(n)}" ${MC_NB.extra.includes(n) ? 'checked' : ''}>${esc(n)}</label>`).join('')}</div></fieldset>`);
+    m.body = m.body.replace(/<div class="field full"><label for="nb-ac">Academic Coordinator \(required\)<\/label>(<select class="select" id="nb-ac">[\s\S]*?<\/select>)<\/div>/, (x, sel) => {
+      const cur = (/<option selected>([^<]*)<\/option>/.exec(sel) || [])[1] || '', on = n => n === cur || MC_NB.extra.includes(n);
+      return `<fieldset class="field full mc-nb" style="border:0;padding:0"><legend class="lbl">Academic Coordinators (required — choose one or more)</legend>
+        <p class="xs muted">Every Coordinator you tick works with this batch. Each learner is given one of them as their own Coordinator when they join — whoever has the fewest active learners (on a tie, the one higher in this list).</p>
+        <div class="mc-nb-list">${names.map(n => `<label class="check"><input type="checkbox" class="mc-nb-c" value="${esc(n)}" data-onchange="mcNbTick" ${on(n) ? 'checked' : ''}>${esc(n)}</label>`).join('')}</div>
+        <p class="small mc-nb-n" aria-live="polite"></p>${sel.replace('<select class="select" id="nb-ac">', '<select class="select mc-nb-legacy" id="nb-ac" aria-hidden="true" tabindex="-1" style="display:none">')}</fieldset>`;
+    });
+    m.onOpen = (f => el => { if (f) f(el); mcNbCount(); })(m.onOpen);
     (m.actions || []).forEach(a => { if (a.fn && a.cls && /primary/.test(a.cls)) { const g = a.fn; a.fn = (...x) => {
       const first = mval('#nb-ac'), extra = $$('#modal-root .mc-nb-c:checked').map(i => i.value).filter(n => n !== first), as = $$('#modal-root .nb-a:checked').map(i => i.value);
+      if (!first && $('#modal-root .mc-nb')) { fieldErr('#modal-root .mc-nb-c', 'Choose at least one Academic Coordinator'); return false; }
       const bad = extra.find(n => as.includes(n)); if (bad) { const why = `${bad} is an assessor on this batch, so they can't also be its Academic Coordinator. ${CH_P33}`; w0Log('Batches', MC_NB.code || 'New batch', 'Blocked: Coordinator as assessor', '—', bad, why); fieldErr('#modal-root .mc-nb-c', why); toast(why, 'err'); return false; }
       const off = extra.find(n => s5HoldsWhy(n, 'Academic Coordinator')); if (off) { toast(s5HoldsWhy(off, 'Academic Coordinator'), 'err'); return false; }
       const r = g(...x); if (r !== false) MC_NB.extra = extra; return r; }; } });
   }
-  if (m && MC_NB && /^Create batch — step 5 of 5$/.test(m.title || '') && typeof m.body === 'string' && MC_NB.extra.length) m.body = m.body.replace(/<dt>Academic Coordinator<\/dt><dd>([^<]*)<\/dd>/, (x, c) => `<dt>Academic Coordinators</dt><dd class="mc-nb-rev">${esc([c].concat(MC_NB.extra).join(', '))}</dd>`);
+  if (m && MC_NB && /^Create batch — step 5 of 5$/.test(m.title || '') && typeof m.body === 'string') m.body = m.body.replace(/<dt>Academic Coordinator<\/dt><dd>([^<]*)<\/dd>/, (x, c) => { const all = [c].concat(MC_NB.extra.filter(n => n !== c)); return `<dt>Academic Coordinators (${all.length})</dt><dd class="mc-nb-rev"><ol class="small mc-nb-ol">${all.map(n => `<li>${esc(n)}</li>`).join('')}</ol></dd>`; });
   return _omMC.apply(this, arguments);
 };
+// Ticking a Coordinator: the first ticked (in list order) becomes the legacy first-Coordinator value; the count updates
+function mcNbCount() {
+  const t = $$('#modal-root .mc-nb-c:checked').map(i => i.value), sel = $('#modal-root #nb-ac'), n = $('#modal-root .mc-nb-n'); if (!n) return;
+  n.innerHTML = t.length ? `<strong>${plural(t.length, 'Academic Coordinator')} selected:</strong> ${esc(t.join(', '))}` : '<span class="muted">No Academic Coordinator selected yet.</span>';
+  if (sel && t.length && !t.includes(sel.value)) sel.value = t[0]; if (sel && !t.length) sel.value = '';
+}
+INP.mcNbTick = () => { const sel = $('#modal-root #nb-ac'), t = $$('#modal-root .mc-nb-c:checked').map(i => i.value); if (sel) sel.value = t[0] || ''; mcNbCount(); };
 const _syncMC = syncTasBatches;
 syncTasBatches = function () {
   if (MC_NB && MC_NB.code) { const nb = MC_NB, b = (ADMIN.batches || []).find(x => x.code === nb.code && x.created && !x._mcNb);
@@ -422,11 +439,12 @@ cooComposeModal = function () { const r = _cmMC.apply(this, arguments); w0OnConf
 const _rtMC = rosterTable;
 rosterTable = function (ls, id) {
   if (S.portal !== 'coord') return _rtMC.apply(this, arguments);
-  const me = CME().name, real = ls.filter(l => mcKnown(l.lid)), mine = real.filter(l => mcOf(l.lid, l.batch) === me), sc = ui('mcSc-' + id, 'all'), rows = sc === 'mine' ? mine : ls;
+  const me = CME().name, real = ls.filter(l => mcKnown(l.lid)), mine = real.filter(l => mcOf(l.lid, l.batch) === me), sc = ui('mcSc-' + id, 'mine'), rows = sc === 'mine' ? mine : ls; // My learners is the default view
   let h = _rtMC.call(this, rows, id);
   rows.forEach(l => { const d = mcKnown(l.lid) && mcOf(l.lid, l.batch), tag = !mcKnown(l.lid) ? `<span class="mc-tag">${chip('Unresolved roster entry — not allocated', 'amber')}</span>` : d === me ? `<span class="mc-tag">${chip('My learner', 'green')}</span>` : `<span class="xs muted mc-tag">Coordinator: ${esc(d || '—')}</span>`; h = h.split(`<div class="xs mono muted">${l.lid}</div>`).join(`<div class="xs mono muted">${l.lid}</div>${tag}`); });
   const one = id.startsWith('roster-') && ADMIN.batches.find(b => 'roster-' + b.code === id);
-  const bar = `<div class="mc-scope row-b"><div role="tablist" aria-label="Which learners" class="tabs">${[['mine', 'My learners', mine.length], ['all', one ? 'All batch learners' : 'All learners in my batches', real.length]].map(([k, l, n]) => `<button class="tab" role="tab" aria-selected="${k === sc}" data-act="mcScope" data-t="${id}" data-k="${k}">${l}<span class="cnt">${n}</span></button>`).join('')}</div><p class="small mc-count"><strong>${mine.length}</strong> of <strong>${real.length}</strong> learners are allocated to you</p></div>`;
+  const bar = `<div class="mc-scope row-b"><div role="tablist" aria-label="Which learners" class="tabs">${[['mine', 'My learners', mine.length], ['all', one ? 'All batch learners' : 'All learners in my batches', real.length]].map(([k, l, n]) => `<button class="tab" role="tab" aria-selected="${k === sc}" data-act="mcScope" data-t="${id}" data-k="${k}">${l}<span class="cnt">${n}</span></button>`).join('')}</div><p class="small mc-count"><strong>${mine.length}</strong> of <strong>${real.length}</strong> learners are allocated to you</p></div>
+    <div class="kpis mc-kpis">${kpi(one ? 'Total batch learners' : 'Learners in my batches', real.length)}${kpi('My learners', mine.length, 'You are their Academic Coordinator')}${kpi('Other Coordinators\' learners',real.length - mine.length, 'Academic view only')}</div>`;
   return bar + (one ? mcCountNote(one, 'coord') : '') + h;
 };
 ACT.mcScope = el => { setUi('mcSc-' + el.dataset.t, el.dataset.k); render(); };
