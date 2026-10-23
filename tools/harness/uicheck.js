@@ -378,6 +378,29 @@
       setAdminIdentity('A'); S.portal = 'admin'; go('a-programmes', { id: p9.id, tab: 'fees' }); ok('CB12-F approved terms: the approved state shown, no "Submit to Finance"; no overflow', shown($1('main .cb8-approved')) && !$1('main [data-act="cb8Submit"]') && appOver() <= 1, appOver());
       go('a-programmes', { id: p9.id, tab: 'review' }); ok('CB11 a published programme: summary with the approved fee options, "Create new version"; no overflow', shown($1('main .cb-rv-sec[data-sec="payments"]')) && shown($1('main [data-act="s3WizVersion"]')) && appOver() <= 1, appOver());
     }
+    // MC: several Academic Coordinators — the Create batch step, the Coordinators panel, the Coordinator's roster and the learner's people
+    closeModal(); initStore(); setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true;
+    ['UI Coord A', 'UI Coord B'].forEach((n, k) => { ADMIN.staff.push({ id: 'ST-UI' + k, name: n, email: `ui.coord${k}@illumin-academy.example`, roles: ['Academic Coordinator'], status: 'Active' }); COO_USERS['U' + k] = { key: 'U' + k, name: n, first: 'UI', email: `ui.coord${k}@illumin-academy.example`, roles: ['Academic Coordinator'] }; });
+    go('a-batches'); click($1('main [data-act="newBatch"]')); $1('#modal-root #nb-c').value = 'UI-MC'; click($1('#modal-root .modal-f .btn-primary'));
+    ok('MC Create batch step 2: "More Academic Coordinators" checkboxes displayed, each labelled; the dialog fits', all('#modal-root .mc-nb-c').filter(shown).length >= 4 && all('#modal-root .mc-nb-c').every(x => x.closest('label') && x.closest('label').textContent.trim()) && !modalFits(), modalFits()); closeModal();
+    const mb = ADMIN.batches.find(x => x.code === 'L3AC-JAN26'); mcAddCoord(mb, 'UI Coord A', 'UI'); mcReassign(mb, mcLids(mb)[1], 'UI Coord A', 'UI'); mcReassign(mb, mcLids(mb)[2], 'UI Coord A', 'UI');
+    go('a-batches', { id: 'L3AC-JAN26', tab: 'staff' });
+    ok('MC Batch → Staff: the Academic Coordinators panel with Add, Remove and Reassign displayed; no page overflow', shown($1('main .mc-panel')) && shown($1('main [data-act="mcAdd"]')) && shown($1('main [data-act="mcRemove"]')) && shown($1('main [data-act="mcMove"]')) && appOver() <= 1, appOver());
+    go('a-batches', { id: 'L3AC-JAN26' }); ok('MC admin roster: the member-count note and a label on every row (Batch member / Demonstration only) displayed; no page overflow', shown($1('main .mc-rnote')) && all('main .mc-roster > li.mc-r').every(li => li.classList.contains('mc-r-c') || shown(li.querySelector('.chip'))) && all('main .mc-roster .mc-r-m').length === mcLids(mb).length && appOver() <= 1, appOver());
+    go('a-batches', { id: 'L3AC-JAN26', tab: 'staff' });
+    click($1('main [data-act="mcRemove"]')); ok('MC Remove dialog: where the learners go and the reason displayed; the dialog fits', shown($1('#modal-root #mc-rm-to')) && shown($1('#modal-root #rsn')) && !modalFits(), modalFits()); closeModal();
+    click($1('main [data-act="mcMove"]')); ok('MC Reassign dialog: new Coordinator and reason displayed; the dialog fits', shown($1('#modal-root #mc-mv')) && !modalFits(), modalFits()); closeModal();
+    S.coo.v = 'U0'; cooEnter(); S.signedIn = true; go('c-batches', { id: 'L3AC-JAN26', tab: 'roster' });
+    ok('MC Coordinator roster: My learners / All batch learners and "2 of n" displayed; "My learner" tags; no page overflow', shown($1('main .mc-scope')) && /2 of \d+ learners are allocated to you/.test($1('main .mc-count').textContent) && all('main .mc-tag .chip').filter(shown).length === 2 && appOver() <= 1, appOver());
+    ok('MC Coordinator roster: the same member-count note as the admin roster displayed', shown($1('main .mc-rnote')) && new RegExp(mcLids(mb).length + ' identified batch members').test($1('main .mc-rnote').textContent));
+    click($1('main [data-act="mcScope"][data-k="mine"]')); ok('MC My learners (a click): only the two allocated learners listed', all('main .mc-tag').filter(shown).length === 2);
+    go('c-learner', { id: mcLids(mb)[5] }); ok('MC another Coordinator\'s learner: "Contact details" withheld note and the admission status displayed; no overflow', shown($1('main .mc-nocontact')) && shown($1('main .mc-adm')) && appOver() <= 1, appOver());
+    go('c-dashboard'); ok('MC Coordinator dashboard: My caseload card displayed; no overflow', shown($1('main .mc-caseload')) && appOver() <= 1, appOver());
+    S.portal = 'admin'; setAdminIdentity('A'); mcReassign(mb, STORE.worlds.C.me.id, 'UI Coord A', 'UI');
+    S.variant = 'C'; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; go('course', { id: STORE.worlds.C.nvq.id });
+    const ppl = all('main section.card').find(x => /Your people/.test(x.textContent));
+    ok('MC learner "Your people": their own Coordinator with an email link; no other Coordinator; no overflow', !!ppl && /UI Coord A/.test(ppl.textContent) && shown(ppl.querySelector('.mc-contact')) && !/Helen Carter/.test(ppl.textContent) && appOver() <= 1, appOver());
+    closeModal(); initStore();
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));
     ok('no script errors', !errs.length, errs.join(' | '));
