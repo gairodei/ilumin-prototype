@@ -56,9 +56,11 @@ ACT.chSupSave = el => { const v = ($('input[name="ch-sup"]:checked') || {}).valu
 // System Configuration: the fee rows are Finance Admin / Super Admin only
 const _cfgCh7b = SCREENS['a-config'];
 SCREENS['a-config'] = p => { let h = _cfgCh7b(p); if (!finOwner()) ['CF-OFA', 'CF-OFS'].forEach(id => { h = h.replace(`<button class="btn btn-sm" data-act="cfgEdit" data-id="${id}">Edit</button>`, `<span class="xs muted">${ic('lock', 12)} Finance Admin / Super Admin only</span>`); }); return h; };
+// A card placed below the page heading (after the whole .page-h block, never inside its title/actions row)
+function chAfterHead(h, card) { const t = document.createElement('template'); t.innerHTML = h; const ph = t.content.querySelector('.page-h'); if (!ph) return card + h; ph.insertAdjacentHTML('afterend', card); return t.innerHTML; }
 // Finance → Payment Plans: the two fee settings, editable and audited
 const _fPlansCh7b = SCREENS['f-plans'];
-SCREENS['f-plans'] = p => { const h = _fPlansCh7b(p), k = h.indexOf('</div>', h.indexOf('<h1')); const card = `<section class="card ch-fees"><h2>Observation fees</h2><p class="small muted">One fee per learner per course, raised when the first observation is confirmed. No VAT. Non-refundable. Changes are audited.</p><dl class="kv">${['Observation fee — fully assisted', 'Observation fee — self-paced'].map(n => { const c = chCfg(n); return c ? `<dt>${esc(n)}</dt><dd><strong>${esc(c.value)}</strong> <button class="btn btn-sm" data-act="cfgEdit" data-id="${c.id}">Edit</button></dd>` : ''; }).join('')}</dl></section>`; return k < 0 ? card + h : h.slice(0, k + 6) + card + h.slice(k + 6); };
+SCREENS['f-plans'] = p => { const h = _fPlansCh7b(p); const card = `<section class="card ch-fees"><h2>Observation fees</h2><p class="small muted">One fee per learner per course, raised when the first observation is confirmed. No VAT. Non-refundable. Changes are audited.</p><dl class="kv">${['Observation fee — fully assisted', 'Observation fee — self-paced'].map(n => { const c = chCfg(n); return c ? `<dt>${esc(n)}</dt><dd><strong>${esc(c.value)}</strong> <button class="btn btn-sm" data-act="cfgEdit" data-id="${c.id}">Edit</button></dd>` : ''; }).join('')}</dl></section>`; return chAfterHead(h, card); };
 
 /* ---------- CH-38 fee items (one per learner per course) ---------- */
 const chFees = () => (STORE.chFees = STORE.chFees || []);
@@ -129,7 +131,7 @@ function chPayCards(w) {
   return cards + (f ? chFeeCard(f, true) : '');
 }
 const _payCh7b = SCREENS.payments;
-SCREENS.payments = p => { const h = _payCh7b(p); if (p && p.tab && p.tab !== 'plans') return h; const add = chPayCards(W); if (!add) return h; const k = h.indexOf('</div>', h.indexOf('<h1')); return k < 0 ? add + h : h.slice(0, k + 6) + add + h.slice(k + 6); };
+SCREENS.payments = p => { const h = _payCh7b(p); if (p && p.tab && p.tab !== 'plans') return h; const add = chPayCards(W); if (!add) return h; return chAfterHead(h, add); };
 ACT.chFeePay = el => { const f = chFees().find(x => x.id === el.dataset.id); if (!f || f.status !== 'Due') return; checkout({ title: 'Observation fee — ' + f.course, amount: f.amount, cur: 'GBP', onSuccess: () => { Object.assign(f, { status: 'Paid', paidAt: chNow(), method: 'Card', ref: (W.tx[0] || {}).ref }); render(); } }); };
 ACT.chFeeBank = el => {
   const f = chFees().find(x => x.id === el.dataset.id); if (!f || f.status !== 'Due') return; const ref = `${f.lid.replace(/^IA-L-/, 'IA-')}-OBS`;
@@ -157,7 +159,7 @@ const _fOdCh7b = SCREENS['f-overdue'];
 SCREENS['f-overdue'] = p => {
   const h = _fOdCh7b(p), od = chFees().filter(chFeeOverdue);
   const card = `<section class="card ch-feeod"><h2>Observation fees overdue</h2>${od.length ? `<div class="tbl-wrap"><table class="tbl dense"><thead><tr><th>Learner</th><th>Course</th><th class="r">Amount</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>${od.map(f => `<tr><td><a href="#f-learner.${f.lid}" data-go="f-learner" data-id="${f.lid}">${esc(f.name)}</a></td><td class="small">${esc(f.course)}</td><td class="r">${money(f.amount, 'GBP')}</td><td>${fd(f.due)} <span class="xs muted">(${-daysTo(f.due)} days)</span></td><td>${chip(chFeeLabel(f), 'red')}</td><td class="nowrap"><button class="btn btn-sm" data-act="chFeeRemind" data-id="${f.id}">Send reminder</button> <button class="btn btn-sm" data-go="f-learner" data-id="${f.lid}">Access</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="small muted">No observation fees overdue.</p>'}<p class="xs muted">${ic('info', 12)} An unpaid fee never blocks an observation. Reminders and pausing access work as for any overdue payment.</p></section>`;
-  const k = h.indexOf('</div>', h.indexOf('<h1')); return k < 0 ? card + h : h.slice(0, k + 6) + card + h.slice(k + 6);
+  return chAfterHead(h, card);
 };
 ACT.chFeeRemind = el => { const f = chFees().find(x => x.id === el.dataset.id); if (!f) return; if (f.v) notifyLearner(f.v, 'Payments', 'Reminder: observation fee overdue', `${money(f.amount, 'GBP')} was due ${fd(f.due)}.`, 'payments'); logA('Finance', `${f.name} · ${f.id}`, 'Overdue reminder sent', 'Due', 'Reminded', 'Observation fee'); toast('Reminder sent.'); };
 const _dtCh7b = dt;
@@ -283,7 +285,7 @@ SCREENS['c-dashboard'] = p => {
   const h = _cDashCh7b(p), mine = chOrs().filter(r => r.status === 'Pending approval' && chIsMyBatchLid(r.lid)).map(r => ({ r, i: qItem(r.qid) })).filter(x => x.i && isOpen(x.i) && x.i.status !== 'Escalated');
   if (!mine.length) return h;
   const card = `<section class="card ch-ordash"><h2>Academy-office observation requests</h2><ul class="list">${mine.map(({ r, i }) => `<li class="li"><div class="li-b"><a href="#c-learner.${r.lid}" data-go="c-learner" data-id="${r.lid}" class="strong">${esc(r.name)}</a><span class="small muted">${esc(r.batch)} · ${esc(r.reason)}</span></div><button class="btn btn-sm btn-primary" data-act="chOrDecide" data-id="${i.id}" data-a="approve">Approve</button><button class="btn btn-sm btn-danger" data-act="chOrDecide" data-id="${i.id}" data-a="reject">Reject</button></li>`).join('')}</ul></section>`;
-  const k = h.indexOf('</div>', h.indexOf('<h1')); return k < 0 ? card + h : h.slice(0, k + 6) + card + h.slice(k + 6);
+  return chAfterHead(h, card);
 };
 
 /* ---------- CH-37 booking: Academy office only with an approved request ---------- */
