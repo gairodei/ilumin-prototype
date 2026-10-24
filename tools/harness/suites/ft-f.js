@@ -3,6 +3,10 @@
 // paused routes); I1 IQA portfolio from the learner's own programme; I2 cards below the page heading; K2 greeting.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
+  // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
+  const crT = f => (...a) => { const l3 = (document.querySelector('main #np-l') || {}).value === 'Level 3', rows = [...document.querySelectorAll('main .r1-np-m')].map(x => x.value).filter(Boolean); document.querySelectorAll('main .cr-dm-c').forEach(x => { const sup = (document.querySelector('main input[name="np-s"]:checked') || {}).value === 'Self-paced' ? 'Self-Paced' : 'Fully Assisted'; x.checked = l3 || x.value === sup; }); return f(...a); };
+  const crPd = (v = '2026-12-20T21:59') => document.querySelectorAll('#modal-root .cr-pd').forEach(x => { if (!x.value) x.value = v; });
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const q = s => document.querySelector('main ' + s), qa = s => [...document.querySelectorAll('main ' + s)];
   const mroot = () => document.querySelector('#modal-root');
@@ -29,9 +33,9 @@
   const make = (o = {}) => {
     go('a-programmes'); ACT.chProgNew(); const n = ++codeN;
     fill({ '#np-t': o.title || 'CB11 Level 3 course ' + n, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (5500 + n) + '/1', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
-    document.querySelector('#np-code').value = 'CB11C' + n; document.querySelector('#np-obs-' + (o.obs ? 'yes' : 'no')).checked = true;
+    (document.querySelector('#np-code') || {}).value = 'CB11C' + n; document.querySelector('#np-obs-' + (o.obs ? 'yes' : 'no')).checked = true;
     [{ l: 'Fully Assisted — standard', f: 2400, m: 'Fully Assisted' }, { l: 'Self-Paced — standard', f: 1800, m: 'Self-Paced' }].forEach((x, k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = x.l; r.querySelector('.r1-np-f').value = String(x.f); r.querySelector('.r1-np-m').value = x.m; });
-    const pr = ACT.cbDetCreate(); closeModal(); return pr;
+    const pr = crT(ACT.cbDetCreate)(); closeModal(); return pr;
   };
   const structure = (pr, obs) => {
     const id = pr.id; go('a-programmes', { id, tab: 'structure' });
@@ -42,10 +46,10 @@
   // Section 3: an assignment with a mapped question (new assignments have References and no template)
   const author = (pr, title) => {
     go('a-programmes', { id: pr.id, tab: 'assessments' }); ACT.cbAsgNew({ dataset: { p: pr.id } }); if (!MODAL) return null;
-    fill({ '#cna-t': title, '#cna-d': '2026-12-20T21:59' }); press(); const d = s2Defs().find(x => x.title === title); if (!d) return null;
+    fill({ '#cna-t': title }); press(); const d = s2Defs().find(x => x.title === title); if (!d) return null;
     ACT.s2QAdd({ dataset: { id: d.id } }); fill({ '#aq-t': 'Explain why person-centred care matters.', '#aq-ev': 'A real example from your workplace', '#aq-n': '2' }); document.querySelectorAll('#modal-root .aq-ty').forEach(c => { c.checked = c.value === 'PDF'; }); press();
     const crit = s2Crit(d).find(c => c.type === 'Knowledge').code; INP.mapChange({ checked: true, dataset: { id: d.id, q: d.qs[0].id, c: crit } });
-    go('a-programmes', { id: pr.id, tab: 'assessments' }); ACT.pubAsg({ dataset: { id: d.id } }); reason('Publish'); return d;
+    go('a-programmes', { id: pr.id, tab: 'assessments' }); ACT.pubAsg({ dataset: { id: d.id } }); crPd(); reason('Publish'); return d;
   };
   // Section 4: locations, evidence for the NVQ criteria, one Academy criterion, two required observation events
   const observations = pr => {
@@ -78,7 +82,10 @@
   };
   const batch = (pr, code) => {
     ACA(); go('a-batches'); ACT.newBatch(); fill({ '#nb-c': code }); const co = document.querySelector('#nb-co'); co.value = pr.title; INP.n2NbCourse(co); document.querySelector('#nb-m').value = 'Online'; prim(); fill({ '#nb-ac': 'Dr Helen Carter' }); prim(); prim(); prim(); prim(); closeModal();
-    const bt = ADMIN.batches.find(x => x.code === code); if (bt) { bt.start = D(40, '09:00'); bt.end = D(240, '17:00'); } return bt;
+    const bt = ADMIN.batches.find(x => x.code === code); if (bt) { bt.start = D(40, '09:00'); bt.end = D(240, '17:00'); }
+    // CR (PD-CR-13): a new batch issues an assignment once it has its own deadline — the administrator sets it (Batch → Assignment deadlines)
+    if (bt) crAsgOf(bt).filter(d => d.status === 'Published' && !crEffDue(d, bt.code)).forEach(d => { ACT.crDlEdit({ dataset: { b: bt.code, id: d.id } }); fill({ '#cr-dl-d': '2026-12-20T21:59' }); reason('New batch deadline'); });
+    return bt;
   };
   const signUp = (v, pr, bt, optId, k) => {
     learner(v); go('browse'); const c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === pr.title); ACT.applyNvq({ dataset: { id: c.id } });
@@ -145,11 +152,11 @@
   const IQA = k => { iqaEnter(k); S.signedIn = true; S.ui = {}; };
   const draftAsg = (pr, title, due = '2026-12-20T21:59') => {   // a definition with a mapped question, still Draft
     go('a-programmes', { id: pr.id, tab: 'assessments' }); ACT.cbAsgNew({ dataset: { p: pr.id } }); if (!MODAL) return null;
-    fill({ '#cna-t': title, '#cna-d': due }); press(); const d = s2Defs().find(x => x.title === title); if (!d) return null;
+    fill({ '#cna-t': title }); press(); const d = s2Defs().find(x => x.title === title); if (!d) return null;
     ACT.s2QAdd({ dataset: { id: d.id } }); fill({ '#aq-t': 'Describe how you support independence.', '#aq-ev': 'An example from practice', '#aq-n': '1' }); document.querySelectorAll('#modal-root .aq-ty').forEach(c => { c.checked = c.value === 'PDF'; }); press();
     INP.mapChange({ checked: true, dataset: { id: d.id, q: d.qs[0].id, c: s2Crit(d).find(c => c.type === 'Knowledge').code } }); return d;
   };
-  const publishTo = (pr, d, codes) => { ACA(); go('a-programmes', { id: pr.id, tab: 'assessments' }); ACT.pubAsg({ dataset: { id: d.id } }); if (codes) document.querySelectorAll('#modal-root .s2-pb').forEach(x => { x.checked = codes.includes(x.value); }); return reason('Publish'); };
+  const publishTo = (pr, d, codes) => { ACA(); go('a-programmes', { id: pr.id, tab: 'assessments' }); ACT.pubAsg({ dataset: { id: d.id } }); crPd(); if (codes) document.querySelectorAll('#modal-root .s2-pb').forEach(x => { x.checked = codes.includes(x.value); }); return reason('Publish'); };
   const copies = (w, id) => w.assignments.filter(a => a.id === id).length;
   const nNew = (w, id) => w.notifs.filter(n => n.go === 'assignment.' + id && n.title === 'New assignment').length;
   const move = (lid, to) => { ACA(); ACT.chMoveBatch({ dataset: { id: lid } }); if (!MODAL) return false; const s = document.querySelector('#modal-root #ch-mv-b'); if (!s || ![...s.options].some(o => o.value === to)) { closeModal(); return false; } s.value = to; return reason('Transfer test'); };
@@ -170,7 +177,7 @@
     const E = signUp('E', P.pr, P.bt, P.b, 'deposit');
     ok('F-B a Self-Paced learner (deposit) enrolling later also receives it, once', E.signup.done && r2ModeOfW(E) === 'Self-Paced' && copies(E, d0.id) === 1 && nNew(E, d0.id) === 1);
     const a = E.assignments.find(x => x.id === d0.id);
-    ok('F-B the copy is the published definition: same deadline, questions, criteria and brief version; status Not Started', a.due === d0.due && a.qs.length === d0.qs.filter(q => q.status === 'Active').length && a.briefV === d0.briefV && a.status === 'Not Started');
+    ok('F-B the copy is the published definition: same deadline, questions, criteria and brief version; status Not Started', a.due === crEffDue(d0, P.bt.code) /* CR (PD-CR-12): the batch's deadline */ && a.qs.length === d0.qs.filter(q => q.status === 'Active').length && a.briefV === d0.briefV && a.status === 'Not Started');
     ok('F-B the definition records both learners; the issue is audited', d0.copies.filter(c => c.id === d0.id).length === 2 && ADMIN.audit.some(x => x.action === 'Issued to a learner who joined after publication' && /IA-L-/.test(x.after)));
     learner('E'); go('assignments'); ok('F-B the learner sees it on Assignments (To do 1)', main().includes(d0.title) || /To do\s*1/.test(main()));
     const b = P.bt; b.assessors = ['Sarah Okonkwo']; delete chAllocs()[b.code]; touch(b.code); syncTasBatches(); // Sarah allocated (as in setup())
@@ -230,7 +237,7 @@
   await T('F-H joining after the deadline', async () => {
     fresh(); const P = natural(), pr = P.pr; ACA(); const d = draftAsg(pr, 'F-H early deadline'); publishTo(pr, d);
     // time passes: the deadline is now behind the demo date (the clock is fixed, so the definition's deadline is moved instead)
-    const past = new Date(now().getTime() - 3 * DAY).toISOString(); d.due = past;
+    const past = new Date(now().getTime() - 3 * DAY).toISOString(); crSetDue(d, P.bt, past, 'F-H'); // CR (PD-CR-12): the batch's deadline is moved (was the definition's)
     const c0 = STORE.coo.notifs.length, E = signUp('E', pr, P.bt, P.b, 1), a = E.assignments.find(x => x.id === d.id);
     ok('F-H the late joiner receives it with the published deadline — none is invented', !!a && a.due === past && !!a.lateJoin);
     const n = E.notifs.find(x => x.go === 'assignment.' + d.id); ok('F-H the learner is told the deadline passed and an extension decision is needed', !!n && /passed before you joined/.test(n.body));
@@ -239,7 +246,7 @@
     ok('F-H learners who were enrolled on time aren\'t flagged', !(P.w.assignments.find(x => x.id === d.id) || {}).lateJoin);
     extendAssignment('E', d.id, new Date(now().getTime() + 10 * DAY).toISOString(), 'Joined late'); learner('E'); go('assignment', { id: d.id });
     ok('F-H after an extension (the existing policy) the note goes', !q('.f-late') && a.originalDue === past);
-    fresh(); const P2 = natural(); ACA(); const d2 = draftAsg(P2.pr, 'F-H pre-recorded extension'); publishTo(P2.pr, d2); d2.due = past;
+    fresh(); const P2 = natural(); ACA(); const d2 = draftAsg(P2.pr, 'F-H pre-recorded extension'); publishTo(P2.pr, d2); crSetDue(d2, P2.bt, past, 'F-H'); // CR (PD-CR-12)
     const fut = new Date(now().getTime() + 9 * DAY).toISOString(); STORE.s2Ext[STORE.worlds.E.me.id + '|' + d2.id] = fut;
     const E2 = signUp('E', P2.pr, P2.bt, P2.b, 1), a2 = E2.assignments.find(x => x.id === d2.id);
     ok('F-H an extension already recorded for the learner is applied when the copy is issued', a2.due === fut && !fLateOpen(a2));
@@ -254,8 +261,8 @@
 
   await T('F-J unauthorized and paused routes issue nothing', async () => {
     fresh(); const P = natural(), pr = P.pr; ACA(); const d = draftAsg(pr, 'F-J draft');
-    COO('A'); ACT.pubAsg({ dataset: { id: d.id } }); const c1 = !MODAL || !/^Publish/.test(MODAL.title); closeModal();
-    learner('C'); ACT.pubAsg({ dataset: { id: d.id } }); const c2 = !MODAL || !/^Publish/.test(MODAL.title); closeModal();
+    COO('A'); ACT.pubAsg({ dataset: { id: d.id } }); crPd(); const c1 = !MODAL || !/^Publish/.test(MODAL.title); closeModal();
+    learner('C'); ACT.pubAsg({ dataset: { id: d.id } }); crPd(); const c2 = !MODAL || !/^Publish/.test(MODAL.title); closeModal();
     ok('F-J (negative) a Coordinator or a learner can\'t publish (so nothing is issued)', c1 && c2 && d.status === 'Draft' && !Object.values(STORE.worlds).some(w => (w.assignments || []).some(a => a.id === d.id)));
     learner('F'); go('browse'); const c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === pr.title); ACT.applyNvq({ dataset: { id: c.id } }); const ro = document.querySelector(`#modal-root input[name="r1-opt"][value="${P.b}"]`); if (ro) ro.checked = true; prim(); closeModal();
     const F = W; chSetBatch(F, P.bt); ACT.suNext(); F.docs.forEach(x => { x.status = 'Submitted'; x.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', F.me.first + ' ' + F.me.last); setUi('suDecl', true); ACT.suSign(); chSetBatch(F, P.bt);

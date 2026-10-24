@@ -3,6 +3,10 @@
 // the placeholder register (4 topics), CH-24 unchanged, and the CH records. … Batch 6: CH-06 VAT on agency bundles. Batch 7a: CH-32 – CH-36. Batch 7b: CH-37 – CH-41, CH-43. Batch 7c: CH-42, P-32, P-33. Gap fix: new NVQ programme.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
+  // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
+  const crT = f => (...a) => { const l3 = (document.querySelector('main #np-l') || {}).value === 'Level 3', rows = [...document.querySelectorAll('main .r1-np-m')].map(x => x.value).filter(Boolean); document.querySelectorAll('main .cr-dm-c').forEach(x => { const sup = (document.querySelector('main input[name="np-s"]:checked') || {}).value === 'Self-paced' ? 'Self-Paced' : 'Fully Assisted'; x.checked = l3 || x.value === sup; }); return f(...a); };
+  const crPd = (v = '2026-12-20T21:59') => document.querySelectorAll('#modal-root .cr-pd').forEach(x => { if (!x.value) x.value = v; });
   const wait = ms => new Promise(r => setTimeout(r, ms));
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const app = () => document.getElementById('app');
@@ -1072,7 +1076,7 @@
   // CB2 (PD-CB-14) supersedes the creation dialog: "New NVQ programme" opens Course Details of an unsaved course (no dialog); the
   // observation question is required; "Save and continue" (ACT.cbDetCreate) creates the Draft and returns false when refused
   let codeN = 0; // CB2 correction: a course code is required for a new course
-  const create8 = (obs = 'no') => { const r = document.querySelector('#np-obs-' + obs); if (r) r.checked = true; const c = document.querySelector('#np-code'); if (c && !c.value) c.value = 'NP' + (++codeN); return ACT.cbDetCreate(); };
+  const create8 = (obs = 'no') => { const r = document.querySelector('#np-obs-' + obs); if (r) r.checked = true; const c = document.querySelector('#np-code'); if (c && !c.value) c.value = 'NP' + (++codeN); return crT(ACT.cbDetCreate)(); };
 
   await T('New NVQ programme: who, details, Draft Version 1', async () => {
     fresh(); acaEnter('KA'); S.signedIn = true; go('a-programmes');
@@ -1082,7 +1086,7 @@
     role('finA'); ACT.chProgNew(); ok('NP Finance can\'t create a programme (refused, logged)', !MODAL && ADMIN.audit[0].action === 'Blocked: create programme');
     acaEnter('KA'); S.signedIn = true; go('a-programmes'); ACT.chProgNew();
     ok('NP details (Course Details page, not a dialog): title, level, reference, duration, description, price (GBP), Support type with the P-31 tag, the observation question', !MODAL && S.params.id === 'new' && ['#np-t', '#np-l', '#np-r', '#np-d', '#np-ds', '#np-p', '#np-obs-yes', '#np-obs-no'].every(s => document.querySelector(s)) && document.querySelectorAll('input[name="np-s"]').length === 2 && /Pending client: Fully assisted vs self-paced/.test(main()));
-    ok('NP required fields', ACT.cbDetCreate() === false && /Enter a title/.test(main()));
+    ok('NP required fields', crT(ACT.cbDetCreate)() === false && /Enter a title/.test(main()));
     ACT.chProgNew(); fill8({ '#np-t': 'Level 3 Diploma in Adult Care (England)', '#np-r': 'QN 1', '#np-p': '2000' }); ok('NP title must be unique', create8() === false && /already exists/.test(main()) && !(STORE.chNewProgs || []).some(p => !p.seed)); ACT.chProgNew();
     fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600', '#np-ds': 'For team leaders.' }); document.querySelector('input[name="np-s"][value="Self-paced"]').checked = true; create8();
     const pr = np();

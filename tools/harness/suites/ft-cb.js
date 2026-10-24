@@ -5,6 +5,10 @@
 // the page or the record, and includes the negative case.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
+  // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
+  const crT = f => (...a) => { const l3 = (document.querySelector('main #np-l') || {}).value === 'Level 3', rows = [...document.querySelectorAll('main .r1-np-m')].map(x => x.value).filter(Boolean); document.querySelectorAll('main .cr-dm-c').forEach(x => { const sup = (document.querySelector('main input[name="np-s"]:checked') || {}).value === 'Self-paced' ? 'Self-Paced' : 'Fully Assisted'; x.checked = l3 || x.value === sup; }); return f(...a); };
+  const crPd = (v = '2026-12-20T21:59') => document.querySelectorAll('#modal-root .cr-pd').forEach(x => { if (!x.value) x.value = v; });
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const q = s => document.querySelector('main ' + s), qa = s => [...document.querySelectorAll('main ' + s)];
   const T = async (n, f) => { try { closeModal(); S.frame = 'auto'; await f(); } catch (e) { R.push('FAIL ' + n + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
@@ -33,7 +37,7 @@
     SYS(); go('a-programmes'); q('[data-act="chProgNew"]').click();
     ok('CB1-A "New NVQ programme" opens Section 1 — Course Details of an unsaved course (no dialog, no "Step 1 of 6")', !MODAL && S.params.id === 'new' && cur() === 'details' && !/Step 1 of/.test(main()));
     const set = (s, v) => { const e = document.querySelector(s); e.value = v; e.dispatchEvent(new Event('change', { bubbles: true })); };
-    set('#np-l', 'Level 4'); set('#np-t', 'Level 4 CB1 programme'); set('#np-r', 'QN 610/7777/1'); set('#np-d', '12'); set('#np-du', 'months'); set('#np-p', '2400'); set('#np-code', 'CB1-L4'); q('#np-obs-no').click();
+    set('#np-l', 'Level 4'); set('#np-t', 'Level 4 CB1 programme'); set('#np-r', 'QN 610/7777/1'); set('#np-d', '12'); set('#np-du', 'months'); set('#np-p', '2400'); q('.cr-dm-c[value="Fully Assisted"]').click(); q('#np-obs-no').click(); // CR (PD-CR-06, PD-CR-01): no course code; the modes offered are required
     q('[data-act="cbDetCreate"]').click(); const pr = (STORE.chNewProgs || []).slice(-1)[0];
     ok('CB1-A "Save and continue" opens the new programme in the course builder (Curriculum, as before), seven sections, Draft, Version 1', !!pr && pr.title === 'Level 4 CB1 programme' && S.params.id === pr.id && cur() === 'curriculum' && qa('.cb-nav .cb-sec').length === 7 && /Draft/.test(q('.page-h').textContent) && /Version 1/.test(q('.page-h').textContent));
     ok('CB1-A header: title, level, reference, status, version and "Version history"', q('.page-h h1').textContent === pr.title && /Level 4/.test(q('.page-h').textContent) && /QN 610\/7777\/1/.test(q('.page-h').textContent) && !!q('.page-h [data-tab="versions"]'));
@@ -92,7 +96,7 @@
     open('NV-L3', 'review'); ok('CB1-D Review & Publish: says Version 2 is published and how to change it', /Version 2 is published/.test(q('.cb-body').textContent));
     q('.page-h [data-tab="versions"]').click(); ok('CB1-D Version history: the versions with the current one, and a way back', /Version 2 \(current\)/.test(main()) && !q('.cb-nav') && !!q('.cb-sh [data-tab="curriculum"]'));
     q('.cb-sh [data-tab="curriculum"]').click(); ok('CB1-D …"Back to the course builder" returns to Curriculum', cur() === 'curriculum');
-    SA(); const pr = (() => { go('a-programmes'); ACT.chProgNew(); const f = (s, v) => { document.querySelector(s).value = v; }; f('#np-t', 'Level 3 CB1 options'); f('#np-l', 'Level 3'); INP.r1NpLevel(document.querySelector('#np-l')); f('#np-r', 'QN 603/7777/3'); f('#np-d', '6'); f('#np-du', 'months'); const r = document.querySelector('main .r1-np-row'); r.querySelector('.r1-np-l').value = 'Self-Paced'; r.querySelector('.r1-np-f').value = '1800'; r.querySelector('.r1-np-m').value = 'Self-Paced'; document.querySelector('#np-obs-yes').checked = true; document.querySelector('#np-code').value = 'CB1-L3'; ACT.cbDetCreate(); return (STORE.chNewProgs || []).slice(-1)[0]; })(); // CB2 (PD-CB-14): the Course Details page, not the dialog
+    SA(); const pr = (() => { go('a-programmes'); ACT.chProgNew(); const f = (s, v) => { document.querySelector(s).value = v; }; f('#np-t', 'Level 3 CB1 options'); f('#np-l', 'Level 3'); INP.r1NpLevel(document.querySelector('#np-l')); f('#np-r', 'QN 603/7777/3'); f('#np-d', '6'); f('#np-du', 'months'); const r = document.querySelector('main .r1-np-row'); r.querySelector('.r1-np-l').value = 'Self-Paced'; r.querySelector('.r1-np-f').value = '1800'; r.querySelector('.r1-np-m').value = 'Self-Paced'; document.querySelector('#np-obs-yes').checked = true; (document.querySelector('#np-code') || {}).value = 'CB1-L3'; crT(ACT.cbDetCreate)(); return (STORE.chNewProgs || []).slice(-1)[0]; })(); // CB2 (PD-CB-14): the Course Details page, not the dialog
     // CB8 (PD-CB-48) supersedes the panels "plan, fees, support" and the R1 options card for a new programme: "Fees & payment options"
     // (one card per fee option, with its observation fees and payment options), "Financial versions", and the legacy rate
     open(pr.id, 'payments'); ok('CB1-D new Level 3 programme: Fees & Payments shows its fee options, its financial versions and the observation fee rate', qa('.cb-panels .tab').map(t => t.dataset.tab).join() === 'fees,payhist,support');

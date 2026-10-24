@@ -4,6 +4,10 @@
 // their pinned version; the CH-8 quick picks are not an editor. Each check acts through the screen or the handler, with negatives.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
+  // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
+  const crT = f => (...a) => { const l3 = (document.querySelector('main #np-l') || {}).value === 'Level 3', rows = [...document.querySelectorAll('main .r1-np-m')].map(x => x.value).filter(Boolean); document.querySelectorAll('main .cr-dm-c').forEach(x => { const sup = (document.querySelector('main input[name="np-s"]:checked') || {}).value === 'Self-paced' ? 'Self-Paced' : 'Fully Assisted'; x.checked = l3 || x.value === sup; }); return f(...a); };
+  const crPd = (v = '2026-12-20T21:59') => document.querySelectorAll('#modal-root .cr-pd').forEach(x => { if (!x.value) x.value = v; });
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const q = s => document.querySelector('main ' + s), qa = s => [...document.querySelectorAll('main ' + s)];
   const T = async (n, f) => { try { closeModal(); S.frame = 'auto'; await f(); } catch (e) { R.push('FAIL ' + n + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
@@ -32,7 +36,7 @@
 
   await T('CB3-B a new course receives its first offer-letter version', async () => {
     fresh(); SYS(); go('a-programmes'); ACT.chProgNew(); const f = (s, v) => { document.querySelector(s).value = v; };
-    f('#np-t', 'Level 4 CB3 Letters'); f('#np-l', 'Level 4'); INP.r1NpLevel(document.querySelector('#np-l')); f('#np-code', 'L4-CB3'); f('#np-r', 'QN 610/3333/4'); f('#np-p', '2400'); document.querySelector('#np-obs-no').checked = true; ACT.cbDetCreate();
+    f('#np-t', 'Level 4 CB3 Letters'); f('#np-l', 'Level 4'); INP.r1NpLevel(document.querySelector('#np-l')); /* CR (PD-CR-06): no course code */ f('#np-r', 'QN 610/3333/4'); f('#np-p', '2400'); document.querySelector('#np-obs-no').checked = true; crT(ACT.cbDetCreate)();
     const pr = (STORE.chNewProgs || []).slice(-1)[0]; go('a-programmes', { id: pr.id, tab: 'letter' });
     ok('CB3-B before its first version: "No offer letter uploaded yet" with Upload offer letter; Review blocks publishing', !chLetterCur(pr.id) && /No offer letter uploaded yet/.test(main()) && !!q('[data-act="chLetterUp"]') && ch8Check(pr).block.includes('No offer letter uploaded'));
     q('[data-act="chLetterUp"]').click(); ok('CB3-B the upload starts from the standard Academy letter text (existing wording)', document.querySelector('#lt-x').value === CH_LETTER_TEXT.join('\n\n')); ACT.chLetterSample(); reason('First version');

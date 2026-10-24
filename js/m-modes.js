@@ -121,7 +121,7 @@ openModal = function (m) {
     if (r1IsL3Pid(pid) && box && box.dataset.pid === pid) {
       const ids = $$('#modal-root .w1-nb-o:checked').map(i => i.value), ok = r1Opts(pid).filter(o => o.status === 'Active').map(o => o.id), bad = ids.filter(id => !ok.includes(id));
       if (bad.length) { logA('Batches', co, 'Blocked: accept a fee option of another course', '—', '—', `${bad.map(w1OptName).join(', ')} isn't an active fee option of ${co}`); toast(`${bad.map(w1OptName).join(', ')} isn't an active fee option of this course.`, 'err'); return false; }
-      if (!ids.length) { fieldErr('#w1-nb-acc', 'Choose at least one delivery mode — Self-Paced, Fully Assisted or both (with at least one fee option)'); return false; }
+      if (!ids.length && !$$('#modal-root .cr-pend:checked').length) { fieldErr('#w1-nb-acc', /* CR (PD-CR-14): a mode awaiting Finance can be configured */ 'Choose at least one delivery mode — Self-Paced, Fully Assisted or both (with at least one fee option)'); return false; }
     }
     return g(...x); }; } });
   return r;

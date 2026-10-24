@@ -4,6 +4,10 @@
 // notice is labelled simulated; notification and audit histories are only appended to.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
+  // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
+  const crT = f => (...a) => { const l3 = (document.querySelector('main #np-l') || {}).value === 'Level 3', rows = [...document.querySelectorAll('main .r1-np-m')].map(x => x.value).filter(Boolean); document.querySelectorAll('main .cr-dm-c').forEach(x => { const sup = (document.querySelector('main input[name="np-s"]:checked') || {}).value === 'Self-paced' ? 'Self-Paced' : 'Fully Assisted'; x.checked = l3 || x.value === sup; }); return f(...a); };
+  const crPd = (v = '2026-12-20T21:59') => document.querySelectorAll('#modal-root .cr-pd').forEach(x => { if (!x.value) x.value = v; });
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const q = s => document.querySelector('main ' + s);
   const T = async (n, f) => { try { closeModal(); S.frame = 'auto'; await f(); } catch (e) { R.push('FAIL ' + n + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
@@ -23,7 +27,7 @@
   const prog = () => {
     SA(); go('a-programmes'); ACT.chProgNew();
     fill({ '#np-t': 'CB10 Level 4 course', '#np-l': 'Level 4', '#np-r': 'QN 610/4500/4', '#np-d': '6', '#np-du': 'months', '#np-p': '2400' }); INP.r1NpLevel(document.querySelector('#np-l'));
-    document.querySelector('#np-code').value = 'CB10C'; document.querySelector('#np-obs-no').checked = true; const pr = ACT.cbDetCreate(); closeModal(); const id = pr.id;
+    (document.querySelector('#np-code') || {}).value = 'CB10C'; document.querySelector('#np-obs-no').checked = true; const pr = crT(ACT.cbDetCreate)(); closeModal(); const id = pr.id;
     go('a-programmes', { id, tab: 'structure' }); add8('ch8AddUnit', { id }, { '#u-c': 'U101', '#u-t': 'Practice' }); add8('ch8AddMod', { id, u: 0 }, { '#m-t': 'Core', '#m-ab': 'C/650/1010' }); add8('ch8AddLo', { id, u: 0, m: 0 }, { '#lo-t': 'Understand practice', '#lo-y': 'Knowledge' }); add8('ch8AddCrit', { id, u: 0, m: 0, l: 0 }, { '#c-d': 'Describe practice', '#c-e': 'Written account' });
     ACT.chLetterUp({ dataset: { id } }); ACT.chLetterSample(); reason('First version');
     const o = cb8Work(pr).opts[0].id; [1, 4].forEach(k => ACT.cb8PayAdd({ dataset: { p: id, o, k: String(k) } })); ACT.cb8SaApprove({ dataset: { p: id } }); reason('Terms');

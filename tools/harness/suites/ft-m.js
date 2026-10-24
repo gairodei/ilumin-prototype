@@ -4,6 +4,10 @@
 // Every check does the action through the screen or handler, then checks the record or consuming screen, with the negative case.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
+  // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
+  const crT = f => (...a) => { const l3 = (document.querySelector('main #np-l') || {}).value === 'Level 3', rows = [...document.querySelectorAll('main .r1-np-m')].map(x => x.value).filter(Boolean); document.querySelectorAll('main .cr-dm-c').forEach(x => { const sup = (document.querySelector('main input[name="np-s"]:checked') || {}).value === 'Self-paced' ? 'Self-Paced' : 'Fully Assisted'; x.checked = l3 || x.value === sup; }); return f(...a); };
+  const crPd = (v = '2026-12-20T21:59') => document.querySelectorAll('#modal-root .cr-pd').forEach(x => { if (!x.value) x.value = v; });
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const mroot = () => document.getElementById('modal-root');
   const T = async (n, f) => { try { closeModal(); S.frame = 'auto'; await f(); } catch (e) { R.push('FAIL ' + n + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
@@ -31,9 +35,9 @@
   const course = rows => {
     SA(); go('a-programmes'); ACT.chProgNew(); const n = ++cN;
     fill({ '#np-t': 'M Level 3 course ' + n, '#np-l': 'Level 3', '#np-r': 'QN 610/90' + (10 + n) + '/1', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
-    document.querySelector('#np-code').value = 'MC' + n; document.querySelector('#np-obs-no').checked = true;
+    (document.querySelector('#np-code') || {}).value = 'MC' + n; document.querySelector('#np-obs-no').checked = true;
     rows.forEach((x, k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = x.l; r.querySelector('.r1-np-f').value = String(x.f); r.querySelector('.r1-np-m').value = x.m; });
-    const pr = ACT.cbDetCreate(); closeModal(); pr.status = 'Active';
+    const pr = crT(ACT.cbDetCreate)(); closeModal(); pr.status = 'Active';
     const id = l => (r1Opts(pr.id).find(o => o.label === l) || {}).id; return { pr, title: pr.title, ids: rows.map(x => id(x.l)) };
   };
   // Create batch through the wizard; o.modes / o.opts = what to tick (default: as offered)
@@ -206,26 +210,26 @@
   await T('M-K Course code, Awarding body and Awarding body course code are separate', async () => {
     fresh(); SA(); go('a-programmes'); ACT.chProgNew();
     const lab = id => (document.querySelector(`main label[for="${id}"]`) || {}).textContent, order = [...document.querySelectorAll('main .cb-det-form label[for]')].map(l => l.getAttribute('for'));
-    ok('M-K the form: three separate fields — Course code, Awarding body, Awarding body course code — in that order', lab('np-code') === 'Course code' && lab('np-q-body') === 'Awarding body' && lab('np-r') === 'Awarding body course code' && order.indexOf('np-code') < order.indexOf('np-q-body') && order.indexOf('np-q-body') === order.indexOf('np-r') - 1);
-    ok('M-K the awarding body course code is the existing reference field (no new field)', !!document.querySelector('main #np-r') && document.querySelectorAll('main input[id^="np-"][id*="ab"]').length === 0 && /Separate from the Academy's course code/.test(document.querySelector('main #np-r').closest('.field').textContent));
+    // CR (PD-CR-06, supersedes PD-M-09's Course code field): no Academy course code; Course name, Awarding body, Awarding body course code
+    ok('M-K the form: Course name, Awarding body, Awarding body course code — no Academy course code', !lab('np-code') && lab('np-t') === 'Course name' && lab('np-q-body') === 'Awarding body' && lab('np-r') === 'Awarding body course code' && order.indexOf('np-q-body') === order.indexOf('np-r') - 1);
+    ok('M-K the awarding body course code is the existing reference field (no new field)', !!document.querySelector('main #np-r') && document.querySelectorAll('main input[id^="np-"][id*="ab"]').length === 0 && /Separate from the Academy/.test(document.querySelector('main #np-r').closest('.field').textContent));
     fill({ '#np-t': 'M codes course', '#np-l': 'Level 4', '#np-r': 'QN 610/4242/7', '#np-d': '12', '#np-du': 'months', '#np-p': '2400', '#np-q-body': 'NCFE CACHE' }); INP.r1NpLevel(document.querySelector('#np-l'));
-    document.querySelector('#np-code').value = 'm-codes1'; document.querySelector('#np-obs-no').checked = true;
-    const pr = ACT.cbDetCreate(); closeModal();
-    ok('M-K saved independently: pr.code (upper-case), pr.qual.body and pr.ref', !!pr && pr.code === 'M-CODES1' && pr.qual.body === 'NCFE CACHE' && pr.ref === 'QN 610/4242/7');
-    go('a-programmes', { id: pr.id, tab: 'details' }); fill({ '#np-code': 'M-CODES2' }); document.querySelector('main [data-act="cbDetSave"]:not([data-next])').click();
-    ok('M-K changing the course code leaves the awarding body course code alone', pr.code === 'M-CODES2' && pr.ref === 'QN 610/4242/7' && pr.qual.body === 'NCFE CACHE');
+    (document.querySelector('#np-code') || {}).value = 'm-codes1'; document.querySelector('#np-obs-no').checked = true;
+    const pr = crT(ACT.cbDetCreate)(); closeModal();
+    ok('M-K saved independently: pr.qual.body and pr.ref; no course code (CR)', !!pr && !pr.code && pr.qual.body === 'NCFE CACHE' && pr.ref === 'QN 610/4242/7');
+    pr.code = 'M-CODES2'; /* CR (PD-CR-06): a code recorded before the field was removed is kept */
     go('a-programmes', { id: pr.id, tab: 'details' }); fill({ '#np-r': 'QN 610/4242/8' }); document.querySelector('main [data-act="cbDetSave"]:not([data-next])').click();
     ok('M-K changing the awarding body course code leaves the course code alone', pr.ref === 'QN 610/4242/8' && pr.code === 'M-CODES2');
     go('a-programmes', { id: pr.id, tab: 'details' }); fill({ '#np-r': '' }); document.querySelector('main [data-act="cbDetSave"]:not([data-next])').click();
     ok('M-K (negative) the awarding body course code is still required, named as such', pr.ref === 'QN 610/4242/8' && /Enter the awarding body course code/.test(main()));
     go('a-programmes', { id: pr.id, tab: 'review' }); const rv = (document.querySelector('main .cb-rv-sec[data-sec="details"]') || {}).textContent || '';
-    ok('M-K Review & Publish: Course code, Awarding body and Awarding body course code each shown', /Course codeM-CODES2/.test(rv) && /Awarding bodyNCFE CACHE/.test(rv) && /Awarding body course codeQN 610\/4242\/8/.test(rv));
-    ok('M-K builder header names the awarding body course code', /Course code M-CODES2 · Awarding body course code QN 610\/4242\/8/.test(document.querySelector('main .page-h').textContent));
+    ok('M-K Review & Publish: Awarding body and Awarding body course code each shown; no course code row (CR)', !/Course codeM-CODES2/.test(rv) && /Awarding bodyNCFE CACHE/.test(rv) && /Awarding body course codeQN 610\/4242\/8/.test(rv));
+    ok('M-K builder header names the awarding body course code (no course code, CR)', /Awarding body course code QN 610\/4242\/8/.test(document.querySelector('main .page-h').textContent));
   });
   await T('M-K historical programmes, versions and learner records are unchanged', async () => {
     fresh(); SA(); const keep = () => J({ p: ADMIN.programmes.filter(p => !p.chNew), w: Object.values(STORE.worlds).map(w => w.nvq && { ab: w.nvq.ab, v: w.nvq.version, t: w.nvq.title }), tr: STORE.s3 && STORE.s3.trees }), k0 = keep();
     go('a-programmes', { id: 'NV-L3', tab: 'details' }); const dl = document.querySelector('main .cb-dl').textContent;
-    ok('M-K seeded Level 3 Diploma (read-only): the three rows in order; no course code or awarding body made up', /Course codeNot recordedAwarding bodyNot recordedAwarding body course codeQN 603\/2851\/9/.test(dl.replace(/\s+/g, '')) || /Course code\s*Not recorded\s*Awarding body\s*Not recorded\s*Awarding body course code\s*QN 603\/2851\/9/.test(dl));
+    ok('M-K seeded Level 3 Diploma (read-only): the rows in order; no course code or awarding body made up', /Awarding body\s*Not recorded\s*Awarding body course code\s*QN 603\/2851\/9/.test(dl) && !/Course code\s*Not recorded/.test(dl)); // CR (PD-CR-06): no course code row
     ['NV-L2', 'NV-L4', 'NV-L5', 'NV-L3D', 'NV-L3O'].forEach(id => go('a-programmes', { id, tab: 'details' }));
     ok('M-K programmes, programme versions and learner records unchanged by the new labels', keep() === k0 && s3Pr('NV-L3').ref === 'QN 603/2851/9' && s3Pr('NV-L3').code === undefined);
   });

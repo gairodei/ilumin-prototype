@@ -3,6 +3,10 @@
 // editors refused for package programmes, Finance's views, the offer-letter wording, role checks and historical isolation.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
+  // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
+  const crT = f => (...a) => { const l3 = (document.querySelector('main #np-l') || {}).value === 'Level 3', rows = [...document.querySelectorAll('main .r1-np-m')].map(x => x.value).filter(Boolean); document.querySelectorAll('main .cr-dm-c').forEach(x => { const sup = (document.querySelector('main input[name="np-s"]:checked') || {}).value === 'Self-paced' ? 'Self-Paced' : 'Fully Assisted'; x.checked = l3 || x.value === sup; }); return f(...a); };
+  const crPd = (v = '2026-12-20T21:59') => document.querySelectorAll('#modal-root .cr-pd').forEach(x => { if (!x.value) x.value = v; });
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const q = s => document.querySelector('main ' + s), qa = s => [...document.querySelectorAll('main ' + s)];
   const T = async (n, f) => { try { closeModal(); S.frame = 'auto'; await f(); } catch (e) { R.push('FAIL ' + n + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
@@ -25,10 +29,10 @@
   const make = (o = {}) => {
     go('a-programmes'); ACT.chProgNew(); const l3 = (o.level || 'Level 3') === 'Level 3';
     fill({ '#np-t': o.title || 'CB8 course ' + (++codeN), '#np-l': o.level || 'Level 3', '#np-r': 'QN 610/' + (3000 + codeN) + '/8', '#np-d': String(o.n || 6), '#np-du': o.unit || 'months' });
-    document.querySelector('#np-code').value = 'CBE' + codeN; document.querySelector('#np-obs-' + (o.obs || 'no')).checked = true; INP.r1NpLevel(document.querySelector('#np-l'));
+    (document.querySelector('#np-code') || {}).value = 'CBE' + codeN; document.querySelector('#np-obs-' + (o.obs || 'no')).checked = true; INP.r1NpLevel(document.querySelector('#np-l'));
     if (l3) (o.opts || [{ l: 'Fully Assisted — standard', f: 2400, m: 'Fully Assisted' }]).forEach((x, k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = x.l; r.querySelector('.r1-np-f').value = String(x.f); r.querySelector('.r1-np-m').value = x.m; });
     else fill({ '#np-p': String(o.price || 1800) });
-    const r = ACT.cbDetCreate(); closeModal(); return r && r.id ? r : null;
+    const r = crT(ACT.cbDetCreate)(); closeModal(); return r && r.id ? r : null;
   };
   const W8 = pr => cb8Work(pr), opt = (pr, i = 0) => cb8Work(pr).opts.filter(x => x.status === 'Active')[i];
   const fees = (pr, o = '', v = {}) => { ACT.cb8Opt({ dataset: { p: pr.id, o } }); if (!MODAL) return 'no dialog'; Object.entries(v).forEach(([k, x]) => { const e = document.querySelector('#modal-root ' + k); if (e) { e.value = x; } }); return press(); };
@@ -186,8 +190,8 @@
     ok('CB8-H changing the duration withdraws approval (logged with before → after)', J(pr.durV) === J({ n: 9, unit: 'months' }) && wf(pr).status === 'Draft' && /6 months[^→]*→ Level 3 · 9 months/.test(ADMIN.audit.find(x => x.action === 'Payment terms need Finance approval again').reason));
     pr = approved(); SA(); settings(pr.id, null, null, 'Not available'); ok('CB8-H changing an observation location withdraws approval', wf(pr).status === 'Draft');
     pr = approved(); SA(); go('a-programmes', { id: pr.id, tab: 'details' }); document.querySelector('#np-obs-no').checked = true; ACT.cbDetSave({ dataset: { id: pr.id } }); ok('CB8-H changing "Does this course contain observations?" withdraws approval', cbObsOf(pr) === false && wf(pr).status === 'Draft');
-    pr = approved(); SA(); go('a-programmes', { id: pr.id, tab: 'details' }); document.querySelector('#np-ds').value = 'New description'; document.querySelector('#np-code').value = 'CBE-NEW' + codeN; ACT.cbDetSave({ dataset: { id: pr.id } });
-    ok('CB8-H (negative) title, description and code don\'t withdraw approval', pr.code === 'CBE-NEW' + codeN && wf(pr).status === 'Approved');
+    pr = approved(); SA(); go('a-programmes', { id: pr.id, tab: 'details' }); document.querySelector('#np-ds').value = 'New description'; (document.querySelector('#np-code') || {}).value = 'CBE-NEW' + codeN; ACT.cbDetSave({ dataset: { id: pr.id } });
+    ok('CB8-H (negative) title, description and code don\'t withdraw approval', !pr.code /* CR (PD-CR-06): no course code is entered */ && wf(pr).status === 'Approved');
     go('a-programmes', { id: pr.id, tab: 'structure' }); ACT.ch8AddUnit({ dataset: { id: pr.id } }); fill({ '#u-c': 'U900', '#u-t': 'Extra unit' }); prim(); closeModal();
     ACT.chLetterUp({ dataset: { id: pr.id } }); ACT.chLetterSample(); reason('Letter v1');
     ok('CB8-H (negative) curriculum and offer letter changes don\'t withdraw approval', wf(pr).status === 'Approved' && chLetters(pr.id).length >= 1);

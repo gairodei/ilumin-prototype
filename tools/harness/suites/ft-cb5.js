@@ -4,6 +4,10 @@
 // checks the role; seeded answer-key records are frozen and note their programme version. Positive and negative checks throughout.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
+  // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
+  const crT = f => (...a) => { const l3 = (document.querySelector('main #np-l') || {}).value === 'Level 3', rows = [...document.querySelectorAll('main .r1-np-m')].map(x => x.value).filter(Boolean); document.querySelectorAll('main .cr-dm-c').forEach(x => { const sup = (document.querySelector('main input[name="np-s"]:checked') || {}).value === 'Self-paced' ? 'Self-Paced' : 'Fully Assisted'; x.checked = l3 || x.value === sup; }); return f(...a); };
+  const crPd = (v = '2026-12-20T21:59') => document.querySelectorAll('#modal-root .cr-pd').forEach(x => { if (!x.value) x.value = v; });
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const q = s => document.querySelector('main ' + s), qa = s => [...document.querySelectorAll('main ' + s)];
   const T = async (n, f) => { try { closeModal(); S.frame = 'auto'; await f(); } catch (e) { R.push('FAIL ' + n + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
@@ -23,12 +27,12 @@
   // Create an assignment in Section 3, add one question (evidence + attachments), map it, optionally publish
   const author = (pid, title, o = {}) => {
     open(pid); ACT.cbAsgNew({ dataset: { p: pid } }); if (!MODAL) return null;
-    if (o.unit) document.querySelector('#cna-u').value = o.unit; fill({ '#cna-t': title, '#cna-d': '2026-12-20T21:59' }); press();
+    if (o.unit) document.querySelector('#cna-u').value = o.unit; fill({ '#cna-t': title }); press();
     const d = s2Defs().find(x => x.title === title); if (!d) return null;
     ACT.s2QAdd({ dataset: { id: d.id } }); fill({ '#aq-t': o.q || 'Explain why communication matters in care.', '#aq-ev': o.ev || 'A real example from your workplace', '#aq-n': String(o.n || 2) });
     document.querySelectorAll('#modal-root .aq-ty').forEach(c => { c.checked = (o.types || ['PDF']).includes(c.value); }); press();
     const crit = o.crit || s2Crit(d).find(c => c.type === 'Knowledge').code; INP.mapChange({ checked: true, dataset: { id: d.id, q: d.qs[0].id, c: crit } });
-    if (o.publish) { open(pid); ACT.pubAsg({ dataset: { id: d.id } }); reason('Publish'); }
+    if (o.publish) { open(pid); ACT.pubAsg({ dataset: { id: d.id } }); crPd(); reason('Publish'); }
     return d;
   };
 
@@ -63,7 +67,7 @@
     ok('CB5-C the question keeps its evidence guidance and attachment limits; mapped', d.qs[0].ev === 'One example from a recent shift' && d.qs[0].attMax === 2 && J(d.qs[0].attTypes) === J(['PDF', 'DOCX']) && d.qs[0].crit.length === 1);
     open('NV-L3'); ok('CB5-C after creating, Section 3 opens the assignment in place (Questions) with its settings table', !!q('.cb-asg-ed') && /One example from a recent shift/.test(q('.cb-asg-qset').textContent) && /Up to 2 files · PDF, DOCX/.test(q('.cb-asg-qset').textContent));
     ACT.cbAsgOpen({ dataset: { p: 'NV-L3', id: d.id, t: 'details' } }); ok('CB5-C Details shows version, References and template; Save and Publish here', /Version 2/.test(q('.cb-asg-set').textContent) && /Yes — after the last question/.test(q('.cb-asg-set').textContent) && /None — learners answer in the boxes/.test(q('.cb-asg-set').textContent) && !!q('.cb-asg-btns [data-act="s2Save"]') && !!q('.cb-asg-btns [data-act="pubAsg"]'));
-    ACT.pubAsg({ dataset: { id: d.id } }); reason('Publish from the builder');
+    ACT.pubAsg({ dataset: { id: d.id } }); crPd(); reason('Publish from the builder');
     const a = STORE.worlds.C.assignments.find(x => x.id === d.id);
     ok('CB5-C published from the builder: stays on Section 3; Aisha (Level 3, the batch) gets her copy', d.status === 'Published' && S.route === 'a-programmes' && S.params.tab === 'assessments' && !!a);
     ok('CB5-C …her copy has the References section, no template download, and the question settings', a.refsOn === true && J(a.refRounds) === '[]' && !a.resources.some(x => /template/i.test(x[0])) && a.qs[0].ev === 'One example from a recent shift' && a.qs[0].attMax === 2);
@@ -98,7 +102,7 @@
 
   /* ================= F. Publishing checks ================= */
   await T('CB5-F publishing refused for criteria outside the linked version', async () => {
-    fresh(); SA(); const d = author('NV-L3', 'L3 CB5 Stale'); d.qs[0].crit = ['999 9.9']; const a0 = ADMIN.audit.length; ACT.pubAsg({ dataset: { id: d.id } });
+    fresh(); SA(); const d = author('NV-L3', 'L3 CB5 Stale'); d.qs[0].crit = ['999 9.9']; const a0 = ADMIN.audit.length; ACT.pubAsg({ dataset: { id: d.id } }); crPd();
     ok('CB5-F a mapped code that isn\'t a knowledge criterion of Version 2 blocks publishing (logged); stays Draft', d.status === 'Draft' && blocked(a0, /criteria not in the linked version/) && /999 9\.9/.test(document.querySelector('#modal-root').textContent)); closeModal();
     const o = author('NV-L3', 'L3 CB5 Observation map'), obs = s2Crit(o).find(c => c.type !== 'Knowledge'); o.qs[0].crit = [obs.code]; ACT.pubAsg({ dataset: { id: o.id } });
     ok('CB5-F an Observation criterion mapped to an assignment question blocks publishing (only observation meets it)', o.status === 'Draft' && !!MODAL && /Can't publish/.test(MODAL.title)); closeModal();
@@ -110,7 +114,7 @@
     fresh(); SA(); const d = author('NV-L3', 'L3 CB5 Template');
     ACT.cbAsgSet({ dataset: { id: d.id, k: 'template' } }); ACT.cbAsgSet({ dataset: { id: d.id, k: 'refs' } });
     ok('CB5-G while Draft: an optional template offered and the References section removed, both audited', d.template === true && d.refs === false && ADMIN.audit[0].action === 'References section changed' && ADMIN.audit[1].action === 'Answer template changed');
-    open('NV-L3'); ACT.pubAsg({ dataset: { id: d.id } }); reason('Publish'); const a = STORE.worlds.C.assignments.find(x => x.id === d.id);
+    open('NV-L3'); ACT.pubAsg({ dataset: { id: d.id } }); crPd(); reason('Publish'); const a = STORE.worlds.C.assignments.find(x => x.id === d.id);
     ok('CB5-G the learner copy offers the template as optional and has no References section', a.resources.some(x => /optional/.test(x[0])) && !a.refsOn);
     const a0 = ADMIN.audit.length; ACT.cbAsgSet({ dataset: { id: d.id, k: 'refs' } }); ok('CB5-G (negative) published: references and template can\'t change (logged)', d.refs === false && blocked(a0, /published/));
   });

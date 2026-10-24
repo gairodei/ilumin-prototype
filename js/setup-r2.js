@@ -18,7 +18,8 @@ const R2_TOK = m => 'mode:' + m;
 const R2_TOKS = R1_MODES.map(R2_TOK);
 // A batch's programme decides: every Level 3 programme has fee options (R1); groups never cross programmes
 const r2Pid = b => (b ? s4PidOfTitle(b.course) : null);
-const r2IsL3B = b => !!(b && r1IsL3Pid(r2Pid(b)));
+// CR (PD-CR-05): a Level 2, 4 or 5 batch is mixed-mode only when it was created with an accepted list; older batches keep one mode
+const r2IsL3B = b => { const pid = b && r2Pid(b), pr = pid && s3Pr(pid); return !!(pr && r1IsL3Pid(pid) && (pr.level === 'Level 3' || Array.isArray(b.w1opts))); };
 const r2Batch = code => ADMIN.batches.find(x => x.code === code) || null;
 // A learner's fee-option group and delivery mode, as a member of a batch
 function r2LidInfo(lid, code) {

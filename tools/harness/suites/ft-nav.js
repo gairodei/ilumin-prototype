@@ -63,7 +63,8 @@
     reload(); await viaPanel('sysA'); await clickSide('a-programmes'); clickEl(q('main [data-act="chProgNew"]'));
     Object.entries({ '#np-t': 'Level 4 Certificate in Navigation Checks', '#np-l': 'Level 4', '#np-r': 'QN 610/5040/1', '#np-d': '12', '#np-du': 'months', '#np-p': '2400' }).forEach(([s, v]) => { const e = q('main ' + s); if (e) e.value = v; });
     // CB2 (PD-CB-14): the page's "Save and continue" (was the dialog's "Create draft"); the observation question is required
-    q('main #np-code').value = 'NAV-L4'; clickEl(q('main #np-obs-no')); clickEl(q('main [data-act="cbDetCreate"]')); await tick();
+    // CR (PD-CR-06): no course code; the delivery modes offered are required (PD-CR-01)
+    clickEl(q('main .cr-dm-c[value="Fully Assisted"]')); clickEl(q('main #np-obs-no')); clickEl(q('main [data-act="cbDetCreate"]')); await tick();
     const id = S.params.id;
     ok('NAV Save and continue creates the draft and opens it at #a-programmes.<new id>.curriculum (CB2: Section 2; was .structure)', /^NV-N\d+$/.test(id || '') && location.hash === `#a-programmes.${id}.curriculum` && !is404(), location.hash);
     reload(location.hash); await viaPanel('sysA');

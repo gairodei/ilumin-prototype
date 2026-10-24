@@ -23,7 +23,8 @@ const r1Seed = () => ({ opts: { [R1_PID]: [r1Legacy(R1_PID)] }, n: {} });
 const R1 = () => { const s = STORE.r1 = STORE.r1 || r1Seed(); if (typeof s.n !== 'object') s.n = { [R1_PID]: +s.n || 0 }; return s; };
 const r1Pr = (pid = R1_PID) => s3Pr(pid);
 // Every Level 3 programme that isn't retired has fee options (the programme's level, not one programme's ID)
-const r1IsL3Pid = pid => { const pr = pid && s3Pr(pid); return !!(pr && pr.level === 'Level 3' && pr.status !== 'Retired'); };
+// CR (PD-CR-04): also a Level 2, 4 or 5 programme once Finance has approved mode-specific fee options for it (the name is kept)
+const r1IsL3Pid = pid => { const pr = pid && s3Pr(pid); return !!(pr && pr.status !== 'Retired' && (pr.level === 'Level 3' || ((STORE.r1 && STORE.r1.opts[pid]) || []).some(o => !o.legacy && o.mode))); };
 const r1L3Progs = () => s3Progs().filter(p => r1IsL3Pid(p.id));
 const r1Opts = (pid = R1_PID) => R1().opts[pid] || [];
 const r1Opt = id => { const o = R1().opts; for (const k of Object.keys(o)) { const x = o[k].find(y => y.id === id); if (x) return x; } return null; };

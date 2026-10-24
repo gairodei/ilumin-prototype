@@ -3,6 +3,10 @@
 // legacy programmes' panels kept, and the seven sections walk in order for a new course.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
+  // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
+  const crT = f => (...a) => { const l3 = (document.querySelector('main #np-l') || {}).value === 'Level 3', rows = [...document.querySelectorAll('main .r1-np-m')].map(x => x.value).filter(Boolean); document.querySelectorAll('main .cr-dm-c').forEach(x => { const sup = (document.querySelector('main input[name="np-s"]:checked') || {}).value === 'Self-paced' ? 'Self-Paced' : 'Fully Assisted'; x.checked = l3 || x.value === sup; }); return f(...a); };
+  const crPd = (v = '2026-12-20T21:59') => document.querySelectorAll('#modal-root .cr-pd').forEach(x => { if (!x.value) x.value = v; });
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const q = s => document.querySelector('main ' + s), qa = s => [...document.querySelectorAll('main ' + s)];
   const T = async (n, f) => { try { closeModal(); S.frame = 'auto'; await f(); } catch (e) { R.push('FAIL ' + n + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
@@ -42,9 +46,10 @@
   await T('CB12-C Fees & Payments is the home; one Deposit heading', async () => {
     fresh(); ACA(); go('a-programmes'); ACT.chProgNew();
     fill({ '#np-t': 'CB12 Level 3 course', '#np-l': 'Level 3', '#np-r': 'QN 610/7712/1', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
-    document.querySelector('#np-code').value = 'CB12A'; document.querySelector('#np-obs-no').checked = true;
+    (document.querySelector('#np-code') || {}).value = 'CB12A'; document.querySelector('#np-obs-no').checked = true;
     const r = document.querySelector('main .r1-np-row'); r.querySelector('.r1-np-l').value = 'Fully Assisted'; r.querySelector('.r1-np-f').value = '2400'; r.querySelector('.r1-np-m').value = 'Fully Assisted';
-    const pr = ACT.cbDetCreate(); closeModal();
+    // CR (PD-CR-07): the course offers only its option's mode, so the package can be approved without a Self-Paced option
+    document.querySelectorAll('main .cr-dm-c').forEach(x => { x.checked = x.value === 'Fully Assisted'; }); const pr = ACT.cbDetCreate(); closeModal();
     open(pr.id, 'payments'); const heads = qa('.cb8-sec h3').filter(h => /^Deposit/.test(h.textContent));
     ok('CB12-C editable package: exactly one "Deposit" heading, with the current setting stated once, and no visible "Deposit" legend', heads.length === 1 && !!q('.cb8-depnow') && !qa('.cb8-sec legend.lbl').some(l => /^Deposit$/.test(l.textContent.trim())), heads.length);
     ok('CB12-C …the deposit choice is still there (not available / default / custom) and still saves', qa('input[name="e1-wdm"]').length === 3 && (() => { const x = q('input[name="e1-wdm"][value="none"]'); x.checked = true; ACT.cb8Dep({ dataset: { p: pr.id } }); return cb8Work(pr).dep.mode === 'none'; })());

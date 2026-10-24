@@ -4,6 +4,10 @@
 // through the screen or handler, then checks the consuming screen or record, and includes the negative case.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
+  // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
+  const crT = f => (...a) => { const l3 = (document.querySelector('main #np-l') || {}).value === 'Level 3', rows = [...document.querySelectorAll('main .r1-np-m')].map(x => x.value).filter(Boolean); document.querySelectorAll('main .cr-dm-c').forEach(x => { const sup = (document.querySelector('main input[name="np-s"]:checked') || {}).value === 'Self-paced' ? 'Self-Paced' : 'Fully Assisted'; x.checked = l3 || x.value === sup; }); return f(...a); };
+  const crPd = (v = '2026-12-20T21:59') => document.querySelectorAll('#modal-root .cr-pd').forEach(x => { if (!x.value) x.value = v; });
   // PD-M-11: options created later are no longer accepted by existing batches automatically; this suite's journeys assume they are, so an
   // administrator accepts them explicitly on the open Level 3 Diploma batches (the audited Change-dialog path) — assertions unchanged
   const m11Accept = () => { mFreezeAll(); ADMIN.batches.filter(b => w1L3(b) && r2Pid(b) === 'NV-L3' && !w1Closed(b)).forEach(b => { const add = r1Opts('NV-L3').filter(o => o.status === 'Active' && !b.w1opts.includes(o.id)).map(o => o.id); if (add.length) mApply(b, b.w1opts.concat(add), 'Accepted explicitly (test fixture, PD-M-11)'); }); };
@@ -31,7 +35,7 @@
   let codeN = 0; // CB2 correction: a course code is required for a new course (unique per test programme)
   // CB8 (PD-CB-49): a programme created in the builder since CB8 sets its terms as a financial package (ft-cb8.js). E1's single-method proposal flow
   // tested here still governs programmes created before CB8 (no package flag) — so each programme made here is marked as one of those (fixture).
-  const create = (obs = 'no') => { const r = document.querySelector('#np-obs-' + obs); if (r) r.checked = true; const c = document.querySelector('#np-code'); if (c && !c.value) c.value = 'TC' + (++codeN); const pr = ACT.cbDetCreate(); if (pr && pr.id) delete pr.cb8; return pr; };
+  const create = (obs = 'no') => { const r = document.querySelector('#np-obs-' + obs); if (r) r.checked = true; const c = document.querySelector('#np-code'); if (c && !c.value) c.value = 'TC' + (++codeN); const pr = crT(ACT.cbDetCreate)(); if (pr && pr.id) delete pr.cb8; return pr; };
   const meth = (px, m) => { const r = document.querySelector(`input[name="${px}-meth"][value="${m}"]`); r.checked = true; INP.e1Meth(r); };
   // A new programme through the wizard dialog (Level 2/4/5: one price); returns the programme or null
   const newProg = (title, o = {}) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': o.level || 'Level 4', '#np-r': 'QN 610/' + (2000 + title.length) + '/1', '#np-d': String(o.n ?? 12), '#np-du': o.unit || 'months', '#np-p': String(o.price || 2400) }); const n0 = (STORE.chNewProgs || []).length; create(); return (STORE.chNewProgs || []).length > n0 ? last() : null; };

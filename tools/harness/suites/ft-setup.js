@@ -4,6 +4,10 @@
 // workflows (incl. learners keeping their version, programme isolation, access refusals) and the S2 / CH-17 marker line.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
+  // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
+  const crT = f => (...a) => { const l3 = (document.querySelector('main #np-l') || {}).value === 'Level 3', rows = [...document.querySelectorAll('main .r1-np-m')].map(x => x.value).filter(Boolean); document.querySelectorAll('main .cr-dm-c').forEach(x => { const sup = (document.querySelector('main input[name="np-s"]:checked') || {}).value === 'Self-paced' ? 'Self-Paced' : 'Fully Assisted'; x.checked = l3 || x.value === sup; }); return f(...a); };
+  const crPd = (v = '2026-12-20T21:59') => document.querySelectorAll('#modal-root .cr-pd').forEach(x => { if (!x.value) x.value = v; });
   const wait = ms => new Promise(r => setTimeout(r, ms));
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const app = () => document.getElementById('app');
@@ -155,10 +159,10 @@
 
   /* ================= S2 — assignments ================= */
   const tasV = v => { S.tas.v = v; tasEnter(); S.signedIn = true; };
-  const newAsg = (title) => { SA(); go('a-assignments'); ACT.newAsg(); const u = document.querySelector('#na-u'); u.value = [...u.options].find(o => /^U306 · Module 1/.test(o.textContent)).value; fill({ '#na-t': title, '#na-d': D(25, '21:59').slice(0, 16) }); prim(); return s2Defs().find(d => d.title === title); };
+  const newAsg = (title) => { SA(); go('a-assignments'); ACT.newAsg(); const u = document.querySelector('#na-u'); u.value = [...u.options].find(o => /^U306 · Module 1/.test(o.textContent)).value; fill({ '#na-t': title }); prim(); /* CR (PD-CR-11): no deadline on the definition */ return s2Defs().find(d => d.title === title); };
   const addQs = (d, qs) => qs.forEach(t => { ACT.s2QAdd({ dataset: { id: d.id } }); fill({ '#aq-t': t }); prim(); });
   const mapAll = d => { go('a-assignments', { id: d.id, tab: 'mapping' }); d.qs.filter(q => q.status === 'Active').forEach((q, i) => { const box = [...app().querySelectorAll('[data-onchange="mapChange"][data-q="' + q.id + '"]')][i % 2]; box.checked = true; INP.mapChange(box); }); };
-  const publish = (d, codes = ['L3AC-JAN26']) => { ACT.pubAsg({ dataset: { id: d.id } }); $$('.s2-pb').forEach(x => { x.checked = codes.includes(x.value); }); reason('Publish'); };
+  const publish = (d, codes = ['L3AC-JAN26']) => { ACT.pubAsg({ dataset: { id: d.id } }); crPd(); $$('.s2-pb').forEach(x => { x.checked = codes.includes(x.value); }); reason('Publish'); };
 
   await T('S2-01 / S2-03 / S2-04 new assignment, its own questions and mapping', async () => {
     fresh(); const n0 = s2Defs().length, d = newAsg('Assignment 30 — Safeguarding in practice');
@@ -170,7 +174,7 @@
     ACT.s2QEdit({ dataset: { id: d.id, q: 'q2' } }); fill({ '#aq-t': 'Describe your role and responsibilities if you suspect abuse.' }); document.querySelector('#aq-a').checked = false; prim();
     ACT.s2QMove({ dataset: { id: d.id, q: 'q2', d: '-1' } }); ACT.s2QRetire({ dataset: { id: d.id, q: 'q3' } });
     ok('S2-03 add, edit (attachments off), reorder, retire', d.qs.length === 3 && d.qs[0].id === 'q2' && !d.qs[0].attach && d.qs[0].text.startsWith('Describe your role and responsibilities') && d.qs[2].status === 'Retired');
-    ACT.pubAsg({ dataset: { id: d.id } }); ok('S2-04 publish blocked until every question is mapped', /Can't publish yet/.test(MODAL.title) && /Not mapped/.test(mroot().textContent) && d.status === 'Draft'); closeModal();
+    ACT.pubAsg({ dataset: { id: d.id } }); crPd(); ok('S2-04 publish blocked until every question is mapped', /Can't publish yet/.test(MODAL.title) && /Not mapped/.test(mroot().textContent) && d.status === 'Draft'); closeModal();
     mapAll(d); ok('S2-04 mapping saved (knowledge criteria only)', d.qs.filter(q => q.status === 'Active').every(q => q.crit.length && q.crit.every(c => /^306 /.test(c))) && !!app().querySelector('input[type=checkbox][disabled][title*="assessed only by observation"]'));
   });
 
@@ -178,7 +182,7 @@
     fresh(); const d = newAsg('Assignment 31 — Reporting concerns'); addQs(d, ['What signs of abuse might you notice?', 'Who do you report concerns to?']); mapAll(d); publish(d);
     const C = STORE.worlds.C, a = C.assignments.find(x => x.id === d.id);
     ok('S2-05 published with the assignment\'s own questions (not a3\'s)', d.status === 'Published' && !!a && a.qs.map(q => q.text).join('|') === 'What signs of abuse might you notice?|Who do you report concerns to?' && a.status === 'Not Started');
-    ok('S2-05 deadline on the learner\'s calendar; learner notified', C.events.some(e => e.id === 'ed' + d.id && e.start === d.due) && C.notifs.some(n => n.body.includes(d.title)));
+    ok('S2-05 deadline on the learner\'s calendar; learner notified', C.events.some(e => e.id === 'ed' + d.id && e.start === crDue(d, 'L3AC-JAN26')) /* CR (PD-CR-12): the batch's deadline (was d.due) */ && C.notifs.some(n => n.body.includes(d.title)));
     ok('S2-05 Croydon learner (other programme) not reached', !STORE.worlds.D.assignments.some(x => x.id === d.id));
     go('a-assignments', { id: d.id }); ok('S2-05 published page states the prototype limit', /reached 1 learner with full data/.test(main()) && /admin and Coordinator views only/.test(main()));
     learner('C'); go('assignments'); ok('S2-05 learner\'s assignment list shows it', main().includes('Assignment 31 — Reporting concerns'));
@@ -194,9 +198,11 @@
 
   await T('S2-02 / S2-05 deadline change and unpublish reach the learner', async () => {
     fresh(); const d = newAsg('Assignment 32 — Record keeping'); addQs(d, ['Why do accurate records matter?']); mapAll(d); publish(d);
-    go('a-assignments', { id: d.id, tab: 'details' }); fill({ '#ae-d': D(35, '20:00').slice(0, 16), '#ae-t': 'Assignment 32 — Accurate record keeping' }); ACT.s2Save({ dataset: { id: d.id } }); reason('Moved');
+    go('a-assignments', { id: d.id, tab: 'details' }); fill({ '#ae-t': 'Assignment 32 — Accurate record keeping' }); ACT.s2Save({ dataset: { id: d.id } }); reason('Moved');
+    // CR (PD-CR-12, supersedes S2-02's deadline field): the deadline is changed for the batch (Batches → Assignment deadlines)
+    ACT.crDlEdit({ dataset: { b: 'L3AC-JAN26', id: d.id } }); fill({ '#cr-dl-d': D(35, '20:00').slice(0, 16) }); reason('Moved');
     const a = STORE.worlds.C.assignments.find(x => x.id === d.id);
-    ok('S2-02 saved: new version; the learner\'s deadline, title and calendar follow', d.version === 2 && a.due === d.due && a.title === 'Assignment 32 — Accurate record keeping' && STORE.worlds.C.events.find(e => e.id === 'ed' + d.id).start === d.due && STORE.worlds.C.notifs.some(n => /Deadline changed/.test(n.title)));
+    ok('S2-02 saved: new version; the learner\'s deadline, title and calendar follow', d.version === 2 && a.due === crDue(d, 'L3AC-JAN26') && a.title === 'Assignment 32 — Accurate record keeping' && STORE.worlds.C.events.find(e => e.id === 'ed' + d.id).start === a.due && STORE.worlds.C.notifs.some(n => /Deadline changed/.test(n.title)));
     ok('S2-02 the assessor is told', STORE.tas.notifs.some(n => /Deadline changed/.test(n.t)));
     ACT.s2Unpublish({ dataset: { id: d.id } }); reason('Not ready');
     ok('S2-05 unpublish (no submissions): learner no longer sees it; Draft again', d.status === 'Draft' && !STORE.worlds.C.assignments.some(x => x.id === d.id) && !STORE.worlds.C.events.some(e => e.id === 'ed' + d.id));
@@ -543,7 +549,7 @@
     // R1 (final review): a new Level 3 programme is created with fee options instead of a single price — one option at the same £1,500
     fill({ '#np-t': 'Level 3 Certificate in Dementia Care', '#np-l': 'Level 3', '#np-r': 'QN 610/7777/1', '#np-d': '9', '#np-du': 'months' /* E1-A: number + unit (was free text '9 months') */, '#np-ds': 'Dementia care.' }); fill({ 'main .r1-np-l': 'Standard', 'main .r1-np-f': '1500', 'main .r1-np-m': 'Fully Assisted' });
     // CB2 (PD-CB-14) supersedes the creation dialog: Course Details of an unsaved course; the observation question is required; "Save and continue"
-    document.querySelector('#np-obs-no').checked = true; document.querySelector('#np-code').value = 'L3DEM-9M'; ACT.cbDetCreate();
+    document.querySelector('#np-obs-no').checked = true; (document.querySelector('#np-code') || {}).value = 'L3DEM-9M'; crT(ACT.cbDetCreate)();
     const pr = (STORE.chNewProgs || []).slice(-1)[0], id = pr.id; go('a-programmes', { id, tab: 'structure' });
     const a8 = (act, ds, o) => { ACT[act]({ dataset: { id, ...ds } }); fill(o); return prim(); };
     a8('ch8AddUnit', {}, { '#u-c': 'U350', '#u-t': 'Dementia awareness' }); a8('ch8AddMod', { u: 0 }, { '#m-t': 'Understanding dementia', '#m-ab': 'B/652/3501' });
@@ -1222,7 +1228,7 @@
     // P-31 wording
     go('a-programmes', { id: 'NV-L3D', tab: 'support' }); ok('N2 programme Support type = default for new batches (not the mode of enrolled batches); P-31 tag kept', /Observation fee rate/.test(main()) && /doesn't set anyone's delivery mode/.test(main()) && !!app().querySelector('.tbd') && !!document.querySelector('input[name="ch-sup"][value="Self-paced"]:checked')); // R2 final review (Level 3): observation-fee rate only
     acaEnter('KA'); S.signedIn = true; go('a-programmes', { id: 'NV-N1', tab: 'details' }); ok('N2 wizard Details: "Default delivery mode for new batches"', /Default delivery mode for new batches/.test(main()) && !/<legend class="lbl">Support type<\/legend>/.test(html()));
-    go('a-programmes', { id: 'NV-N1', tab: 'review' }); ok('N2 wizard Review: the same label', /Default delivery mode for new batches/.test(main()));
+    go('a-programmes', { id: 'NV-N1', tab: 'review' }); ok('N2 wizard Review: the same label', /Delivery modes offered/.test(main())); // CR (PD-CR-03, supersedes "Default delivery mode for new batches"): Review & Publish shows the modes offered
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: N2 entry; N4 limitations stated', /NVQ batch-level delivery mode/.test(main()) && /NOT client-approved academic eligibility policies/.test(main()) && /Thresholds tab is not functional yet/.test(main()) && /unverified demo data/.test(main()) && /Grace Mensah/.test(main()));
   });
 

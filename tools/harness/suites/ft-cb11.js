@@ -7,6 +7,10 @@
 // retired, role checks and the section links.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
+  // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
+  const crT = f => (...a) => { const l3 = (document.querySelector('main #np-l') || {}).value === 'Level 3', rows = [...document.querySelectorAll('main .r1-np-m')].map(x => x.value).filter(Boolean); document.querySelectorAll('main .cr-dm-c').forEach(x => { const sup = (document.querySelector('main input[name="np-s"]:checked') || {}).value === 'Self-paced' ? 'Self-Paced' : 'Fully Assisted'; x.checked = l3 || x.value === sup; }); return f(...a); };
+  const crPd = (v = '2026-12-20T21:59') => document.querySelectorAll('#modal-root .cr-pd').forEach(x => { if (!x.value) x.value = v; });
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const q = s => document.querySelector('main ' + s), qa = s => [...document.querySelectorAll('main ' + s)];
   const mroot = () => document.querySelector('#modal-root');
@@ -33,9 +37,9 @@
   const make = (o = {}) => {
     go('a-programmes'); ACT.chProgNew(); const n = ++codeN;
     fill({ '#np-t': o.title || 'CB11 Level 3 course ' + n, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (5500 + n) + '/1', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
-    document.querySelector('#np-code').value = 'CB11C' + n; document.querySelector('#np-obs-' + (o.obs ? 'yes' : 'no')).checked = true;
+    (document.querySelector('#np-code') || {}).value = 'CB11C' + n; document.querySelector('#np-obs-' + (o.obs ? 'yes' : 'no')).checked = true;
     [{ l: 'Fully Assisted — standard', f: 2400, m: 'Fully Assisted' }, { l: 'Self-Paced — standard', f: 1800, m: 'Self-Paced' }].forEach((x, k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = x.l; r.querySelector('.r1-np-f').value = String(x.f); r.querySelector('.r1-np-m').value = x.m; });
-    const pr = ACT.cbDetCreate(); closeModal(); return pr;
+    const pr = crT(ACT.cbDetCreate)(); closeModal(); return pr;
   };
   const structure = (pr, obs) => {
     const id = pr.id; go('a-programmes', { id, tab: 'structure' });
@@ -46,10 +50,10 @@
   // Section 3: an assignment with a mapped question (new assignments have References and no template)
   const author = (pr, title) => {
     go('a-programmes', { id: pr.id, tab: 'assessments' }); ACT.cbAsgNew({ dataset: { p: pr.id } }); if (!MODAL) return null;
-    fill({ '#cna-t': title, '#cna-d': '2026-12-20T21:59' }); press(); const d = s2Defs().find(x => x.title === title); if (!d) return null;
+    fill({ '#cna-t': title }); press(); const d = s2Defs().find(x => x.title === title); if (!d) return null;
     ACT.s2QAdd({ dataset: { id: d.id } }); fill({ '#aq-t': 'Explain why person-centred care matters.', '#aq-ev': 'A real example from your workplace', '#aq-n': '2' }); document.querySelectorAll('#modal-root .aq-ty').forEach(c => { c.checked = c.value === 'PDF'; }); press();
     const crit = s2Crit(d).find(c => c.type === 'Knowledge').code; INP.mapChange({ checked: true, dataset: { id: d.id, q: d.qs[0].id, c: crit } });
-    go('a-programmes', { id: pr.id, tab: 'assessments' }); ACT.pubAsg({ dataset: { id: d.id } }); reason('Publish'); return d;
+    go('a-programmes', { id: pr.id, tab: 'assessments' }); ACT.pubAsg({ dataset: { id: d.id } }); crPd(); reason('Publish'); return d;
   };
   // Section 4: locations, evidence for the NVQ criteria, one Academy criterion, two required observation events
   const observations = pr => {
@@ -97,7 +101,7 @@
   let P = null;
   await T('CB11-A creation and review', async () => {
     fresh(); ACA(); const pr = make({ obs: true }); P = { pr };
-    ok('CB11-A Section 1: the Draft is created with Observations = Yes, course code and Level 3', !!pr && pr.status === 'Draft' && cbObsOf(pr) === true && pr.code === 'CB11C' + codeN && pr.level === 'Level 3');
+    ok('CB11-A Section 1: the Draft is created with Observations = Yes, course code and Level 3', !!pr && pr.status === 'Draft' && cbObsOf(pr) === true && !pr.code /* CR (PD-CR-06): no course code (was 'CB11C' + n) */ && pr.level === 'Level 3');
     rv(pr.id);
     ok('CB11-A Review & Publish is one panel with a summary of all six sections and an Open link for each', qa('.cb-rv-sec').length === 6 && J(qa('.cb-rv-sec').map(x => x.dataset.sec)) === J(['details', 'curriculum', 'assessments', 'observations', 'payments', 'documents']) && qa('.cb-rv-sec [data-go="a-programmes"]').length === 6);
     ok('CB11-A the empty course is blocked, with blockers grouped under the sections that fix them (curriculum, observations, payments, documents)', /items? to fix before this programme can be published/.test(q('.cb-rv-state').textContent) && ['curriculum', 'documents', 'payments'].every(s => secs(pr).includes(s)), secs(pr));
@@ -115,7 +119,7 @@
     rv(pr.id);
     ok('CB11-A only the Finance approval is left, under Fees & Payments ("not yet sent to Finance")', secs(pr) === 'payments' && blockers(pr).length === 1 && /not yet sent to Finance/.test(blockers(pr)[0].msg), J(blockers(pr).map(x => x.msg)));
     const sum = k => q(`.cb-rv-sec[data-sec="${k}"]`).textContent;
-    ok('CB11-A summary — details: course, code, qualification number, 6 months, Observations Yes', /CB11C/.test(sum('details')) && /QN 610\//.test(sum('details')) && /6 months/.test(sum('details')) && /Yes/.test(sum('details')));
+    ok('CB11-A summary — details: course, code, qualification number, 6 months, Observations Yes', /Awarding body course code/.test(sum('details')) /* CR (PD-CR-06): was /CB11C/ */ && /QN 610\//.test(sum('details')) && /6 months/.test(sum('details')) && /Yes/.test(sum('details')));
     ok('CB11-A summary — curriculum: 1 unit · 1 module · 2 Learning Outcomes · 3 criteria; Knowledge 1 · Observation 1', /1 unit · 1 module · 2 Learning Outcomes · 3 criteria/.test(sum('curriculum')) && /Knowledge 1 · Observation 1/.test(sum('curriculum')), sum('curriculum'));
     ok('CB11-A summary — assessments: 1 assignment, 1 published, with References; knowledge criteria covered 1 of 1', /1 assignment — 1 published, 0 draft · 1 with References/.test(sum('assessments')) && /1 of 1/.test(sum('assessments')), sum('assessments'));
     ok('CB11-A summary — observations: workplace and Academy office, two required observation events named, NVQ criteria covered 2 of 2, 1 Academy criterion', /Workplace · Academy office/.test(sum('observations')) && /2 observation events — Observation 1 — moving and handling · Observation 2 — communication/.test(sum('observations')) && /2 of 2/.test(sum('observations')), sum('observations'));

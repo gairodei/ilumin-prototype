@@ -5,6 +5,10 @@
 // acts through the screen or the handler, then checks the page and the record, with the negative case.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
+  // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
+  const crT = f => (...a) => { const l3 = (document.querySelector('main #np-l') || {}).value === 'Level 3', rows = [...document.querySelectorAll('main .r1-np-m')].map(x => x.value).filter(Boolean); document.querySelectorAll('main .cr-dm-c').forEach(x => { const sup = (document.querySelector('main input[name="np-s"]:checked') || {}).value === 'Self-paced' ? 'Self-Paced' : 'Fully Assisted'; x.checked = l3 || x.value === sup; }); return f(...a); };
+  const crPd = (v = '2026-12-20T21:59') => document.querySelectorAll('#modal-root .cr-pd').forEach(x => { if (!x.value) x.value = v; });
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const q = s => document.querySelector('main ' + s), qa = s => [...document.querySelectorAll('main ' + s)];
   const T = async (n, f) => { try { closeModal(); S.frame = 'auto'; await f(); } catch (e) { R.push('FAIL ' + n + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
@@ -26,7 +30,7 @@
   const T3 = id => STORE.s3.trees[id];
   const units = () => qa('.cb-cur-tree > details[data-cbu]').map(d => d.dataset.cbu).join();
   const edit = (p, path, codes, vals) => { ACT.cbCurEdit({ dataset: { p, path, codes } }); if (!MODAL) return 'no dialog'; fill(vals); return press(); };
-  const newCourse = (obs = 'yes', title = 'Level 4 CB4 Curriculum') => { SYS(); go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': 'Level 4', '#np-code': 'L4-CB4' + Math.floor(Math.random() * 900 + 100), '#np-r': 'QN 610/4444/4', '#np-p': '2400' }); document.querySelector('#np-obs-' + obs).checked = true; ACT.cbDetCreate(); return (STORE.chNewProgs || []).slice(-1)[0]; };
+  const newCourse = (obs = 'yes', title = 'Level 4 CB4 Curriculum') => { SYS(); go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': 'Level 4', /* CR (PD-CR-06): no course code */ '#np-r': 'QN 610/4444/4', '#np-p': '2400' }); document.querySelector('#np-obs-' + obs).checked = true; crT(ACT.cbDetCreate)(); return (STORE.chNewProgs || []).slice(-1)[0]; };
 
   /* ================= A. Seeded Level 2, 3, 4 and 5 ================= */
   await T('CB4-A seeded curricula', async () => {

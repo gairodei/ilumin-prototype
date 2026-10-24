@@ -1482,3 +1482,16 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 .m-opts .check span { overflow-wrap: anywhere; }
 .m-sum { margin-top: 8px; }
 @media (max-width: 640px) { .m-opts { margin-left: 30px; } }
+
+/* CR — course and batch configuration (delivery modes offered, batch deadlines, awarding body batch code) */
+.cr-dm-opts { gap: 8px 24px; flex-wrap: wrap; }
+.cr-dm-ro .btn { margin-left: 4px; }
+.cr-miss { margin-top: 8px; opacity: .75; }
+.cr-pb { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin: 4px 0; min-width: 0; }
+.cr-pb .cr-pd-l { margin: 0; flex: 1 1 220px; min-width: 0; max-width: 280px; }
+.cr-pb .cr-pd-l .input { width: 100%; }
+.cr-asg-dl .tbl-wrap { margin-top: 4px; }
+.cr-bc { margin: 2px 0; }
+.cr-abc { overflow-wrap: anywhere; }
+.cr-dl .cr-due { white-space: nowrap; }
+@media (max-width: 640px) { .cr-pb .cr-pd-l { max-width: none; flex-basis: 100%; } }

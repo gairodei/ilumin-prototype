@@ -4,6 +4,10 @@
 // or handler, then checks the consuming screen or record, and includes the negative case.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
+  // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
+  const crT = f => (...a) => { const l3 = (document.querySelector('main #np-l') || {}).value === 'Level 3', rows = [...document.querySelectorAll('main .r1-np-m')].map(x => x.value).filter(Boolean); document.querySelectorAll('main .cr-dm-c').forEach(x => { const sup = (document.querySelector('main input[name="np-s"]:checked') || {}).value === 'Self-paced' ? 'Self-Paced' : 'Fully Assisted'; x.checked = l3 || x.value === sup; }); return f(...a); };
+  const crPd = (v = '2026-12-20T21:59') => document.querySelectorAll('#modal-root .cr-pd').forEach(x => { if (!x.value) x.value = v; });
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const mroot = () => document.getElementById('modal-root');
   const T = async (n, f) => { try { closeModal(); S.frame = 'auto'; await f(); } catch (e) { R.push('FAIL ' + n + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
@@ -28,7 +32,7 @@
   // CB2 (PD-CB-14) supersedes the creation dialog: Course Details of an unsaved course; the observation question is required; "Save and
   // continue" (ACT.cbDetCreate) creates the Draft
   let codeN = 0; // CB2 correction: a course code is required for a new course (unique per test programme)
-  const create = (obs = 'no') => { const r = document.querySelector('#np-obs-' + obs); if (r) r.checked = true; const c = document.querySelector('#np-code'); if (c && !c.value) c.value = 'TC' + (++codeN); return ACT.cbDetCreate(); };
+  const create = (obs = 'no') => { const r = document.querySelector('#np-obs-' + obs); if (r) r.checked = true; const c = document.querySelector('#np-code'); if (c && !c.value) c.value = 'TC' + (++codeN); return crT(ACT.cbDetCreate)(); };
   const newProg = (title, level = 'Level 4', price = 2400) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': level, '#np-r': 'QN 610/' + (5000 + title.length) + '/1', '#np-d': '12', '#np-du': 'months', '#np-p': String(price) }); const n0 = (STORE.chNewProgs || []).length; create(); return (STORE.chNewProgs || []).length > n0 ? last() : null; };
   const l3Wizard = (title, rows) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (6000 + title.length) + '/3', '#np-d': '12', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l')); rows.forEach(([l, f, m], k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = l; r.querySelector('.r1-np-f').value = f; r.querySelector('.r1-np-m').value = m; }); create(); return last(); };
   const optOf = fee => r1Opts('NV-L3').find(o => o.fee === fee);

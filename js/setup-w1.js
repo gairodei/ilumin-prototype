@@ -17,7 +17,8 @@ const w1Closed = b => ['Completed', 'Archived', 'Cancelled'].includes(b.status);
    A batch created from W1 stores the option IDs explicitly (an option added to the programme later isn't accepted until someone adds
    it — the same rule as session audiences, PD-R2-14). A batch from before W1 has no list and accepts every option of its programme. */
 const w1Accepted = b => { if (!w1L3(b)) return []; const all = r1Opts(r2Pid(b)); return Array.isArray(b.w1opts) ? all.filter(o => b.w1opts.includes(o.id)) : all; };
-const w1Accepts = (b, optId) => { if (!w1L3(b) || !optId) return true; const o = r1Opt(optId); return !!o && o.pid === r2Pid(b) && (!Array.isArray(b.w1opts) || b.w1opts.includes(optId)); };
+// CR (PD-CR-05): a single-mode batch of a programme with mode-specific fee options accepts only options of its own mode
+const w1Accepts = (b, optId) => { if (!optId) return true; if (!w1L3(b)) { const o = r1Opt(optId); return !(o && o.mode && b && b.dmode && o.pid === r2Pid(b) && o.mode !== b.dmode); } const o = r1Opt(optId); return !!o && o.pid === r2Pid(b) && (!Array.isArray(b.w1opts) || b.w1opts.includes(optId)); };
 const w1StdApplies = b => w1L3(b) && !!w1Std(b) && w1Accepts(b, w1Std(b));
 const w1OptName = id => { const o = r1Opt(id); return o ? r2OptName(o) : id; };
 const w1ModeOfOpt = (id, b) => { const o = r1Opt(id); return o ? o.mode || (b && b.dmode) || null : null; };
@@ -133,7 +134,7 @@ openModal = function (m) {
   if (m && m.title === 'Create batch — step 1 of 5') (m.actions || []).forEach(a => { if (a.fn && a.cls && /primary/.test(a.cls)) { const g = a.fn; a.fn = (...x) => {
     const co = mval('#nb-co'), pid = s4PidOfTitle(co); W1_NB = null;
     if (r1IsL3Pid(pid)) { const box = $('#modal-root #w1-nb-acc'), mine = box && box.dataset.pid === pid; // (a list for another programme → this one's defaults: every active option)
-      const opts = mine ? $$('#modal-root .w1-nb-o:checked').map(i => i.value) : r1Opts(pid).filter(o => o.status === 'Active').map(o => o.id); if (!opts.length) { fieldErr('#w1-nb-acc', 'Choose at least one fee option for this batch'); return false; } W1_NB = { code: (mval('#nb-c') || '').toUpperCase(), course: co, opts, std: !!r1StdOf(pid) && opts.includes(r1StdOf(pid)) }; }
+      const opts = mine ? $$('#modal-root .w1-nb-o:checked').map(i => i.value) : r1Opts(pid).filter(o => o.status === 'Active').map(o => o.id); if (!opts.length && !$$('#modal-root .cr-pend:checked').length) { fieldErr('#w1-nb-acc', 'Choose at least one fee option for this batch'); return false; } /* CR (PD-CR-14): or a mode awaiting Finance */ W1_NB = { code: (mval('#nb-c') || '').toUpperCase(), course: co, opts, std: !!r1StdOf(pid) && opts.includes(r1StdOf(pid)) }; }
     return g(...x); }; } });
   if (m && m.title === 'Create batch — step 5 of 5' && W1_NB && typeof m.body === 'string') m.body = m.body.replace(/<dt>Delivery mode<\/dt><dd>([^<]*)<\/dd>/, (x, md) => `<dt>Fee options</dt><dd class="w1-nb-rev">${esc(w1AccTxtOf(W1_NB))}</dd><dt>Delivery mode</dt><dd>From each learner's fee option${W1_NB.std ? ` · standard-fee learners: ${md}` : ''}</dd>`);
   return _omW1.apply(this, arguments);
@@ -143,7 +144,7 @@ const w1AccTxtOf = nb => w1AccTxt({ course: nb.course, w1opts: nb.opts, code: nb
 const _syncW1 = syncTasBatches;
 syncTasBatches = function () {
   if (W1_NB) { const nb = W1_NB, b = (ADMIN.batches || []).find(x => x.code === nb.code && x.course === nb.course && x.created && !x.w1opts);
-    if (b && w1L3(b)) { W1_NB = null; b.w1opts = nb.opts.slice(); if (!nb.std) { delete b.dmode; delete b.dmodeSrc; } logA('Batches', `${b.label} (${b.code})`, 'Fee options accepted set', '—', w1AccTxt(b), 'Batch created'); } }
+    if (b && r1IsL3Pid(r2Pid(b))) { W1_NB = null; b.w1opts = nb.opts.slice(); if (!nb.std) { delete b.dmode; delete b.dmodeSrc; } logA('Batches', `${b.label} (${b.code})`, 'Fee options accepted set', '—', w1AccTxt(b), 'Batch created'); } }
   return _syncW1.apply(this, arguments);
 };
 

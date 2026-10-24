@@ -21,7 +21,8 @@
 
 const CB8 = () => (STORE.cb8 = STORE.cb8 || { work: {}, wf: {} });
 const CB8_OBS_MAX = R1_FEE_MAX;
-const cb8L3 = pr => !!pr && pr.level === 'Level 3';
+// CR (PD-CR-04): a package has fee options with delivery modes for Level 3, and for any course offering both modes or already holding them
+const cb8L3 = pr => !!pr && (pr.level === 'Level 3' || (typeof crMultiFee === 'function' && crMultiFee(pr)));
 const cb8FeeId = pr => pr.id + '-FEE';
 const cb8Ent = pr => `${pr.title} (${pr.id})`;
 const cb8Cur = pid => { const p = s4PlanCur(pid); return (p && p.pkg) || null; };
