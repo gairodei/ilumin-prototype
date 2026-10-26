@@ -82,7 +82,7 @@
     ACT.cb8OptRetire({ dataset: { p: pr.id, o: o.id } }); reason('Not offered');
     ok('CB8-B a draft option that was never approved is removed (not retired); its ID isn\'t reused', !W8(pr).opts.some(x => x.id === o.id) && (fees(pr, '', { '#c8-l': 'Another', '#c8-m': 'Self-Paced', '#c8-f': '999' }), W8(pr).opts.slice(-1)[0].id !== o.id));
     fresh(); SA(); const p2 = make({ level: 'Level 4', price: 2200 }); ACA(); go('a-programmes', { id: p2.id, tab: 'fees' });
-    ok('CB8-B Level 4: one programme fee card, no "Add fee option" (Q-CB-10)', qa('.cb8-opt').length === 1 && !q('[data-act="cb8Opt"][data-o=""]') && /one programme fee/.test(main()) && opt(p2).label === 'Programme fee' && opt(p2).fee === 2200);
+    ok('CB8-B Level 4: one programme fee card, no "Add fee option" (Q-CB-10)', qa('.cb8-opt').length === 1 && !q('[data-act="cb8Opt"][data-o=""]') && /one programme price/.test(main()) && !!q('[data-act="crFoStart"]') /* DM (PD-DM-06, supersedes Q-CB-10's "Level 3 feature" note): one price, with the explicit switch to fee options by delivery mode */ && opt(p2).label === 'Programme fee' && opt(p2).fee === 2200);
     ok('CB8-B (negative) Level 4: adding a second fee option is refused', fees(p2, '', {}) === 'no dialog' && W8(p2).opts.length === 1);
   });
 

@@ -65,7 +65,7 @@
   await T('M-A a course with Self-Paced only', async () => {
     fresh(); const c = course([{ l: 'Self-Paced — standard', f: 1800, m: 'Self-Paced' }]); ACA(); go('a-batches');
     ACT.newBatch(); const co = qm('#nb-co'); co.value = c.title; INP.n2NbCourse(co);
-    ok('M-A step 1: "Delivery modes this batch accepts" shows a Self-Paced checkbox only (Fully Assisted isn\'t offered)', /Delivery modes this batch accepts/.test(qm('#w1-nb-acc legend').textContent) && modesShown() === 'Self-Paced' && !qm('.m-m[value="Fully Assisted"]') && /offer Self-Paced only, so Fully Assisted isn't available/.test(mroot().textContent));
+    ok('M-A step 1: "Delivery modes this batch accepts" shows a Self-Paced checkbox only (Fully Assisted isn\'t offered)', /Delivery modes accepted/.test(qm('#w1-nb-acc legend').textContent) /* DM (PD-DM-07): the legend was "Delivery modes this batch accepts" */ && modesShown() === 'Self-Paced' && !qm('.m-m[value="Fully Assisted"]') && /offer Self-Paced only, so Fully Assisted isn't available/.test(mroot().textContent));
     ok('M-A the modes are checkboxes (multi-select), not a dropdown; ticked by default with its fee option', qma('.m-m').every(x => x.type === 'checkbox') && !qm('select.m-m') && qm('.m-m').checked && qma('.w1-nb-o').every(x => x.checked) && /Accepts: Self-Paced/.test(qm('.m-sum').textContent));
     tickMode('Self-Paced', false); fill({ '#nb-c': 'M-SP-NONE' });
     ok('M-A (negative) unticking the only mode unticks its option; at least one mode is required; nothing created', !qma('.w1-nb-o').some(x => x.checked) && /Accepts: none/.test(qm('.m-sum').textContent) && prim() === false && /Choose at least one delivery mode/.test(mroot().textContent) && !ADMIN.batches.some(x => x.code === 'M-SP-NONE')); closeModal();

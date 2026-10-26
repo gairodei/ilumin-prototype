@@ -1,6 +1,8 @@
 /* ============================================================
    CR — Course and batch configuration revisions (23 Oct 2026; PD-CR-* in PROVISIONAL-DECISIONS.md). User-confirmed requirements.
-   1. Delivery modes by course. Course Details records the modes a course offers (Self-Paced, Fully Assisted or both), for every
+   1. Delivery modes by course. DM (26 Oct 2026, PD-DM-*) supersedes the separate setting described here: a course's modes now come
+      from its fee options (section 1 below); STORE.crDm is kept only as a legacy value with its history.
+      As built in CR: Course Details recorded the modes a course offers (Self-Paced, Fully Assisted or both), for every
       level: STORE.crDm[pid] (with its history). Create batch shows only those modes, as checkboxes. A course with mode-specific
       fee options (Level 3, and any Level 2, 4 or 5 course once Finance approves such options for it) keeps W1/M's fee-option
       checkboxes: the accepted fee options stay the batch's record and each learner's mode comes from their option. A course
@@ -26,120 +28,137 @@ const _isCR = initStore; initStore = function () { STORE.crDm = null; STORE.crd 
 const crEntB = b => `${b.label} (${b.code})`;
 const crNo = (module, entity, what, why) => { logA(module, entity, 'Blocked: ' + what, '—', '—', why); toast(why, 'err'); return false; };
 
-/* ================= 1. Delivery modes offered by a course ================= */
+/* ================= 1. Delivery modes offered by a course — derived from its fee options (DM, 26 Oct 2026; PD-DM-*) =================
+   A course offers exactly the modes of its configured fee options (each option has one mode; several options may share a mode),
+   for every level. "Configured" means an active, mode-specific option in force (R1 store) or in the course's working financial
+   package (Section 5 — Fees & Payments, the same records Course Details lists, with the same IDs), including one awaiting Finance.
+   Finance approval never hides a mode: it is shown per mode and gates enrolment only. There is no separate "Delivery modes offered"
+   setting any more. A course with no mode-specific fee option keeps working as before: a value recorded by CR's former setting
+   (STORE.crDm, kept with its history) still applies until fee options are configured; otherwise Level 3 learners on the Standard
+   programme fee follow their batch's mode, and other levels have one programme price and one mode per batch. */
 const CRDM = () => (STORE.crDm = STORE.crDm || {});
-const crCfg = pr => { const c = pr && CRDM()[pr.id]; return c && c.modes.length ? c : null; };
-// modes of the programme's active, mode-specific fee options (the legacy Standard programme fee has none)
+const CRFO = () => (STORE.crFo = STORE.crFo || {}); // non-Level 3 courses an administrator moved to fee options by delivery mode
+const _isFoCR = initStore; initStore = function () { STORE.crFo = null; return _isFoCR.apply(this, arguments); };
+const crLegacyCfg = pr => { const c = pr && CRDM()[pr.id]; return c && c.modes.length ? c : null; };
+// modes of the programme's active, mode-specific fee options in force (the legacy Standard programme fee has none)
 const crOptModes = pid => M_MODES.filter(m => r1Opts(pid).some(o => o.status === 'Active' && !o.legacy && o.mode === m));
-// What a course offers new batches: its configuration; with none recorded, what it did before (nothing is invented)
+// …and of the options configured in its working package (read raw: cb8Work derives through cb8L3, which reads this)
+const crWorkOpts = pr => { const w = pr && typeof CB8 === 'function' ? CB8().work[pr.id] : null; return w && !w.derived ? w.opts : []; };
+const crFoModes = pr => !pr ? [] : M_MODES.filter(m => crOptModes(pr.id).includes(m) || crWorkOpts(pr).some(o => o.status === 'Active' && !o.legacy && o.mode === m));
+const crCfg = pr => { const ms = crFoModes(pr); if (ms.length) return { modes: ms, src: 'fee options' }; const c = crLegacyCfg(pr); return c ? { modes: M_MODES.filter(m => c.modes.includes(m)), src: 'legacy', by: c.by, at: c.at } : null; };
+// What a course offers new batches (nothing is invented when no fee option has a mode)
 function crModes(pr) {
-  const c = crCfg(pr); if (c) return { modes: M_MODES.filter(m => c.modes.includes(m)), src: 'config' };
-  return pr && r1IsL3Pid(pr.id) ? { modes: crOptModes(pr.id), src: 'fee options' } : { modes: [], src: 'none' };
+  const c = crCfg(pr); if (c) return { modes: c.modes, src: c.src };
+  return pr && r1IsL3Pid(pr.id) ? { modes: [], src: 'fee options' } : { modes: [], src: 'none' };
 }
-// Fees & Payments uses fee options with modes: Level 3, a course that offers both modes, or one that already has such options
-const crMultiFee = pr => !!pr && (pr.level === 'Level 3' || r1IsL3Pid(pr.id) || ((crCfg(pr) || {}).modes || []).length > 1);
-const crSupOf = m => (m === 'Self-Paced' ? 'Self-paced' : 'Fully assisted');
+// Fee options with modes (Section 5): Level 3, any course holding or configuring them, one moved to them, or a former two-mode setting
+const crMultiFee = pr => !!pr && (pr.level === 'Level 3' || r1IsL3Pid(pr.id) || !!CRFO()[pr.id] || crWorkOpts(pr).some(o => o.status === 'Active' && !o.legacy && o.mode) || ((crLegacyCfg(pr) || {}).modes || []).length > 1);
 
-function crSet(pr, modes, why) {
-  const c = crCfg(pr), was = c ? mTxt(c.modes) : 'Not configured', at = now().toISOString(), by = ADMIN.me.name, ms = M_MODES.filter(m => modes.includes(m));
-  CRDM()[pr.id] = { modes: ms, at, by, hist: ((c && c.hist) || []).concat([[at, by, was, mTxt(ms), why]]) };
-  logA('NVQ Programmes', cbEnt(pr), c ? 'Delivery modes offered changed' : 'Delivery modes offered set', was, mTxt(ms), why);
+// An option's Finance state: in force before packages ('force'), approved in the package in force, waiting for Finance, or not yet sent
+function crFoSt(pr, o) {
+  if (typeof cb8Managed !== 'function' || !cb8Managed(pr)) return o.status === 'Active' ? 'force' : 'retired';
+  const cur = cb8Cur(pr.id), x = cur && cur.opts.find(y => y.id === o.id && y.status === 'Active');
+  if (x && x.mode === o.mode && x.fee === o.fee && x.label === o.label) return 'approved';
+  const wf = cb8Wf(pr); return wf && wf.status === 'Pending' ? 'pending' : 'draft';
 }
-// Why the course's modes can't become `modes` now ('' when they can): Finance is reviewing the terms, or fee options use a mode left out
-function crWhyNot(pr, modes) {
-  const wf = typeof cb8Wf === 'function' ? cb8Wf(pr) : null, T = typeof e1T === 'function' ? e1T(pr.id) : null;
-  if ((wf && wf.status === 'Pending') || (T && T.status === 'Pending')) return 'The payment terms are with Finance for review — change the delivery modes after Finance decides.';
-  const out = M_MODES.filter(m => !modes.includes(m)), act = r1Opts(pr.id).filter(o => o.status === 'Active' && !o.legacy && out.includes(o.mode)).map(o => o.label);
-  const work = typeof cb8Managed === 'function' && cb8Managed(pr) ? cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.legacy && out.includes(o.mode)).map(o => o.label) : [];
-  const all = [...new Set(act.concat(work))];
-  return all.length ? `${all.join(', ')}: ${all.length > 1 ? 'active fee options' : 'an active fee option'} for ${mTxt(out)}. Retire ${all.length > 1 ? 'them' : 'it'} in Section 5 — Fees & Payments first (Finance approval), or keep that mode.` : '';
+const CR_FOST = { force: ['In force', 'green'], approved: ['Approved by Finance', 'green'], pending: ['Waiting for Finance review', 'amber'], draft: ['Finance approval required', 'amber'], retired: ['Retired', 'grey'] };
+// The course's fee options, one list for Course Details (the working package when there is one, else the options in force)
+const crFoOpts = pr => ((typeof cb8Managed === 'function' && cb8Managed(pr)) ? cb8Work(pr).opts : r1Opts(pr.id)).filter(o => o.status === 'Active');
+const crModeSt = (pr, m) => { const st = crFoOpts(pr).filter(o => !o.legacy && o.mode === m).map(o => crFoSt(pr, o)); return st.some(s => s === 'approved' || s === 'force') ? 'approved' : st.includes('pending') ? 'pending' : 'draft'; };
+const crFeesGo = pr => `<button class="btn btn-sm" data-go="a-programmes" data-id="${pr.id}" data-tab="payments">Section 5 — Fees &amp; Payments</button>`;
+function crFoList(pr) {
+  const os = crFoOpts(pr); if (!os.length) return '<p class="small muted cr-fo-none">No fee options yet.</p>';
+  return `<ul class="list small cr-fo-l">${os.map(o => { const [t, c] = CR_FOST[crFoSt(pr, o)]; return `<li class="li cr-fo" data-o="${esc(o.id)}"><span class="code">${esc(o.id)}</span> <strong>${esc(o.label || 'Unnamed fee option')}</strong> · ${esc(o.legacy ? R1_LEGACY_MODE : o.mode || 'No delivery mode')} · ${o.fee > 0 || o.legacy ? money(o.legacy ? r1FeeOf(o) : o.fee, 'GBP') : '<span class="muted">fee not set</span>'} ${chip(t, c)}</li>`; }).join('')}</ul>`;
 }
 const crModesHtml = pr => {
-  const m = crModes(pr), c = crCfg(pr);
-  if (m.src === 'config') return `<span class="cr-dm-v">${m.modes.map(x => chip(x, x === 'Self-Paced' ? 'blue' : 'grey')).join(' ')}</span> <span class="xs muted">Set by ${esc(c.by)} on ${fd(c.at)}. Only these modes appear when a batch is created.</span>`;
-  if (m.src === 'fee options' && !m.modes.length) return `<span class="muted cr-dm-v">No mode-specific fee options yet</span> <span class="xs muted">Learners on the Standard programme fee follow their batch's delivery mode. The course's delivery modes aren't configured (legacy).</span>`;
-  if (m.src === 'fee options') return `<span class="cr-dm-v">${esc(mTxt(m.modes))}</span> <span class="xs muted">From the course's active fee options — the course's delivery modes aren't configured (legacy).</span>`;
-  return `<span class="muted cr-dm-v">Not configured</span> <span class="xs muted">Each new batch has one delivery mode, chosen when it is created (as before; default ${esc(n2DefaultFor(pr.title))}).</span>`;
+  const m = crModes(pr), c = crCfg(pr), hist = (CRDM()[pr.id] || {}).hist ? ` <button class="btn btn-sm btn-ghost" data-act="crDmHist" data-id="${pr.id}">Former setting</button>` : '';
+  if (m.src === 'fee options' && m.modes.length) return `<span class="cr-dm-v">${m.modes.map(x => { const [t, k] = CR_FOST[crModeSt(pr, x)]; return `<span class="cr-dm-m" data-m="${x}">${chip(x, x === 'Self-Paced' ? 'blue' : 'grey')} ${chip(t, k)}</span>`; }).join(' ')}</span> <span class="xs muted">From the course's fee options — each fee option has one delivery mode. Finance approval is needed before anyone can enrol in a mode; batches can be configured for it before then.</span>${hist}`;
+  if (m.src === 'legacy') return `<span class="cr-dm-v">${esc(mTxt(m.modes))}</span> <span class="xs muted">Recorded by ${esc(c.by)} on ${fd(c.at)}, before delivery modes came from fee options (kept). Fee options with a delivery mode replace it once they are configured.</span>${hist}`;
+  if (m.src === 'fee options') return `<span class="muted cr-dm-v">No fee options with a delivery mode yet</span> <span class="xs muted">Learners on the Standard programme fee follow their batch's delivery mode (legacy), so each batch has one mode for them. Add fee options by delivery mode to offer both.</span>`;
+  return `<span class="muted cr-dm-v">One programme price</span> <span class="xs muted">Each new batch has one delivery mode, chosen when it is created (as before; default ${esc(n2DefaultFor(pr.title))}). Use fee options by delivery mode to offer both in one batch.</span>`;
 };
 
-/* ---------- Course Details: the field (new and Draft courses) ---------- */
-const crField = (sel, multiNote) => `<fieldset class="field full cr-dm"><legend class="lbl">Delivery modes offered <span class="cb-req">Required</span></legend>
-  <div class="row cr-dm-opts">${M_MODES.map((m, k) => `<label class="check"><input type="checkbox" class="cr-dm-c" id="cr-dm-${k}" value="${m}" ${sel.includes(m) ? 'checked' : ''}><span>${m}</span></label>`).join('')}</div>
-  <span class="hint">Only these modes appear when a batch of this course is created; tick one or both. ${esc(multiNote)}</span></fieldset>`;
-const CR_MULTI_NOTE = 'When a course offers both, each learner\'s mode comes from the fee option they choose — give each mode a fee option in Section 5 — Fees & Payments (Finance approves them).';
-const _snapCR = cbSnap; cbSnap = function (form) { const s = _snapCR.apply(this, arguments); s.dm = [...form.querySelectorAll('.cr-dm-c:checked')].map(x => x.value); return s; };
+/* ---------- Course Details form: no separate modes field; fee options for every level (a one-price course stays as before) ---------- */
+const CR_PM_HINT = 'Fee options by delivery mode: each option has one mode, and the course offers the modes its options use — one batch can take both. One programme price: as before, each batch has one delivery mode.';
+const crPmField = pm => `<fieldset class="field full cr-pm" style="border:0;padding:0"><legend class="lbl">How is this course priced?</legend><div class="row">${[['opts', 'Fee options by delivery mode'], ['price', 'One programme price']].map(([v, l]) => `<label class="check"><input type="radio" name="cr-pm" id="cr-pm-${v}" value="${v}" data-onchange="crPm" ${pm === v ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div><span class="hint">${esc(CR_PM_HINT)}</span></fieldset>`;
+const _snapCR = cbSnap; cbSnap = function (form) { const s = _snapCR.apply(this, arguments); const p = form.querySelector('input[name="cr-pm"]:checked'); if (p) s.pm = p.value; return s; };
 const _cbFormCR = cbForm;
 cbForm = function (pr, key) {
-  let h = _cbFormCR.apply(this, arguments); const c = CB_CACHE[key], sel = c && c.dm ? c.dm : (crCfg(pr) || { modes: [] }).modes;
+  let h = _cbFormCR.apply(this, arguments); const c = CB_CACHE[key];
   h = h.replace(/<div class="field"><label for="np-code">[\s\S]*?<\/div>/, '')                 // 2. no Academy course code
     .replace('<label for="np-t">Title</label>', '<label for="np-t">Course name</label>')
     .replace('Separate from the Academy&#39;s course code.', 'Separate from the Academy&#39;s own records.').replace("Separate from the Academy's course code.", "Separate from the Academy's own records.")
-    .replace(/<fieldset class="field full r1-np-sup"[^>]*>/, '<fieldset class="field full r1-np-sup" style="border:0;padding:0" hidden="">'); // the old default is replaced by the modes offered
-  const at = ['<p class="field full cb-interim', '<div class="field r1-np-price"'].map(s => h.indexOf(s)).filter(i => i >= 0)[0];
-  return at == null ? h + crField(sel, CR_MULTI_NOTE) : h.slice(0, at) + crField(sel, CR_MULTI_NOTE) + h.slice(at);
+    .replace(/<fieldset class="field full r1-np-sup"[^>]*>/, '<fieldset class="field full r1-np-sup" style="border:0;padding:0" hidden="">'); // modes come from the fee options
+  // an existing course: its fee options (the Section 5 records, with their Finance state) and the modes they give
+  h = h.replace(/<div class="field full r1-np-opts"><span class="lbl">Fee options<\/span><ul class="list small">[\s\S]*?<\/ul><span class="hint">[^<]*<\/span><\/div>/, () => `<div class="field full r1-np-opts cr-fo-f"><span class="lbl">Fee options</span>${crFoList(pr)}<span class="hint">Managed in Section 5 — Fees &amp; Payments. These are the same records: they are changed there and approved by Finance. Delivery modes offered: <strong class="cr-fo-m">${esc(mTxt(crModes(pr).modes))}</strong>.</span></div>`);
+  if (pr && pr.id && pr.level !== 'Level 3' && crFoOpts(pr).some(o => !o.legacy && o.mode)) h = h.replace(/<div class="r1-np-l3 field full" hidden/, '<div class="r1-np-l3 field full"');
+  // a new course of another level: choose fee options by delivery mode or one programme price (the default, as before)
+  if (h.includes('class="r1-np-list"')) { const pm = (c && c.pm) || 'price', i = h.indexOf('<div class="field r1-np-price"'); if (i >= 0) h = h.slice(0, i) + crPmField(pm) + h.slice(i); }
+  return h;
 };
 // 2. The Academy's course code isn't entered any more: a programme keeps the code it has (never cleared, never invented)
 cbCodeRead = function (pr) { return pr && pr.code ? pr.code : null; };
-const _lvCR = INP.r1NpLevel; INP.r1NpLevel = el => { const r = _lvCR(el); $$('main .cb-det-form .r1-np-sup').forEach(x => { x.hidden = true; }); return r; };
-// the modes ticked on the page; null (field marked) when none
-function crRead() { const ms = $$('main .cb-det-form .cr-dm-c:checked').map(x => x.value).filter(m => M_MODES.includes(m)); if (!ms.length) { fieldErr('#cr-dm-0', 'Choose the delivery modes this course offers — Self-Paced, Fully Assisted or both'); return null; } return ms; }
-// a single mode becomes the old programme default too (it pre-selected batch modes; nothing else reads it for new batches)
-const crSyncSup = ms => { if (ms.length !== 1 || v8('#np-l') === 'Level 3') return; // Level 3: that setting is only the class pattern (R1)
-  const r = $(`main .cb-det-form input[name="np-s"][value="${crSupOf(ms[0])}"]`); if (r) $$('main .cb-det-form input[name="np-s"]').forEach(x => { x.checked = x === r; }); };
-// Level 3 creation rows: every row uses an offered mode (an offered mode without an option yet is caught by Review & Publish)
-function crRowsOk(ms) {
-  if (v8('#np-l') !== 'Level 3') return true;
-  const bad = $$('main .cb-new .r1-np-row').map(r => r.querySelector('.r1-np-m').value).filter(m => m && !ms.includes(m));
-  if (bad.length) return fieldErr('#cr-dm-0', `A fee option uses ${bad[0]}, which this course doesn't offer — tick it or change the option`), false;
-  return true;
+const crPmOf = () => ($(`${r1Sc()} input[name="cr-pm"]:checked`) || {}).value || 'price';
+function crPmSync() {
+  const sc = r1Sc(), lv = $(`${sc} #np-l`); if (!lv || !$(`${sc} .cr-pm`)) return; const l3 = lv.value === 'Level 3', opts = !l3 && crPmOf() === 'opts';
+  $$(`${sc} .cr-pm`).forEach(x => { x.hidden = l3; });
+  if (!l3) { $$(`${sc} .r1-np-l3`).forEach(x => { x.hidden = !opts; }); $$(`${sc} .r1-np-price`).forEach(x => { x.hidden = opts; }); }
 }
-const _createCR = ACT.cbDetCreate;
-ACT.cbDetCreate = function (el) {
-  const tok = (el && el.dataset && el.dataset.tok) || CB_TOK;
-  if (!cbCanCreate() || (tok && CB_MADE[tok]) || !$('main .cb-det-form.cb-new')) return _createCR.apply(this, arguments);
-  if (!ch8ReadDetails(null) || !cbExtras(null)) return false; // the form's own checks first (title, level, fees, observations)
-  const ms = crRead(); if (!ms || !crRowsOk(ms)) return false; crSyncSup(ms);
-  const pr = _createCR.apply(this, arguments);
-  if (pr && pr.id && !crCfg(pr)) { crSet(pr, ms, 'Set when the course was created'); pr.crNew = true; }
+const _lvCR = INP.r1NpLevel; INP.r1NpLevel = el => { const r = _lvCR(el); $$('main .cb-det-form .r1-np-sup').forEach(x => { x.hidden = true; }); crPmSync(); return r; };
+INP.crPm = () => crPmSync();
+const _rnPmCR = render; render = function () { const r = _rnPmCR.apply(this, arguments); try { crPmSync(); } catch (e) { /* no details form */ } return r; };
+// Another level with fee options by delivery mode: the rows are read as for Level 3 (the single price isn't used)
+const crPmNew = pr => !pr && v8('#np-l') !== 'Level 3' && crPmOf() === 'opts' && !!$(`${r1Sc()} .r1-np-list`);
+const _readPmCR = ch8ReadDetails;
+ch8ReadDetails = function (pr) {
+  if (!crPmNew(pr)) return _readPmCR.apply(this, arguments);
+  const P = $('#np-p'), keep = P.value; P.value = '1'; let d; try { d = _readPmCR.apply(this, arguments); } finally { P.value = keep; } if (!d) return null;
+  const opts = r1NpRead(); if (!opts) return null;
+  d.price = Math.min(...opts.map(o => o.fee)); d.r1opts = opts; return d;
+};
+const _createPmCR = ch8Create;
+ch8Create = function (d) {
+  const pr = _createPmCR.apply(this, arguments);
+  if (pr && d && d.r1opts && pr.level !== 'Level 3' && !r1Opts(pr.id).length) {
+    CRFO()[pr.id] = { at: now().toISOString(), by: ADMIN.me.name, r: 'Set when the course was created' }; R1().opts[pr.id] = [];
+    d.r1opts.forEach(o => r1AddOpt(pr.id, { label: o.label, fee: o.fee, mode: o.mode }, 'Set when the programme was created', 'Added (new programme)'));
+  }
   return pr;
 };
-const _saveCR = ACT.cbDetSave;
-ACT.cbDetSave = function (el) {
-  const pr = cbPr(el && el.dataset && el.dataset.id);
-  if (!pr || cbRetired(pr) || !cbAdmin() || !cbDetEditable(pr) || !$('main .cb-det-form .cr-dm')) return _saveCR.apply(this, arguments);
-  const ms = crRead(); if (!ms) return; const c = crCfg(pr), ch = !c || !mSame(ms, c.modes);
-  if (ch) { const why = crWhyNot(pr, ms); if (why) { fieldErr('#cr-dm-0', why); return; } }
-  crSyncSup(ms); const a0 = ADMIN.audit.length, r = _saveCR.apply(this, arguments);
-  if (ch && ADMIN.audit.slice(0, ADMIN.audit.length - a0).some(a => a.action === 'Details changed')) { crSet(pr, ms, 'Course Details'); render(); }
-  return r;
-};
 
-/* ---------- Read-only Course Details: modes offered, the configuration path; the course code only as history ---------- */
+/* ---------- Read-only Course Details: the fee options and the modes they give; the course code only as history ---------- */
 const crCanCfg = pr => cbAdmin() && !cbRetired(pr);
 const _viewCR = cbDetailsView;
 cbDetailsView = function (pr) {
   let h = _viewCR.apply(this, arguments);
   h = h.replace(/<dt>Course code<\/dt><dd>[\s\S]*?<\/dd>/, () => pr.code ? `<dt>Former Academy course code</dt><dd><span class="mono">${esc(pr.code)}</span> <span class="xs muted">Kept for history — no longer entered.</span></dd>` : '');
-  return h.replace(/<dt>Delivery mode<\/dt><dd>[\s\S]*?<\/dd>/, () => `<dt>Delivery modes offered</dt><dd class="cr-dm-ro">${crModesHtml(pr)}${crCanCfg(pr) ? ` <button class="btn btn-sm" data-act="crDmEdit" data-id="${pr.id}">${crCfg(pr) ? 'Change delivery modes' : 'Configure delivery modes'}</button>` : ''}${(CRDM()[pr.id] || {}).hist ? ` <button class="btn btn-sm btn-ghost" data-act="crDmHist" data-id="${pr.id}">History</button>` : ''}</dd>`);
+  const fo = crFoOpts(pr).length && crMultiFee(pr) ? `<dt>Fee options</dt><dd class="cr-fo-ro">${crFoList(pr)}</dd>` : '';
+  const go8 = crCanCfg(pr) && !h.includes('cb-feelink'); // the page's own "Open Fees & Payments" link (CB-F), where it has one
+  return h.replace(/<dt>Delivery mode<\/dt><dd>[\s\S]*?<\/dd>/, () => `${fo}<dt>Delivery modes offered</dt><dd class="cr-dm-ro">${crModesHtml(pr)}${go8 ? ` ${crFeesGo(pr)}` : ''}</dd>`);
 };
-ACT.crDmEdit = el => {
-  const pr = cbPr(el && el.dataset && el.dataset.id); if (!pr) return;
-  if (!cbAdmin()) return crNo('NVQ Programmes', cbEnt(pr), 'configure delivery modes', 'Only the Super Admin, Academic Admin or System Admin can configure a course\'s delivery modes.');
-  if (cbRetired(pr)) return crNo('NVQ Programmes', cbEnt(pr), 'configure delivery modes (programme retired)', 'This programme is retired, so it is read-only.');
-  const c = crCfg(pr), cur = c ? c.modes : crModes(pr).modes;
-  reasonDlg({ title: 'Delivery modes offered — ' + esc(pr.title), ok: 'Save', body: `<p class="small">${c ? '' : 'This course has no delivery-mode configuration yet. '}Only the modes ticked appear when a batch of this course is created from now on. Existing batches, learners, fee options and payment terms don't change.</p>`,
-    extra: `<fieldset class="field cr-dm" id="crd-fs" style="border:0;padding:0"><legend class="lbl">Delivery modes offered</legend><div class="row">${M_MODES.map((m, k) => `<label class="check"><input type="checkbox" class="crd-c" id="crd-${k}" value="${m}" ${cur.includes(m) ? 'checked' : ''}><span>${m}</span></label>`).join('')}</div><span class="hint">${esc(CR_MULTI_NOTE)}</span></fieldset>`,
-    onOk: r => {
-      if (!cbAdmin()) { closeModal(); return crNo('NVQ Programmes', cbEnt(pr), 'configure delivery modes', 'Only the Super Admin, Academic Admin or System Admin can configure a course\'s delivery modes.'); }
-      const ms = $$('#modal-root .crd-c:checked').map(x => x.value).filter(m => M_MODES.includes(m));
-      if (!ms.length) { fieldErr('#crd-0', 'Tick at least one delivery mode'); return false; }
-      if (c && mSame(ms, c.modes)) { fieldErr('#crd-0', 'Nothing has changed'); return false; }
-      const why = crWhyNot(pr, ms); if (why) { logA('NVQ Programmes', cbEnt(pr), 'Blocked: change delivery modes offered', c ? mTxt(c.modes) : 'Not configured', mTxt(ms), why); fieldErr('#crd-0', why); return false; }
-      crSet(pr, ms, r); render(); toast('Delivery modes saved. They apply to batches created from now on.');
-    } });
+// The former setting (CR) is no longer edited: a direct call is refused and points to the fee options
+ACT.crDmEdit = el => { const pr = cbPr(el && el.dataset && el.dataset.id); if (!pr) return; return crNo('NVQ Programmes', cbEnt(pr), 'set delivery modes separately', 'A course\'s delivery modes come from its fee options — configure them in Section 5 — Fees & Payments.'); };
+ACT.crDmHist = el => { const c = CRDM()[el.dataset.id]; if (!c) return; openModal({ title: 'Former delivery-mode setting — history', body: `<p class="small muted">Recorded before delivery modes came from fee options. Kept for history; fee options with a delivery mode replace it.</p><ul class="list">${c.hist.slice().reverse().map(h => `<li class="li"><div class="li-b"><strong>${esc(h[3])}</strong><span class="small">Was: ${esc(h[2])}</span><span class="xs muted">${fdt(h[0])} · ${esc(h[1])} · ${esc(h[4])}</span></div></li>`).join('')}</ul>`, actions: [{ label: 'Close', cls: 'btn-primary' }] }); };
+
+/* ---------- Section 5: another level's single programme fee can become fee options by delivery mode (explicit, audited) ----------
+   Nothing is invented: the existing programme fee stays in the draft package, without a mode until the administrator gives it one
+   (or removes it); Finance approves the package as before. Learners, batches and the terms in force don't change until then. */
+ACT.crFoStart = el => {
+  const g = cb8Guard(el, 'use fee options by delivery mode'); if (!g) return; const { pr } = g;
+  if (crMultiFee(pr)) return toast('This course already uses fee options by delivery mode.', 'info');
+  reasonDlg({ title: 'Use fee options by delivery mode — ' + esc(pr.title), ok: 'Use fee options', body: `<p class="small">Each fee option will have one delivery mode, and the course will offer the modes its options use. The current programme fee stays in the draft package: give it a delivery mode, or remove it, and add other options. Nothing changes for learners or batches until Finance approves the package.</p>`, onOk: r => {
+    if (!cb8Guard(el, 'use fee options by delivery mode')) return false;
+    cb8Mut(pr); CRFO()[pr.id] = { at: now().toISOString(), by: ADMIN.me.name, r }; // the working copy is made first, so the programme fee is kept
+    cb8Touch(pr, 'Fee options by delivery mode', 'One programme fee', 'Fee options by delivery mode', r); render(); toast('Fee options by delivery mode are on. Give each option a delivery mode, then submit to Finance.');
+  } });
 };
-ACT.crDmHist = el => { const c = CRDM()[el.dataset.id]; if (!c) return; openModal({ title: 'Delivery modes offered — history', body: `<ul class="list">${c.hist.slice().reverse().map(h => `<li class="li"><div class="li-b"><strong>${esc(h[3])}</strong><span class="small">Was: ${esc(h[2])}</span><span class="xs muted">${fdt(h[0])} · ${esc(h[1])} · ${esc(h[4])}</span></div></li>`).join('')}</ul>`, actions: [{ label: 'Close', cls: 'btn-primary' }] }); };
-CB_WRITE.push('crDmEdit');
+CB_WRITE.push('crFoStart');
+const _panelCR = cb8Panel;
+cb8Panel = function (pr) {
+  const h = _panelCR.apply(this, arguments); if (crMultiFee(pr)) return h;
+  const wf = cb8Wf(pr), ed = cbAdmin() && !cbRetired(pr) && !(wf && wf.status === 'Pending');
+  return h.replace(/<p class="xs muted">[^<]*: one programme fee \(multiple fee options are a Level 3 feature — Q-CB-10\)\.[^<]*<\/p>/, () => `<div class="note b-grey cr-fo-one">${ic('info')}<div class="small">${esc(pr.level)}: one programme price, so each batch has one delivery mode. To offer Self-Paced and Fully Assisted with their own fees (several options per mode are allowed), use fee options by delivery mode.${ed ? ` <button class="btn btn-sm" data-act="crFoStart" data-p="${pr.id}">Use fee options by delivery mode</button>` : ''}</div></div>`);
+};
 
 // Builder header and Review & Publish: no Academy course code; the modes offered instead of the old default
 const _pageCR = cbPage; cbPage = function (pr) { return _pageCR.apply(this, arguments).replace(/ · Course code <span class="mono cb-code">[^<]*<\/span>/, ''); };
@@ -153,30 +172,11 @@ const _rvChecksCR = cbRvChecks;
 cbRvChecks = function (pr) {
   const out = _rvChecksCR.apply(this, arguments); if (!cbRvKind(pr)) return out;
   const tag = m => { const [sec, tab] = cbRvWhere(pr, m); return { msg: m, sec, tab }; }, c = crCfg(pr);
-  if (!c && pr.crNew) out.block.push(tag('Course Details: choose the delivery modes this course offers'));
-  else if (!c) out.warn.push(tag('Delivery modes offered aren\'t configured for this course — new batches keep working as before. Configure them in Course Details'));
-  else if (crMultiFee(pr)) { const miss = c.modes.filter(m => !crOptModes(pr.id).includes(m)); if (miss.length) out.warn.push(tag(`Finance approval required for ${mTxt(miss)}: offered (Course Details), but no approved fee option has ${miss.length > 1 ? 'these modes' : 'this mode'} yet — batches can be configured for it; no one can enrol in it until Finance approves an option (Section 5 — Fees & Payments)`)); } // PD-CR-14: a warning, not a blocker
+  if (c && c.src === 'fee options' && pr.status !== 'Draft') { const miss = c.modes.filter(m => !crOptModes(pr.id).includes(m)); if (miss.length) out.warn.push(tag(`Finance approval required for ${mTxt(miss)}: a fee option with ${miss.length > 1 ? 'these modes' : 'this mode'} is configured but not yet approved — batches can be configured for it; no one can enrol in it until Finance approves (Section 5 — Fees & Payments)`)); } // PD-CR-14: a warning, not a blocker (a Draft is already blocked on its package)
   return out;
 };
 
-/* ---------- Fee options use only modes the course offers (Fees & Payments, the options card) ---------- */
-const crModeOk = (pr, mode) => { const c = crCfg(pr); return !c || !mode || c.modes.includes(mode); };
-const _issCR = cb8Issues;
-cb8Issues = function (pr, P) {
-  const out = _issCR.apply(this, arguments), c = crCfg(pr); if (!c) return out;
-  cb8Act(P).filter(o => !o.legacy && o.mode && !c.modes.includes(o.mode)).forEach(o => out.push({ o: o.id, msg: `${o.label || 'A fee option'}: ${o.mode} isn't offered by this course (Course Details) — change its mode or retire it.` }));
-  return out;
-};
-const _optCR = ACT.cb8Opt;
-ACT.cb8Opt = function (el) {
-  const r = _optCR.apply(this, arguments), pr = cbPr(el && el.dataset && el.dataset.p), c = crCfg(pr), sel = $('#modal-root #c8-m');
-  if (!c || !sel || !MODAL) return r;
-  [...sel.options].forEach(o => { if (o.value && !c.modes.includes(o.value) && !o.selected) o.remove(); });
-  const a = MODAL.actions.find(x => /primary/.test(x.cls || '')); if (a && a.fn) { const g = a.fn; a.fn = (...x) => { const m = mval('#c8-m'); if (m && !c.modes.includes(m)) { logA('Payment Plans', cbEnt(pr), 'Blocked: fee option in a mode the course doesn\'t offer', '—', m, 'Course Details: ' + mTxt(c.modes)); return fieldErr('#c8-m', `${m} isn't offered by this course (Course Details)`), false; } return g(...x); }; }
-  return r;
-};
-const _r1ReadCR = r1Read;
-r1Read = function (o, pid) { const f = _r1ReadCR.apply(this, arguments); if (f && !(o && o.legacy) && !crModeOk(cbPr(pid), f.mode)) return fieldErr('#fo-m', `${f.mode} isn't offered by this course (Course Details)`), false; return f; };
+// DM (PD-DM-01): fee options are the source of the modes, so no mode check against a separate setting (CR's checks removed)
 // the options card is titled for any level that has options
 const _r1CardCR = r1Card; r1Card = function (pid) { const h = _r1CardCR.apply(this, arguments), pr = r1Pr(pid); return pr && pr.level !== 'Level 3' ? h.replace('Level 3 fee options — ', 'Fee options — ') : h; };
 
@@ -205,20 +205,22 @@ function crNbBox() {
   const co = $('#modal-root #nb-co'); if (!co) return; ['#cr-nb', '.cr-nb-note', '.cr-src', '.cr-miss', '.cr-pend-sum'].forEach(s => $$('#modal-root ' + s).forEach(x => x.remove()));
   $$('#modal-root .m-l245').forEach(x => { x.style.display = 'none'; });
   const pid = s4PidOfTitle(co.value), pr = pid && s3Pr(pid), dm = $('#modal-root #nb-dm'), f = dm && dm.tagName === 'SELECT' && dm.closest('.field'); if (!pr) return;
-  const c = crCfg(pr);
+  const c = crCfg(pr), src = c && c.src === 'legacy' ? '(recorded before delivery modes came from fee options)' : '(from its fee options)';
   if (r1IsL3Pid(pid)) { // M's fee-option checkboxes; an offered mode without an approved option can be configured, marked as waiting for Finance
-    const fs = $('#modal-root #w1-nb-acc'); if (!fs) return;
-    fs.querySelector('legend').insertAdjacentHTML('afterend', `<p class="xs muted cr-src">${c ? `This course offers: <strong>${esc(mTxt(c.modes))}</strong> (Course Details).` : 'This course\'s delivery modes aren\'t configured, so they come from its active fee options, as before.'}</p>`);
+    const fs = $('#modal-root #w1-nb-acc'); if (!fs) return; fs.querySelector('legend').textContent = 'Delivery modes accepted';
+    fs.querySelector('legend').insertAdjacentHTML('afterend', `<p class="xs muted cr-src">${c ? `This course offers: <strong>${esc(mTxt(c.modes))}</strong> ${src}.` : 'This course has no fee options with a delivery mode yet (legacy), so a batch has one delivery mode, for its learners on the Standard programme fee. To accept Self-Paced and Fully Assisted learners in one batch, add fee options by delivery mode in Section 5 — Fees &amp; Payments.'}</p>`);
     const miss = c ? c.modes.filter(m => !crOptModes(pid).includes(m)) : [], sum = fs.querySelector('.m-sum'), keep = CR_NBM && CR_NBM.course === co.value ? CR_NBM.pend || [] : [];
+    const intro = fs.querySelector('.m-intro'); // M's intro counts approved options only ("… isn't available"): a mode waiting for Finance is offered
+    if (miss.length && intro) intro.textContent = `Tick one mode or both. ${mTxt(miss)} ${miss.length > 1 ? 'have' : 'has'} a fee option waiting for Finance: it can be configured now, and no one can enrol in it until Finance approves and it is enabled for this batch. Each learner keeps their own fee option, delivery mode and financial terms.`;
     miss.forEach(m => (sum || fs.lastElementChild).insertAdjacentHTML('beforebegin', `<div class="cr-miss"><label class="check m-mh"><input type="checkbox" class="cr-pend" value="${m}" data-onchange="crPendTick" ${keep.includes(m) ? 'checked' : ''} aria-label="Configure ${m} — ${CR_FIN}"><span><span class="r2-gh">${m}</span> ${chip(CR_FIN, 'amber')} <span class="xs muted">No approved fee option has this mode yet. It can be configured now; no one can enrol in it until Finance approves an option and it is enabled for this batch.</span></span></label></div>`));
     crPendSync(); return;
   }
   if (!f) return;
-  if (!c) { f.style.display = ''; f.insertAdjacentHTML('beforeend', '<span class="hint cr-nb-note">This course\'s delivery modes aren\'t configured, so the batch has one delivery mode, chosen here as before. An administrator can configure them in the course builder (Course Details).</span>'); return; }
+  if (!c) { f.style.display = ''; f.insertAdjacentHTML('beforeend', '<span class="hint cr-nb-note">This course has one programme price, so the batch has one delivery mode, chosen here as before. To accept both modes in one batch, the course needs fee options by delivery mode (Section 5 — Fees &amp; Payments).</span>'); return; }
   f.style.display = 'none';
   const multi = crMultiFee(pr), keep = CR_NB && CR_NB.course === co.value ? CR_NB.modes : null, sel = keep || (c.modes.length === 1 ? c.modes.slice() : c.modes.filter(m => m === dm.value));
-  f.insertAdjacentHTML('afterend', `<fieldset class="field full cr-nb" id="cr-nb" data-course="${esc(co.value)}" ${multi ? 'data-multi="1"' : ''} style="border:0;padding:0"><legend class="lbl">Delivery modes this batch accepts</legend>
-    <p class="xs muted">This course offers: <strong>${esc(mTxt(c.modes))}</strong> (Course Details).${c.modes.length > 1 ? ' Tick one mode or both.' : ''}</p>
+  f.insertAdjacentHTML('afterend', `<fieldset class="field full cr-nb" id="cr-nb" data-course="${esc(co.value)}" ${multi ? 'data-multi="1"' : ''} style="border:0;padding:0"><legend class="lbl">Delivery modes accepted</legend>
+    <p class="xs muted">This course offers: <strong>${esc(mTxt(c.modes))}</strong> ${src}.${c.modes.length > 1 ? ' Tick one mode or both.' : ''}</p>
     <div class="row">${c.modes.map((m, k) => `<label class="check"><input type="checkbox" class="cr-nb-m" id="cr-nb-${k}" value="${m}" data-onchange="crNbTick" ${sel.includes(m) ? 'checked' : ''}><span>${m}${multi ? ` ${chip(CR_FIN, 'amber')}` : ''}</span></label>`).join('')}</div>
     ${multi ? `<p class="xs muted">No fee option of this course has been approved by Finance yet (Section 5 — Fees &amp; Payments). The batch can be configured now; enrolment, fee-option choice, payment and learner allocation stay closed for each mode until Finance approves an option of that mode and an administrator enables it for this batch.</p>` : ''}<p class="small cr-nb-sum" aria-live="polite"></p></fieldset>`);
   crNbSync();
@@ -332,6 +334,10 @@ openModal = function (m) {
   if (m && m.title === 'Create batch — step 5 of 5' && typeof m.body === 'string') m.body = m.body.replace(/(<dt>Code<\/dt><dd class="mono">[^<]*<\/dd>)/, (x) => `<dt>Batch code</dt>${x.slice(13)}<dt>Awarding body batch code</dt><dd class="cr-abc-rev">${CR_ABC && CR_ABC.abc ? `<span class="mono">${esc(CR_ABC.abc)}</span>` : '<span class="muted">Not recorded</span>'}</dd>`);
   if (m && m.title === 'Create batch — step 5 of 5' && typeof m.body === 'string' && CR_NBM && CR_NBM.modes.length) m.body = m.body.replace(/(<dt>Academic Coordinator<\/dt>)/, () => `<dt>Mode configured</dt><dd class="cr-rev-m">${esc(mTxt(CR_NBM.modes))}</dd><dt>Ready for enrolment</dt><dd class="cr-rev-r">${esc(mTxt(CR_NBM.rdy))}${CR_NBM.modes.some(x => !CR_NBM.rdy.includes(x)) ? ` ${chip(CR_FIN + ': ' + mTxt(CR_NBM.modes.filter(x => !CR_NBM.rdy.includes(x))), 'amber')}` : ''}</dd><dt>Academic Coordinator</dt>`);
   const r = _omCR.apply(this, arguments);
+  // DM: the review lists every mode ticked (M's row counted only modes with approved options); "Ready for enrolment" says which can take learners
+  if (m && m.title === 'Create batch — step 5 of 5' && MODAL && CR_NBM && CR_NBM.modes.length && typeof MODAL.body === 'string' && MODAL.body.includes('m-nb-rev')) {
+    MODAL.body = MODAL.body.replace(/<dd class="m-nb-rev">[^<]*<\/dd>/, () => `<dd class="m-nb-rev">${esc(mTxt(CR_NBM.modes))}</dd>`).replace(/<dt>Mode configured<\/dt><dd class="cr-rev-m">[^<]*<\/dd>/, ''); renderModal();
+  }
   if (m && m.title === 'Create batch — step 1 of 5' && MODAL) (MODAL.actions || []).forEach(a => { if (a.fn && a.cls && /primary/.test(a.cls)) { const g = a.fn; a.fn = (...x) => {
     const abc = crAbcNorm(mval('#nb-abc')), why = crAbcWhy(abc); if (why) { fieldErr('#nb-abc', why); return false; }
     const co = mval('#nb-co'), pr = s3Pr(s4PidOfTitle(co)), c = crCfg(pr), fs = $('#modal-root #cr-nb');
@@ -609,6 +615,7 @@ batchDetail = function (code, t) {
   const miss = dl ? [] : crAsgOf(b).filter(d => d.status === 'Published' && !crEffDue(d, b.code));
   const warn = miss.length ? `<div class="note b-amber cr-dl-miss" role="status">${ic('clock')}<div class="small"><strong>${plural(miss.length, 'published assignment has', 'published assignments have')} no deadline for this batch</strong> (${esc(miss.map(d => d.title).join(', '))}), so its learners don't receive ${miss.length > 1 ? 'them' : 'it'} yet. <button class="btn btn-sm" data-go="a-batches" data-id="${b.code}" data-tab="deadlines">Set deadlines</button></div></div>` : '';
   let out = k < 0 ? h : h.slice(0, k) + warn + neu + (dl ? crDlCard(b) : h.slice(k + old.length));
+  out = out.replace(/<p class="small m-modes">Delivery modes accepted: <strong>[^<]*<\/strong><\/p>/, () => `<p class="small m-modes">Delivery modes accepted: <strong>${esc(mTxt(crBModes(b)))}</strong></p>`); // DM: every mode configured, readiness below
   const line = crAbcLine(b, s4bCanBatch() && b.status !== 'Cancelled') + (crShowReady(b) || crAddable(b).length ? crReadyHtml(b, !w1AdminWhy(b)) : ''), i = out.indexOf('<p class="small s4b-bdates">');
   out = i >= 0 ? out.slice(0, i) + line + out.slice(i) : out.replace(/(<div class="row">)/, line + '$1');
   return out;
@@ -636,6 +643,7 @@ SCREENS['c-batches'] = p => {
   let h = _cbCR(p); const b = p && p.id && chBatch(p.id); if (!b) return h;
   h = h.replace(/<section class="card s2-cb"><h2>Assignments published to this batch<\/h2><ul class="list small">[\s\S]*?<\/ul><\/section>/, () => { const ds = s2Defs().filter(d => d.status === 'Published' && d.batches.includes(b.code) && !d.seeded);
     return `<section class="card s2-cb"><h2>Assignments published to this batch</h2><ul class="list small">${ds.map(d => `<li class="li"><div class="li-b"><strong>${esc(d.title)}</strong><span class="xs muted">${esc(d.unit)} · ${crEffDue(d, b.code) ? `due ${fdt(crEffDue(d, b.code))} (this batch)` : 'deadline not set for this batch — not issued yet'} · reached ${plural(d.copies.filter(c => s2BatchCodeOf(STORE.worlds[c.v]) === b.code).length, 'learner')} with full data (prototype limit)</span></div></li>`).join('')}</ul></section>`; });
+  h = h.replace(/<dd class="small m-modes">[^<]*<\/dd>/, () => `<dd class="small m-modes">${esc(mTxt(crBModes(b)))}</dd>`);
   if (crShowReady(b)) h = h.replace(/(<dt>Delivery channel<\/dt>)/, `<dt>Delivery modes</dt><dd class="cr-rdy-c">${crReadyHtml(b, false)}</dd>$1`);
   return h.replace(/(<dt>Delivery channel<\/dt>)/, `<dt>Awarding body batch code</dt><dd class="cr-abc-v">${b.abCode ? `<span class="mono">${esc(b.abCode)}</span>` : '<span class="muted">Not recorded</span>'}</dd>$1`);
 };
@@ -711,7 +719,11 @@ UXC.push(['CR-C', 'Course and batch configuration — final consistency correcti
   'A delivery mode can be added to an existing batch from its Change dialog or Edit batch details, using the same rules as Create batch. Until an approved fee option of that mode is enabled for the batch, it shows "Finance approval required" or "Approved by Finance — not enabled". Learners, allocations, fees and schedules don\'t change. A mode or option held by learners can\'t be removed. Changes are audited.',
   'Each mode\'s approval is shown with the fee option, its approval date and the queue item. Approving one mode leaves the other mode\'s records untouched.',
   'Publish: an older draft\'s own date is pre-filled only as an editable suggestion, saved for a batch when you publish. An existing batch deadline wins, and later batches never get it.']]);
+UXC.push(['DM', 'Delivery modes from fee options (26 Oct 2026)', [
+  'Course Details no longer has a separate "Delivery modes offered" setting. Each fee option has one delivery mode (several options per mode are allowed), and a course offers the modes its fee options use. Course Details lists the fee options from the same records as Section 5 — Fees & Payments, with each option\'s Finance state; a mode waiting for Finance is shown as such, not hidden.',
+  'Not only Level 3: a new Level 2, 4 or 5 course chooses "Fee options by delivery mode" or "One programme price" (as before). A one-price course can move to fee options by delivery mode in Section 5 ("Use fee options by delivery mode", audited); its programme fee is kept and needs a mode before Finance approval. Nothing is invented for legacy courses.',
+  'Create batch: "Delivery modes accepted" shows a checkbox for each mode the course\'s fee options use; one or both can be ticked, and the ticks survive moving between steps. Review & Create, batch detail and the Coordinator\'s overview list every mode ticked, with readiness for enrolment separately. A course with one programme price, or the Level 3 Diploma\'s Standard programme fee, still has one mode per batch, and the form says why.']]);
 const _aIdxCR = SCREENS['a-index'];
 SCREENS['a-index'] = p => _aIdxCR(p) + `<section class="card idx-sec"><h2>CR — Course and batch configuration</h2><ul class="idx-list">${[
-  chIdxLi('Course Details — delivery modes offered (Level 3 Diploma)', { act: 'aJump', t: 'a-programmes.NV-L3.details' }, 'CR — Configure delivery modes (legacy course).'),
+  chIdxLi('Course Details — delivery modes offered (Level 3 Diploma)', { act: 'aJump', t: 'a-programmes.NV-L3.details' }, 'DM — derived from the fee options (legacy course: Standard programme fee only).'),
   chIdxLi('Batch → Assignment deadlines', { act: 'aJump', t: 'a-batches.L3AC-JAN26.deadlines' }, 'CR — one deadline per batch for each assignment.')].join('')}</ul></section>`;

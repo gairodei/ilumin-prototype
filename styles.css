@@ -1494,4 +1494,9 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 .cr-bc { margin: 2px 0; }
 .cr-abc { overflow-wrap: anywhere; }
 .cr-dl .cr-due { white-space: nowrap; }
+/* DM — delivery modes from fee options */
+.cr-pm[hidden] { display: none !important; }
+.cr-pm .row { gap: 8px 24px; flex-wrap: wrap; }
+.cr-fo-l .cr-fo { flex-wrap: wrap; gap: 4px 8px; overflow-wrap: anywhere; }
+.cr-dm-v .cr-dm-m { display: inline-flex; flex-wrap: wrap; gap: 4px; margin: 0 8px 4px 0; }
 @media (max-width: 640px) { .cr-pb .cr-pd-l { max-width: none; flex-basis: 100%; } }

@@ -33,19 +33,26 @@
     if (lv !== 'Level 3') fill({ '#np-p': String(o.price || 900) });
     document.querySelector('#np-obs-no').checked = true;
     (lv === 'Level 3' ? (o.rows || [{ l: 'Fully Assisted — standard', f: 2400, m: 'Fully Assisted' }, { l: 'Self-Paced — standard', f: 1800, m: 'Self-Paced' }]) : []).forEach((x, k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = x.l; r.querySelector('.r1-np-f').value = String(x.f); r.querySelector('.r1-np-m').value = x.m; });
-    qa('.cr-dm-c').forEach(x => { x.checked = (o.modes || ['Fully Assisted', 'Self-Paced']).includes(x.value); });
-    const pr = ACT.cbDetCreate(); closeModal(); return pr && pr.id ? pr : null;
+    // DM (PD-DM-01): Course Details has no modes field any more (was: tick .cr-dm-c). A Level 2, 4 or 5 course given modes here is one
+    // configured under CR: its record is seeded exactly as CR stored it, so these journeys keep testing that preserved behaviour (PD-DM-05).
+    // Fee options by delivery mode for those levels (the new path) are tested in ft-dm.js.
+    const pr = ACT.cbDetCreate(); closeModal(); if (!(pr && pr.id)) return null;
+    if (lv !== 'Level 3' && o.modes) crLeg(pr.id, o.modes);
+    return pr;
   };
+  const crLeg = (pid, ms, why = 'Set when the course was created') => { const at = now().toISOString(), c = CRDM()[pid]; CRDM()[pid] = { modes: M_MODES.filter(m => ms.includes(m)), at, by: ADMIN.me.name, hist: ((c && c.hist) || []).concat([[at, ADMIN.me.name, c ? mTxt(c.modes) : 'Not configured', mTxt(ms), why]]) }; };
   // Section 5 for a course without options yet: one fee option per mode (pay in full), submitted and approved by Finance
-  const feeOpts = (pr, list) => {
+  const feeOpts = (pr, list, o = {}) => {
     ACA(); if (!CB8().wf[pr.id] && !(pr.cb8 && pr.status === 'Draft')) ACT.cb8Start({ dataset: { p: pr.id } }); go('a-programmes', { id: pr.id, tab: 'fees' });
     list.forEach(x => { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); fill({ '#c8-l': x.l, '#c8-f': String(x.f) }); const s = qm('#c8-m'); if (s) s.value = x.m; press(); });
     cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.pay.length).forEach(o => ACT.cb8PayAdd({ dataset: { p: pr.id, o: o.id, k: '1' } }));
     cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.mode && !o.legacy).forEach(o => { ACT.cb8OptRetire && ACT.cb8OptRetire({ dataset: { p: pr.id, o: o.id } }); if (MODAL) press(); });
     ACT.cb8Submit({ dataset: { p: pr.id } }); if (MODAL) press();
     const wf = cb8Wf(pr), qid = wf && wf.qid; if (!qid) return false;
-    FA(); go('a-queue', { id: qid }); ACT.e1Decide({ dataset: { id: qid, a: 'approve' } }); if (MODAL) reason('Checked'); ACA(); return true;
+    if (o.pending) { ACA(); return qid; } // DM (PD-DM-03): submitted, left with Finance — a mode configured but not approved
+    approveQ(qid); return true;
   };
+  const approveQ = qid => { FA(); go('a-queue', { id: qid }); ACT.e1Decide({ dataset: { id: qid, a: 'approve' } }); if (MODAL) reason('Checked'); ACA(); };
   // Create batch through the wizard. o.modes: course without options (cr-nb) or mode checkboxes (M); o.abc; o.dm (legacy select)
   const nb = (code, title, o = {}) => {
     ACT.newBatch(); if (!MODAL) return { refused: true, msg: 'no dialog' }; fill({ '#nb-c': code }); const co = qm('#nb-co'); co.value = title; INP.n2NbCourse(co); qm('#nb-m').value = 'Online';
@@ -75,9 +82,11 @@
   await T('CR-A', async () => {
     fresh(); ACA(); const a0 = ADMIN.audit.length;
     go('a-programmes'); ACT.chProgNew();
-    ok('CR-A Course Details: "Delivery modes offered" with Self-Paced and Fully Assisted checkboxes, for every level', qa('.cr-dm-c').map(x => x.value).join('|') === 'Self-Paced|Fully Assisted' && /Delivery modes offered/.test(main()));
+    // DM (PD-DM-01) supersedes: was "Course Details: Delivery modes offered checkboxes, for every level" — now no separate field; the modes come from the fee options
+    ok('CR-A (DM) Course Details: no separate "Delivery modes offered" field; each fee option has a delivery mode', !qa('.cr-dm-c').length && !!q('.r1-np-m'));
     const pr = make({ level: 'Level 2', modes: ['Self-Paced', 'Fully Assisted'], title: 'CR Level 2 Certificate (both modes)' }); L2 = pr;
-    ok('CR-A a Level 2 course is created offering both modes (recorded, audited)', !!pr && J(CRDM()[pr.id].modes) === J(['Self-Paced', 'Fully Assisted']) && logged(a0, /^Delivery modes offered set$/));
+    // DM (PD-DM-05) supersedes "recorded, audited (Delivery modes offered set)": the record is now only a legacy value from CR, seeded by make()
+    ok('CR-A (DM) a Level 2 course configured under CR for both modes keeps offering both (legacy value honoured)', !!pr && J(crModes(pr).modes) === J(['Self-Paced', 'Fully Assisted']) && crModes(pr).src === 'legacy'); void a0;
     ok('CR-A no fee option is created automatically', r1Opts(pr.id).length === 0 && !r1IsL3Pid(pr.id));
     ok('CR-A Fees & Payments: fee options with a delivery mode are available for this Level 2 course', cb8L3(pr));
     pr.status = 'Active';
@@ -120,6 +129,8 @@
     fresh(); ACA();
     // Level 3: both offered, only Fully Assisted approved — Self-Paced configurable but waiting for Finance
     const p3 = make({ level: 'Level 3', modes: ['Self-Paced', 'Fully Assisted'], rows: [{ l: 'FA only', f: 2400, m: 'Fully Assisted' }] }); p3.status = 'Active';
+    // DM (PD-DM-01, PD-DM-03): a mode is offered through a fee option — here a Self-Paced option configured and waiting for Finance (was: ticked in the removed field)
+    feeOpts(p3, [{ l: 'SP pending', f: 1500, m: 'Self-Paced' }], { pending: true });
     ACT.newBatch(); const c3 = qm('#nb-co'); c3.value = p3.title; INP.n2NbCourse(c3);
     ok('CR-N Level 3: the approved mode with its fee option and the other mode marked "Finance approval required", both selectable', !!qm('.m-m[value="Fully Assisted"]') && !!qm('.cr-pend[value="Self-Paced"]') && !qm('.cr-pend[value="Self-Paced"]').disabled); closeModal();
     ACT.newBatch(); fill({ '#nb-c': 'CR-L3-N2' }); const c3b = qm('#nb-co'); c3b.value = p3.title; INP.n2NbCourse(c3b); qm('#nb-m').value = 'Online'; qm('.cr-pend[value="Self-Paced"]').checked = true; INP.crPendTick();
@@ -155,6 +166,10 @@
     ok('CR-P Course Builder (draft, no package approved): Review & Publish blocks on the existing payment-terms approval', cbRvChecks(pr).block.some(x => x.sec === 'payments' && /Payment terms/.test(x.msg)));
     pr.status = 'Active'; feeOpts(pr, [{ l: 'FA — P', f: 900, m: 'Fully Assisted' }]); const fa = r1Opts(pr.id).find(o => o.mode === 'Fully Assisted').id;
     ok('CR-P Finance approved the Fully Assisted option only: Self-Paced has no approved option', crOptModes(pr.id).join() === 'Fully Assisted');
+    // DM (PD-DM-01, PD-DM-03): once fee options exist they decide the modes, so Self-Paced is offered by an option waiting for Finance
+    // (was: offered by the removed setting with no option at all)
+    const qSP = feeOpts(pr, [{ l: 'SP — P', f: 700, m: 'Self-Paced' }], { pending: true });
+    ok('CR-P (DM) the Self-Paced option waits for Finance; the course offers both, Self-Paced not approved', !!qSP && J(crModes(pr).modes) === J(['Self-Paced', 'Fully Assisted']) && crOptModes(pr.id).join() === 'Fully Assisted');
     // create with one approved and one pending mode
     ACT.newBatch(); fill({ '#nb-c': 'CR-P1' }); const co = qm('#nb-co'); co.value = pr.title; INP.n2NbCourse(co); qm('#nb-m').value = 'Online';
     ok('CR-P Create batch: Fully Assisted with its approved option, Self-Paced selectable with "Finance approval required"', !!qm(`.w1-nb-o[value="${fa}"]`) && !!qm('.cr-pend[value="Self-Paced"]') && /Finance approval required/.test(qm('.cr-miss').textContent));
@@ -171,14 +186,14 @@
     const lS = freeL([lF.id]); a0 = ADMIN.audit.length;
     ok('CR-P (negative) no enrolment under Self-Paced before approval (no option to choose; allocation skips the mode)', !r1Opts(pr.id).some(o => o.mode === 'Self-Paced') && crReady(b2, 'Self-Paced') !== 'ready');
     // a single-mode batch from before (seeded) gets the other mode added through Edit batch details
-    SA(); ACT.crDmEdit({ dataset: { id: 'NV-L2' } }); qma('.crd-c').forEach(c => { c.checked = true; }); reason('Both modes from 2027'); ACA();
+    SA(); crLeg('NV-L2', ['Self-Paced', 'Fully Assisted'], 'Both modes from 2027'); ACA(); // DM (PD-DM-06): CR's dialog is retired — its record, as it was stored
     const lb = ADMIN.batches.find(b => b.course === T2 && ['Open', 'Planned'].includes(b.status) && !Array.isArray(b.w1opts)), lbKeep = J({ roster: batchRoster(lb), enrolled: lb.enrolled, dm: lb.dmode, coh: lb.coh });
     ACT.s4bBatchEdit({ dataset: { id: lb.code } }); ok('CR-P Edit batch details: the configurable modes are offered (the same rules)', !!qm('.cr-bm') && qma('.cr-bm').map(x => x.value).join() === ['Self-Paced', 'Fully Assisted'].filter(m => m !== lb.dmode).join());
     qma('.cr-bm').forEach(x => { x.checked = true; }); fill({ '#bd-r': 'Second mode for this intake' }); a0 = ADMIN.audit.length; prim(); const edTxt = MODAL ? qma('.err').map(e => e.textContent).join(' | ') + ' // ' + (qm('#bd-i') || {}).textContent : 'closed'; if (MODAL) closeModal();
     ok('CR-P …saved alone with the reason (audited); its own mode stays ready on the programme fee', crBModes(lb).length === 2 && lb.crBase === lb.dmode && crReady(lb, lb.dmode) === 'ready' && crReady(lb, M_MODES.find(m => m !== lb.dmode)) === 'finance' && logged(a0, /Delivery modes configured changed/), J({ m: crBModes(lb), base: lb.crBase, dm: lb.dmode, w: lb.w1opts, err: edTxt }));
     ok('CR-P …its learners, enrolment and mode are unchanged', J({ roster: batchRoster(lb), enrolled: lb.enrolled, dm: lb.dmode, coh: lb.coh }) === lbKeep);
     // Finance approves only the Self-Paced option (a later package): attributable to that option; Fully Assisted untouched
-    const faHist = J(r1Opt(fa).hist); ACA(); feeOpts(pr, [{ l: 'SP — P', f: 700, m: 'Self-Paced' }]); const sp = r1Opts(pr.id).find(o => o.mode === 'Self-Paced');
+    const faHist = J(r1Opt(fa).hist); ACA(); approveQ(qSP); /* DM: the package submitted above (was feeOpts adding and approving it here) */ const sp = r1Opts(pr.id).find(o => o.mode === 'Self-Paced');
     ok('CR-P Finance approves the Self-Paced option; the approval is recorded on that option', !!sp && sp.hist.some(h => /financial package/.test(h[2])) && J(r1Opt(fa).hist) === faHist);
     ok('CR-P …the Fully Assisted option\'s approval record is unchanged (approving one mode doesn\'t re-approve the other)', J(r1Opt(fa).hist) === faHist);
     ok('CR-P nothing widens on its own: both batches show Self-Paced "Approved by Finance — not enabled"', crReady(b1, 'Self-Paced') === 'accept' && crReady(b2, 'Self-Paced') === 'accept' && !w1Accepts(b2, sp.id) && !w1Accepts(b1, sp.id));
@@ -213,22 +228,24 @@
   await T('CR-B', async () => {
     fresh(); ACA();
     const pr = make({ level: 'Level 3' }); pr.status = 'Active';
-    ok('CR-B Level 3 course: modes recorded from the form, fee options created from its rows', J(CRDM()[pr.id].modes) === J(['Self-Paced', 'Fully Assisted']) && r1Opts(pr.id).length === 2);
+    ok('CR-B (DM) Level 3 course: fee options created from its rows; the modes offered come from them (no separate record)', J(crModes(pr).modes) === J(['Self-Paced', 'Fully Assisted']) && crModes(pr).src === 'fee options' && !CRDM()[pr.id] && r1Opts(pr.id).length === 2); // DM (PD-DM-01): was "modes recorded from the form"
     const r = nb('CR-L3-B', pr.title, { modes: ['Self-Paced', 'Fully Assisted'] });
     ok('CR-B the batch accepts both modes through its fee options (W1 record)', r.b && r.b.w1opts.length === 2 && mModesOf(r.b).length === 2);
     ACT.newBatch(); const co = qm('#nb-co'); co.value = pr.title; INP.n2NbCourse(co); const fa = r1Opts(pr.id).find(o => o.mode === 'Fully Assisted').id;
     const x = qm(`.w1-nb-o[value="${fa}"]`); x.checked = false; INP.mOptTick(x);
     ok('CR-B unticking one fee option leaves only the other mode', /Accepts: Self-Paced/.test(mroot().textContent)); closeModal();
-    const a0 = ADMIN.audit.length; ACT.crDmEdit({ dataset: { id: pr.id } }); qma('.crd-c').forEach(c => { c.checked = c.value === 'Self-Paced'; }); const res = reason('Self-Paced only');
-    ok('CR-B (negative) a mode can\'t be removed while an active fee option uses it — refused, logged', res === false && blocked(a0, /change delivery modes offered/) && J(CRDM()[pr.id].modes) === J(['Self-Paced', 'Fully Assisted']));
+    // DM (PD-DM-06) supersedes "a mode can't be removed while an active fee option uses it": modes can't be set separately at all
+    const a0 = ADMIN.audit.length; ACT.crDmEdit({ dataset: { id: pr.id } });
+    ok('CR-B (DM, negative) setting delivery modes separately is refused, logged; the modes still follow the fee options', !MODAL && blocked(a0, /set delivery modes separately/) && J(crModes(pr).modes) === J(['Self-Paced', 'Fully Assisted']));
     closeModal();
     ok('CR-B the seeded Level 3 Diploma (no configuration): modes still come from its fee options', crModes(s3Pr('NV-L3')).src === 'fee options' && !CRDM()['NV-L3']);
-    // Course creation: a Level 3 row in a mode the course doesn't offer is refused
+    // DM (PD-DM-01) supersedes "a Level 3 row in a mode the course doesn't offer is refused": there is no second setting to disagree with —
+    // a course with a single Fully Assisted row offers Fully Assisted only
     go('a-programmes'); ACT.chProgNew(); const n = document.querySelectorAll('main .r1-np-row');
     fill({ '#np-t': 'CR Level 3 mismatch', '#np-l': 'Level 3', '#np-r': 'QN 610/7999/1', '#np-d': '6', '#np-du': 'months' }); document.querySelector('#np-obs-no').checked = true;
     const row = document.querySelector('main .r1-np-row'); row.querySelector('.r1-np-l').value = 'FA'; row.querySelector('.r1-np-f').value = '2400'; row.querySelector('.r1-np-m').value = 'Fully Assisted';
-    qa('.cr-dm-c').forEach(c => { c.checked = c.value === 'Self-Paced'; }); const p0 = ADMIN.programmes.length; ACT.cbDetCreate();
-    ok('CR-B (negative) a fee option in a mode the course doesn\'t offer: nothing created', ADMIN.programmes.length === p0 && /doesn't offer/.test(main()));
+    const p0 = ADMIN.programmes.length, pm = ACT.cbDetCreate(); closeModal();
+    ok('CR-B (DM) one Fully Assisted row: the course is created offering Fully Assisted only', ADMIN.programmes.length === p0 + 1 && !!pm && J(crModes(pm).modes) === J(['Fully Assisted']));
     void n;
   });
 
@@ -253,7 +270,8 @@
     ACT.newBatch(); const c3 = qm('#nb-co'); c3.value = p3.title; INP.n2NbCourse(c3);
     ok('CR-C Level 3 course offering Self-Paced only: only that mode is selectable', qma('.m-m').map(x => x.value).join('|') === 'Self-Paced'); closeModal();
     go('a-programmes', { id: p3.id, tab: 'fees' }); if (!CB8().wf[p3.id]) ACT.cb8Start({ dataset: { p: p3.id } }); ACT.cb8Opt({ dataset: { p: p3.id, o: '' } });
-    ok('CR-C Fees & Payments: a new fee option can only use an offered mode', MODAL && qma('#c8-m option').map(o => o.value).filter(Boolean).join('|') === 'Self-Paced'); closeModal();
+    // DM (PD-DM-01) supersedes "a new fee option can only use an offered mode": the options are the offer, so adding one in the other mode is how a course offers it
+    ok('CR-C (DM) Fees & Payments: a new fee option can use either mode (adding one is how the course offers that mode)', MODAL && qma('#c8-m option').map(o => o.value).filter(Boolean).sort().join('|') === 'Fully Assisted|Self-Paced'); closeModal();
   });
 
   /* ================= D. Legacy courses: nothing invented ================= */
@@ -261,13 +279,14 @@
     fresh(); SA(); const b0 = J(ADMIN.batches.filter(b => b.course === T2).map(b => [b.code, b.dmode, b.w1opts]));
     ok('CR-D the seeded Level 2 Diploma has no configuration recorded', !CRDM()['NV-L2'] && crModes(s3Pr('NV-L2')).src === 'none');
     ACA(); ACT.newBatch(); const co = qm('#nb-co'); co.value = T2; INP.n2NbCourse(co);
-    ok('CR-D Create batch (legacy course): the one-mode choice works as before, with a note', !qm('#cr-nb') && qm('#nb-dm').closest('.field').style.display !== 'none' && /aren't configured/.test(mroot().textContent)); closeModal();
+    ok('CR-D Create batch (legacy course): the one-mode choice works as before, with a note', !qm('#cr-nb') && qm('#nb-dm').closest('.field').style.display !== 'none' && /one programme price/.test(mroot().textContent) /* DM (PD-DM-05): the note now says why — was /aren't configured/ */); closeModal();
     const r = nb('CR-L2-LEG', T2, { dm: 'Self-Paced' });
     ok('CR-D a batch of the legacy course is created with the chosen mode', r.b && r.b.dmode === 'Self-Paced');
     SA(); go('a-programmes', { id: 'NV-L2', tab: 'details' });
-    ok('CR-D Course Details (legacy): "Not configured" and "Configure delivery modes"', /Delivery modes offered\s*Not configured/.test(main()) && !!q('[data-act="crDmEdit"]'));
-    const a0 = ADMIN.audit.length; ACT.crDmEdit({ dataset: { id: 'NV-L2' } }); qma('.crd-c').forEach(c => { c.checked = c.value === 'Fully Assisted'; }); reason('Configured for 2027 intakes');
-    ok('CR-D an administrator configures it explicitly (audited, history kept)', J(CRDM()['NV-L2'].modes) === J(['Fully Assisted']) && logged(a0, /^Delivery modes offered set$/) && CRDM()['NV-L2'].hist.length === 1);
+    // DM (PD-DM-06) supersedes "Not configured" + "Configure delivery modes": the explicit step is now fee options by delivery mode in Section 5 (ft-dm)
+    ok('CR-D (DM) Course Details (legacy): "One programme price" and the way to Section 5 — Fees & Payments; no separate modes dialog', /Delivery modes offered\s*One programme price/.test(main()) && !!(q('.cb-feelink') || q('.cr-dm-ro [data-go]')) && !q('[data-act="crDmEdit"]'));
+    const a0 = ADMIN.audit.length; crLeg('NV-L2', ['Fully Assisted'], 'Configured for 2027 intakes');
+    ok('CR-D (DM) a value recorded under CR is honoured, with its history (no new record is written by DM)', J(crModes(s3Pr('NV-L2')).modes) === J(['Fully Assisted']) && crModes(s3Pr('NV-L2')).src === 'legacy' && CRDM()['NV-L2'].hist.length === 1 && !logged(a0, /Delivery modes offered/));
     ok('CR-D existing batches of the course are unchanged', J(ADMIN.batches.filter(b => b.course === T2 && b.code !== 'CR-L2-LEG').map(b => [b.code, b.dmode, b.w1opts])) === b0);
     ok('CR-D …and CR-L2-LEG keeps Self-Paced', ADMIN.batches.find(b => b.code === 'CR-L2-LEG').dmode === 'Self-Paced');
   });
@@ -417,10 +436,14 @@
 
   /* ================= L. Unauthorized changes are refused and logged ================= */
   await T('CR-L', async () => {
+    // DM (PD-DM-06) supersedes the "configure delivery modes" refusals: CR's dialog is retired for everyone; the explicit step is
+    // "Use fee options by delivery mode" (Section 5), with the existing role check, also at confirm time
     fresh(); let a0 = ADMIN.audit.length; FA(); ACT.crDmEdit({ dataset: { id: 'NV-L2' } });
-    ok('CR-L Finance can\'t configure delivery modes (refused, logged)', !MODAL && blocked(a0, /configure delivery modes/) && !CRDM()['NV-L2']);
-    a0 = ADMIN.audit.length; ACA(); ACT.crDmEdit({ dataset: { id: 'NV-L2' } }); qma('.crd-c').forEach(c => { c.checked = true; }); FA(); reason('Hijack');
-    ok('CR-L (confirm time) a role change before Save is refused, logged', blocked(a0, /configure delivery modes/) && !CRDM()['NV-L2']);
+    ok('CR-L (DM) setting delivery modes separately is refused for Finance too (logged)', !MODAL && blocked(a0, /set delivery modes separately/) && !CRDM()['NV-L2']);
+    ACA(); const p1 = make({ level: 'Level 4', title: 'CR Level 4 one price (L)' }); a0 = ADMIN.audit.length; FA(); ACT.crFoStart({ dataset: { p: p1.id } });
+    ok('CR-L (DM) Finance can\'t switch a course to fee options by delivery mode (refused, logged)', !MODAL && blocked(a0, /use fee options by delivery mode/) && !crMultiFee(p1));
+    a0 = ADMIN.audit.length; ACA(); ACT.crFoStart({ dataset: { p: p1.id } }); FA(); reason('Hijack');
+    ok('CR-L (DM, confirm time) a role change before confirming is refused, logged', blocked(a0, /use fee options by delivery mode/) && !crMultiFee(p1)); closeModal();
     const d = s2Defs().find(x => x.status === 'Published' && (x.batches || []).includes('L3AC-JAN26'));
     a0 = ADMIN.audit.length; BA(); ACT.crDlEdit({ dataset: { b: 'L3AC-JAN26', id: d.id } });
     ok('CR-L another role can\'t change a batch deadline (refused, logged)', !MODAL && blocked(a0, /change an assignment deadline/) && !crDl('L3AC-JAN26', d.id));

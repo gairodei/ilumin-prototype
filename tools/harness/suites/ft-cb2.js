@@ -24,7 +24,7 @@
   const progs = () => ADMIN.programmes.length, made = () => (STORE.chNewProgs || []).filter(p => !p.seed);
   const blocked = (a0, re) => ADMIN.audit.slice(0, ADMIN.audit.length - a0).some(x => /^Blocked/.test(x.action) && (!re || re.test(x.action)));
   const obsReq = pr => n5Shown(pr).required;
-  const fillL4 = (title = 'Level 4 Certificate in CB2 Leadership', code = 'L4-CB2') => { type('#np-l', 'Level 4'); INP.r1NpLevel(q('#np-l')); type('#np-t', title); void code; q('.cr-dm-c[value="Fully Assisted"]').checked = true; /* CR: no course code (PD-CR-06); modes offered (PD-CR-01) */ type('#np-r', 'QN 610/8282/4'); type('#np-d', '9'); type('#np-du', 'months'); type('#np-p', '2400'); type('#np-ds', 'For team leaders in care.'); type('#np-q-body', 'NCFE CACHE'); type('#np-q-glh', '320'); type('#np-q-tqt', '540'); type('#np-q-credits', '54'); };
+  const fillL4 = (title = 'Level 4 Certificate in CB2 Leadership', code = 'L4-CB2') => { type('#np-l', 'Level 4'); INP.r1NpLevel(q('#np-l')); type('#np-t', title); void code; /* CR: no course code (PD-CR-06). DM (PD-DM-01, supersedes PD-CR-01): no modes-offered field — a one-price course, as before */ type('#np-r', 'QN 610/8282/4'); type('#np-d', '9'); type('#np-du', 'months'); type('#np-p', '2400'); type('#np-ds', 'For team leaders in care.'); type('#np-q-body', 'NCFE CACHE'); type('#np-q-glh', '320'); type('#np-q-tqt', '540'); type('#np-q-credits', '54'); };
   const openNew = enter => { (enter || SYS)(); go('a-programmes'); q('[data-act="chProgNew"]').click(); };
   const createL4 = (obs = 'yes', enter, title) => { openNew(enter); fillL4(title); q('#np-obs-' + obs).click(); q('[data-act="cbDetCreate"]').click(); return made().slice(-1)[0]; };
 
@@ -33,7 +33,7 @@
     ok('CB2-A the button opens Section 1 — Course Details (#a-programmes.new.details), no dialog', !MODAL && location.hash === '#a-programmes.new.details' && cur() === 'details' && /Course Details/.test(q('.cb-h').textContent));
     ok('CB2-A opening it creates no programme record', progs() === n0 && !made().length);
     // CR (PD-CR-06, PD-CR-01): no course code field; "Course name"; the delivery modes offered
-    const fields = ['#np-t', '#np-l', '#cr-dm-0', '#cr-dm-1', '#np-r', '#np-q-body', '#np-q-glh', '#np-q-tqt', '#np-q-credits', '#np-d', '#np-du', '#np-ds', '#np-obs-yes', '#np-obs-no'];
+    const fields = ['#np-t', '#np-l', /* DM (PD-DM-01): was '#cr-dm-0', '#cr-dm-1' — now the fee options (Level 3) */ '.r1-np-m', '#np-r', '#np-q-body', '#np-q-glh', '#np-q-tqt', '#np-q-credits', '#np-d', '#np-du', '#np-ds', '#np-obs-yes', '#np-obs-no'];
     // PD-M-10 supersedes the reference label — was: label[for="np-r"] === 'Qualification number / reference' — now: 'Awarding body course code' (same field, pr.ref)
     ok('CB2-A fields: course name, NVQ level, course code, qualification number / reference and awarding body (three separate fields), GLH, TQT, credits, duration (number + unit), description, observations Yes / No', fields.every(s => !!q(s)) && !q('#np-code') && q('label[for="np-t"]').textContent === 'Course name' && q('label[for="np-r"]').textContent === 'Awarding body course code' && q('label[for="np-q-body"]').textContent === 'Awarding body' && q('#np-r').value === '' && [...q('#np-du').options].map(o => o.textContent).join() === 'Days,Weeks,Months,Years');
     ok('CB2-A the observation question is prominent, required and unanswered at first', !!q('.cb-obs') && /Does this course contain observations\?/.test(q('.cb-obs legend').textContent) && /Required/.test(q('.cb-obs legend').textContent) && !q('#np-obs-yes').checked && !q('#np-obs-no').checked && q('.cb-det-form').firstElementChild === q('.cb-obs'));
@@ -165,7 +165,7 @@
 
   await T('CB2-K Level 3 on the page: fee options and level switching', async () => {
     fresh(); openNew(); ok('CB2-K Level 3 (default): fee-option rows instead of the single price', !!q('.r1-np-row') && q('.r1-np-price').hidden);
-    type('#np-l', 'Level 4'); INP.r1NpLevel(q('#np-l')); ok('CB2-K switching to Level 4 shows the single price and the default delivery mode', !q('.r1-np-price').hidden && q('.r1-np-l3').hidden && q('.r1-np-sup').hidden && !!q('.cr-dm')); // CR (PD-CR-02): the modes offered replace the default selector
+    type('#np-l', 'Level 4'); INP.r1NpLevel(q('#np-l')); ok('CB2-K switching to Level 4 shows the single price and the default delivery mode', !q('.r1-np-price').hidden && q('.r1-np-l3').hidden && q('.r1-np-sup').hidden && !!q('.cr-pm') && !q('.cr-pm').hidden /* DM (PD-DM-04, supersedes PD-CR-02's .cr-dm): the pricing choice instead */); // CR (PD-CR-02): the modes offered replace the default selector
     type('#np-l', 'Level 3'); INP.r1NpLevel(q('#np-l')); type('#np-t', 'Level 3 CB2 Options'); type('#np-r', 'QN 603/8383/3');
     const row = (k, l, f, m) => { const r = qa('.r1-np-row')[k]; r.querySelector('.r1-np-l').value = l; r.querySelector('.r1-np-f').value = f; r.querySelector('.r1-np-m').value = m; r.querySelector('.r1-np-l').dispatchEvent(new Event('input', { bubbles: true })); };
     row(0, 'Self-Paced', '1800', 'Self-Paced'); q('[data-act="r1NpAdd"]').click(); row(1, 'Fully Assisted', '2400', 'Fully Assisted');
@@ -187,7 +187,7 @@
     go('a-programmes', { id, tab: 'details' }); type('#np-r', 'QN 610/8282/5'); q('[data-act="cbDetSave"]:not([data-next])').click();
     ok('CB2-L the awarding body course code stays editable in the draft', pr.ref === 'QN 610/8282/5' && !pr.code);
     go('a-programmes', { id: 'NV-L3', tab: 'details' }); ok('CB2-L legacy programme without a code: no code row is made up; its reference is unchanged', !/Course code\s*Not recorded/.test(q('.cb-dl').textContent) && !/Former Academy course code/.test(q('.cb-dl').textContent) && /QN 603\/2851\/9/.test(q('.cb-dl').textContent) && !s3Pr('NV-L3').code);
-    s3Pr('NV-N1').code = 'L4-DEMENTIA'; SYS(); go('a-programmes', { id: 'NV-N1', tab: 'details' }); type('#np-ds', 'Edited after course codes were removed.'); q('#np-obs-no').click(); q('.cr-dm-c[value="Fully Assisted"]').click(); q('[data-act="cbDetSave"]:not([data-next])').click();
+    s3Pr('NV-N1').code = 'L4-DEMENTIA'; SYS(); go('a-programmes', { id: 'NV-N1', tab: 'details' }); type('#np-ds', 'Edited after course codes were removed.'); q('#np-obs-no').click(); /* DM (PD-DM-01): no modes-offered field */ q('[data-act="cbDetSave"]:not([data-next])').click();
     ok('CB2-L a Draft with a code recorded earlier saves without touching it', s3Pr('NV-N1').desc === 'Edited after course codes were removed.' && s3Pr('NV-N1').code === 'L4-DEMENTIA');
     go('a-programmes', { id: 'NV-L4', tab: 'details' }); s3Pr('NV-L4').code = 'L4-HIST'; render();
     ok('CB2-L a historical code is shown read-only as "Former Academy course code"', /Former Academy course code\s*L4-HIST/.test(q('.cb-dl').textContent));
