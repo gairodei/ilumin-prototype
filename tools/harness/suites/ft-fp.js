@@ -258,6 +258,114 @@
     ok('FP-B6 NVQ enrolments are outside the setting (always resolve as before)', fcOnE({ kind: 'nvq' }) === true);
   });
 
+  /* ================= C. The Certificate tab follows the setting (correction, PD-FP-11..15) ================= */
+  // Real clicks on the tab's controls (radios and checkboxes fire their change handlers; buttons go through data-act)
+  const vis = s => { const e = q(s); return !!e && e.getClientRects().length > 0; };
+  const tap = s => { const e = q(s); if (e) e.click(); return !!e; };
+  const pick = on => tap(`input[name="fc-on"][value="${on ? 'yes' : 'no'}"]`);
+  const certTab = c => go('a-courses', { id: c.id, tab: 'certificate' });
+  const tplShown = () => vis('.fc-tpl') && vis('#ct-logo') && vis('#ct-l') && qa('.s1-cf').some(x => x.getClientRects().length) && vis('.fc-prev .cert-doc');
+  const tplGone = () => !vis('.fc-tpl') && !vis('#ct-logo') && !vis('#ct-l') && !qa('.s1-cf').some(x => x.getClientRects().length) && !vis('.cert-doc') && !vis('input[name="fc-logo"]');
+  const errTxt = () => (q('.fc-errs') || {}).textContent || '';
+  const file = (sel, n) => { const d = new DataTransfer(); d.items.add(new File(['x'], n, { type: 'image/png' })); const e = q(sel); e.files = d.files; e.dispatchEvent(new Event('change', { bubbles: true })); };
+
+  await T('FP-C1 No hides the template', async () => {
+    fresh(); SA(); const c = s1DemoCourse(), sp = s1Spec(c); certTab(c);
+    ok('FP-C1 Yes: the template designer, logo, layout, fields and live preview are shown; no "no certificate" message', tplShown() && !vis('.fc-off'));
+    const before = J({ sp, v: c.version }), na = ADMIN.audit.length; pick(false);
+    ok('FP-C1 choosing No hides the designer, logo, layout, fields and preview', tplGone());
+    ok('FP-C1 … and shows only the setting with a short explanation, marked "Not saved yet"', vis('input[name="fc-on"][value="no"]') && vis('.fc-off') && /no certificate to design/.test(q('.fc-off').textContent) && vis('.fc-dirty'));
+    ok('FP-C1 (negative) choosing on screen changes nothing: same setting, version, template and audit', J({ sp, v: c.version }) === before && ADMIN.audit.length === na && fcOn(sp));
+  });
+
+  await T('FP-C2 No: save and publish without a template; completion without a certificate', async () => {
+    fresh(); SA(); const c = s1DemoCourse(), sp = s1Spec(c); sp.cert = { layout: '', fields: [], logo: '' }; const tpl = J(sp.cert), v0 = c.version; // an unfinished template
+    certTab(c); pick(false); tap('[data-act="s1Save"]'); const dlg = document.getElementById('modal-root').textContent; reason('Induction — no certificate');
+    ok('FP-C2 saving No with an unfinished template: no template errors, a new version with the reason', !errTxt() && /Yes → No/.test(dlg) && sp.certOn === false && c.version === v0 + 1 && ADMIN.audit.some(a => a.action === `Certificate on completion changed — version ${c.version}` && a.reason === 'Induction — no certificate'));
+    ok('FP-C2 the saved template is kept as it was (not deleted or changed)', J(sp.cert) === tpl);
+    ok('FP-C2 after saving, the tab shows only the setting and the explanation', tplGone() && vis('.fc-off') && !vis('.fc-dirty'));
+    tap('[data-act="pubCourse"]'); const pd = document.getElementById('modal-root').textContent; reason('Go live');
+    ok('FP-C2 publishing a No course needs no certificate template', !/Can't publish/.test(pd) && /Certificate on completion: No/.test(pd) && c.status === 'Published' && !s1Missing(c).some(m => /^Certificate/.test(m)));
+    go('a-courses', { id: c.id, tab: 'validity' });
+    ok('FP-C2 Validity: "Not applicable", no validity or reminder controls and no Save', vis('.fc-val-off') && !q('input[name="val"]') && !q('#val-n') && !q('#rem') && !q('[data-act="s1Save"][data-t="validity"]') && /apply only to courses that issue a certificate/.test(main()));
+    const val = c.validity; ACT.s1Save({ dataset: { id: c.id, t: 'validity' } }); ok('FP-C2 (negative) a validity save on a No course is refused, nothing changes', c.validity === val && !MODAL);
+    go('a-courses'); ok('FP-C2 the course list shows its validity as "Not applicable (no certificate)"', /Not applicable \(no certificate\)/.test(main()));
+    const e = buy(c.id), n0 = W.certs.length; doContent(e); q8(e);
+    ok('FP-C9 a learner completing the No course: Completed, no certificate', e.certOn === false && e.status === 'Completed' && !e.certId && W.certs.length === n0);
+  });
+
+  await T('FP-C3/C4 Yes shows the template; an incomplete one blocks save and publish', async () => {
+    fresh(); SA(); const c = s1DemoCourse(), sp = s1Spec(c); certTab(c); pick(false); tap('[data-act="s1Save"]'); reason('Off'); certTab(c);
+    ok('FP-C3 a saved No course opens with the template hidden', tplGone());
+    pick(true); ok('FP-C3 choosing Yes shows the designer and the live preview again', tplShown() && !vis('.fc-off'));
+    tap('.s1-cf[value="Learner name"]'); ok('FP-C3 the live preview follows the fields', !/Learner Name/.test(q('.fc-prev').textContent));
+    const tpl = J(sp.cert), v0 = c.version; tap('[data-act="s1Save"]');
+    ok('FP-C4 Yes without the learner\'s name: Save is blocked with an inline error on the fields', !MODAL && /learner's name on the certificate \(required\)/.test(errTxt()) && q('.s1-cf[aria-invalid="true"]') && q('.fc-fields .err') && sp.certOn === false && c.version === v0 && J(sp.cert) === tpl);
+    tap('[data-act="pubCourse"]');
+    ok('FP-C4 Publish is blocked too, with the same inline error, and logged', c.status === 'Draft' && !MODAL && /before publishing/.test(errTxt()) && ADMIN.audit.some(a => a.action === 'Blocked: publish (certificate incomplete)'));
+    tap('.s1-cf[value="Learner name"]'); ok('FP-C4 the error clears when the template changes', !errTxt());
+    tap('input[name="fc-logo"][value="own"]'); tap('[data-act="s1Save"]');
+    ok('FP-C4 "Our own logo" without a file: blocked — upload a logo or use the default mark', !MODAL && /Upload your logo, or choose the default "Welfare" mark/.test(errTxt()) && q('#ct-logo[aria-invalid="true"]'));
+    // a saved template that is incomplete (older data) blocks publishing from any tab
+    fresh(); SA(); const c2 = s1DemoCourse(); s1Spec(c2).cert = { layout: 'Old layout', fields: ['Course'], logo: '' }; certTab(c2);
+    ok('FP-C4 an unknown saved layout asks for a layout', q('#ct-l').value === '' && /Choose a layout/.test(q('#ct-l').textContent));
+    go('a-courses', { id: c2.id, tab: 'details' }); tap('[data-act="pubCourse"]'); const m = document.getElementById('modal-root').textContent; closeModal();
+    ok('FP-C4 publishing a Yes course with an incomplete saved template: "Can\'t publish yet" names each certificate item', /Can't publish yet/.test(m) && /Certificate: Choose a certificate layout/.test(m) && /Certificate: Put the learner's name on the certificate/.test(m) && c2.status === 'Draft');
+  });
+
+  await T('FP-C5 Yes: a valid template saves and publishes', async () => {
+    fresh(); SA(); const c = s1DemoCourse(), sp = s1Spec(c); certTab(c);
+    const l = q('#ct-l'); l.value = 'Landscape — classic border'; l.dispatchEvent(new Event('change', { bubbles: true }));
+    tap('input[name="fc-logo"][value="own"]'); file('#ct-logo', 'care-co-logo.png');
+    ok('FP-C5 the live preview follows the layout and the logo', /Landscape — classic border/.test(q('.fc-prev').textContent) && /care-co-logo\.png/.test(q('.fc-prev').textContent));
+    tap('[data-act="s1Save"]'); reason('Branded certificate');
+    ok('FP-C5 saved: layout and own logo, a new version', sp.cert.layout === 'Landscape — classic border' && sp.cert.logo === 'care-co-logo.png' && sp.certOn !== false);
+    tap('input[name="fc-logo"][value="def"]'); tap('[data-act="s1Save"]'); reason('Default mark'); ok('FP-C5 choosing the default "Welfare" mark again saves it', sp.cert.logo === '');
+    tap('[data-act="pubCourse"]'); const pd = document.getElementById('modal-root').textContent; reason('Go live');
+    ok('FP-C5 a complete template publishes, stating "Certificate on completion: Yes"', c.status === 'Published' && /Certificate on completion: Yes/.test(pd));
+    fresh(); SA(); const c2 = s1DemoCourse(); certTab(c2); tap('.s1-cf[value="QR code"]'); tap('[data-act="pubCourse"]');
+    ok('FP-C5 (negative) publishing from the Certificate tab with unsaved certificate changes asks to save first', c2.status === 'Draft' && !MODAL && /Save your certificate changes first/.test(errTxt()));
+  });
+
+  await T('FP-C6 Yes → No → Yes restores the design', async () => {
+    fresh(); SA(); const c = s1DemoCourse(), sp = s1Spec(c), saved = J(sp.cert); certTab(c);
+    const l = q('#ct-l'); l.value = 'Landscape — classic border'; l.dispatchEvent(new Event('change', { bubbles: true })); tap('.s1-cf[value="QR code"]');
+    pick(false); pick(true);
+    ok('FP-C6 unsaved layout and field changes are still there after No → Yes', q('#ct-l').value === 'Landscape — classic border' && !q('.s1-cf[value="QR code"]').checked && tplShown() && J(sp.cert) === saved);
+    tap('[data-act="s1Save"]'); reason('Landscape, no QR'); const des = J(sp.cert);
+    pick(false); tap('[data-act="s1Save"]'); reason('Off'); certTab(c); pick(true);
+    ok('FP-C6 a saved No course: choosing Yes shows the design saved before (not a blank one)', J(sp.cert) === des && q('#ct-l').value === 'Landscape — classic border' && !q('.s1-cf[value="QR code"]').checked);
+  });
+
+  await T('FP-C7 published Yes → No keeps certificates and enrolled rights', async () => {
+    fresh(); learner('A'); const old = J(STORE.worlds.A.certs); SA(); const c = s1DemoCourse(); certTab(c); tap('[data-act="pubCourse"]'); reason('Go');
+    const e = buy(c.id); SA(); certTab(c); pick(false); tap('[data-act="s1Save"]'); reason('Turn off');
+    ok('FP-C7 the change through the tab: No, a new version, audited', s1Spec(c).certOn === false && ADMIN.audit.some(a => /^Certificate on completion changed/.test(a.action) && a.reason === 'Turn off'));
+    ok('FP-C7 certificates already issued are unchanged', J(STORE.worlds.A.certs) === old);
+    learner('A'); const n0 = W.certs.length; doContent(e); q8(e);
+    ok('FP-C7 a learner enrolled while Yes still receives the certificate on completion', fcOnE(e) && !!e.certId && W.certs.length === n0 + 1);
+    const e2 = buy(c.id); ok('FP-C7 a new enrolment follows the published No', e2 && e2 !== e && e2.certOn === false);
+  });
+
+  await T('FP-C8 published No → Yes: authorised, versioned, reasoned', async () => {
+    fresh(); SA(); const c = s1DemoCourse(), sp = s1Spec(c); certTab(c); pick(false); tap('[data-act="s1Save"]'); reason('Off'); tap('[data-act="pubCourse"]'); reason('Go');
+    FA(); certTab(c); ok('FP-C8 (negative) a Finance Admin can\'t open the course editor: no setting or Save shown', !q('input[name="fc-on"]') && !q('[data-act="s1Save"]') && /don't have permission/.test(main()));
+    ACT.s1Save({ dataset: { id: c.id, t: 'certificate' } });
+    ok('FP-C8 (negative) … and a save sent anyway is refused and logged, unchanged', sp.certOn === false && !MODAL && ADMIN.audit.some(a => a.action === 'Blocked: certificate setting'));
+    SA(); certTab(c); const v0 = c.version; pick(true); ok('FP-C8 choosing Yes alone doesn\'t change the published course', sp.certOn === false && c.version === v0 && c.status === 'Published');
+    tap('[data-act="s1Save"]'); const dlg = document.getElementById('modal-root').textContent; reason('Certificates back on');
+    ok('FP-C8 saving: the version dialog names No → Yes; a new version with the reason and an audit entry', /No → Yes/.test(dlg) && sp.certOn === true && c.version === v0 + 1 && ADMIN.audit.some(a => a.action === `Certificate on completion changed — version ${c.version}` && a.before === 'No' && a.after === 'Yes' && a.reason === 'Certificates back on'));
+    const e = buy(c.id); ok('FP-C8 a new enrolment after the change gets the certificate setting Yes', e && e.certOn === true);
+  });
+
+  await T('FP-C10 existing workflows', async () => {
+    fresh(); SA(); const row = ADMIN.courses.find(c => c.title === 'Moving and Handling People'); certTab(row);
+    ok('FP-C10 an existing Yes course: the designer, all seven fields and the preview as before', tplShown() && qa('.s1-cf').length === 7 && qa('.s1-cf:checked').length === s1Spec(row).cert.fields.length && /Live preview/.test(main()));
+    go('a-courses', { id: row.id, tab: 'validity' }); ok('FP-C10 an existing Yes course: Validity has its controls and Save', !!q('input[name="val"]') && !!q('#rem') && !!q('[data-act="s1Save"][data-t="validity"]'));
+    go('a-courses'); ok('FP-C10 the course list shows validity for Yes courses', !/Not applicable \(no certificate\)/.test(main()) && /12 months|24 months/.test(main()));
+    ok('FP-C10 NVQ enrolments are outside the setting', fcOnE({ kind: 'nvq' }) === true);
+  });
+
   ACT.resetDemo();
   const pre = document.createElement('pre'); pre.id = 'ft-out'; pre.textContent = R.join('\n'); document.body.appendChild(pre);
 })();

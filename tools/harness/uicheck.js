@@ -485,7 +485,15 @@
     setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; const fpC = s1DemoCourse(); go('a-courses', { id: fpC.id, tab: 'certificate' });
     ok('FP Short course → Certificate: "Certificate on completion" Yes / No; no page overflow', all('main input[name="fc-on"]').filter(shown).length === 2 && appOver() <= 1, appOver());
     click($1('main input[name="fc-on"][value="no"]')); click($1('main [data-act="s1Save"]')); ok('FP saving the setting: the version dialog names the change; the dialog fits', /Certificate on completion: Yes → No/.test($1('#modal-root').textContent) && !modalFits(), modalFits());
-    $1('#modal-root #rsn').value = 'UI FP'; click($1('#modal-root .modal-f .btn-primary')); closeModal(); fpC.status = 'Published'; s1Sync();
+    $1('#modal-root #rsn').value = 'UI FP'; click($1('#modal-root .modal-f .btn-primary')); closeModal();
+    // FP correction: with No only the setting and its explanation; Yes brings the template back; inline errors fit
+    const fpGone = () => !shown($1('main .fc-tpl')) && !shown($1('main #ct-logo')) && !shown($1('main #ct-l')) && !all('main .s1-cf').some(shown) && !shown($1('main .cert-doc'));
+    go('a-courses', { id: fpC.id, tab: 'certificate' }); ok('FP Certificate tab, No: template designer, logo, layout, fields and preview hidden; the explanation shown; no page overflow', fpGone() && shown($1('main .fc-off')) && appOver() <= 1, appOver());
+    click($1('main input[name="fc-on"][value="yes"]')); ok('FP Certificate tab, Yes chosen: designer and live preview shown, "Not saved yet"; no page overflow', shown($1('main #ct-l')) && shown($1('main .fc-prev .cert-doc')) && shown($1('main .fc-dirty')) && !shown($1('main .fc-off')) && appOver() <= 1, appOver());
+    click($1('main .s1-cf[value="Learner name"]')); click($1('main [data-act="s1Save"]')); ok('FP Certificate tab, Yes incomplete: the inline errors are shown and fit; no page overflow', shown($1('main .fc-errs .note')) && shown($1('main .fc-fields .err')) && !MODAL && appOver() <= 1, appOver());
+    click($1('main input[name="fc-on"][value="no"]')); ok('FP Certificate tab, back to No: the template and its errors are hidden', fpGone() && !shown($1('main .fc-errs .note')));
+    go('a-courses', { id: fpC.id, tab: 'validity' }); ok('FP Validity of a No course: "Not applicable", no controls or Save; no page overflow', shown($1('main .fc-val-off')) && !$1('main input[name="val"]') && !$1('main [data-act="s1Save"]') && appOver() <= 1, appOver());
+    fpC.status = 'Published'; s1Sync();
     fpL('A'); go('browse'); ok('FP Browse: "No certificate on completion" on the course card; no page overflow', /No certificate on completion/.test(main()) && appOver() <= 1, appOver());
     s1Enrol(CATALOGUE.find(x => x.course === fpC.id), fpC, null); const fpE = STORE.worlds[S.variant].enrolments.find(x => x.courseId === fpC.id); go('course', { id: fpE.id, tab: 'certificate' });
     ok('FP learner Certificate tab of a No course: "No certificate for this course"; no page overflow', shown($1('main .fc-none')) && appOver() <= 1, appOver());

@@ -1505,3 +1505,9 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 .cr-nc .cr-nc-c { margin-top: 4px; }
 .cr-nc-dur { margin-top: 8px; }
 @media (max-width: 640px) { .cr-pb .cr-pd-l { max-width: none; flex-basis: 100%; } }
+/* FP correction: the certificate template and its notes are shown only for the chosen setting */
+.fc-tpl[hidden], .fc-off[hidden], .fc-dirty[hidden] { display: none !important; }
+.fc-errs:empty { display: none; }
+.fc-errs .note ul { margin: 4px 0 0; padding-left: 18px; }
+.fc-dirty { margin: 6px 0 0; color: var(--amber); }
+.fc-logo .check, .fc-fields .check { overflow-wrap: anywhere; }
