@@ -54,7 +54,7 @@ const cbAsgStamp = (d, pr) => { d.pid = pr ? pr.id : cbAsgPid(d); d.pidFrom = 'c
 const _newAsgCB5 = ACT.newAsg;
 ACT.newAsg = function () { const r = _newAsgCB5.apply(this, arguments), a = MODAL && MODAL.actions.find(x => /primary/.test(x.cls || '')); if (a) { const g = a.fn; a.fn = (...x) => { const n = s2Defs().length, res = g(...x); const d = s2Defs()[n]; if (d) { const pr = s3Progs().find(p => p.title === d.programme); cbAsgStamp(d, pr); } return res; }; } return r; };
 function cbAsgCreate(pr, v) {
-  let n = 10, id; while (s2Defs().some(x => x.id === (id = 'a' + n))) n++;
+  let n = 10, id = 'a' + n; while (s2Defs().some(x => x.id === (id = 'a' + n))) n++;
   const d = { id, title: v.title, programme: pr.title, unit: v.unit, due: v.due, status: 'Draft', version: 1, marker: 'Sarah Okonkwo', brief: s2Html(v.brief || 'Answer each question using examples from your workplace.'), briefV: 1, files: 'PDF, DOCX, JPG, PNG · 10 MB · 5 files', resubMax: 2, window: 10, qs: [], batches: [], copies: [] };
   cbAsgStamp(d, pr); s2Defs().push(d);
   s2Log(d, 'Assignment created (Draft)', '—', `${pr.title} (${pr.id}) · Version ${d.pv} · ${v.unit} · due ${fdt(d.due)}`, 'Course builder — Assessments'); return d;

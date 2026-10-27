@@ -635,7 +635,7 @@ ACT.newAsg = function () {
     const t = mval('#na-t'), prog = mval('#na-p'), unit = mval('#na-u').split(' — ')[0], pr = s3Progs().find(p => p.title === prog);
     if (typeof eArch === 'function' && eArch(pr)) { eNo('Assignments', eEnt(pr), 'create an assignment (programme archived)', 'Programme archived — no new assessment definitions', `${pr.title} is archived: new assignments can't be created. Existing assignments can still be published and taught.`); return false; }
     if (!t) return fieldErr('#na-t', 'Enter a title'), false; if (s2Defs().some(x => x.title.toLowerCase() === t.toLowerCase())) return fieldErr('#na-t', 'An assignment with this title already exists'), false; if (!unit) return fieldErr('#na-u', 'Choose a unit / module'), false;
-    let n = 10, id; while (s2Defs().some(x => x.id === (id = 'a' + n))) n++;
+    let n = 10, id = 'a' + n; while (s2Defs().some(x => x.id === (id = 'a' + n))) n++;
     const d = { id, title: t, programme: prog, unit, due: null, status: 'Draft', version: 1, marker: 'Sarah Okonkwo', brief: '<p>Answer each question using examples from your workplace.</p>', briefV: 1, files: 'PDF, DOCX, JPG, PNG · 10 MB · 5 files', resubMax: 2, window: 10, qs: [], batches: [], copies: [] };
     cbAsgStamp(d, pr); s2Defs().push(d); s2Log(d, 'Assignment created (Draft)', '—', `${prog} · ${unit} · deadlines set per batch`); closeModal(); go('a-assignments', { id, tab: 'questions' }); toast('Draft created — add the questions next.'); return false;
   };
@@ -643,7 +643,7 @@ ACT.newAsg = function () {
 };
 // Course builder, Section 3: no deadline
 cbAsgCreate = function (pr, v) {
-  let n = 10, id; while (s2Defs().some(x => x.id === (id = 'a' + n))) n++;
+  let n = 10, id = 'a' + n; while (s2Defs().some(x => x.id === (id = 'a' + n))) n++;
   const d = { id, title: v.title, programme: pr.title, unit: v.unit, due: null, status: 'Draft', version: 1, marker: 'Sarah Okonkwo', brief: s2Html(v.brief || 'Answer each question using examples from your workplace.'), briefV: 1, files: 'PDF, DOCX, JPG, PNG · 10 MB · 5 files', resubMax: 2, window: 10, qs: [], batches: [], copies: [] };
   cbAsgStamp(d, pr); s2Defs().push(d);
   s2Log(d, 'Assignment created (Draft)', '—', `${pr.title} (${pr.id}) · Version ${d.pv} · ${v.unit} · deadlines set per batch`, 'Course builder — Assessments'); return d;

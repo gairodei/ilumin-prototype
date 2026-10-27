@@ -77,7 +77,7 @@ SCREENS['f-plans'] = p => { const h = _fPlansCB10(p); if ((p.tab || 'schedules')
 // "Send payment reminder now" for a learner with an agreed schedule: a manual reminder, recorded and labelled as simulated
 const _remindCB10 = ACT.finRemind;
 ACT.finRemind = el => {
-  const sel = ui('fpL', 'C'), w = sel.startsWith('od:') ? null : STORE.worlds[sel], pl = cb9Pl(w); if (!pl || !pl.pin) return _remindCB10(el);
+  const sel = ui('fpL', fxClient() ? 'CD1' : 'C'), w = sel.startsWith('od:') ? null : STORE.worlds[sel], pl = cb9Pl(w); if (!pl || !pl.pin) return _remindCB10(el);
   if (!cb10Can()) return cb10Refuse('send a payment reminder');
   const r = pl.rows.find(x => !cb10Paid(x)); if (!r) return toast('Nothing is outstanding on this schedule.', 'info');
   const R = CB10(), at = now().toISOString(); R.log.unshift({ key: 'manual|' + at, pinAt: pl.pin.at, on: cb10Sim(), at, v: w.v, lid: w.me.id, name: chFullName(w), course: pl.title, n: r.n, of: pl.rows.length, amount: r.amount - (r.paid || 0), due: cbYmdOf(r.due), kind: 'manual', channel: 'In-app (simulated)', sim: true, by: ADMIN.me.name });

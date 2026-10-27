@@ -77,7 +77,7 @@ function tasRealloc(from, names, to) { const u = Object.values(TAS_USERS).find(x
 
 /* ---------- Caseload, submissions ---------- */
 const SHORT_BATCH = () => ({ code: 'SC-MH26', label: 'Moving and Handling People — 2026 (short course)', course: 'Moving and Handling People', status: 'In Progress', start: D(-40), end: D(50), teachers: ['Sarah Okonkwo'], assessors: [], short: true, cap: 30, enrolled: 6 });
-function tasBatches() { if (S.tas.edge === 'noAlloc') return []; return TME().batches.map(c => ADMIN.batches.find(b => b.code === c)).filter(Boolean).concat(TME().short ? [SHORT_BATCH()] : []); }
+function tasBatches() { if (S.tas.edge === 'noAlloc') return []; return TME().batches.map(c => ADMIN.batches.find(b => b.code === c)).filter(Boolean).concat(TME().short && !fxClient() ? [SHORT_BATCH()] : []); }
 function tasLearners(all) {
   const removed = new Set(STORE.tas.removed[TME().name] || []), bs = tasBatches().filter(b => all || S.tas.batch === 'all' || b.code === S.tas.batch);
   const out = [];

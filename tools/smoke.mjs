@@ -6,7 +6,7 @@
 // resolves in dist/ with exact letter case; the copies are byte-identical to the sources the regression tests.
 // Served: dist/ is served at "/" with its _headers (as Cloudflare Pages does); a browser loads it and the test fails on any
 // request that isn't 200, any script error, a script that didn't run, or the demo not booting (30 Demo Scenarios, a Level 3
-// Schedule tab), and NVQ Programmes navigation by clicking — the sidebar link, a programme, the wizard, a reload on a
+// Schedule tab), and NVQ Programmes navigation (FX: the served build boots the client demo dataset, so these use its records) by clicking — the sidebar link, a programme, the wizard, a reload on a
 // programme that isn't in the fresh data and a direct address change — with no Error 404.
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, extname, relative } from 'node:path';
@@ -60,8 +60,8 @@ document.getElementById('f').addEventListener('load', () => setTimeout(() => {
       const n = nav(cw, d); r.navReloadSignin = /Sign in/.test(d.querySelector('main').textContent); n.signIn();
       r.navStale = n.h1() === 'NVQ Programmes' && !n.is404() && n.rows() > 0 && !!n.q('main [data-nvq-gone="NV-N99"]') && cw.location.hash === '#a-programmes';
       r.navStaleInfo = n.h1() + ' ' + cw.location.hash;
-      cw.location.hash = '#a-programmes.NV-L3.versions';
-      return setTimeout(() => { r.navDirect = /Level 3 Diploma in Adult Care/.test(n.h1()) && !n.is404() && cw.eval('S.params.tab') === 'versions'; r.errs3 = (cw.__smokeErrs || []).slice(); out(r); }, 300);
+      cw.location.hash = '#a-programmes.NV-N1.versions'; // FX (PD-FX-01): the served build boots the client demo dataset — its Level 3 programme (was NV-L3, legacy data)
+      return setTimeout(() => { r.navDirect = /Level 3 Diploma in Care Practice \\(client demo\\)/.test(n.h1()) && !n.is404() && cw.eval('S.params.tab') === 'versions'; r.errs3 = (cw.__smokeErrs || []).slice(); out(r); }, 300);
     } catch (e) { r.thrown = String(e && e.stack || e); return out(r); }
   }
   try {
@@ -78,7 +78,7 @@ document.getElementById('f').addEventListener('load', () => setTimeout(() => {
     r.app = typeof cw.eval('App') === 'object' && d.querySelector('#app').children.length > 0;
     r.last = cw.eval('typeof r2SchedSection === "function" && typeof r5CohLink === "function" && UXC.some(x => x[0] === "R5 audiences") && typeof e1Decide === "function" && UXC.some(x => x[0] === "E1")');
     cw.eval('setAdminIdentity("A"); S.portal = "admin"; S.signedIn = true; ACT.scOpen(); go("demo-scenarios")'); r.scen = d.querySelectorAll('main section[id^="sc-"]').length; r.scList = cw.eval('SC_LIST().length');
-    cw.eval('setAdminIdentity("A"); S.portal = "admin"; S.signedIn = true; go("a-batches", { id: "L3AC-NOV26-LEI", tab: "schedule" })');
+    cw.eval('setAdminIdentity("A"); S.portal = "admin"; S.signedIn = true; go("a-batches", { id: "DEMO-L3-JAN27", tab: "schedule" })'); // FX: the client demo's Level 3 batch (was L3AC-NOV26-LEI, legacy data)
     r.sched = !!d.querySelector('main .r2-sched') && /Add weekly recurring classes/.test(d.querySelector('main').textContent);
     r.errs2 = (cw.__smokeErrs || []).slice(r.errs.length);
   } catch (e) { r.thrown = String(e && e.stack || e); return out(r); }

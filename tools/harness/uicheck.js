@@ -410,11 +410,23 @@
     ok('MC demo wizard: ten Coordinators ticked, "10 Academic Coordinators selected" displayed; the dialog fits', /10 Academic Coordinators selected/.test(($1('#modal-root .mc-nb-n') || {}).textContent || '') && shown($1('#modal-root .mc-nb-n')) && !modalFits(), modalFits()); closeModal();
     // CD (PD-CD-01…05): the demo presets in Demo controls; after "Load clean client demo", Create batch offers its programme with both modes
     closeModal(); initStore(); setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-batches');
-    S.demoOpen = true; renderDemo(); ok('CD Demo controls: the presets (client demo, 101-learner demo, Reset) and the demo-only note displayed', shown($1('#demo-root .cd-demo')) && shown($1('#demo-root [data-act="cdLoad"]')) && shown($1('#demo-root .cd-demo [data-act="mcDemoLoad"]')) && shown($1('#demo-root .cd-note')));
-    click($1('#demo-root [data-act="cdLoad"]')); S.demoOpen = false; renderDemo();
+    // FX (PD-FX-04) supersedes "the presets (client demo [Load clean client demo button], 101-learner demo, Reset)": the client demo is the
+    // default dataset; Demo data offers Reset demo, the 101-learner demo and the legacy test data (labelled internal)
+    S.demoOpen = true; renderDemo(); ok('CD Demo controls: Demo data (Reset demo, 101-learner demo, legacy test data — no "Load clean client demo") and the demo-only note displayed', shown($1('#demo-root .cd-demo')) && !$1('#demo-root [data-act="cdLoad"]') && shown($1('#demo-root .cd-demo [data-act="resetDemo"]')) && shown($1('#demo-root .cd-demo [data-act="mcDemoLoad"]')) && shown($1('#demo-root .cd-demo [data-act="fxLegacy"]')) && shown($1('#demo-root .cd-note')));
+    S.demoOpen = false; renderDemo(); ACT.cdLoad(); S.demoOpen = false; renderDemo(); // (the client demo dataset, as a fresh start loads it)
     ok('CD client demo loaded: its batch page displayed; no page overflow', /DEMO-L3-JAN27/.test(main()) && appOver() <= 1, appOver());
     go('a-batches'); click($1('main [data-act="newBatch"]')); const cdco = $1('#modal-root #nb-co');
-    ok('CD Create batch: the client-demo programme, both mode checkboxes; the dialog fits', !!cdco && cdco.value === CD_T && all('#modal-root .m-m').filter(shown).length === 2 && !modalFits(), modalFits()); closeModal();
+    ok('CD Create batch: the client-demo programme, both mode checkboxes; the dialog fits', !!cdco && cdco.value === CD_T && all('#modal-root .m-m').filter(shown).length === 2 && !modalFits(), modalFits());
+    // FX: the client demo dataset at this width — Create batch with both modes ticked, Review & create, the lists and Demo data
+    all('#modal-root .m-m').forEach(x => { if (x.checked) click(x); }); all('#modal-root .m-m').forEach(x => click(x));
+    ok('FX Create batch: both delivery-mode checkboxes ticked together, no legacy mode select displayed; the dialog fits', all('#modal-root .m-m').filter(x => shown(x) && x.checked).length === 2 && !shown($1('#modal-root #nb-dm')) && !modalFits(), modalFits());
+    $1('#modal-root #nb-c').value = 'UI-FX-' + W; click($1('#modal-root .modal-f .btn-primary'));
+    all('#modal-root input[type="checkbox"]').filter(x => /Dr Helen Carter/.test((x.closest('label') || {}).textContent || '')).forEach(x => { if (!x.checked) click(x); });
+    for (let g = 0; g < 5 && MODAL && !/step 5 of 5/.test(MODAL.title); g++) click($1('#modal-root .modal-f .btn-primary'));
+    ok('FX Review & create: both modes listed; the dialog fits', /step 5 of 5/.test((MODAL || {}).title || '') && /Delivery modes accepted ?Self-Paced and Fully Assisted/.test($1('#modal-root').textContent.replace(/\s+/g, ' ')) && !modalFits(), modalFits()); closeModal();
+    ['a-programmes', 'a-batches', 'a-learners', 'a-dashboard'].forEach(r => { go(r); ok(`FX ${r}: the client demo's records only; no page overflow`, !/Aisha Rahman|L3AC-JAN26|Level 2 Diploma in Care/.test(main()) && appOver() <= 1, appOver()); });
+    S.demoOpen = true; renderDemo(); ok('FX Demo data: the panel fits (no overflow) with the legacy loader labelled internal', shown($1('#demo-root [data-act="fxLegacy"]')) && /not client data/.test($1('#demo-root [data-act="fxLegacy"]').textContent) && appOver() <= 1); S.demoOpen = false; renderDemo();
+    setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true;
     // CD learner views (PD-CD-06…09): a demo learner's portal at its pending sign-up; a Coordinator's roster; the dashboard's demonstration note
     ACT.cdLearner({ dataset: { k: 'CD3' } }); go('admission'); ok('CD demo learner (Fully Assisted): Admission shows the batch and the delivery mode; no page overflow', /Your delivery mode: Fully Assisted/.test(main()) && appOver() <= 1, appOver());
     go('assignments'); ok('CD demo learner: assignments wait for the sign-up (the normal gate); no page overflow', /Finish your sign-up/.test(main()) && appOver() <= 1, appOver());

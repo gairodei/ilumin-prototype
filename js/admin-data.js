@@ -267,7 +267,7 @@ function buildAdmin(av) {
 
 /* ---------- Helpers shared by admin modules ---------- */
 const VNAME = v => { const m = STORE.worlds[v].me; return m.first + ' ' + m.last; };
-const demoWorlds = () => [...'ABCDEF'].concat(STORE.worlds && STORE.worlds.H ? ['H'] : []); // mock learner Priya Nair (world H)
+const demoWorlds = () => typeof FX !== 'undefined' && FX.mode === 'client' ? [] : [...'ABCDEF'].concat(STORE.worlds && STORE.worlds.H ? ['H'] : []); // mock learner Priya Nair (world H)
 // CH-03: data region by country — UAE → UAE; the UK and every other country → UK
 const regionOf = c => c === 'United Arab Emirates' ? 'UAE' : 'UK';
 function demoLearners() {

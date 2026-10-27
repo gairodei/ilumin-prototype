@@ -186,7 +186,7 @@ function cb9PinCard(w) {
     <p class="xs muted">The original schedule above is kept as agreed; a revision moves unpaid dates only, never amounts.</p></section>`;
 }
 const _fPlansCB9 = SCREENS['f-plans'];
-SCREENS['f-plans'] = p => { const h = _fPlansCB9(p), sel = ui('fpL', 'C'); if ((p.tab || 'schedules') !== 'schedules' || sel.startsWith('od:')) return h; const w = STORE.worlds[sel]; return h + cb9PinCard(w); };
+SCREENS['f-plans'] = p => { const h = _fPlansCB9(p), sel = ui('fpL', fxClient() ? 'CD1' : 'C'); if ((p.tab || 'schedules') !== 'schedules' || sel.startsWith('od:')) return h; const w = STORE.worlds[sel]; return h + cb9PinCard(w); };
 // Admissions → application: the chosen option and schedule
 const _appDetailCB9 = appDetail;
 appDetail = function (id) {

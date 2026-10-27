@@ -91,7 +91,7 @@ if (typeof STORE !== 'undefined' && STORE.worlds) chOfficeSeedObs();
 /* ---------- Approval items (System Admin raises → Super Admin decides) ---------- */
 const chCanCfg = () => isSA() || (typeof isSys === 'function' && isSys());
 function chRaise(type, related, reason, data) {
-  let n = 9000 + ADMIN.queue.length, id; while (ADMIN.queue.some(i => i.id === (id = 'AQ-' + n))) n++;
+  let n = 9000 + ADMIN.queue.length, id = 'AQ-' + n; while (ADMIN.queue.some(i => i.id === (id = 'AQ-' + n))) n++;
   const at = now().toISOString(), i = { id, type, raisedBy: ADMIN.me.name, raised: at, status: 'Pending', first: 'Super Administrator', related: [related, 'a-config'], notes: [], reason, history: [[ADMIN.me.name, at, 'Raised', reason]], data };
   ADMIN.queue.unshift(i); return i;
 }

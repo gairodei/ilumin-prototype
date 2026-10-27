@@ -65,7 +65,7 @@ ACT.chProgNew = () => {
 };
 function ch8Create(d) {
   STORE.chNewProgs = STORE.chNewProgs || [];
-  let n = 1, id; while (ADMIN.programmes.some(p => p.id === (id = 'NV-N' + n))) n++;
+  let n = 1; while (ADMIN.programmes.some(p => p.id === 'NV-N' + n)) n++; const id = 'NV-N' + n; // FX: the first programme of an empty list gets NV-N1 (the id was set inside the callback, which never ran)
   const pr = { id, title: d.title, level: d.level, ref: d.ref, dur: d.dur, desc: d.desc, price: d.price, version: 1, status: 'Draft', batches: 0, learners: 0, chNew: true, plan: { deposit: CH_DEP, inst: CH_INST_N }, created: now().toISOString(), by: ADMIN.me.name };
   ADMIN.programmes.push(pr); STORE.chNewProgs.push(pr); chSupports()[id] = d.support; ch8Docs(id); ch8Tree(id); chLetters(id); STORE.chLetters[id] = STORE.chLetters[id] || [];
   ch8Log(pr, 'Programme created (Draft, Version 1)', '—', `${d.level} · ${d.ref} · ${money(d.price, 'GBP')} · ${d.support}`, d.desc);

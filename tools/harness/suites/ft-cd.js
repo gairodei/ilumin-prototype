@@ -1,4 +1,6 @@
 // CD — the demo presets (26 Oct 2026; PD-CD-01…05): "Load clean client demo", the separate 101-learner Coordinator demo and Reset demo.
+// FX (27 Oct 2026; PD-FX-01…): the client demo is now the default dataset (ACT.cdLoad loads it without a button; see ft-fx.js). This suite
+// runs on the pinned legacy fixture; the checks that compared the client demo with seeded records are restated (each cites PD-FX).
 // The client demo is built through the real screens on top of the seeded data; these checks confirm what it contains, that the seeded
 // records and the DM-P gates are untouched, that the figures agree across screens, and that nothing financial or signed is invented.
 (async function () {
@@ -15,13 +17,16 @@
     w: Object.entries(STORE.worlds).filter(([k]) => !CD_KEYS.includes(k)).map(([, w]) => [w.plans, w.tx, w.signup && w.signup.plan]), ledger: ADMIN.ledger, fees: STORE.chFees || null }).replace(/:\d\d\.\d{3}Z/g, 'Z'); // (a reset regenerates time-of-load stamps to the millisecond)
 
   await T('CD-A load the client demo', async () => {
-    fresh(); SA(); const s0 = seedSnap(), led0 = J(ADMIN.ledger), q0 = ADMIN.queue.length, lt0 = J(Object.values(STORE.chLetters || {}).map(v => v.length));
+    fresh(); SA(); const s0 = seedSnap();
     S.demoOpen = true; renderDemo();
-    ok('CD-A Demo controls: the presets — client demo, 101-learner Coordinator demo, Reset demo — and that data lives only in this tab', !!document.querySelector('#demo-root [data-act="cdLoad"]') && !!document.querySelector('#demo-root .cd-demo [data-act="mcDemoLoad"]') && !!document.querySelector('#demo-root .cd-demo [data-act="resetDemo"]') && /Reloading the page or "Reset demo" returns to the starting data; nothing is saved/.test(document.querySelector('#demo-root .cd-note').textContent));
+    // FX (PD-FX-04) supersedes: was "the presets — client demo [cdLoad button], 101-learner Coordinator demo, Reset demo — … returns to the starting data";
+    // the client demo is now the default dataset (no "Load clean client demo" button) and Reset demo returns to it
+    ok('CD-A Demo controls: Reset demo, the 101-learner Coordinator demo, the legacy test data (no "Load clean client demo") — and that data lives only in this tab', !document.querySelector('#demo-root [data-act="cdLoad"]') && !!document.querySelector('#demo-root .cd-demo [data-act="mcDemoLoad"]') && !!document.querySelector('#demo-root .cd-demo [data-act="resetDemo"]') && !!document.querySelector('#demo-root .cd-demo [data-act="fxLegacy"]') && /Reloading the page or "Reset demo" returns to the client demo dataset; nothing is saved/.test(document.querySelector('#demo-root .cd-note').textContent));
     ACT.cdLoad(); const pr = cdPr(), b = cdBatch();
     ok('CD-A loaded: a published Level 3 programme and one batch; the 101-learner demo isn\'t loaded with it', !!pr && !!b && pr.status === 'Active' && pr.level === 'Level 3' && !mcdBatch());
     ok('CD-A the programme is eligible for new batches: approved Self-Paced and Fully Assisted fee options in force', crElig(pr) && J(crOptModes(pr.id)) === J(M_MODES));
-    ok('CD-A it was approved by a Finance Admin in the Approvals Queue (one new item) and published by the Academic Admin', ADMIN.queue.length === q0 + 1 && cb8Wf(pr).status === 'Approved' && ADMIN.audit.some(a => /Programme published|Version 1 published/.test(a.action) && a.entity.includes(pr.id) && a.actor === 'Rachel Hughes'));
+    // FX (PD-FX-01): the client demo starts from a store without seeded approvals — was "ADMIN.queue.length === q0 + 1" (one new item on top of the seeded queue)
+    ok('CD-A it was approved by a Finance Admin in the Approvals Queue (its only item) and published by the Academic Admin', ADMIN.queue.length === 1 && cb8Wf(pr).status === 'Approved' && ADMIN.audit.some(a => /Programme published|Version 1 published/.test(a.action) && a.entity.includes(pr.id) && a.actor === 'Rachel Hughes'));
     ok('CD-A the batch: Open, both modes, two Academic Coordinators', b.status === 'Open' && J(crBModes(b)) === J(M_MODES) && mcList(b).length === 2 && M_MODES.every(m => crReady(b, m) === 'ready'));
     const lids = mcLids(b), modes = lids.map(l => r2LidInfo(l, CD_B).mode), co = lids.map(l => mcOf(l, b));
     ok('CD-A four demo learners, two in each mode, allocated across both Coordinators', lids.length === 4 && modes.filter(m => m === 'Self-Paced').length === 2 && modes.filter(m => m === 'Fully Assisted').length === 2 && new Set(co).size === 2 && lids.every(l => /\(demo\)$/.test(ADMIN.learners.find(x => x.id === l).name)));
@@ -29,8 +34,11 @@
     const asg = s2Defs().filter(d => cbAsgPid(d) === pr.id);
     ok('CD-A assignments: two published with deadlines for the batch, one draft', asg.length === 3 && asg.filter(d => d.status === 'Published' && !!crDue(d, CD_B)).length === 2 && asg.filter(d => d.status === 'Draft').length === 1);
     ok('CD-A observations: workplace and Academy office permitted, with an event', (() => { const c = n5PubCur(pr) || n5Shown(pr); return c && c.required === true && c.workplace === 'Permitted' && c.office === 'Available' && (c.events || []).length === 1; })());
-    ok('CD-A nothing financial or signed is invented: the ledger, learners\' plans, payments and signed letters are unchanged', J(ADMIN.ledger) === led0 && lids.every(l => { const w = n4World(l); return !w || (!w.tx.length && !w.plans.length && !w.signup.sig && !w.signup.pay); }) /* CD-E: each has a portal account at the pending sign-up */ && J(Object.values(STORE.chLetters || {}).map(v => v.length).slice(0, JSON.parse(lt0).length)) === lt0);
-    ok('CD-A the seeded records are unchanged (programmes, batches, learners, fee options, plans, learner payments)', seedSnap() === s0);
+    // FX (PD-FX-01): was "the ledger, learners' plans, payments and signed letters are unchanged" (compared with the seeded ones); the client demo has none of them
+    ok('CD-A nothing financial or signed is invented: no ledger, no payments; the learners\' plans, payments and signatures are empty', !ADMIN.ledger.length && !allTx().length && lids.every(l => { const w = n4World(l); return !w || (!w.tx.length && !w.plans.length && !w.signup.sig && !w.signup.pay); }) /* CD-E: each has a portal account at the pending sign-up */);
+    // FX (PD-FX-02): was "the seeded records are unchanged" after loading the client demo on top of them; the client demo now holds no seeded
+    // record, so the check is that the legacy fixture itself is unchanged by it: a reset to the legacy data gives the same seeded records
+    fresh(); ok('CD-A the legacy fixture is unchanged by the client demo (programmes, batches, learners, fee options, plans, learner payments)', seedSnap() === s0);
     ok('CD-A the DM-P gates are unchanged: the seeded Level 2 and Level 3 still aren\'t eligible', !crElig(s3Pr('NV-L2')) && !crElig(s3Pr('NV-L3')));
   });
 
@@ -42,13 +50,15 @@
     ok('CD-B both modes as checkboxes, both ticked by default; no single-select mode', qma('.m-m').map(x => x.value + (x.checked ? '*' : '')).join() === 'Self-Paced*,Fully Assisted*' && !!qm('#nb-dm').closest('.cr-nc-hid')); closeModal();
     go('a-programmes'); const row = [...document.querySelectorAll('main tr')].find(r => r.textContent.includes(CD_T));
     ok('CD-B programme list: the client-demo programme shows 1 batch and v1: 4 learners (counted, as on its batch)', !!row && /v1: 4/.test(row.textContent) && [...row.querySelectorAll('td')].some(td => td.textContent.trim() === '1'));
+    fresh(); SA(); go('a-programmes'); // FX (PD-FX-01): the seeded Level 2 is in the legacy fixture only (was checked with the client demo loaded on top of it)
     const l2row = [...document.querySelectorAll('main tr')].find(r => r.textContent.includes('Level 2 Diploma in Care (England)'));
     ok('CD-B programme list: batches are counted (the seeded Level 2 has 5 batches; it showed a stored 3)', !!l2row && [...l2row.querySelectorAll('td')].some(td => td.textContent.trim() === String(ADMIN.batches.filter(x => x.course === 'Level 2 Diploma in Care (England)').length)));
-    go('a-batches', { id: CD_B }); ok('CD-B batch detail: roster 4 and both modes accepted', /Roster \(4\//.test(main()) && /Delivery modes accepted: Self-Paced and Fully Assisted/.test(main()));
+    ACT.cdLoad(); SA(); go('a-batches', { id: CD_B }); ok('CD-B batch detail: roster 4 and both modes accepted', /Roster \(4\//.test(main()) && /Delivery modes accepted: Self-Paced and Fully Assisted/.test(main()));
     const sr = searchResults('DEMO-L3') + searchResults('(demo)');
     ok('CD-B global search (learners, batches) finds the demo batch and the demo learners', sr.includes(CD_B) && ['Amira Shah (demo)', 'Dev Patel (demo)'].every(n => sr.includes(n)));
     go('a-dashboard'); ok('CD-B dashboard: registered learners are counted from the records (the four demo learners included)', main().includes(String(allLearners().length)));
-    ACT.cdOpen({ dataset: { t: 'list' } }); ok('CD-B "Programme list" opens the list with its visible search filled in ("client demo"), showing that programme', /client demo/i.test((document.querySelector('main #dtq-kprogs, main #dtq-progs') || {}).value || '') && [...document.querySelectorAll('main tbody tr')].length === 1);
+    // FX (PD-FX-04): was "opens the list with its visible search filled in ("client demo")"; the client demo dataset has one programme, so no filter
+    ACT.cdOpen({ dataset: { t: 'list' } }); ok('CD-B "Programme list" opens the list (unfiltered), showing that programme only', !((document.querySelector('main #dtq-kprogs, main #dtq-progs') || {}).value || '') && [...document.querySelectorAll('main tbody tr')].length === 1);
   });
 
   await T('CD-C the presets stay separate; Reset', async () => {

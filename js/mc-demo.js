@@ -12,7 +12,8 @@
    ============================================================ */
 'use strict';
 
-const MCD_CODE = 'DEMO-MC101', MCD_COURSE = 'Level 2 Diploma in Care (England)', MCD_N = 101;
+const MCD_CODE = 'DEMO-MC101', MCD_COURSE = 'Level 2 Diploma in Care (England)', MCD_N = 101; // FX: with the client demo dataset loaded, the batch is on the client demo's Level 3 programme (mcdCourse); otherwise Level 2 as before
+const mcdFx = () => typeof fxClient === 'function' && fxClient() && typeof cdPr === 'function' && !!cdPr(), mcdCourse = () => (mcdFx() ? CD_T : MCD_COURSE);
 const MCD_COORDS = ['Amara Okoye', 'Ben Hartley', 'Chloe Sandhu', 'David Mensah', 'Elena Petrova', 'Faisal Rahim', 'Grace Lindqvist', 'Hannah Achebe', 'Imran Qureshi', 'Julia Moretti'].map((n, k) => ({ k: k + 1, name: n + ' (demo)', email: n.toLowerCase().replace(/ /g, '.') + '.demo@illumin-academy.example' }));
 const MCD_FIRST = ['Aaliyah', 'Bilal', 'Carys', 'Dev', 'Erin', 'Femi', 'Gemma', 'Harvey', 'Isabel', 'Jamal', 'Keira', 'Liam', 'Maya', 'Nathan', 'Orla', 'Pavel', 'Rosa', 'Samir', 'Tara', 'Usman'];
 const MCD_LAST = ['Adams', 'Baker', 'Chowdhury', 'Davies', 'Evans', 'Fletcher', 'Green', 'Hughes', 'Iqbal', 'James', 'Khan', 'Lewis', 'Morgan', 'Nowak', 'Owen', 'Patel', 'Quinn', 'Roberts', 'Singh', 'Turner', 'Walsh', 'Young', 'Zielinski'];
@@ -31,7 +32,7 @@ function mcdStaff() {
 }
 // A clean learner-portal account for one demo learner: the Level 2 programme with nothing done yet
 function mcdWorld(key, L, b) {
-  const keepW = W, keepV = S.variant, t = makeWorld('D'), [first, last] = [L.first, L.last];
+  const keepW = W, keepV = S.variant, t = makeWorld(mcdFx() ? 'C' : 'D'), [first, last] = [L.first, L.last];
   PERSONAS[key] = { id: L.id, first, last, email: L.email, mobile: L.mobile, dob: '—', address: '—', postcode: '—', country: 'United Kingdom', tz: 'Europe/London', cur: 'GBP', joined: fd(b.start), referral: 'Demonstration data', sponsor: null };
   VARIANTS[key] = { nvq: false, fresh: true };
   const w = makeWorld(key); W = keepW; S.variant = keepV;
@@ -39,7 +40,7 @@ function mcdWorld(key, L, b) {
   c.tree.forEach(u => u.mods.forEach(m => m.los.forEach(lo => lo.crit.forEach(x => Object.assign(x, { st: 'Not Started', src: null, date: null, ev: null, obs: null })))));
   c.assignments.forEach(a => { Object.assign(a, { status: 'Not Started', round: 'Sub 1', resubUsed: 0, submittedAt: null, timeline: [], overall: null, assessor: null, coordAll: [], closed: false }); delete a.coord; delete a.limit; a.qs.forEach(q => { q.rounds = []; q.fb = []; delete q.state; delete q.pdReason; }); });
   Object.assign(c.workplace, { perm: 'Not entered', name: '', address: '', postcode: '', ctitle: '', cname: '', cemail: '', cphone: '' });
-  const nvq = { ...t.nvq, title: MCD_COURSE, level: 'Level 2', batch: `${b.label} — ${b.code}`, batchStart: b.start, batchEnd: b.end, start: b.start, end: b.end, enrolled: b.start, status: 'Active', version: 'Version 1 — demo enrolment', sponsor: null, people: [], mode: b.mode }; // the delivery channel of the batch
+  const nvq = { ...t.nvq, title: mcdCourse(), level: mcdFx() ? 'Level 3' : 'Level 2', batch: `${b.label} — ${b.code}`, batchStart: b.start, batchEnd: b.end, start: b.start, end: b.end, enrolled: b.start, status: 'Active', version: 'Version 1 — demo enrolment', sponsor: null, people: [], mode: b.mode }; // the delivery channel of the batch
   Object.assign(w, c, { flags: { nvq: true, admitted: true, demo: true }, nvq, enrolments: [nvq], pd: { items: [], session: { status: 'Not scheduled', at: b.end, mode: '—', loc: '', with: chAllocOf(b).pd } }, plan: [], observations: [], docs: [], tx: [], plans: [], certs: [], requests: [], threads: [], attendance: [], events: [], announcements: [], drafts: {}, payOverdue: null, referral: null,
     admission: { status: 'Approved', reviewer: '—', history: [['Demonstration data — no admission record', b.start]], deposit: { min: 0, paid: false, paidAt: null, holdUntil: null, balance: 0 }, batch: nvq.batch, batchStart: b.start },
     signup: { step: 5, done: true, batch: b.code, demo: true, pay: null },
@@ -51,13 +52,13 @@ function mcdWorld(key, L, b) {
 function mcDemoLaunch() {
   if (mcdBatch()) return mcdBatch();
   mcdStaff();
-  const start = D(-21, '09:00'), end = D(344, '17:00'), b = mcNorm({ code: MCD_CODE, label: 'Demo cohort · 10 Coordinators (demo data)', course: MCD_COURSE, start, end, cap: 110, enrolled: MCD_N, mode: 'Online', dmode: 'Fully Assisted', dmodeSrc: 'demo', coord: MCD_COORDS[0].name, teachers: ['Tom Whitfield'], assessors: ['James Pryce'], status: 'In Progress', wait: 0, roster: [], coh: [], intake: 'Manual', created: start, demo: true });
+  const start = D(-21, '09:00'), end = D(344, '17:00'), b = mcNorm({ code: MCD_CODE, label: 'Demo cohort · 10 Coordinators (demo data)', course: mcdCourse(), start, end, cap: 110, enrolled: MCD_N, mode: 'Online', dmode: 'Fully Assisted', dmodeSrc: 'demo', coord: MCD_COORDS[0].name, teachers: ['Tom Whitfield'], assessors: ['James Pryce'], status: 'In Progress', wait: 0, roster: [], coh: [], intake: 'Manual', created: start, demo: true });
   b.coords = MCD_COORDS.map(c => c.name); b.coordHistory = b.coords.map(n => [n, start, null]);
   ADMIN.batches.push(b);
   for (let k = 0; k < MCD_N; k++) {
     const [first, last] = mcdLearnerName(k), n = String(k + 1).padStart(3, '0'), id = 'IA-L-D' + n, name = `${first} ${last} (demo)`;
-    ADMIN.learners.push({ id, name, email: `${first}.${last}.${n}@demo.example`.toLowerCase(), mobile: '+44 7700 900' + String(100 + k).slice(-3), agency: null, courses: [MCD_COURSE], acct: 'Active', rec: 'Active', region: 'UK', last: D(-1 - (k % 9)), flags: [], dob: '—', address: '—', postcode: '—', country: 'United Kingdom', joined: fd(start), referral: 'Demonstration data', cur: 'GBP', demo: true,
-      _enr: [{ id: 'x0', title: MCD_COURSE, type: 'NVQ / RQF', status: 'Active', enrolled: start, start, end, progress: 0, sponsor: null, version: 'Version 1' }] });
+    ADMIN.learners.push({ id, name, email: `${first}.${last}.${n}@demo.example`.toLowerCase(), mobile: '+44 7700 900' + String(100 + k).slice(-3), agency: null, courses: [mcdCourse()], acct: 'Active', rec: 'Active', region: 'UK', last: D(-1 - (k % 9)), flags: [], dob: '—', address: '—', postcode: '—', country: 'United Kingdom', joined: fd(start), referral: 'Demonstration data', cur: 'GBP', demo: true,
+      _enr: [{ id: 'x0', title: mcdCourse(), type: 'NVQ / RQF', status: 'Active', enrolled: start, start, end, progress: 0, sponsor: null, version: 'Version 1' }] });
     const subs = Object.fromEntries(['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7'].map(a => [a, a === 'a1' && k % 4 === 0 ? 'Submitted' : 'Not Started']));
     b.coh.push({ lid: id, flags: ['On track'], last: D(-1 - (k % 9)), att: null, subs, pd: [], seed: hashN(id + MCD_CODE), demo: true });
   }
@@ -99,7 +100,7 @@ function mcdPanel() {
   const on = !!mcdBatch(), b = mcdBatch();
   const cnt = on ? (() => { const c = {}; mcLids(b).forEach(l => { const d = mcOf(l, b); c[d] = (c[d] || 0) + 1; }); return MCD_COORDS.map(x => c[x.name] || 0).join(' · '); })() : '';
   return `<fieldset class="mc-demo"><legend>Multi-Coordinator demo — demonstration data</legend>
-    <p class="xs muted">${on ? `${MCD_CODE} is loaded: 10 demo Coordinators, ${mcLids(b).length} demo learners (learners per Coordinator: ${cnt}). Reset demo removes it.` : 'Loads a Level 2 batch with 10 demo Academic Coordinators and 101 demo learners, allocated by the normal rule. No documents, payments or outcomes are created.'}</p>
+    <p class="xs muted">${on ? `${MCD_CODE} is loaded: 10 demo Coordinators, ${mcLids(b).length} demo learners (learners per Coordinator: ${cnt}). Reset demo removes it.` : `Loads a ${mcdFx() ? 'Level 3' : 'Level 2'} batch with 10 demo Academic Coordinators and 101 demo learners, allocated by the normal rule. No documents, payments or outcomes are created.`}</p>
     <div class="btns">${on ? '' : '<button class="btn btn-sm btn-primary" data-act="mcDemoLoad">Load the 10-Coordinator demo batch</button>'}
       <button class="btn btn-sm" data-act="mcDemoOpen" data-t="admin">Admin: batch Coordinators</button>
       ${[1, 5, 10].map(k => `<button class="btn btn-sm" data-act="mcDemoOpen" data-t="coord" data-k="${k}">Coordinator ${k}</button>`).join('')}

@@ -18,6 +18,7 @@
 'use strict';
 
 const CD_T = 'Level 3 Diploma in Care Practice (client demo)', CD_B = 'DEMO-L3-JAN27';
+const CD_TEACHER = 'Marcus Bell', CD_ASSESSOR = 'James Pryce'; // demo staff accounts: Teacher only / Assessor only (TAQA)
 const CD_LEARNERS = [['Amira Shah (demo)', 'Self-Paced'], ['Ben Holloway (demo)', 'Self-Paced'], ['Chloe Adeyemi (demo)', 'Fully Assisted'], ['Dev Patel (demo)', 'Fully Assisted']];
 const cdPr = () => (ADMIN.programmes || []).find(p => p.title === CD_T) || null;
 const cdBatch = () => (ADMIN.batches || []).find(b => b.code === CD_B) || null;
@@ -76,6 +77,8 @@ function cdBuild() {
   go('a-batches'); ACT.newBatch(); put({ '#nb-c': CD_B }); const co = $('#modal-root #nb-co'); co.value = CD_T; INP.n2NbCourse(co); $('#modal-root #nb-m').value = 'Blended';
   $$('#modal-root .m-m').forEach(x => { x.checked = true; INP.mModeTick(x); }); if (MODAL.actions.find(a => /primary/.test(a.cls)).fn() === false) throw new Error('Create batch: ' + $('#modal-root').textContent.slice(0, 200));
   $('#modal-root #nb-ac').value = coords[0]; const two = $$('#modal-root .mc-nb-c').find(i => i.value === coords[1]); if (two) two.checked = true;
+  // FX (PD-FX-09): one Teacher-only and one Assessor-only account on the same Staff step (neither is a Coordinator — roles stay separate)
+  $$('#modal-root .nb-t').forEach(i => { i.checked = i.value === CD_TEACHER; }); $$('#modal-root .nb-a').forEach(i => { i.checked = i.value === CD_ASSESSOR; });
   [1, 2, 3].forEach(() => MODAL.actions.find(a => /primary/.test(a.cls)).fn()); MODAL.actions.find(a => /primary/.test(a.cls)).fn(); closeModal();
   const b = cdBatch(); if (!b) throw new Error('Create batch: not created');
   // 10. Open the batch for enrolment
@@ -94,7 +97,7 @@ function cdBuild() {
   // 13. Sessions for the batch (Schedule → Add session): a class for everyone, and a Self-Paced check-in for the Self-Paced fee option only
   [['Client demo — mixed class (all learners)', 75, null], ['Client demo — Self-Paced check-in', 76, 'Self-Paced']].forEach(([t, n, m]) => {
     go('a-batches', { id: CD_B, tab: 'schedule' }); ACT.addSession({ dataset: { b: CD_B } }); if (!MODAL) throw new Error('Add session refused');
-    put({ '#se-n': t, '#se-d': cdLondon(D(n).slice(0, 10), 10), '#se-m': '60' }); const te = $('#modal-root #se-t'); if (te) te.value = te.options[1] ? te.options[1].value : te.value;
+    put({ '#se-n': t, '#se-d': cdLondon(D(n).slice(0, 10), 10), '#se-m': '60' }); const te = $('#modal-root #se-t'); if (te) te.value = CD_TEACHER; // the batch's Teacher (FX, PD-FX-09)
     if (m) $$('#modal-root .r2-g').forEach(x => { x.checked = (r1Opt(x.value) || {}).mode === m; });
     let r = ok1(), g = 0; while (r === false && MODAL && g++ < 3) r = ok1(); closeModal();
   });
@@ -120,17 +123,18 @@ ACT.cdOpen = el => { const t = el.dataset.t; setAdminIdentity('A'); S.portal = '
   if (t === 'prog' && pr) return go('a-programmes', { id: pr.id, tab: 'details' });
   if (t === 'batch') return go('a-batches', { id: CD_B });
   if (t === 'new') { go('a-batches'); return ACT.newBatch(); }
-  if (t === 'list') { go('a-programmes'); ['kprogs', 'progs'].forEach(k => { const st = dts(k); if (st) { st.q = 'client demo'; st.page = 0; } }); return render(); } // the list's own search box, filled in (visible; clear it to see every programme)
+  if (t === 'list') return go('a-programmes'); // FX: the client demo has one programme; the list needs no filter
   if (t === 'queue') { const wf = pr && cb8Wf(pr); return go('a-queue', wf && wf.qid ? { id: wf.qid } : {}); }
 };
 
-/* ---------- Demo controls: the presets and what they are ---------- */
-const CD_NOTE = 'Demo only: everything lives in this browser tab. Reloading the page or "Reset demo" returns to the starting data; nothing is saved.';
+/* ---------- Demo controls: the datasets (FX, PD-FX-04: the client demo is the default; "Load clean client demo" is gone) ---------- */
+const CD_NOTE = 'Demo only: everything lives in this browser tab. Reloading the page or "Reset demo" returns to the client demo dataset; nothing is saved.';
 function cdPanel() {
-  const on = cdOn(), b = cdBatch(), n = on ? batchRoster(b).length : 0;
-  return `<fieldset class="cd-demo"><legend>Demo presets</legend><p class="xs muted cd-note">${esc(CD_NOTE)}</p>
-    <div class="btns"><button class="btn btn-sm btn-primary" data-act="cdLoad">Load clean client demo</button><button class="btn btn-sm" data-act="mcDemoLoad">Load 101-learner Coordinator demo</button><button class="btn btn-sm" data-act="resetDemo">Reset demo</button></div>
-    <p class="xs muted">${on ? `Client demo loaded: ${esc(CD_T)} · batch ${CD_B} (${n} demo learners, two Coordinators). Seeded records stay in the lists.` : 'The client demo resets the data, then builds a small example through the real screens; the 101-learner demo is separate.'}</p>
+  const on = cdOn(), b = cdBatch(), n = on ? batchRoster(b).length : 0, legacy = typeof fxClient === 'function' && !fxClient();
+  return `<fieldset class="cd-demo"><legend>Demo data</legend><p class="xs muted cd-note">${esc(CD_NOTE)}</p>
+    ${legacy ? `<div class="note b-amber fx-legacy-note" role="status">${ic('alert')}<div class="small"><strong>Full legacy test data is loaded — internal testing data, not client data.</strong> Reset demo returns to the client demo.</div></div>` : ''}
+    <div class="btns"><button class="btn btn-sm btn-primary" data-act="resetDemo">Reset demo</button><button class="btn btn-sm" data-act="mcDemoLoad">Load 101-learner Coordinator demo</button><button class="btn btn-sm fx-legacy-btn" data-act="fxLegacy">Load full legacy test data (internal — not client data)</button></div>
+    <p class="xs muted">${on ? `Client demo dataset: ${esc(CD_T)} · batch ${CD_B} (${n} demo learners, two Coordinators). Its fees, Finance approval and activations are simulated demonstration records.` : 'The client demo dataset is not loaded.'}</p>
     ${on ? `<div class="btns cd-links"><button class="btn btn-sm" data-act="cdOpen" data-t="list">Programme list</button><button class="btn btn-sm" data-act="cdOpen" data-t="prog">Programme</button><button class="btn btn-sm" data-act="cdOpen" data-t="batch">Batch</button><button class="btn btn-sm" data-act="cdOpen" data-t="new">Create batch</button><button class="btn btn-sm" data-act="cdOpen" data-t="queue">Finance approval</button></div>` : ''}</fieldset>`;
 }
 const _rdCD = renderDemo;
@@ -166,7 +170,7 @@ function cdWorld(key, L, m) {
   const w = makeWorld(key); W = keepW; S.variant = keepV;
   // a new account has no history: the template's short-course records, payments, certificates, requests, messages, notifications,
   // events and attendance are removed (as the 101-learner demo does), so nothing is shown that this learner didn't do
-  Object.assign(w, { enrolments: [], plan: [], observations: [], docs: [], tx: [], plans: [], certs: [], requests: [], threads: [], attendance: [], events: [], notifs: [], drafts: {}, payOverdue: null, referral: null, pd: { items: [], session: { status: 'Not scheduled', at: null, mode: '—', loc: '', with: '' } } });
+  Object.assign(w, { enrolments: [], plan: [], observations: [], docs: [], tx: [], plans: [], certs: [], requests: [], threads: [], attendance: [], events: [], notifs: [], announcements: [], drafts: {}, payOverdue: null, referral: null, pd: { items: [], session: { status: 'Not scheduled', at: null, mode: '—', loc: '', with: '' } } });
   if (w.workplace) Object.assign(w.workplace, { perm: 'Not entered', name: '', address: '', postcode: '', ctitle: '', cname: '', cemail: '', cphone: '' });
   STORE.worlds[key] = w; if (STORE.acct) STORE.acct[key] = 'Active';
   VARIANT_INFO[key] = [`Client demo learner — ${m}`, `${L.name} · ${CD_B} · demonstration data (sign-up pending)`];
@@ -213,10 +217,11 @@ cdPanel = function () {
    aren't calculated from the records, and never from the client demo cohort (whose figures are counted in Demo controls). A note says so,
    directly under the figures; the figures themselves are unchanged (no dashboard rewrite). */
 const CD_DASH_NOTE = 'Demonstration figures: average progress, completion rate and part of the overdue, pending-marking and revenue totals are fixed example values, not calculated from the records (nor from the client demo). Registered learners, enrolments and active learners are counted.';
+const CD_DASH_NOTE_FX = 'Client demo data: every figure here is counted from the demo records. Average progress shows “—” until a learner has started.';
 const _dashCD = SCREENS['a-dashboard'];
 SCREENS['a-dashboard'] = function () {
   const h = _dashCD.apply(this, arguments); if (typeof h !== 'string' || !h.includes('adm-kpis') || h.includes('cd-dash-note')) return h;
-  return h.replace(/(<div class="kpis adm-kpis">[\s\S]*?<\/div>\s*)(<section class="card"><h3>Enrolments by course)/, (x, a, b) => `${a}<p class="xs muted cd-dash-note">${ic('info', 12)} ${CD_DASH_NOTE}</p>${b}`);
+  return h.replace(/(<div class="kpis adm-kpis">[\s\S]*?<\/div>\s*)(<section class="card"><h3>Enrolments by course)/, (x, a, b) => `${a}<p class="xs muted cd-dash-note">${ic('info', 12)} ${typeof fxClient === 'function' && fxClient() ? CD_DASH_NOTE_FX : CD_DASH_NOTE}</p>${b}`);
 };
 
 

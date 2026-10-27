@@ -67,6 +67,6 @@
   });
   // Demo Scenarios + record pages, then every scenario step's screen (role switched as the step's Open button does)
   [['Demo Scenarios', 'demo-scenarios'], ['Records', 'cd-log'], ['Records', 'ux-changelog'], ['Records', 'tbd-register'], ['Records', 'fd-inventory'], ['Records', 'fu-inventory'], ['Records', 'tbd-check']].forEach(([r, t]) => { try { S.ui = {}; ACT.scOpen(); } catch (e) { out.errors.push(r + ' enter ' + e); } snap(r, t); });
-  try { SC_LIST().forEach(([n, , , steps]) => steps.forEach((st, k) => { if (!st.t) return; try { S.ui = {}; ACT.scOpen(); scRole(st.r); } catch (e) { out.errors.push('Scenario ' + n + ' enter ' + e); } snap('Scenario ' + n + '.' + (k + 1), st.t); })); } catch (e) { out.errors.push('scenarios ' + e); }
+  try { if (!(typeof fxClient === 'function' && fxClient())) SC_LIST().forEach(([n, , , steps]) => steps.forEach((st, k) => { if (!st.t) return; try { S.ui = {}; ACT.scOpen(); scRole(st.r); } catch (e) { out.errors.push('Scenario ' + n + ' enter ' + e); } snap('Scenario ' + n + '.' + (k + 1), st.t); })); } catch (e) { out.errors.push('scenarios ' + e); }
   const pre = document.createElement('pre'); pre.id = 'crawl-out'; pre.textContent = JSON.stringify(out); document.body.appendChild(pre);
 })();

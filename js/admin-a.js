@@ -12,7 +12,7 @@ SCREENS['a-dashboard'] = () => {
   const rev = c => tx.filter(t => t.cur === c).reduce((a, t) => a + t.amount, 0);
   const mine = q.filter(awaitingMe), escd = q.filter(i => i.escalated && isOpen(i)), finals = q.filter(i => isOpen(i) && i.finalSuper);
   const overdue = overdueLearners();
-  const byCourse = [['Moving and Handling', 412], ['Infection Prevention', 351], ['Basic Life Support', 286], ['Dementia Awareness', 220], ['L3 Adult Care', 63], ['L2 Care', 41]];
+  const byCourse = fxClient() ? fxByCourse() : [['Moving and Handling', 412], ['Infection Prevention', 351], ['Basic Life Support', 286], ['Dementia Awareness', 220], ['L3 Adult Care', 63], ['L2 Care', 41]];
   const subs = allSubmissions();
   const apps = allApplications();
   const today = W && D(0);
@@ -21,13 +21,13 @@ SCREENS['a-dashboard'] = () => {
     ${kpi('Registered learners (people)', L.length, 'Unique accounts', 'a-reports..registered')}
     ${kpi('Enrolments (records)', enrolCount, 'One learner can hold several', 'a-reports..registered')}
     ${kpi('Active learners', active, `${L.length - active} inactive or archived`, 'a-learners')}
-    ${kpi('Average progress', '58%', 'Across active enrolments', 'a-reports..progress')}
+    ${fxClient() ? fxDashKpis(subs, rev) : `${kpi('Average progress', '58%', 'Across active enrolments', 'a-reports..progress')}
     ${kpi('Completion rate', '71%', 'Started 1,842 · completed 1,308 · expired 196', 'a-reports..completion')}
     ${kpi('Overdue submissions', subs.filter(s => s.overdue).length + 11, 'Deadline passed, nothing submitted', 'a-records')}
     ${kpi('Pending markings', subs.filter(s => ['Submitted'].includes(s.status)).length + 23, 'Submitted, awaiting marking', 'a-records')}
-    ${kpi('Revenue this month', `${money(rev('GBP') + 31592, 'GBP')}`, 'All amounts in GBP', 'a-finance..reports')}
+    ${kpi('Revenue this month', `${money(rev('GBP') + 31592, 'GBP')}`, 'All amounts in GBP', 'a-finance..reports')}`}
   </div>
-  <section class="card"><h3>Enrolments by course / programme</h3>${byCourse.map(([c, n]) => `<div class="row" style="gap:10px"><span class="small" style="width:170px">${c}</span><div class="bar" style="flex:1"><span style="width:${n / 4.2}%"></span></div><span class="small num" style="width:40px;text-align:right">${n}</span></div>`).join('')}</section>
+  <section class="card"><h3>Enrolments by course / programme</h3>${byCourse.map(([c, n]) => `<div class="row" style="gap:10px"><span class="small" style="width:170px">${esc(c)}</span><div class="bar" style="flex:1"><span style="width:${fxClient() ? n / Math.max(1, ...byCourse.map(x => x[1])) * 100 : n / 4.2}%"></span></div><span class="small num" style="width:40px;text-align:right">${n}</span></div>`).join('')}</section>
   <div class="grid-2">
     <section class="card"><div class="card-h"><h2>${ic('inbox')}My approvals</h2><button class="btn btn-sm btn-ghost" data-go="a-queue">Open queue</button></div>
       ${mine.length ? `${(o => o ? `<div class="note b-blue" role="status">${ic('clock')}<div class="small"><strong>Oldest awaiting you:</strong> <span class="mono">${o.id}</span> · ${esc(qLbl(o.type))} · ${esc(o.related[0])} · raised ${fd(o.raised)}<div class="b-act"><button class="btn btn-sm btn-primary" data-go="a-queue" data-id="${o.id}">Decide</button></div></div></div>` : '')(mine.slice().sort((a, b) => new Date(a.raised) - new Date(b.raised))[0])}<h3 class="small">Escalated to me (${escd.length})</h3>${escd.length ? `<ul class="list">${escd.map(i => `<li class="li"><div class="li-b"><span class="strong"><span class="mono small">${i.id}</span> · ${esc(qLbl(i.type))}</span><span class="small muted">${esc(i.related[0])}</span></div>${daysChip(i.days)}<button class="btn btn-sm" data-go="a-queue" data-id="${i.id}">Open</button></li>`).join('')}</ul>` : '<p class="small muted">Nothing escalated.</p>'}
@@ -41,15 +41,16 @@ SCREENS['a-dashboard'] = () => {
   <div class="grid-2">
     <section class="card"><h2>Admissions snapshot</h2><div class="chip-row">${['Pending — Documents Required', 'Under Review', 'Approved', 'Rejected', 'Withdrawn', 'Escalated'].map(s => chip(`${s}: ${apps.filter(a => a.status === s || (s === 'Escalated' && a.escalated)).length}`, TONE[s] || 'red')).join('')}</div>
       <p class="small">Reviews nearing the 7-day SLA: <strong>${apps.filter(a => a.days >= 5 && ['Under Review', 'Pending — Documents Required'].includes(a.status)).length}</strong></p><button class="btn btn-sm" data-go="a-admissions">Open applications</button></section>
-    <section class="card"><h2>Upcoming</h2><ul class="list small">
+    ${fxClient() ? fxUpcoming() : `<section class="card"><h2>Upcoming</h2><ul class="list small">
       <li class="li"><span class="typebadge">Today</span><div class="li-b">Live class: Unit 306 safeguarding workshop · Leicester Cohort 7 · ${ft(D(0, '08:25'))}</div></li>
       <li class="li"><span class="typebadge">Today</span><div class="li-b">Moving and Handling Q&amp;A · ${ft(D(0, '13:00'))}</div></li>
       <li class="li"><span class="typebadge">This week</span><div class="li-b">Observations: ${STORE.worlds.C.observations.filter(o => ['Proposed', 'Confirmed'].includes(o.status) && daysTo(o.at) <= 7).length + 3} (Aisha Rahman ${fds(D(3))}, 3 others)</div></li>
-      <li class="li"><span class="typebadge">This week</span><div class="li-b">Deadlines: Assignment 4 (Leicester Cohort 7) ${fds(D(1))}; Assignment 2 resubmissions ${fds(D(6))}</div></li></ul></section></div>
+      <li class="li"><span class="typebadge">This week</span><div class="li-b">Deadlines: Assignment 4 (Leicester Cohort 7) ${fds(D(1))}; Assignment 2 resubmissions ${fds(D(6))}</div></li></ul></section>`}</div>
   <section class="card"><div class="card-h"><h2>Recent activity</h2><button class="btn btn-sm btn-ghost" data-go="a-audit">Audit log</button></div><ul class="list small">${ADMIN.audit.slice(0, 6).map(a => `<li class="li"><div class="li-b"><span><strong>${esc(a.actor)}</strong> · ${esc(a.action)} · ${esc(a.entity)}</span><span class="xs muted">${esc(a.module)} · ${fdt(a.at)}</span></div></li>`).join('')}</ul></section>`;
 };
 function dashAlerts() {
   const a = [];
+  if (fxClient()) return fxDashAlerts(a); // FX: the client demo's alerts are counted from its records
   ADMIN.integrations.filter(i => i.status === 'Failing').forEach(i => a.push(['red', `Integration failure: ${i.name}`, i.error, 'a-integrations']));
   if (ADMIN.edge === 'zoomDown') a.push(['red', 'Integration failure: Zoom', 'Attendance reports unavailable — manual marking enabled', 'a-attendance']);
   a.push(['red', 'Certificate generation errors: 2', 'Template render timeout for Dementia Awareness', 'a-certificates..errors']);
@@ -496,7 +497,7 @@ function docQueue() {
     cols: [{ k: 'learner', l: 'Learner' }, { k: 'doc', l: 'Document', h: r => esc(r.d.name), v: r => r.d.name }, { k: 'file', l: 'File', h: r => r.d.replacement ? `<button class="linklike small" data-act="viewFile" data-f="${esc(r.d.replacement.file)}">${esc(r.d.replacement.file)}</button> <span class="typebadge">Replacement</span>` : r.d.file ? `<button class="linklike small" data-act="viewFile" data-f="${esc(r.d.file)}">${esc(r.d.file)}</button>` : '—' }, { k: 'status', l: 'Status', h: r => chip(r.status) }, { k: 'days', l: 'Waiting', h: r => r.status === 'Submitted' ? daysChip(r.days) : '—', s: r => r.days }],
     act: r => r.status === 'Submitted' ? `<button class="btn btn-sm btn-primary" data-act="docDec" data-a="${r.a.id}" data-d="${r.d.id}" data-s="Approved">Approve</button> <button class="btn btn-sm" data-act="docDec" data-a="${r.a.id}" data-d="${r.d.id}" data-s="Rejected">Reject</button> <button class="btn btn-sm" data-act="docDec" data-a="${r.a.id}" data-d="${r.d.id}" data-s="Resubmission Required">Resubmit</button>` : '' });
 }
-function expiringDocs() { const out = []; allApplications().forEach(a => a.docs.forEach(d => { if (d.expires && daysTo(d.expires) <= 30 && daysTo(d.expires) > 0) out.push({ learner: a.name, doc: d.name, exp: d.expires, days: daysTo(d.expires) }); })); return out.concat([{ learner: 'Reem Al Nuaimi', doc: 'Emirates ID', exp: D(18), days: 18 }, { learner: 'Joseph Mathew', doc: 'Residence visa', exp: D(27), days: 27 }, { learner: 'Kofi Asante', doc: 'Right to work (share code)', exp: D(6), days: 6 }]); }
+function expiringDocs() { const out = []; allApplications().forEach(a => a.docs.forEach(d => { if (d.expires && daysTo(d.expires) <= 30 && daysTo(d.expires) > 0) out.push({ learner: a.name, doc: d.name, exp: d.expires, days: daysTo(d.expires) }); })); return fxClient() ? out : out.concat([{ learner: 'Reem Al Nuaimi', doc: 'Emirates ID', exp: D(18), days: 18 }, { learner: 'Joseph Mathew', doc: 'Residence visa', exp: D(27), days: 27 }, { learner: 'Kofi Asante', doc: 'Right to work (share code)', exp: D(6), days: 6 }]); }
 function checklistBuilder() {
   const items = ADMIN.checklist = ADMIN.checklist || [['Passport or UK photo driving licence', 1, 'PDF, JPG, PNG', '5 MB', 0, 'Photo page, four corners visible', 'Active'], ['Right to work (share code letter)', 1, 'PDF', '5 MB', 1, 'From GOV.UK', 'Active'], ['Proof of address (last 3 months)', 1, 'PDF, JPG, PNG', '5 MB', 0, 'Bill or bank statement', 'Active'], ['Enhanced DBS certificate', 1, 'PDF', '5 MB', 1, 'All pages', 'Active'], ['Highest qualification certificate', 1, 'PDF, JPG, PNG', '5 MB', 0, '', 'Active'], ['CV', 1, 'PDF, DOCX', '5 MB', 0, 'Last 5 years', 'Active'], ['Employer reference letter', 0, 'PDF', '5 MB', 0, 'Optional', 'Active'], ['Medical declaration', 1, 'PDF', '2 MB', 0, 'Replaced by occupational health form', 'Retired']];
   return `<section class="card"><div class="row-b"><h2>Level 3 Diploma in Adult Care — admission checklist</h2><div class="row"><label class="sr" for="clp">Programme</label><select class="select" id="clp"><option>Level 3 Diploma in Adult Care (England)</option><option>Level 2 Diploma in Care (England)</option></select></div></div>${versionNote(2, D(-200))}

@@ -11,10 +11,12 @@ EDGE="${EDGE:-/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe}"
 [ -x "$EDGE" ] || { echo "Edge not found at: $EDGE  (set EDGE=/path/to/msedge.exe)"; exit 2; }
 
 # page <name> <html injected after App.boot()>  → out/<name>.html (the prototype, loaded from the project, plus the test script)
+# FX: the suites run on the full legacy test data (window.ILM_FIXTURE = 'legacy', set before App.boot); FIXTURE=client boots the
+# client demo dataset instead, as a fresh browser does.
 page() {
   sed -e "s#href=\"styles.css\"#href=\"file:///$ROOTW/styles.css\"#" \
       -e "s#src=\"js/#src=\"file:///$ROOTW/js/#" \
-      -e "s#<script>App.boot();</script>#<script>App.boot();</script>$2#" \
+      -e "s#<script>App.boot();</script>#<script>window.ILM_FIXTURE='${FIXTURE:-legacy}';</script><script>App.boot();</script>$2#" \
       "$ROOT/index.html" > "$OUT/$1.html"
 }
 

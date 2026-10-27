@@ -302,7 +302,7 @@ ACT.e1Submit = el => {
 };
 function e1SubmitNow(pr, t) {
   const T = e1T(pr.id), at = now().toISOString(), first = e1Approver(), fees = e1Fees(pr);
-  let n = 7600 + ADMIN.queue.length, id; while (ADMIN.queue.some(i => i.id === (id = 'AQ-' + n))) n++;
+  let n = 7600 + ADMIN.queue.length, id = 'AQ-' + n; while (ADMIN.queue.some(i => i.id === (id = 'AQ-' + n))) n++;
   const txt = e1TermsTxt(t), i = { id, type: E1_T, raisedBy: ADMIN.me.name, raised: at, status: 'Pending', first, related: [`${pr.title} · ${pr.id}`, 'f-plans..templates'] /* Finance's own page: its Payment Plans (Finance can't open NVQ Programmes) */, notes: [], amount: Math.min(...fees.map(f => f.fee || Infinity)), cur: 'GBP', reason: `Payment terms for the new programme: ${txt}`, history: [[ADMIN.me.name, at, 'Raised', txt]], data: { pid: pr.id, prop: { ...t }, fees: fees.map(f => ({ ...f })), sched: e1Freeze(e1SchedSnap(pr, t)), role: typeof isSys === 'function' && isSys() ? 'sys' : 'aca' } };
   ADMIN.queue.unshift(i); T.status = 'Pending'; T.qid = id; T.prop = { ...t };
   e1Hist(pr, `Submitted to Finance (${id})`, txt); ch8Log(pr, 'Payment terms submitted for Finance review', 'Draft', 'Waiting for Finance review', `${id} · ${txt}`);

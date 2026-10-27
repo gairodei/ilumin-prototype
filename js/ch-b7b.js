@@ -170,7 +170,7 @@ dt = function (cfg) {
 
 /* ---------- CH-39 waiver: System Admin → Finance review → Super Admin final ---------- */
 function chWaiverRaise(f, reason) {
-  let n = 9100 + ADMIN.queue.length, id; while (ADMIN.queue.some(i => i.id === (id = 'AQ-' + n))) n++;
+  let n = 9100 + ADMIN.queue.length, id = 'AQ-' + n; while (ADMIN.queue.some(i => i.id === (id = 'AQ-' + n))) n++;
   const at = chNow(), i = { id, type: CH_WV_T, raisedBy: ADMIN.me.name, raised: at, status: 'Pending', first: FIN_A, stage: 'review', related: [`${f.name} · Observation fee`, 'a-learner.' + f.lid + '.payments'], notes: [], amount: f.amount, cur: 'GBP', reason, history: [[ADMIN.me.name, at, 'Raised', reason]], data: { fee: f.id, lid: f.lid, course: f.course } };
   ADMIN.queue.unshift(i); f.waiver = id;
   logA('Finance', `${f.name} · ${f.id}`, 'Fee waiver requested', 'Due', 'Waiver in review', reason);
@@ -217,7 +217,7 @@ function chOrCreate(lid, source, reason, by) {
   return r;
 }
 function chOrQueue(r) {
-  let n = 9200 + ADMIN.queue.length, id; while (ADMIN.queue.some(i => i.id === (id = 'AQ-' + n))) n++;
+  let n = 9200 + ADMIN.queue.length, id = 'AQ-' + n; while (ADMIN.queue.some(i => i.id === (id = 'AQ-' + n))) n++;
   const at = chNow(); ADMIN.queue.unshift({ id, type: CH_OR_T, raisedBy: r.name, raised: at, status: 'Pending', first: r.coord || 'Super Administrator', related: [`${r.name} · Academy-office observation`, 'a-learner.' + r.lid + '.observations'], notes: [], reason: r.reason, history: [[r.name, at, 'Raised', r.reason]], data: { req: r.id, lid: r.lid, batch: r.batch } });
   r.qid = id; r.status = 'Pending approval';
   chCooNotify(r.coord, 'Academy-office observation to decide', `${r.name} · ${r.batch} — ${r.reason}`, 'c-learner.' + r.lid);

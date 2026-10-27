@@ -348,7 +348,7 @@ function cb8Legacy(pkg) {
 const cb8Txt = pkg => pkg.opts.filter(o => o.status === 'Active').map(o => `${o.label} ${money(o.fee, 'GBP')}: ${o.pay.map(x => cb8PayLbl(x.k).toLowerCase()).join(', ')}`).join(' · ') + ` · ${cb8DepTxt(pkg.dep).toLowerCase()}`;
 function cb8SubmitNow(pr) {
   const wf = cb8Wf(pr) || (CB8().wf[pr.id] = { status: 'Draft', hist: [], approved: null }), pkg = cb8Freeze(pr, cb8Work(pr)), at = now().toISOString(), first = e1Approver(), txt = cb8Txt(pkg), act = pkg.opts.filter(o => o.status === 'Active');
-  let n = 7600 + ADMIN.queue.length, id; while (ADMIN.queue.some(i => i.id === (id = 'AQ-' + n))) n++;
+  let n = 7600 + ADMIN.queue.length, id = 'AQ-' + n; while (ADMIN.queue.some(i => i.id === (id = 'AQ-' + n))) n++;
   const i = { id, type: E1_T, raisedBy: ADMIN.me.name, raised: at, status: 'Pending', first, related: [`${pr.title} · ${pr.id}`, 'f-plans..templates'], notes: [], amount: Math.min(...act.map(o => o.fee)), cur: 'GBP', reason: `Financial package for ${pr.title}: ${txt}`, history: [[ADMIN.me.name, at, 'Raised', txt]],
     data: { pid: pr.id, cb8: true, pkg, prop: cb8Legacy(pkg), role: typeof isSys === 'function' && isSys() ? 'sys' : 'aca' } };
   ADMIN.queue.unshift(i); Object.assign(wf, { status: 'Pending', qid: id, sub: pkg }); if (wf.prop !== undefined) wf.prop = cb8Legacy(pkg);

@@ -41,7 +41,7 @@ bizPatch = function () { const had = !!(ADMIN && ADMIN._bizPatched); const r = _
 /* ---------- The approval ---------- */
 function chVatRequest(p, to, reason) {
   const from = chVatOn(p.vat) ? { ...p.vat } : null, at = now().toISOString(), net = priceOf(p).final;
-  let n = 7400 + ADMIN.queue.length, id; while (ADMIN.queue.some(i => i.id === (id = 'AQ-' + n))) n++;
+  let n = 7400 + ADMIN.queue.length, id = 'AQ-' + n; while (ADMIN.queue.some(i => i.id === (id = 'AQ-' + n))) n++;
   const i = { id, type: CH_VAT_T, raisedBy: ADMIN.me.name, raised: at, status: 'Pending', first: FIN_A, related: [`${p.agency || 'Global'} · ${p.id}`, 'a-bundles.' + p.id + '.catalogue'], notes: [], amount: net, cur: p.cur || 'GBP', reason, history: [[ADMIN.me.name, at, 'Raised', reason]], data: { bundle: p.id, productId: p.id, name: p.name, from, to, net } };
   ADMIN.queue.unshift(i);
   p.vatPending = { ...to, qid: id }; p.history.push([p.version, at, ADMIN.me.name, `VAT change submitted for Finance approval (${id}): ${chVatTxt(from)} → ${chVatTxt(to)}`]);

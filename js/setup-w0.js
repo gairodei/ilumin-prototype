@@ -149,7 +149,7 @@ const _w0OrQueue = chOrQueue;
 chOrQueue = function (r) {
   if (!r || r.source !== 'coord') return _w0OrQueue.apply(this, arguments); // learner-initiated: the existing route (Coordinator or Academic Admin)
   if (r.qid && ADMIN.queue.some(i => i.id === r.qid)) return; // never a second item (or notification) for the same request
-  let n = 9200 + ADMIN.queue.length, id; while (ADMIN.queue.some(i => i.id === (id = 'AQ-' + n))) n++;
+  let n = 9200 + ADMIN.queue.length, id = 'AQ-' + n; while (ADMIN.queue.some(i => i.id === (id = 'AQ-' + n))) n++;
   const at = chNow(), to = w0OrAca();
   ADMIN.queue.unshift({ id, type: CH_OR_T, raisedBy: r.name, raised: at, status: 'Pending', first: to, related: [`${r.name} · Academy-office observation`, 'a-learner.' + r.lid + '.observations'], notes: [], reason: r.reason, history: [[r.name, at, 'Raised', r.reason], ['System', at, 'Routed to the Academic Admin', `Advised by ${r.by} (Coordinator) — separation of duties`]], data: { req: r.id, lid: r.lid, batch: r.batch, advisedBy: r.by } });
   r.qid = id; r.status = 'Pending approval'; r.routedTo = to; r.history.push(['System', at, 'Sent to the Academic Admin for a decision', to]);

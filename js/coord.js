@@ -178,7 +178,7 @@ function cooNotifs() {
     else if (a.module === 'Assignments' && a.action === 'Deadline extension' && names.some(n => a.entity.startsWith(n))) der.push({ id: 'd' + a.id, t: 'Deadline extension granted in my batch', b: `${a.entity}: ${a.before} → ${a.after}`, at: a.at, go: 'c-timeline', unread: !S.coo.seen[a.id] });
     else if (a.module === 'Batches' && mine.some(c => a.entity.includes(c))) der.push({ id: 'd' + a.id, t: a.action === 'Batch cancelled' ? 'Batch cancelled' : a.action.includes('Learner added') ? 'Learner added to my batch' : 'Batch updated', b: `${a.entity}: ${a.after}`, at: a.at, go: 'c-batches', unread: !S.coo.seen[a.id] });
     else if (a.module === 'Learners' && /Enrolment (discontinued|reactivated)/.test(a.action) && names.some(n => a.entity.includes(n) || myLearners(true).some(l => a.entity.startsWith(l.lid)))) der.push({ id: 'd' + a.id, t: 'Learner ' + (a.action.includes('discontinued') ? 'discontinued' : 'reactivated') + ' in my batch', b: a.entity, at: a.at, go: 'c-learners', unread: !S.coo.seen[a.id] });
-    else if (a.module === 'Scheduling' && a.action === 'Session added') der.push({ id: 'd' + a.id, t: 'Schedule changed', b: 'New session for Leicester Cohort 7', at: a.at, go: 'c-timeline', unread: !S.coo.seen[a.id] });
+    else if (a.module === 'Scheduling' && a.action === 'Session added') der.push({ id: 'd' + a.id, t: 'Schedule changed', b: fxClient() ? 'New session: ' + a.entity : 'New session for Leicester Cohort 7', at: a.at, go: 'c-timeline', unread: !S.coo.seen[a.id] });
   });
   return der.concat(S.coo.v === 'B' ? STORE.coo.notifs.slice(4, 8) : STORE.coo.notifs).sort((x, y) => new Date(y.at) - new Date(x.at));
 }
