@@ -26,7 +26,7 @@ const fmt = (iso, o) => dtf({ timeZone: curTZ(), ...o }).format(new Date(iso)).r
 function tzl(iso) {
   const p = dtf({ timeZone: curTZ(), timeZoneName: 'short' }).formatToParts(new Date(iso || now())).find(x => x.type === 'timeZoneName');
   const v = p ? p.value : '';
-  return v === 'GMT+4' ? 'GST' : v === 'GMT+5:30' ? 'IST' : v;
+  return v === 'GMT+4' ? 'GST' : v === 'GMT+5:30' ? 'IST' : v === 'GMT+0' ? 'GMT' : v; // UK winter: "GMT" (some browsers give "GMT+0")
 }
 const fd = iso => fmt(iso, { day: 'numeric', month: 'short', year: 'numeric' });
 const fdl = iso => fmt(iso, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });

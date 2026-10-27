@@ -408,6 +408,24 @@
     M_MODES.forEach(m => { if (!crApprOpts('NV-L2').some(o => o.mode === m)) r1AddOpt('NV-L2', { label: m, fee: 1800, mode: m }, 'Fixture (DM-P)', 'Added'); }); /* DM-P (PD-DM-16): Finance's fee-option card gives the seeded Level 2 approved options by delivery mode, so it takes new batches */ click($1('main [data-act="newBatch"]')); $1('#modal-root #nb-c').value = 'UI-MC10'; click($1('#modal-root .modal-f .btn-primary'));
     MCD_COORDS.forEach(c => click(all('#modal-root .mc-nb-c').find(i => i.value === c.name)));
     ok('MC demo wizard: ten Coordinators ticked, "10 Academic Coordinators selected" displayed; the dialog fits', /10 Academic Coordinators selected/.test(($1('#modal-root .mc-nb-n') || {}).textContent || '') && shown($1('#modal-root .mc-nb-n')) && !modalFits(), modalFits()); closeModal();
+    // CD (PD-CD-01…05): the demo presets in Demo controls; after "Load clean client demo", Create batch offers its programme with both modes
+    closeModal(); initStore(); setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-batches');
+    S.demoOpen = true; renderDemo(); ok('CD Demo controls: the presets (client demo, 101-learner demo, Reset) and the demo-only note displayed', shown($1('#demo-root .cd-demo')) && shown($1('#demo-root [data-act="cdLoad"]')) && shown($1('#demo-root .cd-demo [data-act="mcDemoLoad"]')) && shown($1('#demo-root .cd-note')));
+    click($1('#demo-root [data-act="cdLoad"]')); S.demoOpen = false; renderDemo();
+    ok('CD client demo loaded: its batch page displayed; no page overflow', /DEMO-L3-JAN27/.test(main()) && appOver() <= 1, appOver());
+    go('a-batches'); click($1('main [data-act="newBatch"]')); const cdco = $1('#modal-root #nb-co');
+    ok('CD Create batch: the client-demo programme, both mode checkboxes; the dialog fits', !!cdco && cdco.value === CD_T && all('#modal-root .m-m').filter(shown).length === 2 && !modalFits(), modalFits()); closeModal();
+    // CD learner views (PD-CD-06…09): a demo learner's portal at its pending sign-up; a Coordinator's roster; the dashboard's demonstration note
+    ACT.cdLearner({ dataset: { k: 'CD3' } }); go('admission'); ok('CD demo learner (Fully Assisted): Admission shows the batch and the delivery mode; no page overflow', /Your delivery mode: Fully Assisted/.test(main()) && appOver() <= 1, appOver());
+    go('assignments'); ok('CD demo learner: assignments wait for the sign-up (the normal gate); no page overflow', /Finish your sign-up/.test(main()) && appOver() <= 1, appOver());
+    ACT.cdCoord({ dataset: { k: 'B' } }); ok('CD Coordinator roster (Michael Osei): his demo learners; no page overflow', /Ben Holloway \(demo\)/.test(main()) && !/Amira Shah/.test(main()) && appOver() <= 1, appOver());
+    setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-dashboard'); ok('CD admin dashboard: the demonstration-figures note under the figures', shown($1('main .cd-dash-note')));
+    // CD guided sign-up (PD-CD-10…13): the guide in Demo controls; the simulated checkout label; the enrolled learner's course and payments
+    S.demoOpen = true; renderDemo(); ok('CD Demo controls: the guided sign-up steps displayed', all('#demo-root [data-act="cdGuide"]').filter(shown).length === 10); S.demoOpen = false; renderDemo();
+    { ACT.cdGuide({ dataset: { k: 'CD4', s: 'signup' } }); const w = STORE.worlds.CD4; $1('#su-dob').value = '1990-05-04'; $1('#su-ad').value = '1 Demo Street'; ACT.suNext(); w.docs.filter(x => x.mand).forEach(d => { d.status = 'Submitted'; d.file = 'scan_demo.pdf'; });
+      ok('CD guided sign-up: the documents step displayed; no page overflow', /2\. Documents/.test(main()) && appOver() <= 1, appOver());
+      ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); setUi('suMethod', 'card'); render(); ACT.suPay();
+      ok('CD simulated checkout: labelled; the dialog fits', shown($1('#modal-root .cd-sim')) && !modalFits(), modalFits()); closeModal(); }
     S.demoOpen = true; renderDemo(); click($1('#demo-root [data-act="mcDemoOpen"][data-t="coord"][data-k="1"]')); S.demoOpen = false; renderDemo();
     ok('MC demo Coordinator 1 roster: Total batch learners 101 and My learners 11 figures, My learners selected, 11 tags; no page overflow', /Total batch learners\s*101/.test($1('main .mc-kpis').textContent) && /My learners\s*11/.test($1('main .mc-kpis').textContent) && $1('main [data-act="mcScope"][data-k="mine"]').getAttribute('aria-selected') === 'true' && all('main .mc-tag .chip').filter(shown).length === 11 && appOver() <= 1, appOver());
     click($1('main [data-act="mcScope"][data-k="all"]')); ok('MC demo All batch learners: "of 101" pager and tags; no page overflow', /of 101/.test(main()) && all('main .mc-tag').filter(shown).length > 0 && appOver() <= 1, appOver());

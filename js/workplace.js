@@ -13,7 +13,7 @@ function wfmt(iso, tz = 'Europe/London', time = true) {
   if (!time) return base;
   const t = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
   const z = WPC_TZ_LABEL[tz] || (new Intl.DateTimeFormat('en-GB', { timeZone: tz, timeZoneName: 'short' }).formatToParts(d).find(p => p.type === 'timeZoneName') || {}).value || '';
-  return `${base}, ${t} ${z}`;
+  return `${base}, ${t} ${z === 'GMT+0' ? 'GMT' : z}`; // UK winter: "GMT" (some browsers give "GMT+0")
 }
 const wTok = key => (hashN(key) >>> 0).toString(16).padStart(8, '0') + (hashN(key + '#') >>> 0).toString(16).slice(0, 4);
 const WPC_IP = ['86.14.203.77', '81.98.12.140', '94.204.18.61'];
