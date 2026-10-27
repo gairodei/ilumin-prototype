@@ -478,6 +478,18 @@
     go('a-assignments', { id: crD.id, tab: 'details' }); ok('CR assignment Details: no deadline input; the deadlines per batch; no page overflow', !$1('main #ae-d') && shown($1('main .cr-asg-dl')) && appOver() <= 1, appOver());
     ACT.pubAsg({ dataset: { id: crD.id } }); ok('CR Publish: a deadline field next to every batch; the dialog fits', all('#modal-root .cr-pd').length >= 1 && all('#modal-root .cr-pd').filter(shown).length === all('#modal-root .s2-pb').length && !modalFits(), modalFits());
     closeModal(); initStore();
+    // FP: deposit credit (learner Payments, deposit card, Finance schedules) and the short-course certificate setting at this width
+    const fpL = v => { S.variant = v; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; };
+    fpL('C'); go('payments'); ok('FP learner Payments: the deposit-credit note and the ledger totals; no page overflow', shown($1('main .fp-led')) && /Deposit £300\.00 paid and credited/.test(main()) && appOver() <= 1, appOver());
+    setAdminIdentity('FA'); S.portal = 'admin'; S.signedIn = true; setUi('fpL', 'C'); go('f-plans'); ok('FP Finance Payment Plans: the reconciliation summary above the rows; no page overflow', shown($1('main .fp-sum')) && /Reconciles/.test(main()) && appOver() <= 1, appOver());
+    setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; const fpC = s1DemoCourse(); go('a-courses', { id: fpC.id, tab: 'certificate' });
+    ok('FP Short course → Certificate: "Certificate on completion" Yes / No; no page overflow', all('main input[name="fc-on"]').filter(shown).length === 2 && appOver() <= 1, appOver());
+    click($1('main input[name="fc-on"][value="no"]')); click($1('main [data-act="s1Save"]')); ok('FP saving the setting: the version dialog names the change; the dialog fits', /Certificate on completion: Yes → No/.test($1('#modal-root').textContent) && !modalFits(), modalFits());
+    $1('#modal-root #rsn').value = 'UI FP'; click($1('#modal-root .modal-f .btn-primary')); closeModal(); fpC.status = 'Published'; s1Sync();
+    fpL('A'); go('browse'); ok('FP Browse: "No certificate on completion" on the course card; no page overflow', /No certificate on completion/.test(main()) && appOver() <= 1, appOver());
+    s1Enrol(CATALOGUE.find(x => x.course === fpC.id), fpC, null); const fpE = STORE.worlds[S.variant].enrolments.find(x => x.courseId === fpC.id); go('course', { id: fpE.id, tab: 'certificate' });
+    ok('FP learner Certificate tab of a No course: "No certificate for this course"; no page overflow', shown($1('main .fc-none')) && appOver() <= 1, appOver());
+    initStore();
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));
     ok('no script errors', !errs.length, errs.join(' | '));
