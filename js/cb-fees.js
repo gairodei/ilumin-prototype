@@ -365,7 +365,7 @@ ACT.cb8SaApprove = el => {
   reasonDlg({ title: 'Approve and put in force — ' + esc(pr.title), ok: 'Approve terms', label: 'Note for the record (required)', body: `<p class="small">Super Administrator: your own terms need no Finance approval (D8). A new plan version is saved with this package for new learners; existing learners keep their terms.</p>`, onOk: r => {
     if (!cb8Guard(el, 'approve payment terms') || !isSA()) return false;
     const why = cb8Apply(pr, cb8Freeze(pr, cb8Work(pr)), { by: ADMIN.me.name, how: SA_TAG, r }); if (why) { toast('Not saved: ' + why, 'err'); return false; }
-    render(); toast(`Approved — plan version ${s4PlanCur(pr.id).v} is in force for new learners.`);
+    const wf = cb8Wf(pr), cur = s4PlanCur(pr.id); render(); toast(wf && wf.held ? `Approved for Version ${wf.held.v} (draft) — in force when it is published.` : `Approved — plan version ${cur ? cur.v : '—'} is in force for new learners.`); // a package held for a draft version has no plan in force yet
   } });
 };
 

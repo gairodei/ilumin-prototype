@@ -3,6 +3,7 @@
 // stay editable; typed values are kept across sections; published, seeded and retired programmes are read-only; role guards hold.
 // Each check acts through the screen (clicks, typing) or the handler, then checks the page or the record, with the negative case.
 (async function () {
+  const dmpPrice = () => { const r = document.querySelector('main #cr-pm-price'); if (r && !r.checked) { r.checked = true; INP.crPm(r); } }; // DM-P (PD-DM-18): "One programme price" is now an explicit choice (fee options by delivery mode are the default)
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
   // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
@@ -24,7 +25,7 @@
   const progs = () => ADMIN.programmes.length, made = () => (STORE.chNewProgs || []).filter(p => !p.seed);
   const blocked = (a0, re) => ADMIN.audit.slice(0, ADMIN.audit.length - a0).some(x => /^Blocked/.test(x.action) && (!re || re.test(x.action)));
   const obsReq = pr => n5Shown(pr).required;
-  const fillL4 = (title = 'Level 4 Certificate in CB2 Leadership', code = 'L4-CB2') => { type('#np-l', 'Level 4'); INP.r1NpLevel(q('#np-l')); type('#np-t', title); void code; /* CR: no course code (PD-CR-06). DM (PD-DM-01, supersedes PD-CR-01): no modes-offered field — a one-price course, as before */ type('#np-r', 'QN 610/8282/4'); type('#np-d', '9'); type('#np-du', 'months'); type('#np-p', '2400'); type('#np-ds', 'For team leaders in care.'); type('#np-q-body', 'NCFE CACHE'); type('#np-q-glh', '320'); type('#np-q-tqt', '540'); type('#np-q-credits', '54'); };
+  const fillL4 = (title = 'Level 4 Certificate in CB2 Leadership', code = 'L4-CB2') => { type('#np-l', 'Level 4'); INP.r1NpLevel(q('#np-l')); type('#np-t', title); void code; /* CR: no course code (PD-CR-06). DM (PD-DM-01, supersedes PD-CR-01): no modes-offered field — a one-price course, as before */ type('#np-r', 'QN 610/8282/4'); type('#np-d', '9'); type('#np-du', 'months'); type('#np-p', '2400'); dmpPrice(); type('#np-ds', 'For team leaders in care.'); type('#np-q-body', 'NCFE CACHE'); type('#np-q-glh', '320'); type('#np-q-tqt', '540'); type('#np-q-credits', '54'); };
   const openNew = enter => { (enter || SYS)(); go('a-programmes'); q('[data-act="chProgNew"]').click(); };
   const createL4 = (obs = 'yes', enter, title) => { openNew(enter); fillL4(title); q('#np-obs-' + obs).click(); q('[data-act="cbDetCreate"]').click(); return made().slice(-1)[0]; };
 
@@ -165,7 +166,7 @@
 
   await T('CB2-K Level 3 on the page: fee options and level switching', async () => {
     fresh(); openNew(); ok('CB2-K Level 3 (default): fee-option rows instead of the single price', !!q('.r1-np-row') && q('.r1-np-price').hidden);
-    type('#np-l', 'Level 4'); INP.r1NpLevel(q('#np-l')); ok('CB2-K switching to Level 4 shows the single price and the default delivery mode', !q('.r1-np-price').hidden && q('.r1-np-l3').hidden && q('.r1-np-sup').hidden && !!q('.cr-pm') && !q('.cr-pm').hidden /* DM (PD-DM-04, supersedes PD-CR-02's .cr-dm): the pricing choice instead */); // CR (PD-CR-02): the modes offered replace the default selector
+    type('#np-l', 'Level 4'); INP.r1NpLevel(q('#np-l')); ok('CB2-K switching to Level 4: fee options by delivery mode by default (DM-P, PD-DM-18)', q('.r1-np-price').hidden && !q('.r1-np-l3').hidden && !!q('.cr-pm')); dmpPrice(); ok('CB2-K …and the single price once "One programme price" is chosen', !q('.r1-np-price').hidden && q('.r1-np-l3').hidden && q('.r1-np-sup').hidden && !!q('.cr-pm') && !q('.cr-pm').hidden /* DM (PD-DM-04, supersedes PD-CR-02's .cr-dm): the pricing choice instead */); // CR (PD-CR-02): the modes offered replace the default selector
     type('#np-l', 'Level 3'); INP.r1NpLevel(q('#np-l')); type('#np-t', 'Level 3 CB2 Options'); type('#np-r', 'QN 603/8383/3');
     const row = (k, l, f, m) => { const r = qa('.r1-np-row')[k]; r.querySelector('.r1-np-l').value = l; r.querySelector('.r1-np-f').value = f; r.querySelector('.r1-np-m').value = m; r.querySelector('.r1-np-l').dispatchEvent(new Event('input', { bubbles: true })); };
     row(0, 'Self-Paced', '1800', 'Self-Paced'); q('[data-act="r1NpAdd"]').click(); row(1, 'Fully Assisted', '2400', 'Fully Assisted');

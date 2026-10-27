@@ -23,6 +23,7 @@ window.H = (function () {
     document.querySelector('#np-obs-no').checked = true;
     if (q('#np-p') && o.price) fill({ '#np-p': String(o.price) });
     if (lv !== 'Level 3' && o.rows) { const r = q('#cr-pm-opts'); if (r) { r.checked = true; INP.crPm(r); } }
+    if (lv !== 'Level 3' && !o.rows) { const r = q('#cr-pm-price'); if (r) { r.checked = true; INP.crPm(r); } } // DM-P (PD-DM-18): one programme price is chosen explicitly
     (o.rows || []).forEach((x, k) => { if (k && ACT.r1NpAdd) ACT.r1NpAdd(); const r = qa('.r1-np-row')[k]; if (!r) return; r.querySelector('.r1-np-l').value = x.l; r.querySelector('.r1-np-f').value = String(x.f); r.querySelector('.r1-np-m').value = x.m; });
     if (o.modes) qa('.cr-dm-c').forEach(x => { x.checked = o.modes.includes(x.value); });
     const pr = ACT.cbDetCreate(); const errs = [...document.querySelectorAll('main .err, main [aria-invalid="true"] + .err')].map(e => e.textContent); closeModal(); return pr && pr.id ? pr : { errs };
@@ -111,10 +112,11 @@ window.H = (function () {
     const qid = H.submit(pr);
     ok('C7 Fully Assisted added in Section 5 and waiting for Finance', !!qid && cb8Wf(pr).status === 'Pending' && !crOptModes(pr.id).includes('Fully Assisted'));
     ok('C7 the course offers both modes (pending approval shown separately, not hidden)', J(crModes(pr).modes) === J(M_MODES) && crModeSt(pr, 'Fully Assisted') === 'pending');
-    H.openNb(pr.title, 'DM-P'); ok('C7 Create batch: Self-Paced and Fully Assisted checkboxes; FA marked "Finance approval required" and selectable', !!qm('.m-m[value="Self-Paced"]') && !!qm('.cr-pend[value="Fully Assisted"]') && !qm('.cr-pend').disabled);
-    ok('C7 the intro doesn\'t call the pending mode unavailable', !/isn't available/.test(qm('#w1-nb-acc').textContent) && /waiting for Finance/.test(qm('.m-intro').textContent)); closeModal();
+    // DM-P (PD-DM-17) supersedes PD-CR-14 / PD-DM-03 for NEW batches: a mode whose fee options Finance hasn't approved isn't offered to a new
+    // batch (was: offered, marked "Finance approval required", configurable). It becomes available once approved; existing batches add it in Change.
+    H.openNb(pr.title, 'DM-P'); ok('C7 Create batch: only the approved mode (Self-Paced); Fully Assisted, waiting for Finance, is not offered', qma('.m-m').map(x => x.value).join() === 'Self-Paced' && !qm('.cr-pend') && !qma('.w1-nb-o').some(x => (r1Opt(x.value) || {}).mode === 'Fully Assisted')); closeModal();
     const r = wiz(pr.title, 'DM-P', M_MODES);
-    ok('C7 both configured; review lists both; FA not ready', r.b && J(crBModes(r.b)) === J(M_MODES) && /Delivery modes accepted\s*Self-Paced and Fully Assisted/.test(r.rev) && crReady(r.b, 'Fully Assisted') === 'finance' && crReady(r.b, 'Self-Paced') === 'ready', J({ e: r.err, rev: (r.rev || '').slice(0, 300) }));
+    ok('C7 created with Self-Paced; review lists it; Fully Assisted not configured', r.b && J(crBModes(r.b)) === J(['Self-Paced']) && /Delivery modes accepted\s*Self-Paced/.test(r.rev) && crReady(r.b, 'Self-Paced') === 'ready', J({ e: r.err, rev: (r.rev || '').slice(0, 300) }));
     const l1 = freeL(), l2 = freeL([l1.id]);
     ok('C7 SP enrolment works; FA has no approved option yet (no one can enrol in it)', addL('DM-P', l1.id, r1Opts(pr.id).find(o => o.mode === 'Self-Paced').id) === 'added' && !r1Opts(pr.id).some(o => o.mode === 'Fully Assisted'));
     H.approve(qid); const fa = r1Opts(pr.id).find(o => o.mode === 'Fully Assisted');
@@ -126,7 +128,7 @@ window.H = (function () {
 
   await T('C Level 2', async () => {
     ACA(); go('a-programmes'); ACT.chProgNew(); fill({ '#np-l': 'Level 2' }); INP.r1NpLevel(q('#np-l'));
-    ok('L2 Course Details: pricing choice, one programme price by default', !!q('#cr-pm-price') && q('#cr-pm-price').checked && !q('.r1-np-price').hidden && q('.r1-np-l3').hidden);
+    ok('L2 Course Details: pricing choice, fee options by delivery mode by default (DM-P, PD-DM-18; was one programme price)', !!q('#cr-pm-price') && q('#cr-pm-opts').checked && q('.r1-np-price').hidden && !q('.r1-np-l3').hidden); q('#cr-pm-price').checked = true; INP.crPm();
     q('#cr-pm-opts').checked = true; INP.crPm(); ok('L2 choosing fee options by delivery mode shows the rows and hides the price', q('.r1-np-price').hidden && !q('.r1-np-l3').hidden);
     const pr = H.fullCourse({ title: 'DM Level 2 Certificate', level: 'Level 2', rows: [SP, FAo] }); ok('L2 created with two mode-specific options', !!pr.id && r1Opts(pr.id).length === 2, J(pr.errs));
     ok('L2 offers both modes', J(crModes(pr).modes) === J(M_MODES));
@@ -144,11 +146,12 @@ window.H = (function () {
   });
 
   await T('C legacy', async () => {
-    const pr = H.fullCourse({ title: 'DM Level 2 one price', level: 'Level 2', price: 900 }); H.publish(pr);
+    const pr = H.fullCourse({ title: 'DM Level 2 one price', level: 'Level 2', price: 900 }); const pub = H.publish(pr);
     ok('one-price course: no options invented, offers nothing by fee option', !r1Opts(pr.id).length && crModes(pr).src === 'none');
-    H.openNb(pr.title, 'DM-1P'); ok('one-price course: one delivery mode per batch (select), explained', !!qm('#nb-dm') && qm('#nb-dm').closest('.field').style.display !== 'none' && /one programme price/.test(qm('.cr-nb-note').textContent)); closeModal();
-    H.openNb('Level 2 Diploma in Care (England)', 'DM-X'); ok('seeded Level 2 (legacy): single select as before', !!qm('#nb-dm') && !qm('.cr-nb-m')); closeModal();
-    H.openNb('Level 3 Diploma in Adult Care (England)', 'DM-X'); ok('seeded Level 3 (legacy, Standard fee only): explained, standard-fee mode select kept', /no fee options with a delivery mode yet \(legacy\)/.test(qm('.cr-src').textContent) && !!qm('.w1-nb-o[value="L3-FO-STD"]')); closeModal();
+    // DM-P (PD-DM-15/16) supersedes DM-L's panel and established-mode batch: a one-price course can't be published, and courses without
+    // published, approved mode-specific options aren't listed in Create batch at all (ft-dml)
+    ok('one-price course: publication refused — fee options by delivery mode are required', Array.isArray(pub) && pub.some(m => /Fee option/.test(m)) && pr.status === 'Draft', J(pub));
+    H.openNb('Level 2 Diploma in Care (England)', 'DM-X'); ok('Create batch: the one-price course and the seeded Level 2 / Level 3 are not listed; no panel, no mode select', !qma('#nb-co option').some(o => [pr.title, 'Level 2 Diploma in Care (England)', 'Level 3 Diploma in Adult Care (England)'].includes(o.value)) && !qm('#cr-nc') && !!qm('#nb-dm').closest('.cr-nc-hid')); closeModal();
     ACA(); go('a-programmes', { id: pr.id, tab: 'fees' }); ok('Section 5 (one price): "Use fee options by delivery mode" offered instead of "Level 3 feature"', !!q('[data-act="crFoStart"]') && !/Level 3 feature/.test(q('.cb8-sec').textContent));
     const a0 = ADMIN.audit.length; ACT.crFoStart({ dataset: { p: pr.id } }); reason('Both modes from 2027');
     ok('crFoStart: audited; the programme fee kept, no mode invented; Finance approval needed', crMultiFee(pr) && ADMIN.audit.slice(0, ADMIN.audit.length - a0).some(a => /Fee options by delivery mode/.test(a.action)) && cb8Work(pr).opts.some(o => o.label === 'Programme fee' && !o.mode) && cb8Issues(pr, cb8Work(pr)).some(x => /choose the delivery mode/.test(x.msg)));

@@ -3,6 +3,30 @@
 // sign-up, no repricing of existing learners, and the Finance review of a new programme's payment terms. Each check does the action
 // through the screen or handler, then checks the consuming screen or record, and includes the negative case.
 (async function () {
+  // DM-P (PD-DM-15): publishing a programme or version needs fee options by delivery mode, approved by Finance. Where a check isn't about
+  // fees, this fixture takes the authorized Section 5 path first: the duration of a pre-builder course, a financial package, fee options by
+  // delivery mode, a mode for each option (the Standard programme fee replaced by an option at the same fee), the Super Administrator's own approval (D8)
+  const dmpComply = (pid, mode = 'Fully Assisted') => {
+    const pr = s3Pr(pid) || cbPr(pid); if (!pr) return false; const av = ADMIN.av, po = S.portal, aca = typeof isAca === 'function' && isAca();
+    const qm1 = k => document.querySelector('#modal-root ' + k), put = (k, v) => { const e = qm1(k); if (e && !e.value) e.value = v; };
+    const go1 = () => { const a = MODAL && MODAL.actions.find(x => x.cls && /primary|danger/.test(x.cls)); const r = a && a.fn ? a.fn() : undefined; if (r !== false && MODAL) closeModal(); return r; };
+    const rs = () => { const e = document.querySelector('#rsn'); if (e) e.value = 'Fixture: fee options by delivery mode'; return go1(); };
+    setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true;
+    if (!pr.durV) { ACT.crDurRec({ dataset: { p: pr.id } }); put('#cr-du-n', '12'); rs(); }
+    if (!cb8Managed(pr)) ACT.cb8Start({ dataset: { p: pr.id } });
+    if (!crMultiFee(pr)) { ACT.crFoStart({ dataset: { p: pr.id } }); rs(); }
+    cb8Work(pr).opts.filter(o => o.status === 'Active' && (o.legacy || !M_MODES.includes(o.mode))).map(o => o.id).forEach(id => {
+      const o = cb8Work(pr).opts.find(x => x.id === id);
+      if (o.legacy) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String(o.fee); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); ACT.cb8OptRetire({ dataset: { p: pr.id, o: id } }); rs(); }
+      else { ACT.cb8Opt({ dataset: { p: pr.id, o: id } }); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-f', '2400'); /* a course without any fee (seeded Level 4): the fixture enters one */ put('#c8-wp', '0'); put('#c8-off', '0'); go1(); }
+      closeModal();
+    });
+    if (!cb8Work(pr).opts.some(o => o.status === 'Active' && !o.legacy && M_MODES.includes(o.mode))) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String((s4PlanCur(pr.id) || {}).fee || 2400); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); closeModal(); } // no option at all (a Level 3 package starts from the options in force): one at the plan's fee
+    cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.pay.length).forEach(o => ACT.cb8PayAdd({ dataset: { p: pr.id, o: o.id, k: '1' } }));
+    if (!(cb8Wf(pr) && cb8Wf(pr).status === 'Approved')) { ACT.cb8SaApprove({ dataset: { p: pr.id } }); rs(); }
+    closeModal(); if (aca) { acaEnter(av); S.signedIn = true; } else setAdminIdentity(av); S.portal = po; return true;
+  };
+  const dmpPrice = () => { const r = document.querySelector('main #cr-pm-price'); if (r && !r.checked) { r.checked = true; INP.crPm(r); } }; // DM-P (PD-DM-18): "One programme price" is now an explicit choice (fee options by delivery mode are the default)
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
   // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
@@ -38,7 +62,7 @@
   const create = (obs = 'no') => { const r = document.querySelector('#np-obs-' + obs); if (r) r.checked = true; const c = document.querySelector('#np-code'); if (c && !c.value) c.value = 'TC' + (++codeN); const pr = crT(ACT.cbDetCreate)(); if (pr && pr.id) delete pr.cb8; return pr; };
   const meth = (px, m) => { const r = document.querySelector(`input[name="${px}-meth"][value="${m}"]`); r.checked = true; INP.e1Meth(r); };
   // A new programme through the wizard dialog (Level 2/4/5: one price); returns the programme or null
-  const newProg = (title, o = {}) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': o.level || 'Level 4', '#np-r': 'QN 610/' + (2000 + title.length) + '/1', '#np-d': String(o.n ?? 12), '#np-du': o.unit || 'months', '#np-p': String(o.price || 2400) }); const n0 = (STORE.chNewProgs || []).length; create(); return (STORE.chNewProgs || []).length > n0 ? last() : null; };
+  const newProg = (title, o = {}) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': o.level || 'Level 4', '#np-r': 'QN 610/' + (2000 + title.length) + '/1', '#np-d': String(o.n ?? 12), '#np-du': o.unit || 'months', '#np-p': String(o.price || 2400) }), dmpPrice(); const n0 = (STORE.chNewProgs || []).length; create(); return (STORE.chNewProgs || []).length > n0 ? last() : null; };
   const add8 = (act, ds, o) => { ACT[act]({ dataset: ds }); fill(o); return prim(); };
   // The other publishing requirements (structure with a typed Learning Outcome, an offer letter)
   const ready = pr => { const id = pr.id; obsDecide(id); go('a-programmes', { id, tab: 'structure' }); add8('ch8AddUnit', { id }, { '#u-c': 'U480', '#u-t': 'Practice' }); add8('ch8AddMod', { id, u: 0 }, { '#m-t': 'Core', '#m-ab': 'C/650/4801' }); add8('ch8AddLo', { id, u: 0, m: 0 }, { '#lo-t': 'Understand practice', '#lo-y': 'Knowledge' }); add8('ch8AddCrit', { id, u: 0, m: 0, l: 0 }, { '#c-d': 'Describe practice', '#c-e': 'Written account' }); ACT.chLetterUp({ dataset: { id } }); ACT.chLetterSample(); document.querySelector('#rsn').value = 'First version'; press(); };
@@ -64,7 +88,7 @@
   await T('E1-A duration (negative): zero, fractions, blanks and out-of-range values are refused', async () => {
     fresh(); SA(); const n0 = (STORE.chNewProgs || []).length;
     [['0', 'Enter the duration as a whole number'], ['1.5', 'whole number'], ['1000', 'from 1 to 999'], ['', 'Enter the duration']].forEach(([v, msg]) => {
-      go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': 'Level 4 Bad duration', '#np-l': 'Level 4', '#np-r': 'QN 610/1/1', '#np-p': '2400' }); document.querySelector('#np-d').value = v;
+      go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': 'Level 4 Bad duration', '#np-l': 'Level 4', '#np-r': 'QN 610/1/1', '#np-p': '2400' }), dmpPrice(); document.querySelector('#np-d').value = v;
       const r = create(); ok(`E1-A duration "${v || '(blank)'}" refused with a message`, r === false && main().includes(msg));
     });
     ok('E1-A nothing created by refused durations', (STORE.chNewProgs || []).length === n0);
@@ -88,7 +112,7 @@
     ok('E1-A edit form: the same controls, pre-filled', document.querySelector('#np-d').value === '12' && document.querySelector('#np-du').value === 'months');
     fill({ '#np-d': '2', '#np-du': 'years' }); ACT.ch8SaveDetails({ dataset: { id: pr.id } });
     ok('E1-A edited to 2 years; audited', pr.dur === '2 years' && pr.durV.unit === 'years' && ADMIN.audit[0].action === 'Details changed' && /2 years/.test(ADMIN.audit[0].after));
-    ready(pr); ACT.ch8Publish({ dataset: { id: pr.id } }); reason('Ready');
+    ready(pr); dmpComply(pr.id); ACT.ch8Publish({ dataset: { id: pr.id } }); reason('Ready');
     go('a-programmes', { id: pr.id, tab: 'details' }); ok('E1-A published detail page shows "2 years"', pr.status === 'Active' && main().includes('Duration2 years'));
     ok('E1-A Browse catalogue entry carries "2 years"', CATALOGUE.find(c => c.title === pr.title).dur === '2 years');
   });
@@ -205,7 +229,7 @@
     const fn = finNotifs(); ok('E1-C exactly one in-app notification to that Finance Admin, linking to the item', fn.length === 1 && fn[0].to === FIN_A && fn[0].go === 'a-queue.' + i.id && fn[0].unread);
     go('a-programmes', { id: pr.id, tab: 'plan' }); ok('E1-C plan step: "Waiting for Finance review", read-only, no submit', /Waiting for Finance review/.test(main()) && !document.querySelector('#e1-n') && !app().querySelector('[data-act="e1Submit"]'));
     ACT.e1Submit({ dataset: { id: pr.id } }); ok('E1-C (negative) submitting again is refused (no second item or notification)', ADMIN.queue.filter(x => x.type === 'Programme payment terms').length === 1 && finNotifs().length === 1);
-    go('a-programmes', { id: pr.id, tab: 'details' }); fill({ '#np-p': '2600' }); ACT.ch8SaveDetails({ dataset: { id: pr.id } }); ok('E1-C (negative) the fee can\'t change while Finance reviews it', pr.price === 2400 && /with Finance for review/.test(main()));
+    go('a-programmes', { id: pr.id, tab: 'details' }); fill({ '#np-p': '2600' }), dmpPrice(); ACT.ch8SaveDetails({ dataset: { id: pr.id } }); ok('E1-C (negative) the fee can\'t change while Finance reviews it', pr.price === 2400 && /with Finance for review/.test(main()));
     for (let k = 0; k < 3; k++) { render(); go('a-programmes', { id: pr.id, tab: 'plan' }); go('a-programmes', { id: pr.id, tab: 'review' }); }
     rebuildA(); FA(); go('f-dashboard'); go('a-queue'); go('a-queue', { id: i.id }); FB(); go('f-dashboard'); FA(); go('f-dashboard'); e1DurMigrate();
     ok('E1-C reloads, rebuilds and identity switches add no notification or item', finNotifs().length === 1 && ADMIN.queue.filter(x => x.type === 'Programme payment terms').length === 1);
@@ -343,7 +367,7 @@
     ok('E1-C approved: a new plan version with the terms, by Finance, citing the item', i2.status === 'Approved' && s4Plans(pr.id).length === v0 + 1 && p.meth === 'both' && p.inst === 6 && p.by === FIN_A && p.note.includes(i2.id) && e1T(pr.id).status === 'Approved');
     ok('E1-C the creator is told once', acaNotifs().length === a0 + 2 && /approved/.test(acaNotifs()[0].t));
     ok('E1-C other programmes\' approved plans are untouched', JSON.stringify(s4Plans('NV-L3')) === l3 && JSON.stringify(s4Plans('NV-N2')) === n2);
-    ACA(); go('a-programmes', { id: pr.id, tab: 'review' }); ok('E1-C review: terms Approved, nothing blocking', /Approved/.test(main()) && !ch8Check(pr).block.length);
+    ACA(); go('a-programmes', { id: pr.id, tab: 'review' }); ok('E1-C review: terms Approved, nothing blocking but the fee options by delivery mode (DM-P, PD-DM-15: was nothing blocking)', /Approved/.test(main()) && ch8Check(pr).block.length > 0 && ch8Check(pr).block.every(b => /Fee option|financial package/.test(b))); dmpComply(pr.id);
     ACT.ch8Publish({ dataset: { id: pr.id } }); reason('Ready'); ok('E1-C published by the Academic Admin (existing role)', pr.status === 'Active');
     learner('A'); go('browse'); const c = CATALOGUE.find(x => x.title === pr.title); ok('E1-C purchasable only now, at the approved fee', !!c && c.price === 2400);
     ACA(); go('a-programmes', { id: pr.id, tab: 'details' }); ok('E1-C a published programme\'s details stay read-only (unchanged rule)', !document.querySelector('#np-p') && !document.querySelector('#np-d') && main().includes('Duration12 months'));
@@ -351,12 +375,12 @@
   await T('E1-C a fee change after approval needs approval again; Finance\'s own save approves', async () => {
     fresh(); ACA(); const pr = newProg('Level 4 Refee test', { price: 2400 }); FA(); go('f-plans', { tab: 'templates' }); planEdit(pr.id, 'instalments', 4, 'Finance sets the plan');
     ok('E1-C Finance\'s own save (Payment Plans editor) on a Draft programme = approved terms (no queue item, no notification)', e1T(pr.id).status === 'Approved' && !ADMIN.queue.some(i => i.type === 'Programme payment terms') && !finNotifs().length);
-    ACA(); go('a-programmes', { id: pr.id, tab: 'details' }); fill({ '#np-p': '3000' }); ACT.ch8SaveDetails({ dataset: { id: pr.id } });
+    ACA(); go('a-programmes', { id: pr.id, tab: 'details' }); fill({ '#np-p': '3000' }), dmpPrice(); ACT.ch8SaveDetails({ dataset: { id: pr.id } });
     ok('E1-C creator changed the fee after approval: back to Draft, audited', pr.price === 3000 && e1T(pr.id).status === 'Draft' && ADMIN.audit.some(a => a.action === 'Payment terms need Finance approval again'));
   });
   await T('E1-C terms in force before E1 and the Super Admin\'s own programmes', async () => {
     fresh(); const n1 = ch8Pr('NV-N1');
-    ok('E1-C seeded NV-N1 (Draft): terms in force, no new blocker (only its existing ones)', !e1T('NV-N1') && e1Ok(n1) && !ch8Check(n1).block.some(b => /Payment terms/.test(b)) && ch8Check(n1).block.some(b => /without a type/.test(b)));
+    ok('E1-C seeded NV-N1 (Draft): terms in force, no new payment-terms blocker (only its existing ones and, DM-P PD-DM-15, its fee options by delivery mode)', !e1T('NV-N1') && e1Ok(n1) && !ch8Check(n1).block.some(b => /Payment terms/.test(b)) && ch8Check(n1).block.some(b => /without a type/.test(b)) && ch8Check(n1).block.some(b => /^Fee option/.test(b)));
     ACA(); go('a-programmes', { id: 'NV-N1', tab: 'plan' }); ok('E1-C NV-N1 plan step for the Academic Admin: read-only as before', !document.querySelector('#e1-n') && !document.querySelector('#pp-d') && /Set by Finance or the Super Admin/.test(main()));
     SA(); const pr = newProg('Level 4 SA test'); ok('E1-C Super Admin\'s programme: approved at once, no queue item, no Finance notification', e1T(pr.id).status === 'Approved' && !ADMIN.queue.some(i => i.type === 'Programme payment terms') && !finNotifs().length);
     ACT.qRouting(); ok('E1-C the confirmed routing table (G4 "Who approves what") is unchanged: 19 rows, no provisional type', document.querySelectorAll('#modal-root tbody tr').length === 19 && !/Programme payment terms/.test(mroot().textContent)); closeModal();

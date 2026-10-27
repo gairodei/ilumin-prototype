@@ -3,6 +3,10 @@
 // with the learner's pinned terms, and assignment attachments kept with their submission round. Every action is called directly
 // (not only through visible buttons) and every allowed case has its negative.
 (async function () {
+  // DM-P (PD-DM-16): a new batch needs a course whose published version has Finance-approved fee options with a delivery mode. Where a check
+  // isn't about that, Finance adds them first through its fee-option card (r1AddOpt): Self-Paced and Fully Assisted at the course's fee
+  const dmpElig = (pid = 'NV-L2', modes = M_MODES) => { const fee = crNcFee(s3Pr(pid)) || 2400; modes.forEach(m => { if (!crApprOpts(pid).some(o => o.mode === m)) r1AddOpt(pid, { label: m, fee, mode: m }, 'Fixture (DM-P)', 'Added'); }); };
+  const dmpPrice = () => { const r = document.querySelector('main #cr-pm-price'); if (r && !r.checked) { r.checked = true; INP.crPm(r); } }; // DM-P (PD-DM-18): "One programme price" is now an explicit choice (fee options by delivery mode are the default)
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
   // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
@@ -105,7 +109,7 @@
     fresh(); SA(); const v0 = s4Plans('NV-L2').length; ACT.s4PlanEdit({ dataset: { p: 'NV-L2' } }); fill({ '#pp-n': '4' }); reason('D8 save');
     ok('W0-A Super Admin plan save applies immediately as a new version (D8, G5.2)', s4Plans('NV-L2').length === v0 + 1 && s4PlanCur('NV-L2').inst === 4);
     FA(); ACT.s4PlanEdit({ dataset: { p: 'NV-L2' } }); fill({ '#pp-n': '5' }); reason('Finance save'); ok('W0-A Finance Admin plan save: a new version (G5.2)', s4Plans('NV-L2').length === v0 + 2 && s4PlanCur('NV-L2').inst === 5);
-    ACA(); const pr = (() => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': 'Level 4 Certificate in W0 Terms', '#np-l': 'Level 4', '#np-r': 'QN 610/7000/4', '#np-d': '12', '#np-du': 'months', '#np-p': '2400' }); create(); return (STORE.chNewProgs || []).slice(-1)[0]; })();
+    ACA(); const pr = (() => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': 'Level 4 Certificate in W0 Terms', '#np-l': 'Level 4', '#np-r': 'QN 610/7000/4', '#np-d': '12', '#np-du': 'months', '#np-p': '2400' }), dmpPrice(); create(); return (STORE.chNewProgs || []).slice(-1)[0]; })();
     // CB8 (PD-CB-52) supersedes the E1 proposal form (e1Submit): the creator submits the financial package from Section 5 (cb8Submit); the decision rules are unchanged
     go('a-programmes', { id: pr.id, tab: 'fees' }); ACT.cb8Submit({ dataset: { p: pr.id } }); press(); const qid = e1T(pr.id).qid;
     ok('W0-A CR-E1-01: the creator\'s terms go to Finance (Pending)', !!qid && e1T(pr.id).status === 'Pending');
@@ -132,7 +136,7 @@
   });
   await T('W0-B P-33 in the Create batch wizard', async () => {
     fresh(); SA(); p33Setup(); const st = ADMIN.staff, lk = st.splice(st.findIndex(s => s.name === 'Laura Kemp'), 1)[0]; st.splice(st.findIndex(s => s.name === 'Sarah Okonkwo') + 1, 0, lk); // on-screen order: Sarah, Laura, James, …
-    go('a-batches'); ACT.newBatch(); fill({ '#nb-c': 'W0-P33' }); document.querySelector('#nb-m').value = 'Online'; prim();
+    dmpElig(); go('a-batches'); ACT.newBatch(); fill({ '#nb-c': 'W0-P33' }); document.querySelector('#nb-m').value = 'Online'; prim();
     ok('W0-B wizard reaches step 2 with Laura Kemp offered as an assessor (second, after Sarah Okonkwo)', /step 2 of 5/.test(MODAL.title) && [...document.querySelectorAll('#modal-root .nb-a')].map(x => x.value).slice(0, 3).join() === 'Sarah Okonkwo,Laura Kemp,James Pryce');
     const pick = (coord, as) => { fill({ '#nb-ac': coord }); document.querySelectorAll('#modal-root .nb-a').forEach(x => { x.checked = as.includes(x.value); }); return prim(); };
     ok('W0-B (negative) Coordinator who would be the first assessor (assignment and PD) is refused at step 2', pick('Laura Kemp', ['Laura Kemp', 'James Pryce']) === false && /step 2 of 5/.test(MODAL.title) && ADMIN.audit[0].action === 'Blocked: Coordinator as assessor');
@@ -216,7 +220,7 @@
   const obsDecide = id => { ACT.n5Settings({ dataset: { p: id } }); const r = document.querySelector('#modal-root input[name="n5-req"][value="no"]'); if (r && MODAL) { r.checked = true; prim(); } closeModal(); };
   const pubNew = pr => { const id = pr.id; go('a-programmes', { id, tab: 'structure' }); add8('ch8AddUnit', { id }, { '#u-c': 'U370', '#u-t': 'Practice' }); add8('ch8AddMod', { id, u: 0 }, { '#m-t': 'Core', '#m-ab': 'C/650/3701' }); add8('ch8AddLo', { id, u: 0, m: 0 }, { '#lo-t': 'Understand practice', '#lo-y': 'Knowledge' }); add8('ch8AddCrit', { id, u: 0, m: 0, l: 0 }, { '#c-d': 'Describe practice', '#c-e': 'Written account' });
     ACT.chLetterUp({ dataset: { id } }); ACT.chLetterSample(); document.querySelector('#rsn').value = 'First version'; press(); obsDecide(id); ACT.ch8Publish({ dataset: { id } }); reason('Ready'); closeModal(); return pr.status === 'Active'; };
-  const mkBatch = (code, course) => { ACT.newBatch(); fill({ '#nb-c': code }); const co = document.querySelector('#nb-co'); co.value = course; INP.n2NbCourse(co); document.querySelector('#nb-m').value = 'Online'; prim(); fill({ '#nb-ac': 'Dr Helen Carter' }); prim(); prim(); prim(); prim(); closeModal(); return ADMIN.batches.find(b => b.code === code); };
+  const mkBatch = (code, course) => { dmpElig(s4PidOfTitle(course)); ACT.newBatch(); fill({ '#nb-c': code }); const co = document.querySelector('#nb-co'); co.value = course; INP.n2NbCourse(co); document.querySelector('#nb-m').value = 'Online'; prim(); fill({ '#nb-ac': 'Dr Helen Carter' }); prim(); prim(); prim(); prim(); closeModal(); return ADMIN.batches.find(b => b.code === code); };
   const planEdit = (pid, m, n) => { ACT.s4PlanEdit({ dataset: { p: pid } }); const x = document.querySelector(`input[name="pp-meth"][value="${m}"]`); x.checked = true; INP.e1Meth(x); if (n) fill({ '#pp-n': String(n) }); return reason('W0 plan'); };
   const start = (v, pr, optId) => { learner(v); go('browse'); const c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === pr.title); ACT.applyNvq({ dataset: { id: c.id } }); const r = optId && document.querySelector(`input[name="r1-opt"][value="${optId}"]`); if (r) r.checked = true; if (prim() !== false) closeModal(); return W; };
   const toPay = (w, b) => { chSetBatch(w, b); ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); chSetBatch(w, b); };

@@ -2,6 +2,7 @@
 // the Assessor's final assignment outcome, Self-Paced monthly worklists, and the cross-stage journeys. Each check does the action
 // through the screen or handler, then checks the consuming screen, and includes the negative case.
 (async function () {
+  const dmpPrice = () => { const r = document.querySelector('main #cr-pm-price'); if (r && !r.checked) { r.checked = true; INP.crPm(r); } }; // DM-P (PD-DM-18): "One programme price" is now an explicit choice (fee options by delivery mode are the default)
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
   // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
@@ -471,9 +472,9 @@
 
   await T('R2 (final) Create batch: no class-pattern wording for Level 3; other levels unchanged', async () => {
     fresh(); SA(); ACT.newBatch(); const co = document.querySelector('#nb-co'), l3 = [...co.options].map(o => o.value).find(v => /Level 3 Diploma in Adult Care/.test(v)), l2 = [...co.options].map(o => o.value).find(v => /^Level 2/.test(v));
-    co.value = l3; INP.n2NbCourse(co); const f3 = document.querySelector('#nb-dm').closest('.field');
-    ok('R2 Create batch (Level 3): the mode field is only for standard-fee learners; no class pattern / programme default wording', f3.style.display !== 'none' && f3.querySelector('label').textContent === 'Delivery mode for standard-fee learners' && /fee option/.test(f3.querySelector('.hint').textContent) && !/class pattern|Programme default/i.test(document.querySelector('#modal-root').textContent), f3.textContent);
-    if (l2) { co.value = l2; INP.n2NbCourse(co); const s2 = document.querySelector('#nb-dm'), f2 = s2.closest('.field'); ok('R2 Create batch (Level 2): mode field as before', !f2 || s2.tagName !== 'SELECT' || (f2.querySelector('label').textContent === 'Delivery mode' && /Programme default/.test(f2.querySelector('.hint').textContent)), f2 && f2.textContent); }
+    // DM-P (PD-DM-16/17) supersedes the standard-fee mode field (Level 3) and the Level 2 mode field: neither seeded course has published,
+    // approved mode-specific fee options, so neither is offered for a new batch, and no new batch has a single-select mode
+    ok('R2 Create batch: the seeded Level 3 and Level 2 are not offered; no single-select delivery mode; no class-pattern wording', !l3 && !l2 && !!document.querySelector('#nb-dm').closest('.cr-nc-hid') && !/class pattern/i.test(document.querySelector('#modal-root').textContent)); // (the hidden field keeps N2's hint; it is never shown)
     closeModal();
   });
 
@@ -501,12 +502,14 @@
     go('a-programmes', { id: 'NV-L3D', tab: 'support' }); ok('R1f Support tab of a built-in Level 3 programme (2027 draft): the confirmed learner-level rule is stated; open P-31 questions keep their tag', !!app().querySelector('.r1-sup3') && !!app().querySelector('.tbd'));
     // Level 4: unchanged single price and delivery mode (with its P-31 wording)
     npOpen(); const lv = document.querySelector('#np-l'); lv.value = 'Level 4'; INP.r1NpLevel(lv);
-    ok('R1f wizard (Level 4): single price and default delivery mode (P-31 wording) as before', vis(document.querySelector('#np-p')) && !vis(document.querySelector('main .r1-np-l3')) && vis(document.querySelector('main .cr-pm'))); // DM (PD-DM-04, supersedes PD-CR-02's .cr-dm): the pricing choice, one programme price by default
+    // DM-P (PD-DM-18) supersedes "one programme price by default": fee options by delivery mode are the default; one price is chosen explicitly
+    ok('R1f wizard (Level 4): fee options by delivery mode by default', !vis(document.querySelector('#np-p')) && vis(document.querySelector('main .r1-np-l3')) && document.querySelector('main #cr-pm-opts').checked); dmpPrice();
+    ok('R1f wizard (Level 4): single price and default delivery mode (P-31 wording) as before, once chosen', vis(document.querySelector('#np-p')) && !vis(document.querySelector('main .r1-np-l3')) && vis(document.querySelector('main .cr-pm'))); // DM (PD-DM-04, supersedes PD-CR-02's .cr-dm): the pricing choice, one programme price by default
     ok('R1f wizard (Level 4): the delivery-mode selector is shown, with its choices', !vis(document.querySelector('main .r1-np-sup')) && document.querySelectorAll('main input[name="cr-pm"]').length === 2 && vis(document.querySelector('main .cr-pm')) && !vis(document.querySelector('main .r1-np-modes'))); // DM (PD-DM-04, supersedes PD-CR-02): fee options by delivery mode or one programme price
-    ['Level 2', 'Level 5'].forEach(L => { lv.value = L; INP.r1NpLevel(lv); ok('R1f wizard (' + L + '): unchanged — single price and the delivery-mode selector', vis(document.querySelector('#np-p')) && vis(document.querySelector('main .cr-pm')) && !vis(document.querySelector('main .r1-np-l3'))); }); // DM (PD-DM-04, supersedes PD-CR-02)
+    ['Level 2', 'Level 5'].forEach(L => { lv.value = L; INP.r1NpLevel(lv); dmpPrice(); ok('R1f wizard (' + L + '): unchanged — single price and the delivery-mode selector', vis(document.querySelector('#np-p')) && vis(document.querySelector('main .cr-pm')) && !vis(document.querySelector('main .r1-np-l3'))); }); // DM (PD-DM-04, supersedes PD-CR-02)
     lv.value = 'Level 3'; INP.r1NpLevel(lv); ok('R1f wizard: switching back to Level 3 hides the selector again', !vis(document.querySelector('main .r1-np-sup')) && vis(document.querySelector('main .r1-np-l3')));
     lv.value = 'Level 4'; INP.r1NpLevel(lv);
-    fill({ '#np-t': 'Level 4 Certificate in Team Leading', '#np-r': 'QN 610/4444/4', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600' }); crT(ACT.cbDetCreate)(); closeModal();
+    fill({ '#np-t': 'Level 4 Certificate in Team Leading', '#np-r': 'QN 610/4444/4', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600' }), dmpPrice(); crT(ACT.cbDetCreate)(); closeModal();
     const p4 = (STORE.chNewProgs || []).find(x => x.title === 'Level 4 Certificate in Team Leading');
     ok('R1f Level 4 created with its price and no fee options', !!p4 && p4.price === 2600 && !r1IsL3Pid(p4.id) && !r1Opts(p4.id).length);
     go('a-finance', { tab: 'plans' }); const cards = [...app().querySelectorAll('.r1-opts')].map(c => c.dataset.pid);

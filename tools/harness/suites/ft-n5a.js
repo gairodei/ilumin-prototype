@@ -1,6 +1,29 @@
 // N5a — programme-specific observation configuration (architecture approved 20 Oct 2026). Each check acts through the handler or
 // the screen, then reads the stored configuration, the audit or the consuming screen, and includes the negative case.
 (async function () {
+  // DM-P (PD-DM-15): publishing a programme or version needs fee options by delivery mode, approved by Finance. Where a check isn't about
+  // fees, this fixture takes the authorized Section 5 path first: the duration of a pre-builder course, a financial package, fee options by
+  // delivery mode, a mode for each option (the Standard programme fee replaced by an option at the same fee), the Super Administrator's own approval (D8)
+  const dmpComply = (pid, mode = 'Fully Assisted') => {
+    const pr = s3Pr(pid) || cbPr(pid); if (!pr) return false; const av = ADMIN.av, po = S.portal, aca = typeof isAca === 'function' && isAca();
+    const qm1 = k => document.querySelector('#modal-root ' + k), put = (k, v) => { const e = qm1(k); if (e && !e.value) e.value = v; };
+    const go1 = () => { const a = MODAL && MODAL.actions.find(x => x.cls && /primary|danger/.test(x.cls)); const r = a && a.fn ? a.fn() : undefined; if (r !== false && MODAL) closeModal(); return r; };
+    const rs = () => { const e = document.querySelector('#rsn'); if (e) e.value = 'Fixture: fee options by delivery mode'; return go1(); };
+    setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true;
+    if (!pr.durV) { ACT.crDurRec({ dataset: { p: pr.id } }); put('#cr-du-n', '12'); rs(); }
+    if (!cb8Managed(pr)) ACT.cb8Start({ dataset: { p: pr.id } });
+    if (!crMultiFee(pr)) { ACT.crFoStart({ dataset: { p: pr.id } }); rs(); }
+    cb8Work(pr).opts.filter(o => o.status === 'Active' && (o.legacy || !M_MODES.includes(o.mode))).map(o => o.id).forEach(id => {
+      const o = cb8Work(pr).opts.find(x => x.id === id);
+      if (o.legacy) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String(o.fee); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); ACT.cb8OptRetire({ dataset: { p: pr.id, o: id } }); rs(); }
+      else { ACT.cb8Opt({ dataset: { p: pr.id, o: id } }); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-f', '2400'); /* a course without any fee (seeded Level 4): the fixture enters one */ put('#c8-wp', '0'); put('#c8-off', '0'); go1(); }
+      closeModal();
+    });
+    if (!cb8Work(pr).opts.some(o => o.status === 'Active' && !o.legacy && M_MODES.includes(o.mode))) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String((s4PlanCur(pr.id) || {}).fee || 2400); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); closeModal(); } // no option at all (a Level 3 package starts from the options in force): one at the plan's fee
+    cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.pay.length).forEach(o => ACT.cb8PayAdd({ dataset: { p: pr.id, o: o.id, k: '1' } }));
+    if (!(cb8Wf(pr) && cb8Wf(pr).status === 'Approved')) { ACT.cb8SaApprove({ dataset: { p: pr.id } }); rs(); }
+    closeModal(); if (aca) { acaEnter(av); S.signedIn = true; } else setAdminIdentity(av); S.portal = po; return true;
+  };
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   const errs = []; window.addEventListener('error', e => errs.push(e.message));
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
@@ -22,7 +45,7 @@
   const nvqEv = (id, code, types, instr = '') => { ACT.n5NvqEv({ dataset: { p: id, c: code } }); if (!MODAL) return false; tick('.n5-ev', types); document.querySelector('#n5n-i').value = instr; press(); return true; };
   const iaEdit = (id, code, o) => { ACT.n5IaEdit({ dataset: { p: id, c: code || '' } }); if (!MODAL) return false; if (o.t != null) document.querySelector('#n5-t').value = o.t; if (o.d != null) document.querySelector('#n5-d').value = o.d; if (o.ev) tick('.n5-ev', o.ev); if (o.instr != null) document.querySelector('#n5a-i').value = o.instr; if (o.map) tick('.n5-map', o.map); return press(); };
   const newVer = id => { ACT.newProgVersion({ dataset: { id } }); reason('N5a new version'); };
-  const publish = id => { ACT.kPubProg({ dataset: { id } }); if (MODAL && /^Publish/.test(MODAL.title)) return reason('N5a publish'); };
+  const publish = id => { dmpComply(id); ACT.kPubProg({ dataset: { id } }); if (MODAL && /^Publish/.test(MODAL.title)) return reason('N5a publish'); };
   // Everything a valid required configuration needs: settings, evidence on every criterion, every Academy criterion mapped
   const configure = (id, ev = ['notes', 'photos']) => { settings(id, 'yes', 'Permitted', 'Available'); const p = pr(id), d = n5Draft(p), codes = n5NvqOk(p, d).map(c => c.code); codes.forEach(c => nvqEv(id, c, ev, 'Observe ' + c)); d.ia.filter(c => c.status === 'Active').forEach(c => iaEdit(id, c.code, { ev: ['notes'], map: [codes[0]] }));
     // CB6 (PD-CB-41) adds observation events to a valid required configuration: one workplace observation covering every criterion
@@ -87,7 +110,7 @@
     settings('NV-L3', 'no'); const ck = n5Check(pr('NV-L3'));
     ok('N5a-S4 "No" while active Observation-type Learning Outcomes exist: flagged for review (D5), not blocking', ck.review.some(r => /Review \(D5\)/.test(r) && /Learning Outcomes have the Observation type \(U30/.test(r)) && !ck.block.length);
     ok('N5a-S4 "No": no observation criteria, routes or evidence demanded; the Academy criteria stay in the version (history)', !ck.block.some(b => /evidence|workplace|Academy-office|no active NVQ/.test(b)) && d.ia.length === 4 && ck.warn.some(w => /kept in this version for history/.test(w)));
-    ACT.kPubProg({ dataset: { id: 'NV-L3' } });
+    dmpComply('NV-L3'); ACT.kPubProg({ dataset: { id: 'NV-L3' } });
     ok('N5a-S4 …the publish dialog shows the review flag', /^Publish/.test(MODAL && MODAL.title) && /Review \(D5\)/.test((mroot().querySelector('.n5-warn') || {}).textContent || '')); closeModal();
     go('a-programmes', { id: 'NV-L3', tab: 'obs' }); ok('N5a-S4 …and the tab lists it as "Review"', !!document.querySelector('main .n5-checks .n5-review'));
     settings('NV-L3', 'yes', 'Not permitted', 'Not available');
@@ -211,7 +234,7 @@
     // New version of a migrated programme (Level 5): blocked without a choice; "No" with Observation LOs → review flag, publishes
     newVer('NV-L5'); publish('NV-L5');
     ok('N5a-R3 new version of a migrated programme (negative): refused without a choice; still Version 1', /Can't publish/.test(MODAL && MODAL.title) && pr('NV-L5').version === 1); closeModal();
-    settings('NV-L5', 'no'); ACT.kPubProg({ dataset: { id: 'NV-L5' } }); const rv = /Review \(D5\)/.test((mroot().querySelector('.n5-warn') || {}).textContent || '');
+    settings('NV-L5', 'no'); dmpComply('NV-L5'); ACT.kPubProg({ dataset: { id: 'NV-L5' } }); const rv = /Review \(D5\)/.test((mroot().querySelector('.n5-warn') || {}).textContent || '');
     reason('Publish without observation');
     ok('N5a-R3 new version (positive): "No" publishes, with the D5 review flag shown; Version 2 records No', rv && pr('NV-L5').version === 2 && P('NV-L5', 2).required === false && P('NV-L5', 2).snap.length === 3);
     ok('N5a-R3 …no checklist for a "No" version (observations aren\'t part of current delivery)', !n5Checklist(pr('NV-L5'), P('NV-L5', 2), 'workplace').ok && !n5Checklist(pr('NV-L5'), P('NV-L5', 2), 'office').ok);
@@ -221,7 +244,7 @@
     ok('N5a-R4 …the tab shows "Published before N5 — not recorded" and no publishing checks', /Published before N5 — not recorded/.test(document.querySelector('main .n5-settings').textContent) && !document.querySelector('main .n5-checks'));
     ok('N5a-R4 …and a learner\'s pinned migrated version still resolves to its configuration', n5ConfigFor('NV-L3', 2) === P('NV-L3', 2) && n5ConfigFor('NV-L5', 1) === P('NV-L5', 1));
     // Structure blockers come first (S3-04, unchanged); the observation items join the same refusal
-    fresh(); SA(); ACT.kPubProg({ dataset: { id: 'NV-L3D' } });
+    fresh(); SA(); dmpComply('NV-L3D'); ACT.kPubProg({ dataset: { id: 'NV-L3D' } });
     ok('N5a-R5 Draft NV-L3D: the structure refusal is unchanged (latest audit "Blocked: publish") and lists the observation decision too', /Can't publish/.test(MODAL && MODAL.title) && /U310 LO2/.test(mroot().textContent) && /choose whether observation is required/.test(mroot().textContent) && audit0().action === 'Blocked: publish'); closeModal();
   });
 
@@ -230,14 +253,15 @@
     ACT.s3WizVersion({ dataset: { id: 'NV-N2' } }); reason('N5a version');
     ok('N5a-W1 a wizard programme\'s new version gets a draft configuration copied from Version 1', D('NV-N2') && D('NV-N2').v === 2 && D('NV-N2').origin === 'Copied from Version 1');
     settings('NV-N2', 'yes', 'Permitted', 'Available');
-    ACT.s3WizPublish({ dataset: { id: 'NV-N2' } });
+    dmpComply('NV-N2'); ACT.s3WizPublish({ dataset: { id: 'NV-N2' } });
     ok('N5a-W2 publishing the version is refused while evidence is missing (the observation item is listed)', n2.version === 1 && /Can't publish/.test(MODAL && MODAL.title) && /permitted evidence for 1 NVQ criterion: 201 2\.1/.test(mroot().textContent)); closeModal();
     // CB6 (PD-CB-41): a required configuration also needs observation events — refused until one covers 201 2.1, then published
-    nvqEv('NV-N2', '201 2.1', ['notes', 'docs']); ACT.s3WizPublish({ dataset: { id: 'NV-N2' } });
+    nvqEv('NV-N2', '201 2.1', ['notes', 'docs']); dmpComply('NV-N2'); ACT.s3WizPublish({ dataset: { id: 'NV-N2' } });
     ok('N5a-W2b (CB6) publishing is refused while no observation event covers the criteria', n2.version === 1 && /Can't publish/.test(MODAL && MODAL.title) && /at least one observation event/.test(mroot().textContent)); closeModal();
     ACT.cbObsEv({ dataset: { p: 'NV-N2', e: '' } }); tick('.ev-l', ['workplace']); tick('.ev-c', ['201 2.1']); tick('.ev-e', ['notes']); press();
-    ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Publish Version 2');
-    ok('N5a-W3 audit: "Version 2 published" stays the latest entry, the configuration\'s publication just under it', audit0().action === 'Version 2 published' && ADMIN.audit[1].action === 'Observation configuration published' && /NV-N2/.test(ADMIN.audit[1].entity));
+    dmpComply('NV-N2'); ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Publish Version 2');
+    { const i = ADMIN.audit.findIndex(a => a.action === 'Version 2 published'); // DM-P (PD-DM-15): the fee package approved for Version 2 goes into force with it and is logged just after (was: "Version 2 published" the latest entry)
+      ok('N5a-W3 audit: "Version 2 published" (then only its fee package going into force), with the observation configuration publication just under it', i >= 0 && ADMIN.audit.slice(0, i).every(a => /package|plan|payment|fee/i.test(a.action + ' ' + a.module)) && ADMIN.audit[i + 1].action === 'Observation configuration published' && /NV-N2/.test(ADMIN.audit[i + 1].entity), ADMIN.audit.slice(0, i + 2).map(a => a.action).join(' | ')); }
     ok('N5a-W3 …then published: Version 2 with its frozen configuration', n2.version === 2 && P('NV-N2', 2) && Object.isFrozen(P('NV-N2', 2)) && P('NV-N2', 2).nvq['201 2.1'].types.join() === 'notes,docs' && !D('NV-N2') && P('NV-N2', 1).required === null);
     go('a-programmes', { id: 'NV-N2', tab: 'obs' }); const ro = !document.querySelector('main [data-act="n5Settings"]'); go('a-programmes', { id: 'NV-N2', tab: 'details' });
     ok('N5a-W4 the section is read-only after publishing; on other sections it is listed with nothing to fix', ro && !!document.querySelector('main .cb-sec[data-tab="observations"]') && !document.querySelector('main .cb-sec[data-tab="observations"] .cb-badge.bad'));

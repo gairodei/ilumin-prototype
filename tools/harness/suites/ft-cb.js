@@ -4,6 +4,30 @@
 // roles; leaving a section with unsaved changes asks first. Each check acts through the screen (clicks) or the handler, then checks
 // the page or the record, and includes the negative case.
 (async function () {
+  // DM-P (PD-DM-15): publishing a programme or version needs fee options by delivery mode, approved by Finance. Where a check isn't about
+  // fees, this fixture takes the authorized Section 5 path first: the duration of a pre-builder course, a financial package, fee options by
+  // delivery mode, a mode for each option (the Standard programme fee replaced by an option at the same fee), the Super Administrator's own approval (D8)
+  const dmpComply = (pid, mode = 'Fully Assisted') => {
+    const pr = s3Pr(pid) || cbPr(pid); if (!pr) return false; const av = ADMIN.av, po = S.portal, aca = typeof isAca === 'function' && isAca();
+    const qm1 = k => document.querySelector('#modal-root ' + k), put = (k, v) => { const e = qm1(k); if (e && !e.value) e.value = v; };
+    const go1 = () => { const a = MODAL && MODAL.actions.find(x => x.cls && /primary|danger/.test(x.cls)); const r = a && a.fn ? a.fn() : undefined; if (r !== false && MODAL) closeModal(); return r; };
+    const rs = () => { const e = document.querySelector('#rsn'); if (e) e.value = 'Fixture: fee options by delivery mode'; return go1(); };
+    setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true;
+    if (!pr.durV) { ACT.crDurRec({ dataset: { p: pr.id } }); put('#cr-du-n', '12'); rs(); }
+    if (!cb8Managed(pr)) ACT.cb8Start({ dataset: { p: pr.id } });
+    if (!crMultiFee(pr)) { ACT.crFoStart({ dataset: { p: pr.id } }); rs(); }
+    cb8Work(pr).opts.filter(o => o.status === 'Active' && (o.legacy || !M_MODES.includes(o.mode))).map(o => o.id).forEach(id => {
+      const o = cb8Work(pr).opts.find(x => x.id === id);
+      if (o.legacy) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String(o.fee); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); ACT.cb8OptRetire({ dataset: { p: pr.id, o: id } }); rs(); }
+      else { ACT.cb8Opt({ dataset: { p: pr.id, o: id } }); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-f', '2400'); /* a course without any fee (seeded Level 4): the fixture enters one */ put('#c8-wp', '0'); put('#c8-off', '0'); go1(); }
+      closeModal();
+    });
+    if (!cb8Work(pr).opts.some(o => o.status === 'Active' && !o.legacy && M_MODES.includes(o.mode))) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String((s4PlanCur(pr.id) || {}).fee || 2400); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); closeModal(); } // no option at all (a Level 3 package starts from the options in force): one at the plan's fee
+    cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.pay.length).forEach(o => ACT.cb8PayAdd({ dataset: { p: pr.id, o: o.id, k: '1' } }));
+    if (!(cb8Wf(pr) && cb8Wf(pr).status === 'Approved')) { ACT.cb8SaApprove({ dataset: { p: pr.id } }); rs(); }
+    closeModal(); if (aca) { acaEnter(av); S.signedIn = true; } else setAdminIdentity(av); S.portal = po; return true;
+  };
+  const dmpPrice = () => { const r = document.querySelector('main #cr-pm-price'); if (r && !r.checked) { r.checked = true; INP.crPm(r); } }; // DM-P (PD-DM-18): "One programme price" is now an explicit choice (fee options by delivery mode are the default)
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
   // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
@@ -37,7 +61,7 @@
     SYS(); go('a-programmes'); q('[data-act="chProgNew"]').click();
     ok('CB1-A "New NVQ programme" opens Section 1 — Course Details of an unsaved course (no dialog, no "Step 1 of 6")', !MODAL && S.params.id === 'new' && cur() === 'details' && !/Step 1 of/.test(main()));
     const set = (s, v) => { const e = document.querySelector(s); e.value = v; e.dispatchEvent(new Event('change', { bubbles: true })); };
-    set('#np-l', 'Level 4'); set('#np-t', 'Level 4 CB1 programme'); set('#np-r', 'QN 610/7777/1'); set('#np-d', '12'); set('#np-du', 'months'); set('#np-p', '2400'); /* DM (PD-DM-01): no modes-offered field — was q('.cr-dm-c').click() */ q('#np-obs-no').click(); // CR (PD-CR-06, PD-CR-01): no course code; the modes offered are required
+    set('#np-l', 'Level 4'); set('#np-t', 'Level 4 CB1 programme'); set('#np-r', 'QN 610/7777/1'); set('#np-d', '12'); set('#np-du', 'months'); set('#np-p', '2400'); dmpPrice(); /* DM (PD-DM-01): no modes-offered field — was q('.cr-dm-c').click() */ q('#np-obs-no').click(); // CR (PD-CR-06, PD-CR-01): no course code; the modes offered are required
     q('[data-act="cbDetCreate"]').click(); const pr = (STORE.chNewProgs || []).slice(-1)[0];
     ok('CB1-A "Save and continue" opens the new programme in the course builder (Curriculum, as before), seven sections, Draft, Version 1', !!pr && pr.title === 'Level 4 CB1 programme' && S.params.id === pr.id && cur() === 'curriculum' && qa('.cb-nav .cb-sec').length === 7 && /Draft/.test(q('.page-h').textContent) && /Version 1/.test(q('.page-h').textContent));
     ok('CB1-A header: title, level, reference, status, version and "Version history"', q('.page-h h1').textContent === pr.title && /Level 4/.test(q('.page-h').textContent) && /QN 610\/7777\/1/.test(q('.page-h').textContent) && !!q('.page-h [data-tab="versions"]'));
@@ -176,7 +200,7 @@
     const ACTS = [['ch8SaveDetails', { id: 'NV-N1' }, () => { open('NV-N1', 'details'); q('#np-t').value = 'NV-N1 renamed by CB1-P'; }, () => s3Pr('NV-N1').title === 'NV-N1 renamed by CB1-P'],
       ['ch8AddUnit', { id: 'NV-N1' }], ['ch8AddMod', { id: 'NV-N1', u: '0' }], ['ch8AddLo', { id: 'NV-N1', u: '0', m: '0' }], ['ch8AddCrit', { id: 'NV-N1', u: '0', m: '0', l: '0' }], ['ch8Key', { id: 'NV-N1', u: '0', m: '0' }],
       ['s3WRename', { id: 'NV-N1', u: '0' }], ['s3WRemove', { id: 'NV-N1', u: '0' }], ['s3KeyRemove', { p: 'NV-L3', k: 'U301 M1' }, key], ['s3WizVersion', { id: 'NV-N2' }],
-      ['s3WizPublish', { id: 'NV-N2' }, () => { s3Pr('NV-N2').nextDraft = true; }], ['chSupSave', { id: 'NV-L3' }, radio]];
+      ['s3WizPublish', { id: 'NV-N2' }, () => { s3Pr('NV-N2').nextDraft = true; dmpComply('NV-N2'); }], ['chSupSave', { id: 'NV-L3' }, radio]];
     ok('CB1-P the protected list is exactly these 12 actions', Object.keys(CB_ROLE).sort().join() === ACTS.map(a => a[0]).sort().join(), Object.keys(CB_ROLE).join());
     [['Finance Admin', FA], ['Business Admin', BA], ['a learner', LEARNER]].forEach(([who, enter]) => ACTS.forEach(([a, ds, prep]) => {
       fresh(); SYS(); if (prep) prep(); enter(); const s0 = state(), a0 = ADMIN.audit.length; ACT[a]({ dataset: ds });

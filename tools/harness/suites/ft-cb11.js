@@ -6,6 +6,29 @@
 // new package, letter version and programme version. Also: a course with Observations = No, seeded drafts, published, suspended,
 // retired, role checks and the section links.
 (async function () {
+  // DM-P (PD-DM-15): publishing a programme or version needs fee options by delivery mode, approved by Finance. Where a check isn't about
+  // fees, this fixture takes the authorized Section 5 path first: the duration of a pre-builder course, a financial package, fee options by
+  // delivery mode, a mode for each option (the Standard programme fee replaced by an option at the same fee), the Super Administrator's own approval (D8)
+  const dmpComply = (pid, mode = 'Fully Assisted') => {
+    const pr = s3Pr(pid) || cbPr(pid); if (!pr) return false; const av = ADMIN.av, po = S.portal, aca = typeof isAca === 'function' && isAca();
+    const qm1 = k => document.querySelector('#modal-root ' + k), put = (k, v) => { const e = qm1(k); if (e && !e.value) e.value = v; };
+    const go1 = () => { const a = MODAL && MODAL.actions.find(x => x.cls && /primary|danger/.test(x.cls)); const r = a && a.fn ? a.fn() : undefined; if (r !== false && MODAL) closeModal(); return r; };
+    const rs = () => { const e = document.querySelector('#rsn'); if (e) e.value = 'Fixture: fee options by delivery mode'; return go1(); };
+    setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true;
+    if (!pr.durV) { ACT.crDurRec({ dataset: { p: pr.id } }); put('#cr-du-n', '12'); rs(); }
+    if (!cb8Managed(pr)) ACT.cb8Start({ dataset: { p: pr.id } });
+    if (!crMultiFee(pr)) { ACT.crFoStart({ dataset: { p: pr.id } }); rs(); }
+    cb8Work(pr).opts.filter(o => o.status === 'Active' && (o.legacy || !M_MODES.includes(o.mode))).map(o => o.id).forEach(id => {
+      const o = cb8Work(pr).opts.find(x => x.id === id);
+      if (o.legacy) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String(o.fee); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); ACT.cb8OptRetire({ dataset: { p: pr.id, o: id } }); rs(); }
+      else { ACT.cb8Opt({ dataset: { p: pr.id, o: id } }); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-f', '2400'); /* a course without any fee (seeded Level 4): the fixture enters one */ put('#c8-wp', '0'); put('#c8-off', '0'); go1(); }
+      closeModal();
+    });
+    if (!cb8Work(pr).opts.some(o => o.status === 'Active' && !o.legacy && M_MODES.includes(o.mode))) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String((s4PlanCur(pr.id) || {}).fee || 2400); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); closeModal(); } // no option at all (a Level 3 package starts from the options in force): one at the plan's fee
+    cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.pay.length).forEach(o => ACT.cb8PayAdd({ dataset: { p: pr.id, o: o.id, k: '1' } }));
+    if (!(cb8Wf(pr) && cb8Wf(pr).status === 'Approved')) { ACT.cb8SaApprove({ dataset: { p: pr.id } }); rs(); }
+    closeModal(); if (aca) { acaEnter(av); S.signedIn = true; } else setAdminIdentity(av); S.portal = po; return true;
+  };
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
   // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
@@ -199,7 +222,8 @@
     const a0 = ADMIN.audit.length; ACT.kPubProg({ dataset: { id: 'NV-L3D' } });
     ok('CB11-E (negative) with only the payment terms missing, kPubProg refuses (logged) — Finance approval is needed first', L3D.status === 'Draft' && /Finance approval is needed first/.test(mroot().textContent) && blocked(a0, /no payment terms/)); closeModal();
     FA(); ACT.s4PlanEdit({ dataset: { p: 'NV-L3D' } }); if (MODAL) { const f = document.querySelector('#modal-root #pp-f'); if (f && !f.value) f.value = '2600'; reason('Plan for the 2027 update'); }
-    SA(); ok('CB11-E once Finance sets a plan in force, the seeded Draft publishes', !!s4PlanCur('NV-L3D') && !blockers(L3D).length && (ACT.cbPublish({ dataset: { id: 'NV-L3D' } }), reason('Ready'), L3D.status === 'Active'), J(blockers(L3D).map(x => x.msg)));
+    SA(); ok('CB11-E once Finance sets a plan in force, only the fee options by delivery mode remain (DM-P, PD-DM-15)', !!s4PlanCur('NV-L3D') && blockers(L3D).length > 0 && blockers(L3D).every(x => /Fee option/.test(x.msg)), J(blockers(L3D).map(x => x.msg))); dmpComply('NV-L3D');
+    SA(); ok('CB11-E …with them approved, the seeded Draft publishes', !!s4PlanCur('NV-L3D') && !blockers(L3D).length && (ACT.cbPublish({ dataset: { id: 'NV-L3D' } }), reason('Ready'), L3D.status === 'Active'), J(blockers(L3D).map(x => x.msg)));
     rv('NV-L3'); ok('CB11-E published seeded NV-L3: nothing to publish; "Create new version" (newProgVersion)', /Version \d is published/.test(q('.cb-rv-state').textContent) && !!q('[data-act="newProgVersion"]') && !q('[data-act="cbPublish"]'));
     rv('NV-L3O'); ok('CB11-E retired NV-L3O: a read-only summary, no publish or new-version button', /Retired — a read-only historical record/.test(q('.cb-rv-state').textContent) && !q('[data-act="cbPublish"]') && !q('[data-act="newProgVersion"]') && qa('.cb-rv-sec').length === 6);
     const a1 = ADMIN.audit.length; ACT.cbPublish({ dataset: { id: 'NV-L3O' } }); ok('CB11-E (negative) cbPublish on a retired programme: refused, logged', cbPr('NV-L3O').status === 'Retired' && blocked(a1, /retired/));

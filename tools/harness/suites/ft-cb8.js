@@ -2,6 +2,7 @@
 // exact amounts and dated previews, the deposit, Finance submission / approval / locking / version history, invalidation, the old
 // editors refused for package programmes, Finance's views, the offer-letter wording, role checks and historical isolation.
 (async function () {
+  const dmpPrice = () => { const r = document.querySelector('main #cr-pm-price'); if (r && !r.checked) { r.checked = true; INP.crPm(r); } }; // DM-P (PD-DM-18): "One programme price" is now an explicit choice (fee options by delivery mode are the default)
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
   // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
@@ -31,7 +32,7 @@
     fill({ '#np-t': o.title || 'CB8 course ' + (++codeN), '#np-l': o.level || 'Level 3', '#np-r': 'QN 610/' + (3000 + codeN) + '/8', '#np-d': String(o.n || 6), '#np-du': o.unit || 'months' });
     (document.querySelector('#np-code') || {}).value = 'CBE' + codeN; document.querySelector('#np-obs-' + (o.obs || 'no')).checked = true; INP.r1NpLevel(document.querySelector('#np-l'));
     if (l3) (o.opts || [{ l: 'Fully Assisted — standard', f: 2400, m: 'Fully Assisted' }]).forEach((x, k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = x.l; r.querySelector('.r1-np-f').value = String(x.f); r.querySelector('.r1-np-m').value = x.m; });
-    else fill({ '#np-p': String(o.price || 1800) });
+    else fill({ '#np-p': String(o.price || 1800) }), dmpPrice();
     const r = crT(ACT.cbDetCreate)(); closeModal(); return r && r.id ? r : null;
   };
   const W8 = pr => cb8Work(pr), opt = (pr, i = 0) => cb8Work(pr).opts.filter(x => x.status === 'Active')[i];

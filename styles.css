@@ -1499,4 +1499,9 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 .cr-pm .row { gap: 8px 24px; flex-wrap: wrap; }
 .cr-fo-l .cr-fo { flex-wrap: wrap; gap: 4px 8px; overflow-wrap: anywhere; }
 .cr-dm-v .cr-dm-m { display: inline-flex; flex-wrap: wrap; gap: 4px; margin: 0 8px 4px 0; }
+/* DM-L: a course whose delivery modes are not configured */
+.cr-nc-hid { display: none !important; }
+.cr-nc p { margin: 0 0 6px; overflow-wrap: anywhere; }
+.cr-nc .cr-nc-c { margin-top: 4px; }
+.cr-nc-dur { margin-top: 8px; }
 @media (max-width: 640px) { .cr-pb .cr-pd-l { max-width: none; flex-basis: 100%; } }

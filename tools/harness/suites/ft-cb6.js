@@ -2,6 +2,29 @@
 // observation events (name, permitted locations, criteria covered, evidence), edited only in a draft through N5a's gate and audit,
 // published and frozen with the version; coverage problems block publishing; not applicable when the course has no observations.
 (async function () {
+  // DM-P (PD-DM-15): publishing a programme or version needs fee options by delivery mode, approved by Finance. Where a check isn't about
+  // fees, this fixture takes the authorized Section 5 path first: the duration of a pre-builder course, a financial package, fee options by
+  // delivery mode, a mode for each option (the Standard programme fee replaced by an option at the same fee), the Super Administrator's own approval (D8)
+  const dmpComply = (pid, mode = 'Fully Assisted') => {
+    const pr = s3Pr(pid) || cbPr(pid); if (!pr) return false; const av = ADMIN.av, po = S.portal, aca = typeof isAca === 'function' && isAca();
+    const qm1 = k => document.querySelector('#modal-root ' + k), put = (k, v) => { const e = qm1(k); if (e && !e.value) e.value = v; };
+    const go1 = () => { const a = MODAL && MODAL.actions.find(x => x.cls && /primary|danger/.test(x.cls)); const r = a && a.fn ? a.fn() : undefined; if (r !== false && MODAL) closeModal(); return r; };
+    const rs = () => { const e = document.querySelector('#rsn'); if (e) e.value = 'Fixture: fee options by delivery mode'; return go1(); };
+    setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true;
+    if (!pr.durV) { ACT.crDurRec({ dataset: { p: pr.id } }); put('#cr-du-n', '12'); rs(); }
+    if (!cb8Managed(pr)) ACT.cb8Start({ dataset: { p: pr.id } });
+    if (!crMultiFee(pr)) { ACT.crFoStart({ dataset: { p: pr.id } }); rs(); }
+    cb8Work(pr).opts.filter(o => o.status === 'Active' && (o.legacy || !M_MODES.includes(o.mode))).map(o => o.id).forEach(id => {
+      const o = cb8Work(pr).opts.find(x => x.id === id);
+      if (o.legacy) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String(o.fee); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); ACT.cb8OptRetire({ dataset: { p: pr.id, o: id } }); rs(); }
+      else { ACT.cb8Opt({ dataset: { p: pr.id, o: id } }); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-f', '2400'); /* a course without any fee (seeded Level 4): the fixture enters one */ put('#c8-wp', '0'); put('#c8-off', '0'); go1(); }
+      closeModal();
+    });
+    if (!cb8Work(pr).opts.some(o => o.status === 'Active' && !o.legacy && M_MODES.includes(o.mode))) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String((s4PlanCur(pr.id) || {}).fee || 2400); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); closeModal(); } // no option at all (a Level 3 package starts from the options in force): one at the plan's fee
+    cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.pay.length).forEach(o => ACT.cb8PayAdd({ dataset: { p: pr.id, o: o.id, k: '1' } }));
+    if (!(cb8Wf(pr) && cb8Wf(pr).status === 'Approved')) { ACT.cb8SaApprove({ dataset: { p: pr.id } }); rs(); }
+    closeModal(); if (aca) { acaEnter(av); S.signedIn = true; } else setAdminIdentity(av); S.portal = po; return true;
+  };
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const q = s => document.querySelector('main ' + s), qa = s => [...document.querySelectorAll('main ' + s)];
@@ -102,7 +125,7 @@
     d.ia.filter(x => x.status === 'Active').forEach(x => { ACT.n5IaEdit({ dataset: { p: 'NV-L3', c: x.code } }); tick('.n5-ev', ['notes']); tick('.n5-map', [c[0]]); press(); });
     event('NV-L3', { name: 'Workplace observation', loc: ['workplace'], crit: c.concat(d.ia.filter(x => x.status === 'Active').map(x => x.code)), ev: ['notes'] });
     ok('CB6-F Version 2 (published) is unaffected by the Version 3 draft\'s events', cbObsEventsFor('NV-L3', 2).length === 0);
-    ACT.kPubProg({ dataset: { id: 'NV-L3' } }); reason('Publish v3');
+    dmpComply('NV-L3'); ACT.kPubProg({ dataset: { id: 'NV-L3' } }); reason('Publish v3');
     const p3 = P('NV-L3', 3);
     ok('CB6-F published: Version 3\'s configuration carries the event, frozen', pr.version === 3 && !!p3 && cbObsEventsFor('NV-L3', 3).length === 1 && Object.isFrozen(p3.events[0]) && Object.isFrozen(p3.events));
     const a0 = ADMIN.audit.length; ACT.cbObsEv({ dataset: { p: 'NV-L3', e: p3.events[0].id } });

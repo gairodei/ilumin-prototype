@@ -34,6 +34,9 @@
     fill({ '#nb-ac': 'Dr Helen Carter' }); if (prim() === false) return null; prim(); prim(); const rev = mroot().textContent; prim(); closeModal();
     return { b: ADMIN.batches.find(x => x.code === code), rev };
   };
+  // DM-P (PD-DM-16/17): new batches never accept the Standard programme fee or store a mode for standard-fee learners. W1's checks of that
+  // stored mode (display, edit, shared classes) run on batches from before DM-P: a copy of a seeded Level 3 batch, as the seed data makes them
+  const w1Legacy = (code, dm) => { const a = ADMIN.batches.find(b => b.code === 'L3AC-NOV26'), b = { ...JSON.parse(JSON.stringify(a)), code, label: code, start: D(60, '09:00'), end: D(420, '17:00'), enrolled: 0, roster: [], wait: [], status: 'Planned', mode: 'Online', dmode: dm, dmodeSrc: 'set', coord: 'Dr Helen Carter', w1opts: ['L3-FO-STD'] }; ['r2', 'crModes', 'crBase', 'abCode', 'abcHist', 'dmodeHist', 'w1wait', 'coh', 'alloc', 'mElig', 'coords', 'mcA', 'mcH', 'coordHistory'].forEach(k => delete b[k]); ADMIN.batches.push(b); syncTasBatches(); return b; };
   const apply3 = (v, optId) => { learner(v); go('browse'); const c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === T3); ACT.applyNvq({ dataset: { id: c.id } }); const r = optId && document.querySelector(`input[name="r1-opt"][value="${optId}"]`); if (r) r.checked = true; if (prim() !== false) closeModal(); return W; };
   const finish = (w, b) => { chSetBatch(w, b); ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); chSetBatch(w, b); setUi('suOpt', 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal(); return w; };
   const freeL = (skip = []) => { const busy = new Set(ADMIN.batches.filter(x => ['Open', 'In Progress', 'Planned'].includes(x.status)).flatMap(x => batchRoster(x).map(r => r[1]))); return ADMIN.learners.find(l => l.acct === 'Active' && l.rec === 'Active' && !busy.has(l.id) && !skip.includes(l.id) && !n4World(l.id)); };
@@ -45,10 +48,9 @@
   await T('W1-A Create batch (Level 3): fee options accepted; a stored mode only for standard-fee learners', async () => {
     fresh(); const o = opts(); go('a-batches'); ACT.newBatch(); const co = document.querySelector('#nb-co'); co.value = T3; INP.n2NbCourse(co);
     const heads = [...document.querySelectorAll('#modal-root #w1-nb-acc .r2-gh')].map(x => x.textContent), ticks = [...document.querySelectorAll('#modal-root .w1-nb-o')];
-    ok('W1-A step 1 lists the fee options the batch accepts, grouped Self-Paced / Fully Assisted / Standard fee, all ticked by default', heads.join('|') === 'Self-Paced|Fully Assisted|Standard fee (before fee options)' && ticks.length === 3 && ticks.every(x => x.checked) && /can hold Self-Paced and Fully Assisted learners at the same time/.test(mroot().textContent));
-    const f = document.querySelector('#nb-dm').closest('.field');
-    ok('W1-A the delivery-mode field is shown only for standard-fee learners (while that option is ticked)', f.style.display !== 'none' && /Delivery mode for standard-fee learners/.test(f.textContent));
-    document.querySelector(`.w1-nb-o[value="${o.std}"]`).checked = false; INP.w1NbStd(); ok('W1-A …and hidden when the Standard programme fee is unticked', f.style.display === 'none');
+    // DM-P (PD-DM-17) supersedes the Standard fee group and the "mode for standard-fee learners" field in Create batch: only approved,
+    // mode-specific options are offered (was: Self-Paced | Fully Assisted | Standard fee, and the mode field while the standard fee was ticked)
+    ok('W1-A step 1 lists the fee options the batch accepts, grouped Self-Paced / Fully Assisted, all ticked by default; no Standard fee, no mode field', heads.join('|') === 'Self-Paced|Fully Assisted' && ticks.length === 2 && ticks.every(x => x.checked) && !ticks.some(x => x.value === o.std) && !!document.querySelector('#nb-dm').closest('.cr-nc-hid'), heads.join('|'));
     // PD-M-03 supersedes the message — was: /Choose at least one fee option/ — now: "Choose at least one delivery mode … (with at least one fee option)"
     ticks.forEach(x => { x.checked = false; }); fill({ '#nb-c': 'W1-NONE' });
     ok('W1-A (negative) at least one fee option is required', prim() === false && /Choose at least one delivery mode — Self-Paced, Fully Assisted or both \(with at least one fee option\)/.test(mroot().textContent)); closeModal();
@@ -56,10 +58,8 @@
     ok('W1-A review step: "Fee options" and "From each learner\'s fee option" (no single delivery mode)', /Fee options/.test(r1.rev) && /Self-Paced: Self-Paced — W1/.test(r1.rev) && /From each learner's fee option/.test(r1.rev) && !/standard-fee learners:/.test(r1.rev));
     ok('W1-A created: accepts exactly the ticked options; no batch delivery mode stored', JSON.stringify(b.w1opts) === JSON.stringify([o.sp, o.fa]) && b.dmode === undefined && b.dmodeSrc === undefined);
     ok('W1-A audited "Fee options accepted set"; no "Delivery mode set" entry for it', ADMIN.audit.slice(0, ADMIN.audit.length - a0).some(x => x.action === 'Fee options accepted set' && x.entity.includes('W1-MIX')) && !ADMIN.audit.some(x => x.action === 'Delivery mode set' && x.entity.includes('W1-MIX')));
-    const r2b = nb('W1-STD', T3, { dm: 'Self-Paced' });
-    ok('W1-A with the Standard programme fee ticked: its learners\' mode is stored (Self-Paced) and audited', r2b.b.dmode === 'Self-Paced' && r2b.b.w1opts.includes(o.std) && /standard-fee learners: Self-Paced/.test(r2b.rev) && ADMIN.audit.some(x => x.action === 'Delivery mode set' && x.entity.includes('W1-STD')));
-    const l2 = nb('W1-L2', T2, { dm: 'Self-Paced' });
-    ok('W1-A Level 2 unchanged: no fee-option list; one delivery mode for the batch, stored and audited', !!l2.b && l2.b.dmode === 'Self-Paced' && !l2.b.w1opts && /Delivery mode/.test(l2.rev) && !/Fee options/.test(l2.rev));
+    // DM-P (PD-DM-16) supersedes W1-STD (a new batch with the Standard programme fee) and W1-L2 (a new Level 2 batch): neither course is eligible
+    const l2x = nb('W1-L2X', T2, { dm: 'Self-Paced' }); closeModal(); ok('W1-A (negative) a new Level 2 batch is refused (no approved mode-specific options)', !!l2x && l2x.refused === true && !ADMIN.batches.some(b => b.code === 'W1-L2X'));
     FA(); ACT.newBatch(); ok('W1-A (negative) Finance can\'t create a batch (refused, logged)', !MODAL && /^Blocked: create batch/.test(ADMIN.audit[0].action));
   });
 
@@ -152,7 +152,7 @@
     SA(); ok('W1-E register text shows the audience', /Audience: <strong>[^<]*Self-Paced — W1/.test(n4RegisterHtml(spOnly)));
   });
   await T('W1-E shared classes: a Self-Paced batch joins any eligible class of the programme (not only "Fully Assisted" organisers)', async () => {
-    fresh(); const o = opts(), org = nb('W1-ORG', T3, { dm: 'Self-Paced' }).b, joiner = nb('W1-JOIN', T3, { opts: [o.sp] }).b; SA();
+    fresh(); const o = opts(), org = w1Legacy('W1-ORG', 'Self-Paced'), joiner = nb('W1-JOIN', T3, { opts: [o.sp] }).b; SA();
     ok('W1-E the organising batch has the legacy Self-Paced default (standard-fee learners)', org.dmode === 'Self-Paced');
     const open = sessAdd('W1-ORG', { t: 'W1 open revision class', at: plus(org.start, 10) }), faOnly = sessAdd('W1-ORG', { t: 'W1 Fully Assisted workshop', at: plus(org.start, 11), aud: [o.fa] });
     ACT.n3Join({ dataset: { b: 'W1-JOIN' } }); const xs = [...document.querySelectorAll('#n3-j option')].map(x => x.value);
@@ -168,7 +168,7 @@
 
   /* ================= 6. Editing, the fee-option groups, authorization and history ================= */
   await T('W1-F Edit batch and fee options accepted: where the stored mode applies; held options kept; access', async () => {
-    fresh(); const o = opts(), mix = nb('W1-MIX', T3, { opts: [o.sp, o.fa] }).b, std = nb('W1-STD', T3, { dm: 'Fully Assisted' }).b; SA();
+    fresh(); const o = opts(), mix = nb('W1-MIX', T3, { opts: [o.sp, o.fa] }).b, std = w1Legacy('W1-STD', 'Fully Assisted'); SA();
     ACT.s4bBatchEdit({ dataset: { id: 'W1-MIX' } }); ok('W1-F Edit batch details (no standard fee accepted): no delivery-mode field', !document.querySelector('#modal-root #bd-dm')); closeModal();
     ok('W1-F (negative) a direct mode change on that batch is refused (no batch-level mode)', n2CanChangeMode(mix, 'Self-Paced') === false && /has no batch-level delivery mode/.test(ADMIN.audit[0].reason));
     ACT.s4bBatchEdit({ dataset: { id: 'W1-STD' } }); const sel = document.querySelector('#modal-root #bd-dm');
@@ -176,8 +176,11 @@
     const jan = ADMIN.batches.find(b => b.code === 'L3AC-JAN26'); ACT.s4bBatchEdit({ dataset: { id: jan.code } });
     ok('W1-F seeded batch with standard-fee learners: locked, saying why', document.querySelector('#modal-root #bd-dm').disabled && /on the Standard programme fee .*follow/.test(mroot().textContent)); closeModal();
     ACT.s4bBatchEdit({ dataset: { id: 'L2DC-MAR26' } }); ok('W1-F Level 2 seeded batch: the existing lock wording', /transfer and impact policy/.test(mroot().textContent)); closeModal();
-    ACT.w1Opts({ dataset: { id: 'W1-MIX' } }); document.querySelector(`#modal-root .w1-o[value="${o.std}"]`).checked = true; fill({ '#w1-std': 'Self-Paced' }); reason('Standard-fee learners too');
-    ok('W1-F fee options accepted changed (audited); adding the standard fee records its learners\' mode', mix.w1opts.includes(o.std) && mix.dmode === 'Self-Paced' && ADMIN.audit.some(x => x.action === 'Fee options accepted changed') && ADMIN.audit.some(x => x.action === 'Delivery mode set' && x.entity.includes('W1-MIX')));
+    // DM-P (PD-DM-19) supersedes "adding the standard fee records its learners' mode": a batch can newly accept only approved, mode-specific options
+    { const a0 = ADMIN.audit.length; ACT.w1Opts({ dataset: { id: 'W1-MIX' } }); const x = document.querySelector(`#modal-root .w1-o[value="${o.std}"]`); if (x) { x.disabled = false; x.checked = true; } const r = reason('Standard-fee learners too');
+      ok('W1-F (negative) newly adding the Standard programme fee to a batch is refused and logged; nothing changes', r === false && !mix.w1opts.includes(o.std) && mix.dmode === undefined && ADMIN.audit.slice(0, ADMIN.audit.length - a0).some(y => /^Blocked/.test(y.action))); closeModal(); }
+    ACT.w1Opts({ dataset: { id: 'W1-MIX' } }); document.querySelectorAll('#modal-root .w1-o').forEach(x => { x.checked = x.value === o.sp; }); reason('Self-Paced only');
+    ok('W1-F fee options accepted changed (audited)', JSON.stringify(mix.w1opts) === JSON.stringify([o.sp]) && ADMIN.audit.some(x => x.action === 'Fee options accepted changed'));
     ACT.w1Opts({ dataset: { id: 'W1-MIX' } }); ok('W1-F (negative) saving the same choice: "Nothing has changed"', reason('Same') === false && /Nothing has changed/.test(mroot().textContent)); closeModal();
     for (const [lbl, enter] of [['Finance Admin', FA], ['Business Admin', BIZ], ['Coordinator portal', () => { SA(); COO('A'); }], ['learner portal', () => { SA(); learner('C'); }]]) { enter(); const a0 = ADMIN.audit.length, w0 = JSON.stringify(mix.w1opts); ACT.w1Opts({ dataset: { id: 'W1-MIX' } }); ok(`W1-F (negative) ${lbl}: changing the fee options is refused and logged`, !MODAL && blocked(a0) && JSON.stringify(mix.w1opts) === w0); closeModal(); }
     ACA(); ACT.w1Opts({ dataset: { id: 'W1-MIX' } }); ok('W1-F the Academic Admin can change them (batch-edit right)', !!MODAL); closeModal();

@@ -2,6 +2,9 @@
 // plus permissions: direct actions, direct routes, documents, cross-batch isolation. Each check acts through the screen or the handler,
 // then checks the record and the consuming screen, with the negative case.
 (async function () {
+  // DM-P (PD-DM-16): a new batch needs a course whose published version has Finance-approved fee options with a delivery mode. Where a check
+  // isn't about that, Finance adds them first through its fee-option card (r1AddOpt): Self-Paced and Fully Assisted at the course's fee
+  const dmpElig = (pid = 'NV-L2', modes = M_MODES) => { const fee = crNcFee(s3Pr(pid)) || 2400; modes.forEach(m => { if (!crApprOpts(pid).some(o => o.mode === m)) r1AddOpt(pid, { label: m, fee, mode: m }, 'Fixture (DM-P)', 'Added'); }); };
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const mroot = () => document.getElementById('modal-root');
@@ -24,7 +27,7 @@
   const mkCoords = n => { for (let k = 1; k <= n; k++) { const name = CN(k); if (!ADMIN.staff.some(s => s.name === name)) ADMIN.staff.push({ id: 'ST-MC' + k, name, email: `mc.coord${k}@illumin-academy.example`, roles: ['Academic Coordinator'], status: 'Active', tfa: 'Not required', last: D(-1), alloc: 0, mobile: '', quals: '', reg: '', tz: 'Europe/London' }); COO_USERS['M' + k] = { key: 'M' + k, name, first: 'Coord' + k, email: `mc.coord${k}@illumin-academy.example`, roles: ['Academic Coordinator'], label: name }; } };
   // Create batch (wizard) with a first Coordinator and further ones ticked
   const nb = (code, title, first, extra = [], o = {}) => {
-    SA(); ACT.newBatch(); if (!MODAL) return null; qm('#nb-c').value = code; const co = qm('#nb-co'); co.value = title; INP.n2NbCourse(co);
+    SA(); dmpElig(s4PidOfTitle(title)); ACT.newBatch(); if (!MODAL) return null; qm('#nb-c').value = code; const co = qm('#nb-co'); co.value = title; INP.n2NbCourse(co);
     if (qm('#nb-dm')) qm('#nb-dm').value = o.dm || 'Fully Assisted'; if (qm('#nb-m')) qm('#nb-m').value = 'Online'; if (qm('#nb-cap')) qm('#nb-cap').value = String(o.cap || 300);
     if (prim() === false) return { refused: 'step1', msg: mroot().textContent };
     qm('#nb-ac').value = first; extra.forEach(n => { const x = qma('.mc-nb-c').find(i => i.value === n); if (x) x.checked = true; }); (o.assessors || []).forEach(n => { const x = qma('.nb-a').find(i => i.value === n); if (x) x.checked = true; });
@@ -72,7 +75,7 @@
     ok('MC-4 existing allocations didn\'t move when a learner joined', Object.entries(JSON.parse(before)).every(([l, t]) => b.mcA[l].to === t));
     // A further learner through the real Add learner path: least-loaded (names[1], ties by order); nothing else moves
     const before2 = allocJ(b), l = ADMIN.learners.find(x => x.acct === 'Active' && x.rec === 'Active' && !ADMIN.batches.some(y => ['Open', 'In Progress', 'Planned'].includes(y.status) && batchRoster(y).some(rr => rr[1] === x.id)) && !n4World(x.id));
-    ACT.addToBatch({ dataset: { id: 'MC-TEN' } }); if (MODAL) { qm('#ab-l').value = l.id; press(); } render();
+    ACT.addToBatch({ dataset: { id: 'MC-TEN' } }); if (MODAL) { qm('#ab-l').value = l.id; const o = qm('#r2-ab-o'); if (o && !o.value) o.value = o.options[1].value; /* DM-P: a new batch's learner joins on one of its fee options */ press(); } render();
     ok('MC-4 Add learner (admin): the new learner goes to the least-loaded Coordinator; the other 101 allocations are unchanged', mcOf(l.id, b) === names[1] && Object.entries(JSON.parse(before2)).every(([x, t]) => b.mcA[x].to === t), mcOf(l.id, b));
     // Only active allocations count: a discontinued learner frees a place
     const d = mcLids(b).find(x => mcOf(x, b) === names[2]); ADMIN.learners.find(x => x.id === d)._enr = [{ type: 'NVQ / RQF', title: b.course, status: 'Discontinued' }]; b._mcSig = '';
@@ -374,7 +377,7 @@
     go('a-batches', { id: MCD_CODE, tab: 'staff' });
     ok('MC-16 Batch → Staff: the demo note, 10 Coordinators with active learners 11 / 10 …', /Demonstration data/.test(main()) && /Academic Coordinators \(10\)/.test(main()) && [...document.querySelectorAll('main .mc-load tbody tr')].map(r => r.children[1].textContent).join() === '11,10,10,10,10,10,10,10,10,10');
     // The wizard with all ten demo Coordinators ticked (clicks)
-    ACT.newBatch(); qm('#nb-c').value = 'MC-TEN-UI'; prim(); names.forEach(n => qma('.mc-nb-c').find(i => i.value === n).click());
+    dmpElig(); ACT.newBatch(); qm('#nb-c').value = 'MC-TEN-UI'; prim(); names.forEach(n => qma('.mc-nb-c').find(i => i.value === n).click());
     ok('MC-16 Create batch: ten Coordinators ticked by click — "10 Academic Coordinators selected" with their names', /10 Academic Coordinators selected/.test(qm('.mc-nb-n').textContent) && names.every(n => qm('.mc-nb-n').textContent.includes(n)) && qm('#nb-ac').value === names[0]);
     prim(); prim(); prim(); const rev = mroot().textContent;
     ok('MC-16 Review & create lists all ten Coordinators', /Academic Coordinators \(10\)/.test(rev) && names.every(n => rev.includes(n)));

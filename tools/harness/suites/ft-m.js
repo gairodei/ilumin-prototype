@@ -3,6 +3,7 @@
 // their own option, mode and terms. Course Details shows Course code, Awarding body and Awarding body course code separately.
 // Every check does the action through the screen or handler, then checks the record or consuming screen, with the negative case.
 (async function () {
+  const dmpPrice = () => { const r = document.querySelector('main #cr-pm-price'); if (r && !r.checked) { r.checked = true; INP.crPm(r); } }; // DM-P (PD-DM-18): "One programme price" is now an explicit choice (fee options by delivery mode are the default)
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
   // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
@@ -150,7 +151,7 @@
     fresh(); const c1 = course([{ l: 'Fully Assisted — standard', f: 2400, m: 'Fully Assisted' }]), c2 = course([{ l: 'Self-Paced — other course', f: 1500, m: 'Self-Paced' }]), [fa] = c1.ids, [other] = c2.ids; ACA();
     // create: a forged checkbox carrying the other course's option
     ACT.newBatch(); fill({ '#nb-c': 'M-X1' }); const co = qm('#nb-co'); co.value = c1.title; INP.n2NbCourse(co); qm('.m-opts').insertAdjacentHTML('beforeend', `<label class="check"><input type="checkbox" class="w1-nb-o" value="${other}" checked></label>`);
-    let a0 = ADMIN.audit.length; ok('M-G (negative) create: refused and logged; no batch', prim() === false && blocked(a0, /another course/) && !ADMIN.batches.some(x => x.code === 'M-X1')); closeModal();
+    let a0 = ADMIN.audit.length; ok('M-G (negative) create: refused and logged; no batch', prim() === false && blocked(a0, /another course|not an approved option/ /* DM-P (PD-DM-16): the step-1 check names it */) && !ADMIN.batches.some(x => x.code === 'M-X1')); closeModal();
     const b = nb('M-X', c1.title).b, w0 = J(b.w1opts);
     ACT.w1Opts({ dataset: { id: 'M-X' } }); qm('#w1-o-fs .m-opts').insertAdjacentHTML('beforeend', `<label class="check"><input type="checkbox" class="w1-o" value="${other}" checked></label>`); document.querySelector('#rsn').value = 'Forged';
     a0 = ADMIN.audit.length; ok('M-G (negative) Change: refused and logged; accepted options unchanged', prim() === false && blocked(a0, /another course/) && J(b.w1opts) === w0); closeModal();
@@ -189,12 +190,12 @@
 
   /* ================= J. Levels 2, 4 and 5 and the legacy standard fee ================= */
   await T('M-J Level 2 keeps one delivery mode; the legacy standard fee keeps its standard-fee mode', async () => {
-    fresh(); ACA(); go('a-batches'); ACT.newBatch(); const co = qm('#nb-co'); co.value = T2; INP.n2NbCourse(co);
-    ok('M-J Level 2: no mode checkboxes; one Delivery mode dropdown with the reason given', !qm('#w1-nb-acc') && !qm('.m-m') && qm('select#nb-dm').tagName === 'SELECT' && /have no fee options, so a batch has one delivery mode/.test(qm('#nb-dm').closest('.field').textContent)); closeModal();
-    const l2 = nb('M-L2', T2, { dm: 'Self-Paced' }).b; ok('M-J Level 2 created as before: one stored mode, no fee options', l2.dmode === 'Self-Paced' && !l2.w1opts);
-    ACT.newBatch(); const c3 = qm('#nb-co'); c3.value = T3; INP.n2NbCourse(c3);
-    ok('M-J the seeded Level 3 Diploma (only the Standard programme fee): no mode checkboxes; the standard fee row and its mode field', !qm('.m-m') && /no Self-Paced or Fully Assisted fee options yet/.test(mroot().textContent) && qma('.w1-nb-o').length === 1 && /Delivery mode for standard-fee learners/.test(qm('#nb-dm').closest('.field').textContent)); closeModal();
-    const std = nb('M-STD', T3, { dm: 'Self-Paced' }).b; ok('M-J the standard-fee batch: its delivery mode is the standard-fee mode', std.dmode === 'Self-Paced' && J(mModesOf(std)) === J(['Self-Paced']));
+    fresh(); ACA(); go('a-batches'); ACT.newBatch();
+    // DM-P (PD-DM-16/17) supersedes M-J's new-batch checks (DM-L's panel and established-mode batches; before that, a Level 2 dropdown and a
+    // Level 3 standard-fee mode field): courses without published, approved mode-specific fee options are not offered for new batches at all
+    ok('M-J Level 2 and Level 3 (no approved mode-specific options): not listed in Create batch; no mode dropdown, no Standard fee row', !qma('#nb-co option').some(o => [T2, T3].includes(o.value)) && !qm('.w1-nb-o') && !!qm('#nb-dm').closest('.cr-nc-hid')); closeModal();
+    ok('M-J (negative) a forced Level 2 batch is refused', nb('M-L2S', T2, { dm: 'Self-Paced' }).refused === true && !chBatch('M-L2S')); closeModal();
+    ok('M-J (negative) a forced Level 3 standard-fee batch is refused', nb('M-STD', T3, {}).refused === true && !chBatch('M-STD')); closeModal();
     SA(); const nov = chBatch('L3AC-NOV26'), n0 = J({ o: nov.w1opts, d: nov.dmode }); go('a-batches', { id: 'L3AC-NOV26' });
     ok('M-J seeded batch: unchanged record; shows "Delivery modes accepted: Fully Assisted"', J({ o: nov.w1opts, d: nov.dmode }) === n0 && /Delivery modes accepted: Fully Assisted/.test(main()));
     // a seeded batch whose enrolled learners have no record (they pre-date fee options, so they're on the standard fee)
@@ -213,7 +214,7 @@
     // CR (PD-CR-06, supersedes PD-M-09's Course code field): no Academy course code; Course name, Awarding body, Awarding body course code
     ok('M-K the form: Course name, Awarding body, Awarding body course code — no Academy course code', !lab('np-code') && lab('np-t') === 'Course name' && lab('np-q-body') === 'Awarding body' && lab('np-r') === 'Awarding body course code' && order.indexOf('np-q-body') === order.indexOf('np-r') - 1);
     ok('M-K the awarding body course code is the existing reference field (no new field)', !!document.querySelector('main #np-r') && document.querySelectorAll('main input[id^="np-"][id*="ab"]').length === 0 && /Separate from the Academy/.test(document.querySelector('main #np-r').closest('.field').textContent));
-    fill({ '#np-t': 'M codes course', '#np-l': 'Level 4', '#np-r': 'QN 610/4242/7', '#np-d': '12', '#np-du': 'months', '#np-p': '2400', '#np-q-body': 'NCFE CACHE' }); INP.r1NpLevel(document.querySelector('#np-l'));
+    fill({ '#np-t': 'M codes course', '#np-l': 'Level 4', '#np-r': 'QN 610/4242/7', '#np-d': '12', '#np-du': 'months', '#np-p': '2400', '#np-q-body': 'NCFE CACHE' }); INP.r1NpLevel(document.querySelector('#np-l')); dmpPrice();
     (document.querySelector('#np-code') || {}).value = 'm-codes1'; document.querySelector('#np-obs-no').checked = true;
     const pr = crT(ACT.cbDetCreate)(); closeModal();
     ok('M-K saved independently: pr.qual.body and pr.ref; no course code (CR)', !!pr && !pr.code && pr.qual.body === 'NCFE CACHE' && pr.ref === 'QN 610/4242/7');

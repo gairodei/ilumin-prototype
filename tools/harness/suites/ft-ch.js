@@ -2,6 +2,30 @@
 // Batch 1: CH-01 country fixed, CH-02 GBP only, CH-03 data region, CH-05 VAT invoices, CH-31 contact details,
 // the placeholder register (4 topics), CH-24 unchanged, and the CH records. … Batch 6: CH-06 VAT on agency bundles. Batch 7a: CH-32 – CH-36. Batch 7b: CH-37 – CH-41, CH-43. Batch 7c: CH-42, P-32, P-33. Gap fix: new NVQ programme.
 (async function () {
+  // DM-P (PD-DM-15): publishing a programme or version needs fee options by delivery mode, approved by Finance. Where a check isn't about
+  // fees, this fixture takes the authorized Section 5 path first: the duration of a pre-builder course, a financial package, fee options by
+  // delivery mode, a mode for each option (the Standard programme fee replaced by an option at the same fee), the Super Administrator's own approval (D8)
+  const dmpComply = (pid, mode = 'Fully Assisted') => {
+    const pr = s3Pr(pid) || cbPr(pid); if (!pr) return false; const av = ADMIN.av, po = S.portal, aca = typeof isAca === 'function' && isAca();
+    const qm1 = k => document.querySelector('#modal-root ' + k), put = (k, v) => { const e = qm1(k); if (e && !e.value) e.value = v; };
+    const go1 = () => { const a = MODAL && MODAL.actions.find(x => x.cls && /primary|danger/.test(x.cls)); const r = a && a.fn ? a.fn() : undefined; if (r !== false && MODAL) closeModal(); return r; };
+    const rs = () => { const e = document.querySelector('#rsn'); if (e) e.value = 'Fixture: fee options by delivery mode'; return go1(); };
+    setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true;
+    if (!pr.durV) { ACT.crDurRec({ dataset: { p: pr.id } }); put('#cr-du-n', '12'); rs(); }
+    if (!cb8Managed(pr)) ACT.cb8Start({ dataset: { p: pr.id } });
+    if (!crMultiFee(pr)) { ACT.crFoStart({ dataset: { p: pr.id } }); rs(); }
+    cb8Work(pr).opts.filter(o => o.status === 'Active' && (o.legacy || !M_MODES.includes(o.mode))).map(o => o.id).forEach(id => {
+      const o = cb8Work(pr).opts.find(x => x.id === id);
+      if (o.legacy) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String(o.fee); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); ACT.cb8OptRetire({ dataset: { p: pr.id, o: id } }); rs(); }
+      else { ACT.cb8Opt({ dataset: { p: pr.id, o: id } }); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-f', '2400'); /* a course without any fee (seeded Level 4): the fixture enters one */ put('#c8-wp', '0'); put('#c8-off', '0'); go1(); }
+      closeModal();
+    });
+    if (!cb8Work(pr).opts.some(o => o.status === 'Active' && !o.legacy && M_MODES.includes(o.mode))) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String((s4PlanCur(pr.id) || {}).fee || 2400); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); closeModal(); } // no option at all (a Level 3 package starts from the options in force): one at the plan's fee
+    cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.pay.length).forEach(o => ACT.cb8PayAdd({ dataset: { p: pr.id, o: o.id, k: '1' } }));
+    if (!(cb8Wf(pr) && cb8Wf(pr).status === 'Approved')) { ACT.cb8SaApprove({ dataset: { p: pr.id } }); rs(); }
+    closeModal(); if (aca) { acaEnter(av); S.signedIn = true; } else setAdminIdentity(av); S.portal = po; return true;
+  };
+  const dmpPrice = () => { const r = document.querySelector('main #cr-pm-price'); if (r && !r.checked) { r.checked = true; INP.crPm(r); } }; // DM-P (PD-DM-18): "One programme price" is now an explicit choice (fee options by delivery mode are the default)
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
   // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
@@ -1087,8 +1111,8 @@
     acaEnter('KA'); S.signedIn = true; go('a-programmes'); ACT.chProgNew();
     ok('NP details (Course Details page, not a dialog): title, level, reference, duration, description, price (GBP), Support type with the P-31 tag, the observation question', !MODAL && S.params.id === 'new' && ['#np-t', '#np-l', '#np-r', '#np-d', '#np-ds', '#np-p', '#np-obs-yes', '#np-obs-no'].every(s => document.querySelector(s)) && document.querySelectorAll('input[name="np-s"]').length === 2 && /Pending client: Fully assisted vs self-paced/.test(main()));
     ok('NP required fields', crT(ACT.cbDetCreate)() === false && /Enter a title/.test(main()));
-    ACT.chProgNew(); fill8({ '#np-t': 'Level 3 Diploma in Adult Care (England)', '#np-r': 'QN 1', '#np-p': '2000' }); ok('NP title must be unique', create8() === false && /already exists/.test(main()) && !(STORE.chNewProgs || []).some(p => !p.seed)); ACT.chProgNew();
-    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600', '#np-ds': 'For team leaders.' }); document.querySelector('input[name="np-s"][value="Self-paced"]').checked = true; create8();
+    ACT.chProgNew(); fill8({ '#np-t': 'Level 3 Diploma in Adult Care (England)', '#np-r': 'QN 1', '#np-p': '2000' }), dmpPrice(); ok('NP title must be unique', create8() === false && /already exists/.test(main()) && !(STORE.chNewProgs || []).some(p => !p.seed)); ACT.chProgNew();
+    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600', '#np-ds': 'For team leaders.' }); dmpPrice(); document.querySelector('input[name="np-s"][value="Self-paced"]').checked = true; create8();
     const pr = np();
     ok('NP created as Draft, Version 1, with details and Support type', !!pr && pr.status === 'Draft' && pr.version === 1 && pr.price === 2600 && pr.level === 'Level 4' && chSupportOf(pr.id) === 'Self-paced' && S.route === 'a-programmes' && S.params && true);
     ok('NP audited', ADMIN.audit.some(a => a.module === 'NVQ Programmes' && a.action === 'Programme created (Draft, Version 1)' && a.entity.includes(pr.id)));
@@ -1100,7 +1124,7 @@
 
   await T('New NVQ programme: structure, letter, documents, plan, review, publish', async () => {
     fresh(); acaEnter('KA'); S.signedIn = true; go('a-programmes'); ACT.chProgNew();
-    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600' }); create8('yes' /* CB4 (PD-CB-30): an Observation Learning Outcome is chosen below — only offered when the course has observations */); const pr = np(), id = pr.id;
+    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600' }), dmpPrice(); create8('yes' /* CB4 (PD-CB-30): an Observation Learning Outcome is chosen below — only offered when the course has observations */); const pr = np(), id = pr.id;
     go('a-programmes', { id, tab: 'review' }); const pub0 = app().querySelector('[data-act="cbPublish"]'); /* CB11 (PD-CB-77): was ch8Publish */
     ok('NP review: blocking items listed; Publish disabled with a reason', /Add at least one unit/.test(main()) && /No offer letter uploaded/.test(main()) && pub0.disabled && !!pub0.title);
     ACT.ch8Publish({ dataset: { id } }); ok('NP publish refused while items are missing (logged)', /Can't publish/.test(MODAL.title) && pr.status === 'Draft' && ADMIN.audit[0].action === 'Blocked: publish (items missing)'); closeModal();
@@ -1137,7 +1161,7 @@
     go('a-programmes', { id, tab: 'fees' }); const r8 = app().querySelector('main input[name="e1-wdm"][value="own"]'); r8.checked = true; INP.e1DepMode(r8); app().querySelector('main #e1-d').value = '400'; ACT.cb8SaApprove({ dataset: { p: id } }); document.querySelector('#rsn').value = 'Own terms'; press();
     ok('NP Super Admin sets the terms in GBP (D8: approved at once), audited', pr.plan.deposit === 400 && pr.plan.inst === 8 && ADMIN.audit.some(a => a.action === 'Financial package approved'));
     FA(); go('f-plans'); ok('NP Finance → Payment Plans: "View package" for a package programme (not Edit plan)', !!app().querySelector('.ch8-plans [data-act="cb8ViewPkg"][data-p="' + id + '"]') && !app().querySelector('.ch8-plans [data-go="a-programmes"]') && !app().querySelector('.ch8-plans [data-act="s4PlanEdit"][data-p="' + id + '"]'));
-    acaEnter('KA'); S.signedIn = true; obsDecide(id); go('a-programmes', { id, tab: 'review' }); const pub = app().querySelector('[data-act="cbPublish"]'); /* CB11 (PD-CB-77): was ch8Publish */
+    acaEnter('KA'); S.signedIn = true; obsDecide(id); dmpComply(id); go('a-programmes', { id, tab: 'review' }); const pub = app().querySelector('[data-act="cbPublish"]'); /* CB11 (PD-CB-77): was ch8Publish */
     ok('NP review: nothing blocking; Publish enabled', !pub.disabled && !/Blocking/.test(main()));
     ACT.ch8Publish({ dataset: { id } }); document.querySelector('#rsn').value = 'Ready'; press();
     ok('NP published: Active, Version 1, audited', pr.status === 'Active' && pr.version === 1 && ADMIN.audit.some(a => a.action === 'Programme published (Version 1)'));

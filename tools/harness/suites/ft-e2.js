@@ -3,6 +3,7 @@
 // pinned terms allow; the Academy default reaches programmes through new versions. Each check does the action through the screen
 // or handler, then checks the consuming screen or record, and includes the negative case.
 (async function () {
+  const dmpPrice = () => { const r = document.querySelector('main #cr-pm-price'); if (r && !r.checked) { r.checked = true; INP.crPm(r); } }; // DM-P (PD-DM-18): "One programme price" is now an explicit choice (fee options by delivery mode are the default)
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
   // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
@@ -33,7 +34,7 @@
   // continue" (ACT.cbDetCreate) creates the Draft
   let codeN = 0; // CB2 correction: a course code is required for a new course (unique per test programme)
   const create = (obs = 'no') => { const r = document.querySelector('#np-obs-' + obs); if (r) r.checked = true; const c = document.querySelector('#np-code'); if (c && !c.value) c.value = 'TC' + (++codeN); return crT(ACT.cbDetCreate)(); };
-  const newProg = (title, level = 'Level 4', price = 2400) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': level, '#np-r': 'QN 610/' + (5000 + title.length) + '/1', '#np-d': '12', '#np-du': 'months', '#np-p': String(price) }); const n0 = (STORE.chNewProgs || []).length; create(); return (STORE.chNewProgs || []).length > n0 ? last() : null; };
+  const newProg = (title, level = 'Level 4', price = 2400) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': level, '#np-r': 'QN 610/' + (5000 + title.length) + '/1', '#np-d': '12', '#np-du': 'months', '#np-p': String(price) }), dmpPrice(); const n0 = (STORE.chNewProgs || []).length; create(); return (STORE.chNewProgs || []).length > n0 ? last() : null; };
   const l3Wizard = (title, rows) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (6000 + title.length) + '/3', '#np-d': '12', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l')); rows.forEach(([l, f, m], k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = l; r.querySelector('.r1-np-f').value = f; r.querySelector('.r1-np-m').value = m; }); create(); return last(); };
   const optOf = fee => r1Opts('NV-L3').find(o => o.fee === fee);
   const addOpt = (fee, label = 'Self-Paced — E2') => { SA(); r1AddOpt('NV-L3', { label, fee, mode: 'Self-Paced' }, 'E2', 'Added'); m11Accept(); return optOf(fee).id; };

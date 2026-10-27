@@ -3,6 +3,33 @@
 // S3: programme structures, versions, library and types, plus the S3 acceptance corrections A–E, 13 end-to-end
 // workflows (incl. learners keeping their version, programme isolation, access refusals) and the S2 / CH-17 marker line.
 (async function () {
+  // DM-P (PD-DM-15): publishing a programme or version needs fee options by delivery mode, approved by Finance. Where a check isn't about
+  // fees, this fixture takes the authorized Section 5 path first: the duration of a pre-builder course, a financial package, fee options by
+  // delivery mode, a mode for each option (the Standard programme fee replaced by an option at the same fee), the Super Administrator's own approval (D8)
+  const dmpComply = (pid, mode = 'Fully Assisted') => {
+    const pr = s3Pr(pid) || cbPr(pid); if (!pr) return false; const av = ADMIN.av, po = S.portal, aca = typeof isAca === 'function' && isAca();
+    const qm1 = k => document.querySelector('#modal-root ' + k), put = (k, v) => { const e = qm1(k); if (e && !e.value) e.value = v; };
+    const go1 = () => { const a = MODAL && MODAL.actions.find(x => x.cls && /primary|danger/.test(x.cls)); const r = a && a.fn ? a.fn() : undefined; if (r !== false && MODAL) closeModal(); return r; };
+    const rs = () => { const e = document.querySelector('#rsn'); if (e) e.value = 'Fixture: fee options by delivery mode'; return go1(); };
+    setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true;
+    if (!pr.durV) { ACT.crDurRec({ dataset: { p: pr.id } }); put('#cr-du-n', '12'); rs(); }
+    if (!cb8Managed(pr)) ACT.cb8Start({ dataset: { p: pr.id } });
+    if (!crMultiFee(pr)) { ACT.crFoStart({ dataset: { p: pr.id } }); rs(); }
+    cb8Work(pr).opts.filter(o => o.status === 'Active' && (o.legacy || !M_MODES.includes(o.mode))).map(o => o.id).forEach(id => {
+      const o = cb8Work(pr).opts.find(x => x.id === id);
+      if (o.legacy) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String(o.fee); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); ACT.cb8OptRetire({ dataset: { p: pr.id, o: id } }); rs(); }
+      else { ACT.cb8Opt({ dataset: { p: pr.id, o: id } }); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-f', '2400'); /* a course without any fee (seeded Level 4): the fixture enters one */ put('#c8-wp', '0'); put('#c8-off', '0'); go1(); }
+      closeModal();
+    });
+    if (!cb8Work(pr).opts.some(o => o.status === 'Active' && !o.legacy && M_MODES.includes(o.mode))) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String((s4PlanCur(pr.id) || {}).fee || 2400); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); closeModal(); } // no option at all (a Level 3 package starts from the options in force): one at the plan's fee
+    cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.pay.length).forEach(o => ACT.cb8PayAdd({ dataset: { p: pr.id, o: o.id, k: '1' } }));
+    if (!(cb8Wf(pr) && cb8Wf(pr).status === 'Approved')) { ACT.cb8SaApprove({ dataset: { p: pr.id } }); rs(); }
+    closeModal(); if (aca) { acaEnter(av); S.signedIn = true; } else setAdminIdentity(av); S.portal = po; return true;
+  };
+  const L2T = 'Level 2 Diploma in Care (England)';
+  const dmpElig = (pid = 'NV-L2', modes = M_MODES) => { const fee = crNcFee(s3Pr(pid)) || 2400; modes.forEach(m => { if (!crApprOpts(pid).some(o => o.mode === m)) r1AddOpt(pid, { label: m, fee, mode: m }, 'Fixture (DM-P)', 'Added'); }); };
+  const dmpLegacy = (code, dm, chan = 'Online') => { const a = ADMIN.batches.find(b => b.code === 'L3AC-NOV26'), b = { ...JSON.parse(JSON.stringify(a)), code, label: code, start: D(60, '09:00'), end: D(420, '17:00'), enrolled: 0, roster: [], wait: [], status: 'Planned', mode: chan, dmode: dm, dmodeSrc: 'set', coord: 'Dr Helen Carter', w1opts: ['L3-FO-STD'] }; ['r2', 'crModes', 'crBase', 'abCode', 'abcHist', 'dmodeHist', 'w1wait', 'coh', 'alloc', 'mElig', 'coords', 'mcA', 'mcH', 'coordHistory'].forEach(k => delete b[k]); ADMIN.batches.push(b); syncTasBatches(); return b; };
+  const dmpLatest = act => { const i = ADMIN.audit.findIndex(a => a.action === act); return i >= 0 && ADMIN.audit.slice(0, i).every(a => /package|plan|payment|fee/i.test(a.action + ' ' + a.module)); }; // DM-P: an approved fee package goes into force with the version and is logged just after it
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
   // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
@@ -312,8 +339,8 @@
     ok('S3-03 Create new version: a real Version 3 draft (a copy of the current tree)', !!dv && dv.v === 3 && dv.tree !== STORE.worlds.C.tree && dv.tree.length === 7 && /Version 3 \(draft\)/.test(main()) && !!app().querySelector('.cb-vb [data-tab="review"]') /* CB12 (PD-CB-79): was a kPubProg button in the version area */);
     pb('NV-L3', 'tree'); dlg('s3Rename', { p: 'NV-L3', u: 'U301' }, { '#rn-t': 'Communication in care settings (2027)' });
     ok('S3-03 the draft is edited; the current version is not', dv.tree[0].title === 'Communication in care settings (2027)' && STORE.worlds.C.tree[0].title !== dv.tree[0].title);
-    obsDecide('NV-L3'); ACT.kPubProg({ dataset: { id: 'NV-L3' } }); reason('Publish 2027 wording'); const pr = s3Pr('NV-L3');
-    ok('S3-03 Publish version 3: current version, history updated, audited', pr.version === 3 && !STORE.s3.drafts['NV-L3'] && STORE.s3.trees['NV-L3'][0].title === 'Communication in care settings (2027)' && ADMIN.audit[0].action === 'Version 3 published');
+    obsDecide('NV-L3'); dmpComply('NV-L3'), ACT.kPubProg({ dataset: { id: 'NV-L3' } }); reason('Publish 2027 wording'); const pr = s3Pr('NV-L3');
+    ok('S3-03 Publish version 3: current version, history updated, audited', pr.version === 3 && !STORE.s3.drafts['NV-L3'] && STORE.s3.trees['NV-L3'][0].title === 'Communication in care settings (2027)' && dmpLatest('Version 3 published'));
     pb('NV-L3', 'versions'); ok('S3-03 Versions tab: Version 3 (current), Version 2 superseded', /Version 3 \(current\)/.test(main()) && /Version 2/.test(main()) && /Superseded/.test(main()));
     ok('S3-03 Aisha stays on her version (old unit title)', !/\(2027\)/.test(learnerUnits('C')) && /U301/.test(main()));
     SA(); go('a-programmes'); ok('S3-03 programme list shows Version 3', /Version 3/.test(main()));
@@ -322,8 +349,8 @@
     ok('S3-03 published wizard programme offers "Create new version"', !!app().querySelector('[data-act="s3WizVersion"]') && !app().querySelector('[data-act="ch8AddUnit"]'));
     ACT.s3WizVersion({ dataset: { id } }); reason('Add a unit'); go('a-programmes', { id, tab: 'structure' });
     ok('S3-03 wizard Version 2 (draft): structure editable', p2.nextDraft && !!app().querySelector('[data-act="ch8AddUnit"]') && /Version 2 \(draft\)/.test(main()));
-    dlg('ch8AddUnit', { id }, { '#u-c': 'U299', '#u-t': 'Digital skills' }); obsDecide(id); ACT.s3WizPublish({ dataset: { id } }); reason('Publish');
-    ok('S3-03 wizard Publish version 2', p2.version === 2 && !p2.nextDraft && ch8Tree(id).some(u => u.code === 'U299') && ADMIN.audit[0].action === 'Version 2 published');
+    dlg('ch8AddUnit', { id }, { '#u-c': 'U299', '#u-t': 'Digital skills' }); obsDecide(id); dmpComply(id), ACT.s3WizPublish({ dataset: { id } }); reason('Publish');
+    ok('S3-03 wizard Publish version 2', p2.version === 2 && !p2.nextDraft && ch8Tree(id).some(u => u.code === 'U299') && dmpLatest('Version 2 published'));
   });
 
   await T('S3-04 NV-L3D publish is checked against its own tree', async () => {
@@ -335,9 +362,9 @@
     // CB11 (PD-CB-75) supersedes the direct publication: a seeded Draft needs payment terms in force first (Finance sets them)
     obsDecide('NV-L3D'); ACT.kPubProg({ dataset: { id: 'NV-L3D' } }); ok('S3-04 (CB11) with every type set, publishing still waits for Finance: no payment terms in force (refused, logged)', s3Pr('NV-L3D').status === 'Draft' && /Finance approval is needed first/.test(mroot().textContent) && /no payment terms/.test(ADMIN.audit[0].action)); closeModal();
     setAdminIdentity('FA'); S.portal = 'admin'; ACT.s4PlanEdit({ dataset: { p: 'NV-L3D' } }); const ppf = document.querySelector('#modal-root #pp-f'); if (ppf && !ppf.value) ppf.value = '2600'; reason('Plan for the 2027 update');
-    setAdminIdentity('A'); S.portal = 'admin'; ACT.kPubProg({ dataset: { id: 'NV-L3D' } }); reason('Ready');
-    ok('S3-04 publishes once every Learning Outcome has a type (and, CB11, a Finance plan is in force)', s3Pr('NV-L3D').status === 'Active' && ADMIN.audit[0].action === 'Programme published');
-    acaEnter('KA'); S.signedIn = true; go('a-batches'); ACT.newBatch(); ok('S3-04 the published programme is offered when creating a batch', /2027 update/.test(mroot().textContent)); closeModal();
+    setAdminIdentity('A'); S.portal = 'admin'; dmpComply('NV-L3D'), ACT.kPubProg({ dataset: { id: 'NV-L3D' } }); reason('Ready');
+    ok('S3-04 publishes once every Learning Outcome has a type (and, CB11, a Finance plan is in force)', s3Pr('NV-L3D').status === 'Active' && dmpLatest('Programme published'));
+    acaEnter('KA'); S.signedIn = true; go('a-batches'); ACT.newBatch(); ok('S3-04 the published programme is offered when creating a batch', /2027 update/.test(mroot().textContent), crEligWhy(s3Pr('NV-L3D')) + ' ' + JSON.stringify(r1Opts('NV-L3D').map(o => [o.id, o.mode, o.status])) + JSON.stringify(cb8Cur('NV-L3D') && cb8Cur('NV-L3D').opts.map(o => [o.id, o.mode]))); closeModal();
   });
 
   await T('S3-05 one observation-criteria library drives the observation forms', async () => {
@@ -405,7 +432,7 @@
   /* ================= S3 acceptance corrections (A–E) and end-to-end checks ================= */
   const addType = (n, e) => { ACT.addType(); fill({ '#ty-n': n, '#ty-e': e }); return prim(); };
   const optsOf = sel => [...(typeof sel === 'string' ? document.querySelector(sel) : sel).options].map(o => o.value);
-  const mkBatch = (code, course) => { ACT.newBatch(); fill({ '#nb-c': code }); document.querySelector('#nb-co').value = course; prim(); const ac = document.querySelector('#nb-ac'); ac.value = ac.options[1].value; prim(); prim(); prim(); prim(); };
+  const mkBatch = (code, course) => { dmpElig(s4PidOfTitle(course)); ACT.newBatch(); fill({ '#nb-c': code }); const co0 = document.querySelector('#nb-co'); co0.value = course; INP.n2NbCourse(co0); prim(); /* DM-P (PD-DM-16): the course needs approved fee options by delivery mode; its modes load with the course */ const ac = document.querySelector('#nb-ac'); ac.value = ac.options[1].value; prim(); prim(); prim(); prim(); };
   const n2 = () => ch8Pr('NV-N2');
   // NV-N2 Version 2 draft: a written custom type on LO1 and an unsupported ("professional discussion") type on a new Learning Outcome
   const n2Draft = () => {
@@ -417,8 +444,8 @@
     return li;
   };
   // … then the unsupported Learning Outcome is changed to Observation and Version 2 is published
-  const n2Custom = () => { const li = n2Draft(); INP.ch8LoType({ value: 'Observation', dataset: { id: 'NV-N2', u: '0', m: '0', l: String(li) } }); obsDecide('NV-N2'); ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Publish Version 2'); };
-  const signUp = (batch) => { learner('A'); go('browse'); ACT.applyNvq({ dataset: { id: 'k-NV-N2' } }); prim(); const w = W; ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); if (batch) chSetBatch(w, batch); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal(); return w; };
+  const n2Custom = () => { const li = n2Draft(); INP.ch8LoType({ value: 'Observation', dataset: { id: 'NV-N2', u: '0', m: '0', l: String(li) } }); obsDecide('NV-N2'); dmpComply('NV-N2'), ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Publish Version 2'); };
+  const signUp = (batch) => { learner('A'); go('browse'); ACT.applyNvq({ dataset: { id: 'k-NV-N2' } }); { const r = document.querySelector('#modal-root input[name="r1-opt"]'); if (r && !document.querySelector('#modal-root input[name="r1-opt"]:checked')) r.checked = true; } /* DM-P: once the course has fee options, the learner chooses one */ prim(); const w = W; ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); if (batch) chSetBatch(w, batch); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal(); return w; };
 
   await T('S3 correction A — custom assessment types show their configured name; rules follow the evidence method', async () => {
     fresh(); SA(); addType('Written reflection', 'Written assignment questions'); addType('Professional discussion', 'Professional discussion');
@@ -442,10 +469,10 @@
   await T('S3 decision 1 — an unsupported assessment method blocks publishing; drafts stay editable', async () => {
     fresh(); const li = n2Draft(); acaEnter('KA'); S.signedIn = true; go('a-programmes', { id: 'NV-N2', tab: 'review' });
     ok('Wizard review: blocking item names the Learning Outcome and type', /Assessment method not supported yet — learners couldn't complete: U201 M1 LO\d \(Professional discussion — evidence: professional discussion\)/.test(main()));
-    ACT.s3WizPublish({ dataset: { id: 'NV-N2' } });
+    dmpComply('NV-N2'), ACT.s3WizPublish({ dataset: { id: 'NV-N2' } });
     ok('Wizard (negative): "Publish version 2" refused; still Version 1 with the draft open', !!MODAL && /Can't publish this version/.test(MODAL.title) && /Professional discussion/.test(mroot().textContent) && n2().version === 1 && n2().nextDraft); closeModal();
     go('a-programmes', { id: 'NV-N2', tab: 'structure' }); ok('Wizard: the draft stays editable', !!app().querySelector('[data-act="ch8AddUnit"]') && !!app().querySelector(`[data-onchange="ch8LoType"][data-l="${li}"]`));
-    INP.ch8LoType({ value: 'Observation', dataset: { id: 'NV-N2', u: '0', m: '0', l: String(li) } }); obsDecide('NV-N2'); ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Supported now');
+    INP.ch8LoType({ value: 'Observation', dataset: { id: 'NV-N2', u: '0', m: '0', l: String(li) } }); obsDecide('NV-N2'); dmpComply('NV-N2'), ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Supported now');
     ok('Wizard (positive): with supported types (incl. the written custom type) Version 2 publishes', n2().version === 2 && !n2().nextDraft);
     // A Draft programme made with the wizard: the Publish button is disabled with the reason
     acaEnter('KA'); S.signedIn = true; ACT.ch8AddLo({ dataset: { id: 'NV-N1', u: 0, m: 0 } }); fill({ '#lo-t': 'Discuss leadership', '#lo-y': 'Professional discussion' }); prim();
@@ -456,12 +483,12 @@
     INP.loType({ value: 'Professional discussion', dataset: { p: 'NV-L4', u: 'U401', lo: 'LO1' } }); reason('Try PD');
     const dv = STORE.s3.drafts['NV-L4'];
     ok('Builder: unsupported type on a published programme goes into a draft version (current version unchanged)', !!dv && dv.tree.find(u => u.code === 'U401').mods[0].los[0].type === 'Professional discussion' && cur.find(u => u.code === 'U401').mods[0].los[0].type === 'Knowledge');
-    ACT.kPubProg({ dataset: { id: 'NV-L4' } });
+    dmpComply('NV-L4'), ACT.kPubProg({ dataset: { id: 'NV-L4' } });
     ok('Builder (negative): publish blocked, naming U401 LO1 and the type; audited', !!MODAL && !!mroot().querySelector('.s3-unsup') && /U401 LO1 \(Professional discussion — evidence: professional discussion\)/.test(mroot().textContent) && ADMIN.audit[0].action === 'Blocked: publish' && /Unsupported assessment method/.test(ADMIN.audit[0].reason) && s3Pr('NV-L4').version === 1); closeModal();
-    INP.loType({ value: 'Knowledge', dataset: { p: 'NV-L4', u: 'U401', lo: 'LO1' } }); reason('Back to Knowledge'); obsDecide('NV-L4'); ACT.kPubProg({ dataset: { id: 'NV-L4' } }); reason('Publish');
+    INP.loType({ value: 'Knowledge', dataset: { p: 'NV-L4', u: 'U401', lo: 'LO1' } }); reason('Back to Knowledge'); obsDecide('NV-L4'); dmpComply('NV-L4'), ACT.kPubProg({ dataset: { id: 'NV-L4' } }); reason('Publish');
     ok('Builder (positive): the draft stays editable; once supported it publishes Version 2', s3Pr('NV-L4').version === 2 && !STORE.s3.drafts['NV-L4']);
     INP.loType({ value: 'Professional discussion', dataset: { p: 'NV-L3D', u: 'U310', lo: 'LO2' } }); reason('PD'); INP.loType({ value: 'Knowledge', dataset: { p: 'NV-L3D', u: 'U311', lo: 'LO1' } }); reason('K');
-    ACT.kPubProg({ dataset: { id: 'NV-L3D' } }); ok('Builder Draft programme NV-L3D (negative): blocked, stays Draft', /U310 LO2 \(Professional discussion/.test(mroot().textContent) && s3Pr('NV-L3D').status === 'Draft'); closeModal();
+    dmpComply('NV-L3D'), ACT.kPubProg({ dataset: { id: 'NV-L3D' } }); ok('Builder Draft programme NV-L3D (negative): blocked, stays Draft', /U310 LO2 \(Professional discussion/.test(mroot().textContent) && s3Pr('NV-L3D').status === 'Draft'); closeModal();
   });
 
   await T('S3 version consistency — batches and enrolled learners', async () => {
@@ -472,11 +499,11 @@
     ACT.ch8AddUnit({ dataset: { id: 'NV-N2' } }); fill({ '#u-c': 'U299', '#u-t': 'Digital skills' }); prim();
     w = signUp(null); const snap = JSON.stringify(w.tree);
     ok('V (negative): a sign-up while Version 2 is a draft gets Version 1 — never unpublished draft edits', w.nvq.progVersion === 1 && !w.tree.some(u => u.code === 'U299') && ch8Tree('NV-N2').some(u => u.code === 'U299'));
-    acaEnter('KA'); S.signedIn = true; obsDecide('NV-N2'); ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Publish');
+    acaEnter('KA'); S.signedIn = true; obsDecide('NV-N2'); dmpComply('NV-N2'), ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Publish');
     ok('V: publishing Version 2 doesn\'t migrate the enrolled learner (structure and version unchanged)', n2().version === 2 && JSON.stringify(w.tree) === snap && w.nvq.progVersion === 1);
     fresh(); acaEnter('KA'); S.signedIn = true; go('a-batches'); mkBatch('L2PW-MAR27-ONL', n2().title); const b1 = ADMIN.batches.find(b => b.code === 'L2PW-MAR27-ONL');
     ACT.s3WizVersion({ dataset: { id: 'NV-N2' } }); reason('v2'); go('a-programmes', { id: 'NV-N2', tab: 'structure' }); ACT.ch8AddUnit({ dataset: { id: 'NV-N2' } }); fill({ '#u-c': 'U299', '#u-t': 'Digital skills' }); prim();
-    obsDecide('NV-N2'); ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Publish'); go('a-batches'); mkBatch('L2PW-JUN27-ONL', n2().title); const b2 = ADMIN.batches.find(b => b.code === 'L2PW-JUN27-ONL');
+    obsDecide('NV-N2'); dmpComply('NV-N2'), ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Publish'); go('a-batches'); mkBatch('L2PW-JUN27-ONL', n2().title); const b2 = ADMIN.batches.find(b => b.code === 'L2PW-JUN27-ONL');
     ok('V: each batch records the version it was created on (1 and 2)', b1.progVersion === 1 && b2.progVersion === 2);
     w = signUp(b1);
     ok('V: a learner enrolled in the Version 1 batch starts on Version 1 (consistent with the batch)', w.signup.batch === b1.code && w.nvq.progVersion === b1.progVersion && !w.tree.some(u => u.code === 'U299'));
@@ -538,7 +565,7 @@
   await T('S3 correction E — version history: fixtures are marked, new entries are real', async () => {
     fresh(); pb('NV-L3', 'versions'); const h = STORE.s3.hist['NV-L3'];
     ok('E: seeded versions are demo fixtures with no invented date or author', h.length === 2 && h.every(x => x.fixture && !x.at && !x.by) && /Demo fixture — existed before this prototype's audit trail/.test(main()));
-    ACT.newProgVersion({ dataset: { id: 'NV-L3' } }); reason('Spec change'); obsDecide('NV-L3'); ACT.kPubProg({ dataset: { id: 'NV-L3' } }); reason('Publish it');
+    ACT.newProgVersion({ dataset: { id: 'NV-L3' } }); reason('Spec change'); obsDecide('NV-L3'); dmpComply('NV-L3'), ACT.kPubProg({ dataset: { id: 'NV-L3' } }); reason('Publish it');
     const e = h[h.length - 1]; pb('NV-L3', 'versions');
     ok('E: publishing adds a real entry (actor, time, reason) and audit rows', e.v === 3 && !e.fixture && e.by === ADMIN.me.name && !!e.at && e.note === 'Publish it' && /Version history — audit/.test(main()) && /Version 3 published/.test(main()) && /Version created \(draft\)/.test(main()));
     ok('E: wizard programme Version 1 uses its own recorded publish date', (x => !x.fixture && x.at === n2().published)(s3Hist(n2())[0]));
@@ -559,7 +586,7 @@
     ok('E2E-1/2: new programme with its own hierarchy and module code (no Level 3 units)', t.length === 1 && t[0].code === 'U350' && t[0].mods[0].ab === 'B/652/3501' && t[0].mods[0].los[0].crit[0].d === 'Describe three types of dementia' && !t.some(u => u.code === 'U301') && STORE.s3.trees['NV-L3'].length === 7);
     // E2E-7: publishing a new Level 3 version leaves Aisha's version, evidence and progress untouched
     const snap = JSON.stringify(STORE.worlds.C.tree), prog = learnerUnits('C');
-    pb('NV-L3', 'tree'); dlg('nodeAdd', { p: 'NV-L3', lvl: 'unit' }, { '#nd-c': 'U309', '#nd-t': 'Dementia (2027)' }); obsDecide('NV-L3'); ACT.kPubProg({ dataset: { id: 'NV-L3' } }); reason('Publish');
+    pb('NV-L3', 'tree'); dlg('nodeAdd', { p: 'NV-L3', lvl: 'unit' }, { '#nd-c': 'U309', '#nd-t': 'Dementia (2027)' }); obsDecide('NV-L3'); dmpComply('NV-L3'), ACT.kPubProg({ dataset: { id: 'NV-L3' } }); reason('Publish');
     ok('E2E-6/7: Version 3 published; Aisha\'s tree (evidence, statuses) is byte-for-byte unchanged and her Progress is the same', s3Pr('NV-L3').version === 3 && JSON.stringify(STORE.worlds.C.tree) === snap && learnerUnits('C') === prog);
     // E2E-8: a batch created now records Version 3
     acaEnter('KA'); S.signedIn = true; go('a-batches'); mkBatch('L3DC-APR27', s3Pr('NV-L3').title); const b = ADMIN.batches.find(x => x.code === 'L3DC-APR27');
@@ -583,7 +610,7 @@
     ok('Access: Finance can\'t change the structure (refused, logged)', !MODAL && STORE.s3.trees['NV-L4'].length === n0 && ADMIN.audit[0].action === 'Blocked: change the structure');
     ACT.addType(); ok('Access: Finance can\'t change assessment types (refused, logged)', !MODAL && ADMIN.audit[0].action === 'Blocked: change assessment types');
     ACT.kLib({ dataset: { id: '' } }); ok('Access: Finance can\'t change the library (refused, logged)', !MODAL && ADMIN.audit[0].action === 'Blocked: change the observation-criteria library');
-    ACT.kPubProg({ dataset: { id: 'NV-L3D' } }); ok('Access: Finance can\'t publish a programme', !MODAL && s3Pr('NV-L3D').status === 'Draft');
+    dmpComply('NV-L3D'), ACT.kPubProg({ dataset: { id: 'NV-L3D' } }); ok('Access: Finance can\'t publish a programme', !MODAL && s3Pr('NV-L3D').status === 'Draft');
   });
 
   await T('S2 / CH-17 marker follows the target batch\'s assignment assessor', async () => {
@@ -1166,17 +1193,23 @@
   });
 
   /* ================= N2 — batch-level delivery mode (Fully Assisted / Self-Paced) ================= */
-  const mkBatchN2 = (code, course, dm, chan, coord) => { ACT.newBatch(); if (!MODAL) return false; fill({ '#nb-c': code }); const co = document.querySelector('#nb-co'); co.value = course; INP.n2NbCourse(co); if (dm) document.querySelector('#nb-dm').value = dm; if (chan) document.querySelector('#nb-m').value = chan; if (prim() === false) return false; const ac = document.querySelector('#nb-ac'); ac.value = coord === '' ? '' : coord || ac.options[1].value; if (prim() === false) return false; prim(); prim(); prim(); return ADMIN.batches.find(b => b.code === code) || null; };
+  // DM-P (PD-DM-16/17) supersedes N2's stored delivery mode on NEW batches: a new batch takes the modes of its course's published, approved
+  // fee options, as checkboxes; the Standard programme fee and its "mode for standard-fee learners" are no longer offered to a new batch.
+  // N2/N3's creation checks use the wizard on the Level 2 Diploma once Finance has added approved options (dmpElig — Finance's fee-option
+  // card); their standard-fee-mode checks (display, edit, lock, class plans, shared classes) run on batches from before DM-P (dmpLegacy: a
+  // copy of a seeded Level 3 batch, as the seed data makes them). Was: every batch created by the wizard with #nb-dm.
+  const mkBatchN2 = (code, course, dm, chan, coord) => { ACT.newBatch(); if (!MODAL) return false; fill({ '#nb-c': code }); const co = document.querySelector('#nb-co'); co.value = course; INP.n2NbCourse(co); if (dm) M_MODES.forEach(m => { const x = document.querySelector(`#modal-root .m-m[value="${m}"]`); if (x) { x.checked = m === dm; INP.mModeTick(x); } }); if (chan) document.querySelector('#nb-m').value = chan; if (prim() === false) return false; const ac = document.querySelector('#nb-ac'); ac.value = coord === '' ? '' : coord || ac.options[1].value; if (prim() === false) return false; prim(); prim(); prim(); return ADMIN.batches.find(b => b.code === code) || null; };
   await T('N2 batch delivery mode: create, show, seed, edit rules, permissions, preservation', async () => {
-    fresh(); const keep = JSON.stringify([STORE.worlds.C.plans, STORE.worlds.C.nvq, STORE.worlds.C.tree, STORE.worlds.D.plans, STORE.chFees, STORE.worlds.B.signup]);
+    fresh(); const keep = JSON.stringify([STORE.worlds.C.plans, STORE.worlds.C.nvq, STORE.worlds.C.tree, STORE.worlds.D.plans, STORE.chFees, STORE.worlds.B.signup]); dmpElig();
     ok('N2 seed: every existing NVQ batch is Fully Assisted, marked as a seeded default (not client-confirmed)', ADMIN.batches.filter(b => n2IsNvqTitle(b.course)).every(b => b.dmode === 'Fully Assisted' && b.dmodeSrc === 'seed default') && !SHORT_BATCH().dmode);
     ok('N2 seed: NV-L3D keeps Self-Paced as its programme default for new batches (it has no batches)', n2DefaultFor(s3Pr('NV-L3D').title) === 'Self-Paced' && !ADMIN.batches.some(b => b.course === s3Pr('NV-L3D').title) && n2DefaultFor(T3) === 'Fully Assisted');
-    acaEnter('KA'); S.signedIn = true; go('a-batches'); ACT.newBatch();
-    ok('N2 Create batch asks for the delivery mode separately from the delivery channel', !!document.querySelector('#nb-dm') && [...document.querySelectorAll('#nb-dm option')].map(o => o.value).join() === 'Fully Assisted,Self-Paced' && [...document.querySelectorAll('#nb-m option')].map(o => o.value).join() === 'Online,Classroom,Blended' && /Delivery channel/.test(mroot().textContent)); closeModal();
-    ok('N2 (negative) both modes still require an Academic Coordinator', mkBatchN2('L3SP-NOCO', T3, 'Self-Paced', 'Online', '') === false && !ADMIN.batches.some(b => b.code === 'L3SP-NOCO') && /coordinator/i.test(mroot().textContent)); closeModal();
-    const sp = mkBatchN2('L3SP-MAR27', T3, 'Self-Paced', 'Online', 'Dr Helen Carter'), fa = mkBatchN2('L3FA-MAR27', T3, 'Fully Assisted', 'Classroom', 'Dr Helen Carter');
-    ok('N2 two batches of the same programme with different delivery modes; channel kept separately', !!sp && !!fa && sp.course === fa.course && sp.dmode === 'Self-Paced' && fa.dmode === 'Fully Assisted' && sp.mode === 'Online' && fa.mode === 'Classroom' && sp.dmodeSrc === 'set');
-    ok('N2 the choice is audited when the batch is created', ADMIN.audit.some(a => a.action === 'Delivery mode set' && a.entity.includes('L3SP-MAR27') && a.after === 'Self-Paced'));
+    acaEnter('KA'); S.signedIn = true; go('a-batches'); ACT.newBatch(); { const co = document.querySelector('#nb-co'); co.value = L2T; INP.n2NbCourse(co); }
+    ok('N2 Create batch asks for the delivery modes (checkboxes from the fee options) separately from the delivery channel', [...document.querySelectorAll('#modal-root .m-m')].map(x => x.value).join() === 'Self-Paced,Fully Assisted' && !document.querySelector('#modal-root #nb-dm').closest('.field').offsetParent && [...document.querySelectorAll('#nb-m option')].map(o => o.value).join() === 'Online,Classroom,Blended' && /Delivery channel/.test(mroot().textContent)); closeModal();
+    ok('N2 (negative) both modes still require an Academic Coordinator', mkBatchN2('L2SP-NOCO', L2T, 'Self-Paced', 'Online', '') === false && !ADMIN.batches.some(b => b.code === 'L2SP-NOCO') && /coordinator/i.test(mroot().textContent)); closeModal();
+    const spw = mkBatchN2('L2SP-MAR27', L2T, 'Self-Paced', 'Online', 'Dr Helen Carter');
+    ok('N2 the mode chosen is audited when the batch is created', !!spw && JSON.stringify(crBModes(spw)) === '["Self-Paced"]' && spw.mode === 'Online' && ADMIN.audit.some(a => a.action === 'Delivery modes accepted set' && a.entity.includes('L2SP-MAR27') && a.after === 'Self-Paced'));
+    const sp = dmpLegacy('L3SP-MAR27', 'Self-Paced', 'Online'), fa = dmpLegacy('L3FA-MAR27', 'Fully Assisted', 'Classroom');
+    ok('N2 two batches of the same programme (from before DM-P) with different delivery modes; channel kept separately', !!sp && !!fa && sp.course === fa.course && sp.dmode === 'Self-Paced' && fa.dmode === 'Fully Assisted' && sp.mode === 'Online' && fa.mode === 'Classroom' && sp.dmodeSrc === 'set');
     go('a-batches'); const row = [...app().querySelectorAll('main tr')].find(r => r.textContent.includes('L3SP-MAR27'));
     // W1 (PD-W1-02) supersedes "Delivery mode column shows Self-Paced": a Level 3 batch's column shows its composition from its
     // learners, so this empty batch reads "No learners yet" (its stored mode applies to standard-fee learners only)
@@ -1192,6 +1225,7 @@
     learner('A'); go('course', { id: 'nvq' }); ok('N2 learner programme overview: Delivery channel and Delivery mode (Self-Paced) with the support wording', d.signup.batch === 'L3SP-MAR27' && /Delivery channel/.test(main()) && /Self-Paced/.test((app().querySelector('.n2-mode') || {}).textContent || '') && /not routine phone calls/.test(main()));
     ok('N2 same programme structure and version for both modes', d.tree.map(u => u.code).join() === STORE.s3.trees['NV-L3'].map(u => u.code).join() && d.nvq.title === T3);
     // Editing: allowed while empty (with a reason, audited); refused once learners are enrolled, also when forced
+    dmpElig('NV-L3'); // DM-L (PD-DM-11): a batch can change only to a mode its course has a price for — Finance adds approved Self-Paced and Fully Assisted options first
     SA(); ACT.s4bBatchEdit({ dataset: { id: 'L3FA-MAR27' } }); ok('N2 empty batch: the delivery mode can be edited', !document.querySelector('#bd-dm').disabled);
     document.querySelector('#bd-dm').value = 'Self-Paced'; fill({ '#bd-r': 'Planned as a Self-Paced intake' }); prim(); prim(); closeModal();
     ok('N2 empty batch: mode changed with the reason, audited, history kept', fa.dmode === 'Self-Paced' && fa.dmodeHist[0][4] === 'Planned as a Self-Paced intake' && ADMIN.audit.some(a => a.action === 'Delivery mode changed' && a.before === 'Fully Assisted' && a.after === 'Self-Paced'));
@@ -1203,9 +1237,9 @@
     ok('N2 (negative) forcing a mode change on an enrolled batch is refused and logged; nothing changes', prim() === false && sp.dmode === 'Self-Paced' && ADMIN.audit[0].action === 'Blocked: change delivery mode'); closeModal();
     const jan = ADMIN.batches.find(b => b.code === 'L3AC-JAN26'); ACT.s4bBatchEdit({ dataset: { id: jan.code } }); ok('N2 seeded batch with learners (Leicester Cohort 7): locked', document.querySelector('#bd-dm').disabled); closeModal();
     FA4(); ACT.newBatch(); ok('N2 (negative) Finance can\'t create a batch (refused, logged)', !MODAL && ADMIN.audit[0].action === 'Blocked: create batch');
-    role('sysA'); go('a-batches'); const sysB = mkBatchN2('L3SP-SYS27', T3, 'Self-Paced', 'Online', 'Dr Helen Carter');
-    ok('N2 the System Admin can create an NVQ batch and choose its delivery mode (client-confirmed permissions: Create and edit batches ☒)', !!sysB && sysB.dmode === 'Self-Paced' && sysB.dmodeSrc === 'set' && sysB.coord === 'Dr Helen Carter' && ADMIN.audit.some(a => a.action === 'Delivery mode set' && a.entity.includes('L3SP-SYS27')));
-    ok('N2 (negative) the System Admin still needs an Academic Coordinator', mkBatchN2('L3SP-SYSX', T3, 'Self-Paced', 'Online', '') === false && !ADMIN.batches.some(b => b.code === 'L3SP-SYSX')); closeModal();
+    role('sysA'); go('a-batches'); const sysW = mkBatchN2('L2SP-SYS27', L2T, 'Self-Paced', 'Online', 'Dr Helen Carter'); const sysB = dmpLegacy('L3SP-SYS27', 'Self-Paced'); // DM-P: created by the System Admin through the wizard; the stored-mode edits below on a batch from before DM-P
+    ok('N2 the System Admin can create an NVQ batch and choose its delivery mode (client-confirmed permissions: Create and edit batches ☒)', !!sysW && JSON.stringify(crBModes(sysW)) === '["Self-Paced"]' && sysW.coord === 'Dr Helen Carter' && ADMIN.audit.some(a => a.action === 'Delivery modes accepted set' && a.entity.includes('L2SP-SYS27')));
+    ok('N2 (negative) the System Admin still needs an Academic Coordinator', mkBatchN2('L3SP-SYSX', L2T, 'Self-Paced', 'Online', '') === false && !ADMIN.batches.some(b => b.code === 'L3SP-SYSX')); closeModal();
     COO('A'); S.portal = 'coord'; ACT.newBatch(); ok('N2 (negative) a Coordinator can\'t create a batch (refused, logged)', !MODAL && ADMIN.audit[0].action === 'Blocked: create batch');
     COO('A'); S.portal = 'coord'; ACT.s4bBatchEdit({ dataset: { id: 'L3FA-MAR27' } }); ok('N2 (negative) a Coordinator can\'t change the delivery mode', !MODAL && fa.dmode === 'Self-Paced');
     // System Admin: Edit batch details (client-confirmed permissions: Create and edit batches ☒)
@@ -1237,7 +1271,7 @@
   const dayAdd = (iso, n) => new Date(new Date(iso).getTime() + n * DAY).toISOString().slice(0, 10);
   await T('N3 class planning: weekly plan, limited plan, sharing, history, conflicts, permissions', async () => {
     fresh(); const keep = JSON.stringify([STORE.worlds.C.plans, STORE.worlds.C.assignments.map(a => a.due), STORE.worlds.B.signup, STORE.chFees]), janN = s4bSessFor('L3AC-JAN26').length;
-    SA(); go('a-batches'); const fa = mkBatchN2('L3FA-W27', T3, 'Fully Assisted', 'Online', 'Dr Helen Carter'), sp = mkBatchN2('L3SP-W27', T3, 'Self-Paced', 'Online', 'Dr Helen Carter'), sp2 = mkBatchN2('L3SP-X27', T3, 'Self-Paced', 'Online', 'Dr Helen Carter');
+    SA(); go('a-batches'); const fa = dmpLegacy('L3FA-W27', 'Fully Assisted'), sp = dmpLegacy('L3SP-W27', 'Self-Paced'), sp2 = dmpLegacy('L3SP-X27', 'Self-Paced'); // DM-P (PD-DM-16/17): class plans by a batch's stored mode, on batches from before DM-P (was: created by the wizard)
     go('a-batches', { id: 'L3FA-W27', tab: 'schedule' }); ok('N3 Fully Assisted batch → weekly class plan on the Schedule tab (not configured yet)', /Weekly recurring classes/.test(main()) && /No weekly recurring classes yet/.test(main()) && !!app().querySelector('[data-act="n3Weekly"]')); // R2 final review: Level 3 weekly plans
     go('a-batches', { id: 'L3SP-W27', tab: 'schedule' }); ok('N3 Self-Paced batch → limited class plan (and, for Level 3, weekly plans by fee option too)', /Limited classes \(Self-Paced\)/.test(main()) && !!app().querySelector('[data-act="n3Target"]') && !!app().querySelector('[data-act="n3Weekly"]')); // R2 final review: the batch's mode no longer gates weekly plans
     const f = fa.start.slice(0, 10), t4 = dayAdd(fa.start, 27), exp = n3Dates({ weekday: 'Tuesday', time: '17:00', from: f, to: t4 }, fa);
@@ -2280,7 +2314,7 @@
   });
   await T('S5c correction: the "Bulk (CSV)" batch intake rule is shown as not available and refused when saving; the template and demonstration file match the importer', async () => {
     fresh(); SA(); const n0 = lrnN(), keep = JSON.stringify(ADMIN.batches.map(b => [b.code, b.intake, b.enrolled, b.wait, (b.roster || []).length])), imp0 = s5cStore().imports.length;
-    go('a-batches'); ACT.newBatch(); const dm = document.querySelector('#modal-root #nb-dm'); if (dm) dm.value = N2_MODES[0]; fill({ '#nb-c': 'CSVTEST-JAN27' }); prim();
+    dmpElig(); go('a-batches'); ACT.newBatch(); const dm = document.querySelector('#modal-root #nb-dm'); if (dm) dm.value = N2_MODES[0]; fill({ '#nb-c': 'CSVTEST-JAN27' }); prim(); // DM-P (PD-DM-16): an eligible course first (the list's first course)
     const ac = document.querySelector('#modal-root #nb-ac'); ac.value = [...ac.options].find(o => o.value).value; prim(); prim();
     const bulk = document.querySelector('#modal-root input[name="nb-in"][value="Bulk (CSV)"]');
     ok('S5c (1) the intake step marks "Bulk (CSV)" as not available, with the reason, and disables it', /Create batch — step 4 of 5/.test(MODAL.title) && bulk && bulk.disabled && /Bulk \(CSV\) — not available/.test(mroot().textContent) && /batch-eligibility rule/.test(mroot().textContent) && !/You upload a spreadsheet/.test(mroot().textContent));
@@ -2294,7 +2328,7 @@
     ok('S5c (4)(6) the batch is created with Manual intake; creating it imported and enrolled no one', !!nb && nb.intake === 'Manual' && nb.enrolled === 0 && !nb.roster.length && lrnN() === n0 && s5cStore().imports.length === imp0);
     ok('S5c (3) existing batches and their stored intake values are unchanged', JSON.stringify(ADMIN.batches.filter(b => b !== nb).map(b => [b.code, b.intake, b.enrolled, b.wait, (b.roster || []).length])) === keep);
     const busy = new Set(ADMIN.batches.filter(x => ['Open', 'In Progress'].includes(x.status)).flatMap(x => batchRoster(x).map(rr => rr[1]))), fr = ADMIN.learners.find(l => l.acct === 'Active' && l.rec === 'Active' && !busy.has(l.id));
-    ACT.addToBatch({ dataset: { id: nb.code } }); document.querySelector('#ab-l').value = fr.id; prim(); closeModal();
+    ACT.addToBatch({ dataset: { id: nb.code } }); document.querySelector('#ab-l').value = fr.id; { const o = document.querySelector('#modal-root #r2-ab-o'); if (o && !o.value) o.value = o.options[1].value; } /* DM-P: a new batch's learner joins on one of its fee options */ prim(); closeModal();
     ok('S5c (4) manual assignment to the new batch still works (one learner, Add learner)', nb.enrolled === 1 && nb.roster.some(x => x[1] === fr.id));
     const head = t => s5cParse(t).rows[0].cells.join(), cols = S5C_COLS.map(c => c[1]).join();
     ok('S5c (5) the template and the demonstration file have exactly the importer\'s columns (Full name, Email, Mobile, Country)', head(S5C_TEMPLATE) === cols && head(S5C_DEMO.text) === cols && cols === 'Full name,Email,Mobile,Country');

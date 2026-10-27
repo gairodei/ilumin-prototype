@@ -5,6 +5,7 @@
 // refresh (fresh data, route restored from the address after sign-in) are covered, including a link to a programme that
 // isn't in the fresh data — the case that showed the 404 — and the negative case for roles without NVQ Programmes.
 (async function () {
+  const dmpPrice = () => { const r = document.querySelector('main #cr-pm-price'); if (r && !r.checked) { r.checked = true; INP.crPm(r); } }; // DM-P (PD-DM-18): "One programme price" is now an explicit choice (fee options by delivery mode are the default)
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const h1 = () => ((document.querySelector('main h1') || {}).textContent || '').trim();
@@ -61,7 +62,7 @@
 
   await T('NAV refresh after creating a programme (the reported 404)', async () => {
     reload(); await viaPanel('sysA'); await clickSide('a-programmes'); clickEl(q('main [data-act="chProgNew"]'));
-    Object.entries({ '#np-t': 'Level 4 Certificate in Navigation Checks', '#np-l': 'Level 4', '#np-r': 'QN 610/5040/1', '#np-d': '12', '#np-du': 'months', '#np-p': '2400' }).forEach(([s, v]) => { const e = q('main ' + s); if (e) e.value = v; });
+    Object.entries({ '#np-t': 'Level 4 Certificate in Navigation Checks', '#np-l': 'Level 4', '#np-r': 'QN 610/5040/1', '#np-d': '12', '#np-du': 'months', '#np-p': '2400' }).forEach(([s, v]) => { const e = q('main ' + s); if (e) e.value = v; }); dmpPrice();
     // CB2 (PD-CB-14): the page's "Save and continue" (was the dialog's "Create draft"); the observation question is required
     // CR (PD-CR-06): no course code; the delivery modes offered are required (PD-CR-01)
     /* DM (PD-DM-01): no modes-offered field — was clickEl(.cr-dm-c) */ clickEl(q('main #np-obs-no')); clickEl(q('main [data-act="cbDetCreate"]')); await tick();
