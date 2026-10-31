@@ -537,6 +537,13 @@
     go('dashboard'); ok('CF client demo NVQ dashboard: exactly one competency legend', all('main .five-legend').filter(shown).length === 1 && !all('main .legend-line').length);
     go('dashboard'); ok('CF dashboard status: "Nothing overdue" (no prediction); no page overflow', shown($1('main .hello .cs-status')) && /Nothing overdue/.test($1('main .hello .cs-status').textContent) && appOver() <= 1, appOver());
     fxLoadLegacy();
+    // AV (PD-AV-01): the agency's learner Progress tab with a published outcome and overall feedback (legacy CarePlus learner) — no overflow
+    { S.tas.v = 'A'; S.tas.dirty = false; tasEnter(); S.signedIn = true; const k = 'IA-L-30237~a4';
+      ACT.r3Declare({ dataset: { k } }); const x = $1('input[name="r3-res"][value="Pass"]'); if (x) x.checked = true; if ($1('#d-ofb')) $1('#d-ofb').value = 'UI check overall feedback for the agency view, long enough to wrap on a phone screen.'; if ($1('#rsn')) $1('#rsn').value = 'UI check';
+      const pb = MODAL && MODAL.actions.find(y => /primary/.test(y.cls || '')); if (pb) pb.fn(); closeModal();
+      agyEnter('AG-02', true); go('g-learner', { id: 'IA-L-30237', tab: 'progress' });
+      ok('AV agency learner Progress: "Final assessment outcomes" with the published Pass and overall feedback, an awaiting row; no card or page overflow', shown($1('main .av-out')) && all('main .av-out .av-row').some(r => shown(r) && /Pass/.test(r.textContent) && /UI check overall feedback/.test(r.textContent)) && /Awaiting final assessment/.test($1('main .av-out').textContent) && !over($1('main .av-out')) && appOver() <= 1, appOver());
+      initStore(); }
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));
     ok('no script errors', !errs.length, errs.join(' | '));

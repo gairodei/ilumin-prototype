@@ -1576,3 +1576,9 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 .save-chip.ar-fail { background: var(--red-bg); color: var(--red); }
 .cf-saved.ar-dirty { color: var(--amber, #8A5300); font-weight: 600; }
 .ar-notyet { margin: 0; font-style: italic; }
+
+/* ---------- Batch AV — agency visibility of final assessment outcomes (31 Oct 2026) ---------- */
+.av-out .list { margin: 4px 0 8px; }
+.av-row { align-items: flex-start; }
+.av-row .chip { flex: none; }
+.av-fb { margin: 4px 0 0; }
