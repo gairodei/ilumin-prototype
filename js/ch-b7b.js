@@ -65,13 +65,16 @@ SCREENS['f-plans'] = p => { const h = _fPlansCh7b(p); const card = `<section cla
 /* ---------- CH-38 fee items (one per learner per course) ---------- */
 const chFees = () => (STORE.chFees = STORE.chFees || []);
 const chFeeKey = (lid, course) => lid + '|' + course;
-const chFeeOf = (lid, course) => chFees().find(f => f.lid === lid && (!course || f.course === course));
+const chFeeOf = (lid, course, pid) => chFees().find(f => f.lid === lid && (pid && f.pid ? f.pid === pid : (!course || f.course === course))); // FI-2 (L-6): by programme ID when both have one
+// The programme a fee is for: the learner's own sign-up (its stable ID), else the only programme with that title (else none: older keying)
+const chFeePid = (lid, course) => { const v = chWorldKey(lid), w = v && STORE.worlds[v]; if (w && w.signup && w.signup.prog && w.nvq && w.nvq.title === course) return w.signup.prog; const ps = (ADMIN.programmes || []).filter(p => p.title === course); return ps.length === 1 ? ps[0].id : null; };
 const chFeeOverdue = f => f.status === 'Due' && new Date(f.due) < now();
 const chFeeTone = f => f.status === 'Paid' ? 'green' : f.status === 'Waived' ? 'grey' : chFeeOverdue(f) ? 'red' : 'amber';
 const chFeeLabel = f => f.status === 'Due' && chFeeOverdue(f) ? 'Due — overdue' : f.status;
 function chFeeRaise(lid, course, obsAt, v, quiet) {
-  if (chFeeOf(lid, course)) return null; // never twice on the same enrolment
-  const support = chSupportOfCourse(course), f = { id: 'OF-' + (101 + chFees().length), lid, v: v || chWorldKey(lid), name: chLidName(lid), course, support, amount: chFeeAmt(support), due: obsAt, raised: chNow(), status: 'Due' };
+  const pid = chFeePid(lid, course); if (chFeeOf(lid, course, pid)) return null; // never twice on the same enrolment
+  let k = 101 + chFees().length; while (chFees().some(x => x.id === 'OF-' + k)) k++;
+  const support = chSupportOfCourse(course), f = { id: 'OF-' + k, lid, v: v || chWorldKey(lid), name: chLidName(lid), course, pid, support, amount: chFeeAmt(support), due: obsAt, raised: chNow(), status: 'Due' };
   chFees().push(f);
   if (!quiet) { if (f.v) notifyLearner(f.v, 'Payments', 'Observation fee due', `${money(f.amount, 'GBP')} for ${course}, due ${fd(f.due)}. One fee covers every observation on this course. Non-refundable.`, 'payments'); if (ADMIN && ADMIN.audit) logA('Finance', `${f.name} · ${f.id}`, 'Observation fee raised', '—', money(f.amount, 'GBP') + ' due ' + fd(f.due), 'First observation confirmed'); }
   return f;
@@ -82,7 +85,7 @@ const CH_OBS_DONE = ['Confirmed', 'Completed'];
 function chFeeSync() {
   Object.keys(STORE.worlds || {}).forEach(v => { const w = STORE.worlds[v]; if (!w || !w.nvq || !w.observations) return;
     const first = w.observations.filter(o => !o.chPreFee && CH_OBS_DONE.includes(o.status)).sort((a, b) => new Date(a.at) - new Date(b.at))[0];
-    if (first) chFeeRaise(w.me.id, w.nvq.title, first.at, v); });
+    if (first && !chFeeOf(w.me.id, w.nvq.title, w.signup && w.signup.prog)) chFeeRaise(w.me.id, w.nvq.title, first.at, v); });
   ((STORE.tas && STORE.tas.obs) || []).forEach(o => { if (!o.chPreFee && CH_OBS_DONE.includes(o.status) && o.lid && !chWorldKey(o.lid)) { const L = learnerById(o.lid), c = L && (L.courses || [])[0]; if (c) chFeeRaise(o.lid, c, o.at, null); } });
 }
 const _renderCh7b = render;

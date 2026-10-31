@@ -167,7 +167,7 @@ ACT.bDup = el => { const n = STORE.biz.products.length; _bDupCh6(el); const c = 
 const _agyCatCh6 = AGY_CATALOGUE;
 AGY_CATALOGUE = function () { return _agyCatCh6.apply(this, arguments).map(c => ({ ...c, vatPct: chVatPct(chProd(c.id)) })); };
 const _priceForCh6 = priceFor;
-priceFor = function (c, qty) { const pr = _priceForCh6.apply(this, arguments), pct = (c && c.vatPct) || 0, vat = chVatAmt(pr.total, pct); return { ...pr, net: pr.total, vatPct: pct, vat, total: pr.total + vat }; };
+priceFor = function (c, qty) { const pr = _priceForCh6.apply(this, arguments), pct = (c && c.vatPct) || 0, vat = chVatAmt(pr.total, pct); return { ...pr, net: pr.total, vatPct: pct, vat, total: Math.round((pr.total + vat) * 100) / 100 }; }; // FI-2 (L-7): in whole pence
 const _gBuyCh6 = SCREENS['g-buy'];
 SCREENS['g-buy'] = p => { let h = _gBuyCh6(p); AGY_CATALOGUE().forEach(c => { const pr = priceFor(c, c.seats); h = h.replace(`<button class="btn btn-sm" data-act="agBuy" data-id="${c.id}">`, `<p class="small ch-vat">${chVatAgy(pr.net, pr.vatPct)}</p><button class="btn btn-sm" data-act="agBuy" data-id="${c.id}">`); }); return h; };
 const _bphCh6 = buyPriceHtml;

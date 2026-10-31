@@ -167,7 +167,7 @@ ACT.invPay = el => {
 
 /* ---------- CR-1 / CR-2 / CR-3: refunds ---------- */
 const fiPayerOf = i => (i.data && i.data.payer) || String((i.related || [])[0] || '').split(' · ')[0];
-const fiRefunds = (ref, payer) => allQueue().filter(i => i.type === 'Refund' && (i.data || {}).tx === ref && fiPayerOf(i) === payer);
+const fiRefunds = (ref, payer) => (ADMIN.queue || []).filter(i => i.type === 'Refund' && (i.data || {}).tx === ref && fiPayerOf(i) === payer); // the whole queue, whoever is looking (allQueue is filtered by role)
 const fiRefDone = i => ['Approved', 'Paid/Processed'].includes(i.status) || !!i.processed;
 const fiRefHeld = i => fiRefDone(i) || isOpen(i); // open requests (Pending, Info Requested, Escalated) reserve their amount
 const fiSum = xs => xs.reduce((s, i) => s + fiP(i.amount), 0);
@@ -207,7 +207,7 @@ ACT.finRaise = el => (fiFin() ? _frFI(el) : w0Deny('Finance', '—', 'raise a re
 const _arFI = ACT.raiseRefund; // kept for the FI-1 suite
 ACT.raiseRefund = () => {
   if (!fiFin()) return w0Deny('Finance', '—', 'raise a refund', FI_FIN);
-  const txs = allTx().filter(t => t.status === 'Paid' && !t.refund && refundable(t) > 0).slice(0, 40); // as Finance's own refund picker (finRaise)
+  const txs = allTx().filter(t => ['Paid', 'Partially refunded'].includes(t.status) && !t.refund && !fiObsFeeTx(t) && refundable(t) > 0).slice(0, 40); // as Finance's own refund picker (finRaise)
   if (!txs.length) { toast('No payment has anything left to refund.', 'info'); return; }
   reasonDlg({ title: 'Raise refund', ok: 'Raise refund', extra: `<div class="field"><label for="rr-t">Original transaction</label><select class="select" id="rr-t">${txs.map((t, k) => `<option value="${k}">${esc(t.ref)} · ${esc(t.payer)} · paid ${money(t.amount, t.cur)} · refundable ${money(refundable(t), t.cur)}</option>`).join('')}</select></div><div class="field"><label for="rr-a">Amount</label><input class="input" id="rr-a" type="number" step="0.01" placeholder="The refundable remainder if blank"></div><div class="field"><label for="rr-c">Enrolment consequence</label><select class="select" id="rr-c"><option>Revoke access</option><option>Retain access</option></select></div><p class="small muted">${isSA() ? 'As Super Administrator, the refund is processed immediately — reason, audit entry and FYI notification to all Finance Admins.' : 'Routed to a different Finance Admin for approval.'}</p>`,
     onOk: rsn => {
@@ -250,6 +250,7 @@ function fiStateWhy(i, a) {
 }
 const _adFI = applyDecision;
 applyDecision = function (i, a, r, o) {
+  if (!i) return false; // FI-2 (L-11): no item, no decision
   if (i && a !== 'note' && FI_TYPES.includes(i.type)) {
     const who = fiDecideWhy(i); if (who) return w0Deny('Approvals Queue', i.id, 'decide a finance item', who);
     const st = fiStateWhy(i, a); if (st) return fiNo(i.id, st[0], st[1]);

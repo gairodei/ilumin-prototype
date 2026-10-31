@@ -151,7 +151,7 @@ s4bImpact = function (b) {
 /* ---------- Observation fee: from the pin, by the location of the first confirmed observation ---------- */
 const _feeRaiseCB9 = chFeeRaise;
 chFeeRaise = function (lid, course, obsAt, v, quiet) {
-  const w = v ? STORE.worlds[v] : null, pin = cb9Sch(w); if (!pin || chFeeOf(lid, course)) return _feeRaiseCB9.apply(this, arguments);
+  const w = v ? STORE.worlds[v] : null, pin = cb9Sch(w); if (!pin || chFeeOf(lid, course, chFeePid(lid, course))) return _feeRaiseCB9.apply(this, arguments); // FI-2 (L-6)
   if (w.cb9Obs) return null; // decided once: no charge, or no fee agreed for that location
   const first = (w.observations || []).filter(o => !o.chPreFee && CH_OBS_DONE.includes(o.status)).sort((a, b) => new Date(a.at) - new Date(b.at))[0];
   const loc = first && first.locType === 'office' ? 'off' : 'wp', locTxt = loc === 'off' ? 'Academy office' : 'workplace', amt = pin.obs[loc], ent = `${chFullName(w)} (${w.me.id})`;
@@ -162,7 +162,7 @@ chFeeRaise = function (lid, course, obsAt, v, quiet) {
     return null;
   }
   const f = _feeRaiseCB9.call(this, lid, course, obsAt, v, true); if (!f) return f;
-  Object.assign(f, { amount: amt, loc, pinned: { pid: pin.pid, planV: pin.planV, optId: pin.optId } });
+  Object.assign(f, { amount: amt, loc, pinned: { pid: pin.pid, planV: pin.planV, optId: pin.optId } }, pin.mode ? { support: /self/i.test(pin.mode) ? 'Self-paced' : 'Fully assisted' } : {}); // FI-2 (L-5): the learner's own mode
   if (!quiet) { notifyLearner(v, 'Payments', 'Observation fee due', `${money(f.amount, 'GBP')} for ${course} (${locTxt} observation), due ${fd(f.due)}. One fee covers every observation on this course. Non-refundable.`, 'payments'); logA('Finance', `${f.name} · ${f.id}`, 'Observation fee raised', '—', `${money(f.amount, 'GBP')} due ${fd(f.due)} (${locTxt}, from the learner's agreed terms)`, 'First observation confirmed'); }
   return f;
 };
