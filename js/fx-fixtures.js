@@ -3,8 +3,9 @@
    - Client demo (the default): what a fresh start and "Reset demo" load. The Academy's configuration (staff accounts and roles,
      settings, integrations, fee rates, offices, the observation library, templates) with NO seeded records, then one coherent
      example built through the real screens (cdBuild in cd-demo.js): a published Level 3 programme with approved Self-Paced and
-     Fully Assisted fee options (demonstration fees), one mixed-mode batch with two Academic Coordinators, four demo learners,
-     assignments, sessions and observation configuration. Plus one published short course and one agency account.
+     Fully Assisted fee options (demonstration fees), one mixed-mode batch with two Academic Coordinators, a Teacher and an Assessor,
+     assignments, sessions and observation configuration; two admitted NVQ learners (one per mode) and one short-course learner (DR).
+     Plus one published short course and one agency account. Its sign-in page and Demo controls are in dr-demo.js.
    - Full legacy test data: everything initStore() seeds (8 programmes, 14 batches, 72+ learners, the approvals, ledgers, IQA
      samples, Demo Scenarios…). The regression suites load it explicitly — the harness sets window.ILM_FIXTURE = 'legacy' before
      App.boot(), and every suite resets with initStore(), which is this fixture, unchanged. Demo controls can load it for internal
@@ -126,8 +127,27 @@ function fxQuiet(f) {
   try { r = f(); } finally { history.pushState = push; try { history.replaceState(null, '', url); } catch (e) { /* sandboxed */ } }
   return r;
 }
+// DR (PD-DR-04): the learners' steps in the build wait on the screens' own timers (the upload progress, the checkout's processing
+// delay). The build runs them on a virtual clock: f(ff) gets ff(ms), which runs every callback falling due in the next ms of virtual
+// time, in order — the same callbacks, without waiting. One-off callbacks still pending at the end (toasts closing) are handed back
+// to the real timers; a repeating one still running couldn't be cancelled by its old id afterwards, so it isn't.
+function fxFast(f) {
+  const G = window, real = { st: G.setTimeout, si: G.setInterval, ct: G.clearTimeout, ci: G.clearInterval }, q = []; let seq = 0, t = 0;
+  const add = (fn, ms, a, every) => { const k = 'fx' + (++seq); if (typeof fn === 'function') q.push({ k, at: t + Math.max(0, +ms || 0), fn, a, every }); return k; };
+  const clr = k => { const i = q.findIndex(x => x.k === k); if (i >= 0) q.splice(i, 1); else real.ct.call(G, k); };
+  G.setTimeout = (fn, ms, ...a) => add(fn, ms, a, 0); G.setInterval = (fn, ms, ...a) => add(fn, ms, a, Math.max(1, +ms || 1));
+  G.clearTimeout = clr; G.clearInterval = k => { const i = q.findIndex(x => x.k === k); if (i >= 0) q.splice(i, 1); else real.ci.call(G, k); };
+  const ff = ms => { const end = t + ms; let n = 0;
+    for (;;) { q.sort((a, b) => a.at - b.at); const x = q[0]; if (!x || x.at > end || n++ > 5000) break; t = x.at; if (x.every) x.at += x.every; else q.shift(); x.fn(...x.a); }
+    t = end; };
+  try { return f(ff); } finally {
+    Object.assign(G, { setTimeout: real.st, setInterval: real.si, clearTimeout: real.ct, clearInterval: real.ci });
+    q.filter(x => !x.every).forEach(x => real.st.call(G, x.fn, x.at - t, ...x.a));
+  }
+}
 function fxLoadClient() {
   const av = (ADMIN && (ADMIN._saAv || ADMIN.av)) || 'A';
+  closeModal(); // DR: a load started from a dialog (Reset demo's confirmation) builds with no dialog open, as at a fresh start
   initStore(); buildAdmin(['A', 'B', 'C'].includes(av) ? av : 'A');
   fxPrune(); FX.mode = 'client';
   let err = null;

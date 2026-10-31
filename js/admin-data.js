@@ -267,7 +267,12 @@ function buildAdmin(av) {
 
 /* ---------- Helpers shared by admin modules ---------- */
 const VNAME = v => { const m = STORE.worlds[v].me; return m.first + ' ' + m.last; };
-const demoWorlds = () => typeof FX !== 'undefined' && FX.mode === 'client' ? [] : [...'ABCDEF'].concat(STORE.worlds && STORE.worlds.H ? ['H'] : []); // mock learner Priya Nair (world H)
+// DR (PD-DR-06): in the client demo, its learners' portal accounts (DR-A: any learner account — the demo learners, one activated from Add learner) (their requests and documents reach the queue; their admin rows come from their learner records)
+const demoWorlds = () => typeof FX !== 'undefined' && FX.mode === 'client' ? learnerAccounts() : [...'ABCDEF'].concat(STORE.worlds && STORE.worlds.H ? ['H'] : []); // mock learner Priya Nair (world H)
+// DR-C (PD-DR-13): every learner-portal account in the store — any world bound to a learner ID (seeded personas, a self-registered
+// learner, one activated from Add learner, the client demo's learners). The client demo's emptied persona templates are no accounts.
+// Staff message routing resolves learners through this list and the learner's own ID, not fixed world positions (A–F).
+const learnerAccounts = () => Object.keys((typeof STORE !== 'undefined' && STORE.worlds) || {}).filter(k => { const w = STORE.worlds[k]; return !!(w && w.me && w.me.id && !w.fxTemplate); });
 // CH-03: data region by country — UAE → UAE; the UK and every other country → UK
 const regionOf = c => c === 'United Arab Emirates' ? 'UAE' : 'UK';
 function demoLearners() {

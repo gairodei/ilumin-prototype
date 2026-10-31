@@ -125,7 +125,25 @@ function myBatches() {
   return ADMIN.batches.filter(b => b.coord === me || (S.coo.edge === 'completed' && b.code === 'L2DC-SEP25' && me === 'Dr Helen Carter'));
 }
 function scopeBatches() { const m = myBatches(); return S.coo.batch === 'all' ? m : m.filter(b => b.code === S.coo.batch); }
+// DR-R (PD-DR-15): a learner's progress-risk flag. Low progress is a risk only once the batch is under way and the learner is behind its
+// timeline (progress under the share of the batch period already gone, capped at 35 % as the rule was) — not merely for not having
+// started. A learner whose batch hasn't started yet is "Not started". Recorded flags (At risk, Stalled, Overdue…) are kept. The flags
+// are a copy: reading never writes onto the cohort record (it did — a Teacher's view made the learner At risk for the Coordinator too).
+function progRisk(L, b) {
+  L.flags = (L.flags || []).slice();
+  const t0 = new Date(b.start).getTime(), t1 = new Date(b.end).getTime(), tn = now().getTime(), started = ['In Progress', 'Completed'].includes(b.status) || (!!t0 && t0 <= tn);
+  const gone = started && t1 > t0 ? Math.min(100, Math.max(0, (tn - t0) / (t1 - t0) * 100)) : 0;
+  if (L.status === 'Active' && L.five && L.five['Achieved'] !== undefined && !L.flags.includes('At risk')) {
+    if (started && L.progress < Math.min(35, gone)) L.flags.push('At risk');
+    else if (!started && !L.progress && !L.flags.length) L.flags.push('Not started');
+  }
+  return L;
+}
 function cohLearner(e, b) {
+  if (e.r5) return progRisk(_cohLearner(e, b), b); // a learner who signed up live: flags derived from their records (seeded entries keep theirs)
+  return _cohLearner(e, b);
+}
+function _cohLearner(e, b) {
   if (e.v) { const w = STORE.worlds[e.v], m = w.me, crit = withW(e.v, () => allCrit()); return { lid: m.id, v: e.v, name: m.first + ' ' + m.last, batch: b, status: w.nvq.status === 'Discontinued' ? 'Discontinued' : 'Active', agency: m.sponsor, progress: pctOf(crit), five: countStates(crit), last: e.last, att: e.att, flags: e.flags, email: m.email, mobile: m.mobile, outstanding: w.assignments.filter(a => ['Not Started', 'Resubmission Required'].includes(a.status)).length }; }
   const l = ADMIN.learners.find(x => x.id === e.lid); const en = (l._enr || [])[0] || {};
   const st = en.status || 'Active', p = en.progress ?? 0;
@@ -186,7 +204,11 @@ function cooThreads() {
   const me = CME().name;
   const staffT = STORE.coo.threads.filter(t => (t.owner || 'Dr Helen Carter') === me);
   const lt = [];
-  ['C', 'D'].forEach(v => STORE.worlds[v].threads.filter(t => t.coo === me).forEach(t => lt.push({ id: 'LT-' + v + '-' + t.id, v, subject: t.subject, with: [VNAME(v) + ' (Learner)'], tag: '', learner: true, lthread: t, msgs: t.msgs.map(m => [m.me ? VNAME(v) : m.from, m.at, m.text]), seen: t._cooSeen || 0 })));
+  // DR-C (PD-DR-13): every learner account (was worlds C and D only), and the learner's own messages to me as well as those I started
+  // (a learner's message names its recipient and had no `coo`, so it never arrived). A learner's message is mine only while I am their
+  // designated Coordinator (their batch allocation) — another Coordinator's learner conversations are not listed.
+  const mineL = w => { const b = typeof chBatchOfLid === 'function' && chBatchOfLid(w.me.id), c = b && typeof mcOf === 'function' ? mcOf(w.me.id, b) : null; return c ? c === me : ((w.nvq && w.nvq.people || []).find(([r]) => r === 'Academic Coordinator') || [])[1] === me; };
+  learnerAccounts().forEach(v => { const w = STORE.worlds[v]; w.threads.filter(t => t.coo === me || ((t.with || []).includes(me + ' (Academic Coordinator)') && mineL(w))).forEach(t => lt.push({ id: 'LT-' + v + '-' + t.id, v, subject: t.subject, with: [VNAME(v) + ' (Learner)'], tag: '', learner: true, lthread: t, msgs: t.msgs.map(m => [m.me ? VNAME(v) : m.from, m.at, m.text]), seen: t._cooSeen || 0 })); });
   return lt.concat(staffT);
 }
 const unreadT = t => t.msgs.length > (t.seen || 0) && t.msgs[t.msgs.length - 1][0] !== CME().name;

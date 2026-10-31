@@ -425,26 +425,31 @@
     for (let g = 0; g < 5 && MODAL && !/step 5 of 5/.test(MODAL.title); g++) click($1('#modal-root .modal-f .btn-primary'));
     ok('FX Review & create: both modes listed; the dialog fits', /step 5 of 5/.test((MODAL || {}).title || '') && /Delivery modes accepted ?Self-Paced and Fully Assisted/.test($1('#modal-root').textContent.replace(/\s+/g, ' ')) && !modalFits(), modalFits()); closeModal();
     ['a-programmes', 'a-batches', 'a-learners', 'a-dashboard'].forEach(r => { go(r); ok(`FX ${r}: the client demo's records only; no page overflow`, !/Aisha Rahman|L3AC-JAN26|Level 2 Diploma in Care/.test(main()) && appOver() <= 1, appOver()); });
-    S.demoOpen = true; renderDemo(); ok('FX Demo data: the panel fits (no overflow) with the legacy loader labelled internal', shown($1('#demo-root [data-act="fxLegacy"]')) && /not client data/.test($1('#demo-root [data-act="fxLegacy"]').textContent) && appOver() <= 1); S.demoOpen = false; renderDemo();
+    // DR (PD-DR-07) supersedes "FX Demo data: the panel … with the legacy loader": the client panel has three controls; the loaders are in developer mode
+    S.demoOpen = true; renderDemo(); ok('DR Demo controls (client): Switch demo user, Reset demo, Developer mode — the panel fits', all('#demo-root .dr-panel [data-act]').filter(x => shown(x) && x.dataset.act !== 'demoToggle').map(x => x.dataset.act).join() === 'drSwitch,drReset,drDevOn' && $1('#demo-root .dr-panel').scrollWidth <= $1('#demo-root .dr-panel').clientWidth + 1 && appOver() <= 1);
+    S.drDev = true; renderDemo(); ok('FX Demo data (developer mode): the panel fits (no overflow) with the legacy loader labelled internal', shown($1('#demo-root .dr-dev-note')) && shown($1('#demo-root [data-act="fxLegacy"]')) && /not client data/.test($1('#demo-root [data-act="fxLegacy"]').textContent) && appOver() <= 1); S.drDev = false; S.demoOpen = false; renderDemo();
     setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true;
-    // CD learner views (PD-CD-06…09): a demo learner's portal at its pending sign-up; a Coordinator's roster; the dashboard's demonstration note
-    ACT.cdLearner({ dataset: { k: 'CD3' } }); go('admission'); ok('CD demo learner (Fully Assisted): Admission shows the batch and the delivery mode; no page overflow', /Your delivery mode: Fully Assisted/.test(main()) && appOver() <= 1, appOver());
-    go('assignments'); ok('CD demo learner: assignments wait for the sign-up (the normal gate); no page overflow', /Finish your sign-up/.test(main()) && appOver() <= 1, appOver());
-    ACT.cdCoord({ dataset: { k: 'B' } }); ok('CD Coordinator roster (Michael Osei): his demo learners; no page overflow', /Ben Holloway \(demo\)/.test(main()) && !/Amira Shah/.test(main()) && appOver() <= 1, appOver());
+    // DR (PD-DR-02/03) supersedes the CD learner views at a pending sign-up: the demo identities open admitted learners and their Coordinators
+    ACT.drAs({ dataset: { p: 'nvq-fa' } }); go('course', { id: 'nvq' }); ok('DR NVQ learner (Fully Assisted): the course shows the batch, fee option and delivery mode; no page overflow', /DEMO-L3-JAN27/.test(main()) && /Delivery mode ?Fully Assisted/.test(main()) && appOver() <= 1, appOver());
+    go('assignments'); ok('DR NVQ learner: the published assignments with their deadlines; no page overflow', /Assignment 1 — Person-centred values/.test(main()) && !/Finish your sign-up/.test(main()) && appOver() <= 1, appOver());
+    go('payments'); ok('DR NVQ learner: the payment schedule; no page overflow', /of £2,600\.00 paid/.test(main()) && appOver() <= 1, appOver());
+    ACT.drAs({ dataset: { p: 'short' } }); go('courses'); ok('DR short-course learner: My Courses lists the enrolled short course; no page overflow', /Moving and Handling People — 2026/.test(main()) && appOver() <= 1, appOver());
+    ACT.drAs({ dataset: { p: 'coord2' } }); go('c-batches', { id: 'DEMO-L3-JAN27', tab: 'roster' }); ok('DR Coordinator roster (Michael Osei): his learner Dev Patel; no page overflow', /Dev Patel \(demo\)/.test(main()) && /1 of 2 learners are allocated to you/.test(main()) && appOver() <= 1, appOver());
     setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-dashboard'); ok('CD admin dashboard: the demonstration-figures note under the figures', shown($1('main .cd-dash-note')));
-    // CD guided sign-up (PD-CD-10…13): the guide in Demo controls; the simulated checkout label; the enrolled learner's course and payments
-    S.demoOpen = true; renderDemo(); ok('CD Demo controls: the guided sign-up steps displayed', all('#demo-root [data-act="cdGuide"]').filter(shown).length === 10); S.demoOpen = false; renderDemo();
-    { ACT.cdGuide({ dataset: { k: 'CD4', s: 'signup' } }); const w = STORE.worlds.CD4; $1('#su-dob').value = '1990-05-04'; $1('#su-ad').value = '1 Demo Street'; ACT.suNext(); w.docs.filter(x => x.mand).forEach(d => { d.status = 'Submitted'; d.file = 'scan_demo.pdf'; });
-      ok('CD guided sign-up: the documents step displayed; no page overflow', /2\. Documents/.test(main()) && appOver() <= 1, appOver());
-      ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); setUi('suMethod', 'card'); render(); ACT.suPay();
-      ok('CD simulated checkout: labelled; the dialog fits', shown($1('#modal-root .cd-sim')) && !modalFits(), modalFits()); closeModal(); }
+    // DR (PD-DR-01/03/07) supersedes the CD guided sign-up (the build makes it): the sign-in chooser, Switch demo user and the simulated checkout at this width
+    signOut(); ok('DR sign-in page: the demo identities displayed; no page overflow', all('#app .dr-signin .dr-grp:not(.dr-more) [data-act="drAs"]').filter(shown).length === 11 && all('#app .dr-signin [data-act="drAs"]').length === 14 && !$1('#app .demo-hint') && appOver() <= 1, appOver());
+    ACT.drAs({ dataset: { p: 'nvq-sp' } }); ACT.drSwitch(); ok('DR Switch demo user: the identity chooser dialog fits', all('#modal-root .dr-grp:not(.dr-more) [data-act="drAs"]').filter(shown).length === 11 && all('#modal-root [data-act="drAs"]').length === 14 && !modalFits(), modalFits()); closeModal();
+    ACT.drAs({ dataset: { p: 'short' } }); go('browse'); click($1('main [data-act="buyCourse"]')); if (MODAL && /About you/.test(MODAL.title)) closeModal();
+    ok('DR simulated checkout (a demo learner): labelled; the dialog fits', shown($1('#modal-root .cd-sim')) && !modalFits(), modalFits()); closeModal();
+    // the 101-learner Coordinator demo is an internal tool (developer mode, PD-DR-07)
+    setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; S.drDev = true;
     S.demoOpen = true; renderDemo(); click($1('#demo-root [data-act="mcDemoOpen"][data-t="coord"][data-k="1"]')); S.demoOpen = false; renderDemo();
     ok('MC demo Coordinator 1 roster: Total batch learners 101 and My learners 11 figures, My learners selected, 11 tags; no page overflow', /Total batch learners\s*101/.test($1('main .mc-kpis').textContent) && /My learners\s*11/.test($1('main .mc-kpis').textContent) && $1('main [data-act="mcScope"][data-k="mine"]').getAttribute('aria-selected') === 'true' && all('main .mc-tag .chip').filter(shown).length === 11 && appOver() <= 1, appOver());
     click($1('main [data-act="mcScope"][data-k="all"]')); ok('MC demo All batch learners: "of 101" pager and tags; no page overflow', /of 101/.test(main()) && all('main .mc-tag').filter(shown).length > 0 && appOver() <= 1, appOver());
     S.demoOpen = true; renderDemo(); click($1('#demo-root [data-act="mcDemoOpen"][data-t="learner"][data-k="10"]')); S.demoOpen = false; renderDemo();
     const dppl = all('main section.card').find(x => /Your people/.test(x.textContent));
     ok('MC demo learner of Coordinator 10: "Your people" shows Julia Moretti (demo) with her email link, no other demo Coordinator; no overflow', !!dppl && /Julia Moretti \(demo\)/.test(dppl.textContent) && shown(dppl.querySelector('.mc-contact')) && !MCD_COORDS.slice(0, 9).some(c => dppl.textContent.includes(c.name)) && appOver() <= 1, appOver());
-    closeModal(); initStore();
+    S.drDev = false; closeModal(); initStore();
     // CR: delivery modes offered, no course / unit code, Create and Edit batch (awarding body batch code), batch deadlines, publish dialog
     closeModal(); initStore(); setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-programmes'); click($1('main [data-act="chProgNew"]'));
     // DM (PD-DM-01, supersedes the CR checks of the "Delivery modes offered" field and "Configure delivery modes"): modes come from the fee options

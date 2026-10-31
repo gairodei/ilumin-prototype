@@ -34,6 +34,13 @@ function mcNorm(b) {
 const mcList = b => (b ? mcNorm(b).coords : []);
 const mcHas = (b, name) => !!name && mcList(b).includes(name);
 const mcMulti = b => mcList(b).length > 1;
+// DR-B (PD-DR-16): a batch list's Coordinator cell — every assigned Coordinator (it showed the first only). Up to two names in full;
+// beyond that the first name and "+N more", with every name in the cell's title and for screen readers. Display only.
+function mcCell(b) {
+  const l = mcList(b); if (!l.length) return chip('Not assigned', 'red');
+  if (l.length <= 2) return `<span class="small mc-cell">${l.map(esc).join(', ')}</span>`;
+  return `<span class="small mc-cell" title="${esc(l.join(', '))}">${esc(l[0])} <span class="typebadge" aria-hidden="true">+${l.length - 1} more</span><span class="sr">, ${esc(l.slice(1).join(', '))}</span></span>`;
+}
 const mcWho = () => MC_BY || (S.portal === 'coord' && typeof CME === 'function' ? CME().name : ADMIN && ADMIN.me ? ADMIN.me.name : 'System');
 const mcLidOf = e => e.lid || (e.v && STORE.worlds[e.v] && STORE.worlds[e.v].me && STORE.worlds[e.v].me.id) || null;
 // A learner is identified when a learner record (admin data or a learner account) carries the ID

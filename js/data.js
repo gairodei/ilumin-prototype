@@ -36,6 +36,11 @@ function shortContent(topic) {
   }[topic] || [['doc', 'Course handbook', '10 pages', 'Completed', 1], ['video', 'Introduction', '10:00', 'Completed', 0, 100, ''], ['scorm', 'Interactive module', '20 min', 'Completed', 0, 0, 0, 90]];
   return T.map((r, i) => ({ id: 'c' + (i + 1), kind: r[0], title: r[1], dur: r[2], state: r[3], dl: !!r[4], watch: r[5] || 0, resume: r[6] || '0:00', score: r[7] || 0 }));
 }
+// DR-P (PD-DR-12): a NEW enrolment's content — the course's items with no learner progress. shortContent's states and watch positions
+// are the seeded learners' own history; a new enrolment (Buy now, re-purchase, renewal, agency seat, the course's configuration) must
+// not inherit them. Existing enrolments are not rewritten.
+const freshItem = c => ({ ...c, state: 'Not opened', watch: 0, resume: '0:00', score: 0 });
+const freshContent = topic => shortContent(topic).map(freshItem);
 // CH-15: an NVQ module's label with its awarding-body code, e.g. "AC M12 Ways of working in adult care (T/652/0001)"
 const modLabel = m => m ? `${m.title}${m.ab ? ' (' + m.ab + ')' : ''}` : '';
 // The unit / module an assignment or resource group names ("U302 · Module 1", "U306 Safeguarding · Module 1")

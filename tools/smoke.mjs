@@ -44,12 +44,13 @@ const TRAP = '<script>window.__smokeErrs=[];addEventListener("error",function(e)
 const PROBE = `<!doctype html><meta charset="utf-8"><title>smoke</title><body><iframe id="f" src="/?smoke=1" style="width:1280px;height:900px"></iframe><pre id="smoke"></pre><script>
 const out = r => { document.getElementById('smoke').textContent = JSON.stringify(r); };
 let r = {}, loads = 0;
-// NVQ Programmes navigation as a user does it (DOM clicks on the served build): demo panel → System Admin A → sidebar
+// NVQ Programmes navigation as a user does it (DOM clicks on the served build): sign-in demo identity → System Admin (2FA) → sidebar
 // NVQ Programmes (opening its collapsed group) → a programme → New NVQ programme. is404 = the in-app Error 404 page.
 const nav = (cw, d) => {
   const q = s => d.querySelector(s), h1 = () => ((q('main h1') || {}).textContent || '').trim(), is404 = () => /We can't find that page/.test((q('main') || d.body).textContent);
   const rows = () => d.querySelectorAll('main table tbody tr').length;
-  const signIn = () => { q('.demo-fab').click(); q('#demo-root [data-act="switchRole"][data-r="sysA"]').click(); if (cw.eval('S.demoOpen')) q('#demo-root .demo-fab').click(); };
+  // DR (PD-DR-01/07): the sign-in page's demo identities → System Administrator, then the two-step code (was Demo controls → role switcher, now developer mode)
+  const signIn = () => { q('.dr-signin [data-act="drAs"][data-p="sys"]').click(); d.querySelectorAll('.otp-i').forEach((i, k) => { i.value = '123456'[k]; }); q('form[data-submit="tfaCode"]').dispatchEvent(new cw.Event('submit', { bubbles: true, cancelable: true })); };
   const side = () => { const a = q('#app nav [data-go="a-programmes"]'), g = a && a.closest('details'); if (g && !g.open) g.querySelector('summary').click(); q('#app nav [data-go="a-programmes"]').click(); };
   return { q, h1, is404, rows, signIn, side };
 };

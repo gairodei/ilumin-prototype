@@ -1511,3 +1511,22 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 .fc-errs .note ul { margin: 4px 0 0; padding-left: 18px; }
 .fc-dirty { margin: 6px 0 0; color: var(--amber); }
 .fc-logo .check, .fc-fields .check { overflow-wrap: anywhere; }
+
+/* DR — demo identities (sign-in page, Switch demo user) and the client Demo controls */
+.dr-signin { border: 1px dashed var(--line-2); border-radius: var(--r-sm); padding: 12px; display: grid; gap: 8px; }
+.dr-signin h2 { font-size: 1rem; margin: 0; }
+.dr-who { display: grid; gap: 12px; }
+.dr-grp h3, .dr-grp > summary { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; margin: 0 0 6px; }
+.dr-more > summary { cursor: pointer; }
+.dr-ids { display: grid; gap: 6px; }
+.modal .dr-ids { grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); }
+.dr-id { display: grid; gap: 2px; align-content: start; text-align: left; width: 100%; min-width: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; cursor: pointer; font: inherit; }
+.dr-id:hover, .dr-id:focus-visible { border-color: var(--brand); background: var(--surface-2); }
+.dr-id-r { font-weight: 700; font-size: .86rem; }
+.dr-id-n { font-size: .84rem; }
+.dr-id-d { font-size: .76rem; color: var(--muted); overflow-wrap: anywhere; }
+.dr-panel { display: grid; gap: 12px; }
+.dr-panel .dr-ctl { display: grid; gap: 4px; }
+.dr-panel .dr-ctl .btn { justify-self: start; }
+.dr-panel .dr-ctl p { margin: 0; }
+.dr-panel .dr-devl { border-top: 1px solid var(--line); padding-top: 8px; }

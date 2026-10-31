@@ -83,7 +83,7 @@ function tasLearners(all) {
   const out = [];
   bs.forEach(b => {
     if (b.short) { [['A', 62], ['F', 62]].map(([v, p]) => ({ lid: STORE.worlds[v].me.id, v, name: VNAME(v), batch: b, status: STORE.worlds[v].enrolments.find(e => e.id === 'mh26')?.status || 'Active', progress: STORE.worlds[v].enrolments.find(e => e.id === 'mh26')?.progress || p, five: {}, flags: ['On track'], att: null, outstanding: 0, short: true, mods: STORE.worlds[v].enrolments.find(e => e.id === 'mh26')?.modules })).concat(['Harry Walsh', 'Megan Roberts', 'Callum Fraser', 'Hannah Patel'].map((n, k) => { const l = ADMIN.learners.find(x => x.name === n) || {}; return { lid: l.id, name: n, batch: b, status: 'Active', progress: [100, 45, 80, 20][k], five: {}, flags: [k === 3 ? 'At risk' : 'On track'], att: null, outstanding: 0, short: true, quiz: { pass: 80, max: 3, attempts: [[1, 85, 'Pass'], [2, 60, 'Fail'], [1, 90, 'Pass'], [0]][k][0] ? [{ n: 1, at: D(-5 - k), score: [85, 60, 90][k], result: ['Pass', 'Fail', 'Pass'][k] }] : [] } }; })).forEach(x => out.push(x)); return; }
-    (b.coh || []).forEach(e => { const L = cohLearner(e, b); L.coh = L.coh || e; L.formerBy = e.formerBy; if (L.status === 'Active' && L.five && L.five['Achieved'] !== undefined && L.progress < 35 && !L.flags.includes('At risk')) L.flags.push('At risk'); out.push(L); });
+    (b.coh || []).forEach(e => { const L = cohLearner(e, b); L.coh = L.coh || e; L.formerBy = e.formerBy; out.push(progRisk(L, b)); }); // DR-R (PD-DR-15)
   });
   return out.filter(l => !removed.has(l.lid));
 }
@@ -245,7 +245,8 @@ function tasNotifs() {
 }
 function tasThreads() {
   const me = TME().name, out = [];
-  [...'ABCDEF'].forEach(v => STORE.worlds[v].threads.filter(t => t.with.some(w => w.startsWith(me)) || t.tas === me).forEach(t => out.push({ id: 'L-' + v + '-' + t.id, v, lthread: t, subject: t.subject, with: [VNAME(v) + ' (Learner)'], tag: t.tag || (t.subject.includes('Assignment') ? 'Re: ' + t.subject.split(' —')[0] : ''), learner: true, msgs: t.msgs.map(m => [m.me ? VNAME(v) : m.from, m.at, m.text]), seen: t._tasSeen ?? t.msgs.length - (t.unread ? 1 : 0) })));
+  // DR-C (PD-DR-13): every learner account (was worlds A–F only), resolved by the account, not its position
+  learnerAccounts().forEach(v => STORE.worlds[v].threads.filter(t => (t.with || []).some(w => w.startsWith(me)) || t.tas === me).forEach(t => out.push({ id: 'L-' + v + '-' + t.id, v, lthread: t, subject: t.subject, with: [VNAME(v) + ' (Learner)'], tag: t.tag || (t.subject.includes('Assignment') ? 'Re: ' + t.subject.split(' —')[0] : ''), learner: true, msgs: t.msgs.map(m => [m.me ? VNAME(v) : m.from, m.at, m.text]), seen: t._tasSeen ?? t.msgs.length - (t.unread ? 1 : 0) })));
   return out.concat(STORE.tas.threads.filter(t => (t.owner || 'Sarah Okonkwo') === me || (me !== 'Sarah Okonkwo' && !t.owner && t.learner)));
 }
 

@@ -40,7 +40,7 @@ function s1Spec(c) {
   const S_ = STORE.sSpec = STORE.sSpec || {};
   if (!S_[c.id]) {
     const cat = S1_CAT0.find(x => x.title === c.title), topic = cat ? cat.topic : (CH_TOPIC[c.title] || '');
-    S_[c.id] = { desc: cat ? cat.desc : 'Practical, law-based training for care workers.', dur: cat ? cat.dur : '3 hours', topic, fields: [], items: shortContent(topic).map(it => ({ ...it, status: 'Active' })), rules: { docs: true, video: true, scorm: false, quiz: true }, cert: { layout: S1_LAYOUTS[0], fields: S1_CERT_FIELDS.slice(), logo: '' }, remind: '30, 15, 7' };
+    S_[c.id] = { desc: cat ? cat.desc : 'Practical, law-based training for care workers.', dur: cat ? cat.dur : '3 hours', topic, fields: [], items: freshContent(topic).map(it => ({ ...it, status: 'Active' })), rules: { docs: true, video: true, scorm: false, quiz: true }, cert: { layout: S1_LAYOUTS[0], fields: S1_CERT_FIELDS.slice(), logo: '' }, remind: '30, 15, 7' };
   }
   return S_[c.id];
 }
@@ -77,7 +77,7 @@ ACT.buyCourse = el => {
 };
 function s1Enrol(c, row, ans) {
   const sp = s1Spec(row), items = sp.items.filter(i => i.status === 'Active'), at = now().toISOString();
-  const content = items.map(it => ({ id: it.id, kind: it.kind, title: it.title, dur: it.dur || '', state: it.state || 'Not opened', dl: it.dl !== undefined ? it.dl : it.kind === 'doc', watch: it.watch || 0, resume: it.resume || '0:00', score: it.score || 0, src: it.src || '' }));
+  const content = items.map(it => ({ id: it.id, kind: it.kind, title: it.title, dur: it.dur || '', state: 'Not opened', dl: it.dl !== undefined ? it.dl : it.kind === 'doc', watch: 0, resume: '0:00', score: 0 /* DR-P (PD-DR-12): a new enrolment starts unopened */, src: it.src || '' }));
   const modules = s1Mods(row).filter(m => m.status === 'Active').map(m => { const qs = s1ActQs(m).map(q => [q.text, q.opts.slice(), q.correct]); return { id: m.id, title: m.title, items: m.items.filter(id => content.some(x => x.id === id)), quiz: { q: Math.min(m.quiz.q, qs.length) || qs.length, limit: m.quiz.limit, pass: m.quiz.pass, max: m.quiz.max, attempts: [], qs } }; });
   const pass = modules.length ? Math.min(...modules.map(m => m.quiz.pass)) : 80;
   const reqs = S1_RULES.filter(([k]) => sp.rules[k]).map(([k, l]) => [k === 'quiz' ? `${l} with ${pass}% or more` : l, false]);

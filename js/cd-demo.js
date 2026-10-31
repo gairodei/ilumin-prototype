@@ -5,12 +5,12 @@
    - Reset first (a predictable start), then, as the Academic Admin, Course Builder creates a Level 3 programme priced by fee options by
      delivery mode (Self-Paced and Fully Assisted), with its structure, observation configuration, assignments (drafts) and offer letter;
      the payment terms are submitted to Finance, a Finance Admin approves them in the Approvals Queue, and the programme is published.
-   - Create batch (the wizard) makes one mixed-mode batch with two Academic Coordinators; Add learner registers four learners labelled
+   - Create batch (the wizard) makes one mixed-mode batch with two Academic Coordinators; Add learner registers the demo learners labelled
      "(demo)" (they receive activation links). The one simulated learner action is their activation (setting a password from the link —
-     there is no admin step for it; audited as a demo step). Add to batch then enrols two on each mode's fee option; the Coordinators'
-     allocation is the batch's own balanced allocation. Two assignments are published to the batch with batch deadlines; one stays a draft.
-   - Learners' sign-ups, offer letters, payments, submissions and observations are NOT simulated: those states need the live workflow
-     (the learner portal and the existing Demo Scenarios). The start panel links to the records and to the seeded examples.
+     there is no admin step for it; audited as a demo step). Two assignments are published to the batch with batch deadlines; one stays a draft.
+   - DR (31 Oct 2026, PD-DR-02/03): the two NVQ learners then sign up in their own portal (the sign-up places them in the batch) and an
+     Academic Admin admits them; the short-course learner buys the short course. Their payments go through the prototype checkout and are
+     labelled and audited as simulated. Submissions, marking, observations and certificates are NOT simulated.
    The 101-learner / 10-Coordinator demo stays a separate preset; neither loads the other.
    Everything is held in this browser tab's memory: reloading the page or Reset demo returns to the starting data.
    Loads last.
@@ -19,7 +19,9 @@
 
 const CD_T = 'Level 3 Diploma in Care Practice (client demo)', CD_B = 'DEMO-L3-JAN27';
 const CD_TEACHER = 'Marcus Bell', CD_ASSESSOR = 'James Pryce'; // demo staff accounts: Teacher only / Assessor only (TAQA)
-const CD_LEARNERS = [['Amira Shah (demo)', 'Self-Paced'], ['Ben Holloway (demo)', 'Self-Paced'], ['Chloe Adeyemi (demo)', 'Fully Assisted'], ['Dev Patel (demo)', 'Fully Assisted']];
+// DR (PD-DR-02): two NVQ learners (one per delivery mode, one per Coordinator) and one short-course learner — nobody else
+const CD_LEARNERS = [['Amira Shah (demo)', 'Self-Paced'], ['Dev Patel (demo)', 'Fully Assisted'], ['Lena Hart (demo)', 'Short course']];
+const CD_SIGNUP = { 'Amira Shah (demo)': ['1992-03-14', '12 Demo Street, London'], 'Dev Patel (demo)': ['1988-11-02', '4 Example Road, Leicester'] }; // synthetic
 const cdPr = () => (ADMIN.programmes || []).find(p => p.title === CD_T) || null;
 const cdBatch = () => (ADMIN.batches || []).find(b => b.code === CD_B) || null;
 const cdOn = () => !!(cdPr() && cdBatch());
@@ -83,14 +85,13 @@ function cdBuild() {
   const b = cdBatch(); if (!b) throw new Error('Create batch: not created');
   // 10. Open the batch for enrolment
   go('a-batches', { id: CD_B }); const life = $('main [data-act="batchLife"]'); if (life) { ACT.batchLife(life); if (MODAL) ok1('Client demo — open for enrolment'); }
-  // 11. Learners: registered through Add learner (activation links sent) and added to the batch on their mode's fee option
-  const optOf = m => r1Opts(id).find(o => o.status === 'Active' && o.mode === m);
-  CD_LEARNERS.forEach(([name, m], k) => {
+  // 11. Learners: registered through Add learner (activation links sent). They join the batch through their own sign-up (cdLearners
+  // below), which places them in it — DR (PD-DR-03): no admin "Add to batch" as well, which counted each learner twice
+  CD_LEARNERS.forEach(([name], k) => {
     go('a-learners'); ACT.addLearner(); put({ '#nl-name': name, '#nl-email': `demo.learner${k + 1}@demo.example`, '#nl-mob': '+44 7700 9001' + String(k + 10) }); ok1();
     const l = ADMIN.learners.find(x => x.name === name); if (!l) throw new Error('Add learner: ' + name);
     // the one simulated learner action: the learner sets their password from the activation link (there is no admin step for it; audited, labelled)
     if (l.acct === 'Pending Verification') { l.acct = 'Active'; logA('Learners', l.id, 'Account activated', 'Pending Verification', 'Active', 'Demo step: the learner used the activation link (client demo)'); }
-    go('a-batches', { id: CD_B }); ACT.addToBatch({ dataset: { id: CD_B } }); put({ '#ab-l': l.id }); const s = $('#modal-root #r2-ab-o'); if (s) s.value = optOf(m).id; ok1();
   });
   // 12. Assignment deadlines for the batch: two published, one left as a draft
   asgs.slice(0, 2).forEach((a, k) => { go('a-programmes', { id, tab: 'assessments' }); ACT.pubAsg({ dataset: { id: a.id } }); $$('#modal-root .s2-pb').forEach(x => { x.checked = x.value === CD_B; }); const dl = $(`#modal-root #cr-pd-${CD_B}`); if (dl) dl.value = cdLondon(D(70 + k * 35).slice(0, 10), 17); ok1('Client demo — deadline for ' + CD_B); });
@@ -150,67 +151,78 @@ const cdCol = c => (c.k === 'batches' ? { ...c, h: x => String(cdBatchN(x)), v: 
 const _dtCD = dt;
 dt = function (o) { if (o && (o.id === 'kprogs' || o.id === 'progs') && Array.isArray(o.cols)) o = { ...o, cols: o.cols.map(cdCol) }; return _dtCD.call(this, o); };
 
-/* ---------- Learner-portal identities for the four demo learners (CD learner views; PD-CD-06…08) ----------
-   Each demo learner record gets a learner-portal account bound to the same learner ID (no new person). The learner then starts the
-   real NVQ sign-up for the demo programme from Browse, choosing the fee option the batch already records for them, and is placed in
-   that batch: they stand at the sign-up's own pending steps (documents, offer letter signature, payment choice). Nothing is signed,
-   paid, approved or assessed for them; screens that need those steps show the learner's pending state through the normal gates.
-   Switching to a demo learner is a prototype demonstration action (Demo controls), not a sign-in; other learners' worlds are untouched. */
-const CD_KEYS = ['CD1', 'CD2', 'CD3', 'CD4'];
+/* ---------- The demo learners' portal accounts and enrolments (DR, 31 Oct 2026; PD-DR-02…05; supersedes PD-CD-06…13) ----------
+   Each learner record (Add learner, step 11) gets a learner-portal account bound to the same learner ID — no second person. Then,
+   in that account, through the screens' own handlers:
+   - the two NVQ learners sign up from Browse on their delivery mode's fee option: personal details (synthetic), the mandatory
+     documents ("Use a sample file" — demonstration documents), the typed offer-letter signature, the first of six instalments
+     through the prototype checkout (simulated; no card is charged; audited "Demonstration: simulated payment"). The sign-up places
+     them in the batch; the batch's Coordinator allocation assigns them. An Academic Admin then approves each document and the
+     admission in Admissions — no capability is bypassed (a Finance Admin still can't approve it).
+   - the short-course learner buys the published short course from Browse through the same simulated checkout.
+   Nothing is marked, observed, certified or paid beyond that; the learners start at 0% with their real deadlines and sessions.
+   The checkout and upload timers are fast-forwarded during the build (fxFast in fx-fixtures.js) — the same callbacks run. */
+const CD_KEYS = ['CD1', 'CD2', 'CD3'];
 const cdKeyOf = lid => CD_KEYS.find(k => STORE.worlds && STORE.worlds[k] && STORE.worlds[k].me && STORE.worlds[k].me.id === lid) || null;
 function cdClear() {
   CD_KEYS.forEach(k => { delete VARIANT_INFO[k]; delete PERSONAS[k]; delete VARIANTS[k]; });
   if (CD_KEYS.includes(S.variant)) S.variant = 'C';
 }
 const _isCD = initStore; initStore = function () { cdClear(); const r = _isCD.apply(this, arguments); if (CD_KEYS.includes(S.variant) || !STORE.worlds[S.variant]) S.variant = 'C'; return r; };
+const CD_VI = { 'Self-Paced': 'NVQ learner — Self-Paced', 'Fully Assisted': 'NVQ learner — Fully Assisted', 'Short course': 'Short-course learner' };
+// DR-A (PD-DR-14): the same account mapping as a learner the Academy adds and activates (lnPortal, dr-demo.js): one world bound to the record's ID
 function cdWorld(key, L, m) {
-  const keepW = W, keepV = S.variant, [first, ...rest] = L.name.replace(/ \(demo\)$/, '').split(' ');
-  PERSONAS[key] = { id: L.id, first, last: rest.join(' ') + ' (demo)', email: L.email, mobile: L.mobile, dob: '', address: '', postcode: '' /* the learner enters them at sign-up */, country: 'United Kingdom', tz: 'Europe/London', cur: 'GBP', joined: fd(now().toISOString()), referral: 'Demonstration data — client demo', sponsor: null };
-  VARIANTS[key] = { nvq: false, fresh: true };
-  const w = makeWorld(key); W = keepW; S.variant = keepV;
-  // a new account has no history: the template's short-course records, payments, certificates, requests, messages, notifications,
-  // events and attendance are removed (as the 101-learner demo does), so nothing is shown that this learner didn't do
-  Object.assign(w, { enrolments: [], plan: [], observations: [], docs: [], tx: [], plans: [], certs: [], requests: [], threads: [], attendance: [], events: [], notifs: [], announcements: [], drafts: {}, payOverdue: null, referral: null, pd: { items: [], session: { status: 'Not scheduled', at: null, mode: '—', loc: '', with: '' } } });
-  if (w.workplace) Object.assign(w.workplace, { perm: 'Not entered', name: '', address: '', postcode: '', ctitle: '', cname: '', cemail: '', cphone: '' });
-  STORE.worlds[key] = w; if (STORE.acct) STORE.acct[key] = 'Active';
-  VARIANT_INFO[key] = [`Client demo learner — ${m}`, `${L.name} · ${CD_B} · demonstration data (sign-up pending)`];
+  const w = lnPortal(L, key); VARIANT_INFO[key] = [CD_VI[m], `${L.name} · demonstration data`];
   return w;
 }
-// the learner starts the NVQ sign-up (their own action in the portal) on the option the batch records for them; placed in the batch
-function cdSignupStart(key, b, optId) {
-  S.variant = key; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; go('browse');
+// the learner's own portal session for a build step (the demonstration identity switch the sign-in page uses)
+const cdAs = key => { S.edge = 'none'; S.variant = key; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; S.ui = {}; };
+const cdPress = () => { const a = MODAL && MODAL.actions.find(x => /primary/.test(x.cls || '')); return a && a.fn ? a.fn() : undefined; };
+const cdErr = (w, what) => new Error(`${what} (${chFullName(w)}): ` + ($$('#modal-root .err, main .err').map(e => e.textContent).join(' ') || ($('#toast-root') || {}).textContent || 'refused'));
+// NVQ: sign-up from Browse on the mode's fee option, details, documents, offer letter, first instalment (simulated checkout)
+function cdSignup(key, m, ff) {
+  const w = STORE.worlds[key], [dob, addr] = CD_SIGNUP[w.me.first + ' ' + w.me.last] || ['1990-01-01', '1 Demo Street, London'];
+  cdAs(key); go('browse');
   const c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === CD_T); if (!c) throw new Error('Browse: the demo programme is not listed');
-  ACT.applyNvq({ dataset: { id: c.id } }); const r = $(`#modal-root input[name="r1-opt"][value="${optId}"]`); if (r) r.checked = true;
-  const a = MODAL && MODAL.actions.find(x => /primary/.test(x.cls || '')); if (a && a.fn && a.fn() === false) throw new Error('Sign-up: ' + $('#modal-root').textContent.slice(0, 160)); closeModal();
-  const w = STORE.worlds[key]; if (!w.signup) throw new Error('Sign-up not started for ' + key);
-  chSetBatch(w, b);
+  const opt = r1Opts(cdPr().id).find(o => o.status === 'Active' && o.mode === m); if (!opt) throw new Error('No approved ' + m + ' fee option');
+  ACT.applyNvq({ dataset: { id: c.id } }); const r = $(`#modal-root input[name="r1-opt"][value="${opt.id}"]`); if (r) r.checked = true;
+  if (cdPress() === false) throw cdErr(w, 'Sign-up'); closeModal(); if (!w.signup) throw cdErr(w, 'Sign-up not started');
+  go('admission'); const fill = (s, v) => { const e = $(s); if (!e) throw cdErr(w, 'Sign-up details: missing ' + s); e.value = v; };
+  fill('#su-dob', dob); fill('#su-ad', addr); ACT.suNext(); if (w.signup.step !== 2) throw cdErr(w, 'Sign-up details');
+  w.docs.filter(d => d.mand).forEach(d => ACT.sampleUpload({ dataset: { id: d.id } })); ff(3000);
+  if (!w.docs.filter(d => d.mand).every(d => d.status === 'Submitted')) throw cdErr(w, 'Documents');
+  ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); if (!w.signup.sig) throw cdErr(w, 'Offer letter');
+  setUi('suOpt', 'instalment'); setUi('suMethod', 'card'); render(); ACT.suPay(); if (cdPress() !== false) throw cdErr(w, 'Checkout'); ff(3000); closeModal();
+  if (!w.signup.done || w.signup.batch !== CD_B) throw cdErr(w, 'Payment');
+}
+// Admissions (Academic Admin): each mandatory document approved, then the admission
+function cdAdmit(key) {
+  const w = STORE.worlds[key], id = 'APP-' + key; acaEnter('KA'); S.signedIn = true; S.ui = {}; go('a-admissions', { id });
+  const ap = allApplications().find(a => a.id === id); if (!ap) throw cdErr(w, 'Admissions: no application');
+  ap.docs.filter(d => d.mand).forEach(d => ACT.docDec({ dataset: { a: id, d: d.id, s: 'Approved' } }));
+  go('a-admissions', { id }); ACT.appApprove({ dataset: { id } }); const t = $('#rsn'); if (t) t.value = 'Documents checked against the sample files (client demo)'; cdPress(); closeModal();
+  if (w.admission.status !== 'Approved') throw cdErr(w, 'Admission');
+}
+// Short course: Browse → Buy now → (the course's own questions, if any) → simulated checkout
+function cdShort(key, ff) {
+  const w = STORE.worlds[key]; cdAs(key); go('browse');
+  const c = CATALOGUE.find(x => x.kind === 'short' && x.course === FX_SHORT); if (!c) throw new Error('Browse: the demo short course is not listed');
+  ACT.buyCourse({ dataset: { id: c.id } });
+  if (MODAL && /About you/.test(MODAL.title || '')) { $$('#modal-root input, #modal-root textarea').forEach(i => { if (!i.value) i.value = i.type === 'date' ? '2026-10-01' : 'Demonstration answer'; }); cdPress(); }
+  if (!MODAL || !/Pay now/.test(MODAL.title || '')) throw cdErr(w, 'Buy now'); cdPress(); ff(3000); closeModal();
+  if (!w.enrolments.some(e => e.kind === 'short' && e.courseId === FX_SHORT && e.status === 'Active')) throw cdErr(w, 'Short-course enrolment');
 }
 function cdLearners() {
-  const b = cdBatch(); if (!b) return;
-  CD_LEARNERS.forEach(([name, m], k) => {
-    const L = ADMIN.learners.find(x => x.name === name), key = CD_KEYS[k]; if (!L) return;
-    cdWorld(key, L, m); cdSignupStart(key, b, (b.r2 && b.r2[L.id] || {}).opt);
+  if (!cdBatch()) return;
+  fxFast(ff => {
+    CD_LEARNERS.forEach(([name, m], k) => { const L = ADMIN.learners.find(x => x.name === name); if (!L) throw new Error('No learner record: ' + name); cdWorld(CD_KEYS[k], L, m); });
+    CD_LEARNERS.forEach(([, m], k) => { if (m === 'Short course') cdShort(CD_KEYS[k], ff); else cdSignup(CD_KEYS[k], m, ff); });
+    CD_LEARNERS.forEach(([, m], k) => { if (m !== 'Short course') cdAdmit(CD_KEYS[k]); });
   });
 }
 const _buildCD = cdBuild;
 cdBuild = function () { const r = _buildCD.apply(this, arguments); cdLearners(); return r; };
-// Demo controls: open a demo learner's portal (a demonstration identity switch, not authentication)
-ACT.cdCoord = el => { const k = el.dataset.k; S.coo.v = k; cooEnter(); S.signedIn = true; S.demoOpen = false; go('c-batches', { id: CD_B, tab: 'roster' }); renderDemo(); toast(`Prototype demonstration: viewing the Coordinator portal as ${COO_USERS[k].name}.`, 'info'); };
-ACT.cdLearner = el => {
-  const key = el.dataset.k; if (!STORE.worlds[key]) return toast('Load the client demo first.', 'info');
-  S.variant = key; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; S.demoOpen = false; go('dashboard'); renderDemo();
-  toast(`Prototype demonstration: viewing the learner portal as ${chFullName(STORE.worlds[key])} — an identity switch for the demo, not a sign-in.`, 'info');
-};
-// the panel: the learners with their mode and Coordinator, and the cohort's figures counted from the four records
-const cdCohort = () => { const b = cdBatch(); if (!b) return null; const ls = mcLids(b).map(id => ({ id, name: (ADMIN.learners.find(x => x.id === id) || {}).name, mode: r2LidInfo(id, CD_B).mode, coord: mcOf(id, b), key: cdKeyOf(id) })); return ls; };
-const _cdPanelL = cdPanel;
-cdPanel = function () {
-  const h = _cdPanelL.apply(this, arguments), ls = cdOn() ? cdCohort() : null; if (!ls) return h;
-  const by = f => Object.entries(ls.reduce((o, l) => { o[f(l)] = (o[f(l)] || 0) + 1; return o; }, {})).map(([k, n]) => `${esc(k)} ${n}`).join(' · ');
-  return h.replace('</fieldset>', `<p class="xs muted cd-cohort">Counted from the batch's records: ${ls.length} learners · ${by(l => l.mode)} · Coordinators: ${by(l => l.coord)}.</p>
-    <p class="xs"><strong>Learner portal (prototype demonstration — an identity switch, not a sign-in):</strong></p><div class="btns cd-learners">${ls.map(l => `<button class="btn btn-sm" data-act="cdLearner" data-k="${l.key}">${esc(l.name)} · ${esc(l.mode)} · ${esc(l.coord)}</button>`).join('')}</div>
-    <p class="xs muted">They stand at their own sign-up: documents, offer letter and payment are pending, so programme content stays locked for them (the normal gate) and their Coordinator appears once it opens. Each Coordinator sees their own allocated learners:</p><div class="btns cd-coords">${[...new Set(ls.map(l => l.coord))].map(n => { const k = Object.keys(COO_USERS).find(x => COO_USERS[x].name === n && !COO_USERS[x].multi); return k ? `<button class="btn btn-sm" data-act="cdCoord" data-k="${k}">Coordinator: ${esc(n)}</button>` : ''; }).join('')}</div></fieldset>`);
-};
+
 
 /* ---------- The admin dashboard says which figures are demonstration values (PD-CD-09) ----------
    Average progress, completion rate and part of the overdue, pending-marking and revenue figures are fixed demonstration values; they
@@ -225,33 +237,9 @@ SCREENS['a-dashboard'] = function () {
 };
 
 
-/* ---------- Guided sign-up for the client demo (PD-CD-10…13) ----------
-   Demo controls → "Guided sign-up": step buttons that switch to the right person and open the right screen; the presenter does each
-   action there with the existing controls — personal details, the sample-document uploads ("demo" files), the offer-letter signature,
-   the prototype checkout (simulated card payment; no card is charged), then the Academic Admin reviews each document and approves the
-   admission. Nothing is completed by the buttons themselves. Suggested learners: Amira Shah (Self-Paced, Dr Helen Carter) and Dev Patel
-   (Fully Assisted, Michael Osei); any of the four can be used. */
-const CD_GUIDE = [['CD1', 'Self-Paced'], ['CD4', 'Fully Assisted']];
-ACT.cdGuide = el => {
-  const k = el.dataset.k, st = el.dataset.s, w = STORE.worlds[k]; if (!w) return toast('Load the client demo first.', 'info');
-  if (st === 'review') { acaEnter('KA'); S.signedIn = true; S.demoOpen = false; go('a-admissions', { id: 'APP-' + k }); renderDemo(); return toast(`Academic Admin: review each document of ${chFullName(w)} (Approve), then "Approve admission".`, 'info'); }
-  S.variant = k; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; S.demoOpen = false;
-  if (st === 'signup') { go('admission'); renderDemo(); return toast(`Prototype demonstration as ${chFullName(w)}: complete each sign-up step — details, documents ("Use a sample file"), offer letter, then the simulated checkout.`, 'info'); }
-  go(st === 'pay' ? 'payments' : st === 'course' ? 'course' : 'dashboard', st === 'course' ? { id: 'nvq' } : {}); renderDemo();
-};
-const cdStage = w => (!w || !w.signup ? '—' : w.admission && w.admission.status === 'Approved' ? 'Enrolled — admission approved' : w.signup.done ? 'Signed up and paid — awaiting admission review' : `Sign-up step ${w.signup.step} of 5`);
-const _cdPanelG = cdPanel;
-cdPanel = function () {
-  const h = _cdPanelG.apply(this, arguments); if (!cdOn()) return h;
-  const rows = CD_GUIDE.map(([k, m]) => { const w = STORE.worlds[k]; if (!w) return ''; return `<div class="cd-g-row" data-k="${k}"><p class="xs"><strong>${esc(chFullName(w))}</strong> · ${m} · <span class="cd-stage">${esc(cdStage(w))}</span></p><div class="btns">
-    <button class="btn btn-sm" data-act="cdGuide" data-k="${k}" data-s="signup">1 · Sign-up (learner)</button>
-    <button class="btn btn-sm" data-act="cdGuide" data-k="${k}" data-s="review">2 · Admissions review (Academic Admin)</button>
-    <button class="btn btn-sm" data-act="cdGuide" data-k="${k}" data-s="dash">3 · Learner dashboard</button>
-    <button class="btn btn-sm" data-act="cdGuide" data-k="${k}" data-s="course">Your people</button>
-    <button class="btn btn-sm" data-act="cdGuide" data-k="${k}" data-s="pay">Payment schedule</button></div></div>`; }).join('');
-  return h.replace(/<\/fieldset>$/, `<p class="xs cd-guide-h"><strong>Guided sign-up (prototype demonstration):</strong> each button switches to the person and opens the screen; you do the step there with the normal controls. Documents use the "sample file" (demonstration documents); payment uses the prototype checkout (simulated — no card is charged).</p>${rows}</fieldset>`);
-};
-// The prototype checkout says it is simulated, for the client-demo learners; the payment is recorded as a demonstration event
+/* ---------- Simulated payments of the demo learners (PD-CD-12; DR) ----------
+   The prototype checkout says it is simulated for the demo learners, and each payment is audited as a demonstration event — the
+   NVQ instalment (chComplete) and a short-course purchase (s1Enrol) alike, in the build and when a presenter pays live. */
 const _coCD = checkout;
 checkout = function (o) {
   const r = _coCD.apply(this, arguments);
@@ -262,5 +250,11 @@ const _chCompleteCD = chComplete;
 chComplete = function (w) {
   const had = !!(w && w.signup && w.signup.done), r = _chCompleteCD.apply(this, arguments);
   if (w && CD_KEYS.includes(w.v) && !had && w.signup && w.signup.done && w.signup.pay) logA('Finance', `${chFullName(w)} (${w.me.id})`, 'Demonstration: simulated payment', '—', `${money(w.signup.pay.amount, 'GBP')} · ${w.signup.pay.ref || ''}`, 'Client demo — prototype checkout, no card charged');
+  return r;
+};
+const _s1EnrolCD = s1Enrol;
+s1Enrol = function (c) {
+  const r = _s1EnrolCD.apply(this, arguments);
+  if (W && CD_KEYS.includes(W.v)) { const t = W.tx[0]; logA('Finance', `${chFullName(W)} (${W.me.id})`, 'Demonstration: simulated payment', '—', `${money(W.amt(c.price), 'GBP')} · ${(t && t.ref) || ''}`, 'Client demo — prototype checkout, no card charged'); }
   return r;
 };
