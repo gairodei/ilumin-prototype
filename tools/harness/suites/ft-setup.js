@@ -842,6 +842,10 @@
     FA4(); cfgSet(300, 14); ok('S4-07 a later hold change doesn\'t move a running hold', e.admission.deposit.holdDays === 21 && Math.round(daysTo(e.admission.deposit.holdUntil)) === 21);
     chReleaseSeat(e);
     ok('P-32 seat release: removed from the batch, deposit kept, materials read-only', chReleased(e) && e.admission.deposit.kept && !e.signup.batch && e.nvq.status === 'Seat released' && /after 21 days/.test(e.admission.history.slice(-1)[0][0]));
+    // PD-DP-13 (supersedes the direct sign-up again here): while the released seat's bank-transfer deposit is unconfirmed, Sign up
+    // again waits for Finance (old: it went straight to the new sign-up). Finance confirms the transfer, then the learner signs up again.
+    learner('E'); ACT.chSignAgain(); ok('PD-DP-13 sign up again waits while the released seat\'s bank-transfer deposit is unconfirmed', !e.signup.again);
+    FA4(); recordPayment(payTargets().find(t => t.key === 'E|dep'), 300, 'BACS-61001', 'Bank transfer', 'Transfer received');
     learner('E'); ACT.chSignAgain(); go('admission');
     ok('P-32 sign up again: instalments only (no deposit)', e.signup.noDeposit && (render(), !document.querySelector('input[name="su-opt"][value="deposit"]')));
   });

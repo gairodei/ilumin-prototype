@@ -35,7 +35,7 @@ initStore = function () {
 const _resetCh = ACT.resetDemo;
 ACT.resetDemo = () => {
   const v = S.variant, learnerView = S.portal === 'learner' && S.signedIn;
-  clearTimer('regtick'); S.reg = null; S.regV = null; delete STORE.regs; delete PERSONAS.G; delete VARIANTS.G;
+  clearTimer('regtick'); S.reg = null; S.regV = null; delete STORE.regs; Object.keys(PERSONAS).filter(k => /^G\d*$/.test(k)).forEach(k => { delete PERSONAS[k]; delete VARIANTS[k]; }); // DP: every registered learner (G, G2 …)
   if (['register', 'regVerify', 'welcome'].includes(S.auth)) S.auth = 'signin';
   _resetCh();
   if (v !== S.variant && learnerView) go('dashboard');

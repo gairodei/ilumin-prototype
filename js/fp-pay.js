@@ -107,8 +107,8 @@ function fpDepTxt(pl, who) {
   const L = fpLedger(pl), c = pl.cur || 'GBP', m = x => money(x, c), you = who === 'fin' ? 'the learner' : 'you', yr = who === 'fin' ? 'their' : 'your';
   if (L.basis === 'none') return '';
   if (L.st === 'refunded') return `Deposit ${m(L.dep)} refunded — it no longer counts towards the programme fee.`;
-  if (L.basis === 'net') return L.st === 'paid' ? `Deposit ${m(L.dep)} paid and credited to the ${m(L.fee)} programme fee. The ${pl.rows.length > 1 ? 'instalments' : 'balance'} below (${m(L.sched)}) exclude it — it isn't charged again.`
-    : `Deposit ${m(L.dep)} awaiting confirmation by Finance. It counts as paid only once confirmed; until then it is included in Outstanding. The ${pl.rows.length > 1 ? 'instalments' : 'balance'} below (${m(L.sched)}) already exclude it.`;
+  if (L.basis === 'net') return L.st === 'paid' ? `Deposit ${m(L.dep)} paid and credited to the ${m(L.fee)} programme fee. The ${pl.rows.length > 1 ? 'instalments' : 'balance'} below (${m(L.sched)}) ${pl.rows.length > 1 ? 'exclude' : 'excludes'} it — it isn't charged again.`
+    : `Deposit ${m(L.dep)} awaiting confirmation by Finance. It counts as paid only once confirmed; until then it is included in Outstanding. The ${pl.rows.length > 1 ? 'instalments' : 'balance'} below (${m(L.sched)}) already ${pl.rows.length > 1 ? 'exclude' : 'excludes'} it.`;
   if (L.basis === 'gross') { const cr = pl.rows.filter(r => fpP(r.credit) > 0); return L.st === 'paid' ? `Deposit ${m(L.dep)} paid and credited to ${cr.length ? cr.map(r => `instalment ${r.n} (${m(r.credit)})`).join(' and ') : 'the earliest unpaid instalments'} — the instalments below are worked out from the full ${m(L.fee)} fee, and the credit is taken off what ${you} pay, never charged again.`
     : `Deposit ${m(L.dep)} not paid yet — once it is paid it is credited to ${yr} earliest unpaid instalment. Until then nothing is taken off.`; }
   return `This schedule doesn't reconcile: deposit ${m(L.dep)} + rows ${m(L.sched)}${L.adj ? ` + adjustments ${m(L.adj)}` : ''} ≠ fee ${m(L.fee)}. Finance should review it; nothing has been changed.`;

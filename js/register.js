@@ -108,24 +108,34 @@ SUBMIT.signin = form => {
   return _siR(form);
 };
 
-/* ---------- Create the learner (world G) and the cross-view records ---------- */
+/* ---------- Create the learner (their own world: G, G2, G3 …) and the cross-view records ----------
+   DP (PD-DP-14): every registration was written to world G, so a second registration in the same tab replaced the first
+   learner's records (sign-up, payments, reservation) and left their seat and bank transfer pointing at the new person. Each
+   registered person now gets their own world and a learner ID no one else has; signing in switches the active account only. */
+const REG_KEY_RX = /^G\d*$/;
+const regKeys = () => Object.keys((STORE && STORE.worlds) || {}).filter(k => REG_KEY_RX.test(k));
+const regNewKey = () => { if (!STORE.worlds.G) return 'G'; let n = 2; while (STORE.worlds['G' + n]) n++; return 'G' + n; };
+function regNewId() {
+  const used = new Set(Object.values(STORE.worlds || {}).map(w => w && w.me && w.me.id).concat((ADMIN.learners || []).map(l => l.id)));
+  let n = 40100 + (STORE.regs || []).length; while (used.has('IA-L-' + n)) n++; return 'IA-L-' + n;
+}
 function regCreate() {
-  const d = S.reg, c = regCountry(d.country) || REG_COUNTRIES[0], [first, ...rest] = d.name.split(' '), id = 'IA-L-' + (40100 + (STORE.regs || []).length);
+  const d = S.reg, c = regCountry(d.country) || REG_COUNTRIES[0], [first, ...rest] = d.name.split(' '), id = regNewId(), key = regNewKey();
   const refTxt = d.refOk ? `${(ADMIN.referrals.find(r => r.code === d.refOk) || {}).type || 'Referral'} referral (code ${d.refOk})` : 'Self-registration';
-  PERSONAS.G = { id, first, last: rest.join(' ') || '', email: d.email, mobile: d.dial + ' ' + d.mob, dob: '—', address: '—', postcode: '—', country: c[0], tz: c[0] === 'United Arab Emirates' ? 'Asia/Dubai' : c[0] === 'India' ? 'Asia/Kolkata' : 'Europe/London', cur: c[1], joined: fd(now().toISOString()), referral: refTxt, sponsor: null };
-  VARIANTS.G = { nvq: false, fresh: true };
-  const w = STORE.worlds.G = makeWorld('G');
+  PERSONAS[key] = { id, first, last: rest.join(' ') || '', email: d.email, mobile: d.dial + ' ' + d.mob, dob: '—', address: '—', postcode: '—', country: c[0], tz: c[0] === 'United Arab Emirates' ? 'Asia/Dubai' : c[0] === 'India' ? 'Asia/Kolkata' : 'Europe/London', cur: c[1], joined: fd(now().toISOString()), referral: refTxt, sponsor: null };
+  VARIANTS[key] = { nvq: false, fresh: true };
+  const w = STORE.worlds[key] = makeWorld(key);
   Object.assign(w, { enrolments: [], certs: [], tx: [], plans: [], threads: [], requests: [], attendance: [], resources: [], events: [], payOverdue: null, referral: null, consents: d.consents.concat([['Marketing emails', 'Declined', d.consents[0][2]]]) });
   w.notifs = [{ id: 'ntw', cat: 'Account', title: 'Welcome to Illumin Academy', body: 'Your account is verified. Browse courses to get started.', at: now().toISOString(), unread: true, go: 'browse' }];
   const r = STORE.regs.find(x => x.email === d.email); if (r) r.verified = true;
-  STORE.acct.G = 'Active';
+  STORE.acct[key] = 'Active';
   if (d.refOk) { const ref = ADMIN.referrals.find(x => x.code === d.refOk); if (ref) ref.regs = (ref.regs || 0) + 1; }
   logA('Learners', id, 'Self-registration', '—', `Verified · ${c[0]}${d.refOk ? ' · code ' + d.refOk : ''}`, 'Consents: Terms v3.2, Privacy v4.0 at ' + fdt(d.consents[0][2]));
-  S.variant = 'G'; W = w; S.edge = 'none'; S.portal = 'learner';
+  S.variant = key; W = w; S.edge = 'none'; S.portal = 'learner';
 }
-// The registered learner joins the demo-learner list so admin views show them (country, data region)
+// Every registered learner joins the demo-learner list so admin views show them (country, data region)
 const _demoLR = demoLearners;
-demoLearners = function () { const list = _demoLR(); const w = STORE.worlds && STORE.worlds.G; if (!w) return list; const m = w.me, c = regCountry(m.country) || []; return list.concat([{ id: m.id, v: 'G', name: (m.first + ' ' + m.last).trim(), email: m.email, mobile: m.mobile, agency: null, courses: w.enrolments.map(e => e.title), acct: 'Active', rec: 'Active', region: regionOf(m.country), last: now().toISOString(), flags: [], dob: m.dob, address: m.address, postcode: m.postcode, country: m.country, joined: m.joined, referral: m.referral, cur: m.cur, demo: true }]); };
+demoLearners = function () { const list = _demoLR(); return list.concat(regKeys().map(v => { const w = STORE.worlds[v], m = w.me; return { id: m.id, v, name: (m.first + ' ' + m.last).trim(), email: m.email, mobile: m.mobile, agency: null, courses: w.enrolments.map(e => e.title), acct: 'Active', rec: 'Active', region: regionOf(m.country), last: now().toISOString(), flags: [], dob: m.dob, address: m.address, postcode: m.postcode, country: m.country, joined: m.joined, referral: m.referral, cur: m.cur, demo: true }; })); };
 // Learner demo panel + sign-in hint: open a referral link
 const _rdR = renderDemo;
 renderDemo = function () { _rdR(); const fs = $('#demo-root .demo-panel'); if (fs && (S.portal === 'learner' || !S.signedIn) && !fs.querySelector('[data-act="regLink"]')) fs.insertAdjacentHTML('beforeend', '<fieldset><legend>Registration — demo only</legend><div class="btns"><button class="btn btn-sm" data-act="regLink">Open referral link (demo)</button><button class="btn btn-sm" data-act="regStart">Create an account</button></div></fieldset>'); };

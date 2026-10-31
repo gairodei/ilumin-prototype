@@ -105,7 +105,7 @@
   await T('FP-A4 net, pay once', async () => {
     fresh(); const P = prog(), s = signUp('A', P, P.b).w; setUi('cb9Pay', 'deposit'); const pl = payCard(s).pl;
     fpCredit(s, 'again'); ok('FP-A4 the £1,500 balance row is never reduced by the deposit again', pl.rows[0].amount === 1500 && !pl.rows[0].credit && pl.rows[0].paid === 0);
-    learner('A'); go('admission'); ok('FP-A4 deposit card: balance due £1,500; "View payments", no "Set up instalments"; the credit sentence', /Balance due\s*£1,500\.00/.test(main()) && !/Set up instalments/.test(main()) && /View payments/.test(main()) && /exclude it — it isn't charged again/.test(main()), (main().match(/Deposit[\s\S]{0,700}/) || ['no Deposit'])[0].replace(/\s+/g, ' '));
+    learner('A'); go('admission'); ok('FP-A4 deposit card: balance due £1,500; "View payments", no "Set up instalments"; the credit sentence', /Balance due\s*£1,500\.00/.test(main()) && !/Set up instalments/.test(main()) && /View payments/.test(main()) && /excludes it — it isn't charged again/.test(main()) /* PD-DP-07: one balance row "excludes" (was "exclude") */, (main().match(/Deposit[\s\S]{0,700}/) || ['no Deposit'])[0].replace(/\s+/g, ' '));
     const g = grab(() => ACT.payBalance(), 1500);
     ok('FP-A4 "Pay balance" asks £1,500 and pays the Payments balance row (one record)', g.amount === 1500 && pl.rows[0].status === 'Paid' && pl.rows[0].paid === 1500);
     ok('FP-A4 the admission balance follows: £0 and the seat hold ends', s.admission.deposit.balance === 0 && !s.admission.deposit.holdUntil);
