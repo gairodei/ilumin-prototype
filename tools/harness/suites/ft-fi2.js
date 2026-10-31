@@ -29,9 +29,12 @@
   const own = w => { const p = pl(w), fee = P(p.total), rows = p.rows.reduce((a, r) => a + Math.max(0, P(r.amount) - P(r.paid)), 0), got = w.tx.filter(t => t.amount > 0 && t.status === 'Succeeded').reduce((a, t) => a + P(t.amount), 0), back = w.tx.filter(t => t.amount < 0).reduce((a, t) => a + P(-t.amount), 0); return { fee, out: rows, got, back }; };
   const raise = (t, a, txt = 'FI-2', keep = true) => { raiseRefund(t); $1('#rr-a').value = String(a); $1('#rr-t').value = txt; if (keep) $a('#modal-root input[name="rrc"]').find(x => x.value === 'Retain access').checked = true; press(); return ADMIN.queue[0]; };
   const txOf = (v, amt) => allTx().find(x => x.v === v && P(x.amount) === P(amt) && !x.refund && ['Paid', 'Partially refunded'].includes(x.status)); // FI-2 review (L-4): a payment refunded in part is still refundable
+  // Each test account gets its own mobile, outside the seeded 7700 900xxx numbers. Was: '7700 900' + a random 100–899, which now and
+  // then matched a demo learner's or an earlier test account's mobile, so sign-up was (correctly) refused as a duplicate account
+  let regN = 0;
   const register = (name, email) => {
     signOutUI(); click($1('#app [data-act="regStart"]'));
-    const v = { '#rg-name': name, '#rg-email': email, '#rg-mob': '7700 900' + String(100 + Math.floor(Math.random() * 800)), '#rg-pw': 'Demo!Pass2026', '#rg-pw2': 'Demo!Pass2026' };
+    const v = { '#rg-name': name, '#rg-email': email, '#rg-mob': '7700 955' + String(100 + regN++), '#rg-pw': 'Demo!Pass2026', '#rg-pw2': 'Demo!Pass2026' };
     Object.entries(v).forEach(([k, x]) => { $1(k).value = x; }); $1('#rg-country').value = 'United Kingdom'; $1('#rg-terms').checked = true; $1('#rg-priv').checked = true;
     submit('form[data-submit="regSubmit"]'); press(); $a('.otp-i').forEach((i, k) => { i.value = '123456'[k]; }); submit('form[data-submit="regCode"]');
     click($1('#app [data-act="finishWelcome"]')); return W;

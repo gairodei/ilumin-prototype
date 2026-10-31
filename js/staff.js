@@ -93,7 +93,7 @@ function tasSubs(all) {
   tasLearners(all).filter(L => !L.short).forEach(L => {
     if (L.v) STORE.worlds[L.v].assignments.forEach(a => { const r = subRow(L, a, a.status, a); r.limit = !!a.limit; out.push(decorate(r)); });
     else BASE_ASGS().forEach(a => {
-      const key = L.lid + '~' + a.id, ov = STORE.tas.over[key], rel = STORE.tas.rel[key];
+      const key = acKey(L.lid, a.id, L.batch), ov = STORE.tas.over[key], rel = STORE.tas.rel[key];
       let st = rel ? rel.status : ov ? ov.status : L.coh.subs[a.id]; if (!st) return;
       const r = subRow(L, a, st, null);
       if (ov) { r.round = rel && rel.round ? rel.round : ov.round; r.at = ov.at; r.waiting = ['Submitted'].includes(st) ? Math.max(0, -daysTo(ov.at)) : null; r.limit = ov.limit && !rel; }

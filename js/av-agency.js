@@ -56,7 +56,7 @@ function avOwns(L, e, o) {
 function avAsgs(L, e) {
   if (L.v) return e === (STORE.worlds[L.v] || {}).nvq ? (STORE.worlds[L.v].assignments || []).map(a => ({ id: a.id, title: a.title, st: a.status })) : [];
   const cs = ADMIN.batches.filter(b => b.course === e.title).map(b => (b.coh || []).find(c => c.lid === L.id)).filter(c => c && c.subs);
-  return BASE_ASGS().filter(a => cs.some(c => c.subs[a.id])).map(a => { const k = L.id + '~' + a.id, rel = STORE.tas.rel[k], ov = STORE.tas.over[k]; return { id: a.id, title: a.title, st: rel ? rel.status : ov ? ov.status : cs.find(c => c.subs[a.id]).subs[a.id] }; });
+  return BASE_ASGS().filter(a => cs.some(c => c.subs[a.id])).map(a => { const k = acKey(L.id, a.id, { course: e.title }), rel = STORE.tas.rel[k], ov = STORE.tas.over[k]; return { id: a.id, title: a.title, st: rel ? rel.status : ov ? ov.status : cs.find(c => c.subs[a.id]).subs[a.id] }; });
 }
 const avDeny = (lid, why) => { ADMIN.security.unshift({ id: 'SE-AV-' + (ADMIN.security.length + 1) + '-' + Date.now().toString(36), sev: 'High', at: now().toISOString(), type: 'Denied cross-agency access', detail: `Agency admin (${S.portal === 'agency' ? AGN() : '—'}) tried to read final assessment outcomes for learner ${lid || '—'} — ${why}`, reviewed: false }); return null; };
 
@@ -68,7 +68,7 @@ function agyOutcomes(lid) {
   if (AV_RESPECT_VIS && !vis().assessment) return null; // the Academy doesn't share Pass / Fail with this agency (not an attempt)
   const L = learnerById(lid), mine = avNvqs(L).filter(e => avSponsors(L, e, AGN())); if (!mine.length) return null; // none sponsored by this agency
   return { progs: mine.map(e => ({ prog: e.title, rows: avAsgs(L, e).map(a => {
-    const k = lid + '~' + a.id, o = dOutSeen(k) ? r3Out(k) : null; // published only — a draft decision is never read here
+    const k = acKey(lid, a.id, { course: e.title }), o = dOutSeen(k) ? r3Out(k) : null; // published only — a draft decision is never read here
     if (o && avOwns(L, e, o)) return { aid: a.id, title: a.title, result: o.result, pubAt: o.pubAt || o.at, by: o.by, round: o.round, feedback: o.feedback || '', label: o.result };
     if (o && (!o.own || o.own.ambiguous)) return { aid: a.id, title: a.title, result: null, label: AV_HELD }; // can't tell whose programme it is
     return { aid: a.id, title: a.title, result: null, label: a.st === 'Completed' && !r3Out(k) ? AV_NONE : AV_AWAIT };

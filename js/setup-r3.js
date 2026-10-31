@@ -16,7 +16,7 @@ const R3_VALS = ['Met', 'Partially Met', 'Not Met'];
 const R3 = () => (STORE.r3 = STORE.r3 || { judg: {}, out: {}, n: 0 });
 const _isR3 = initStore; initStore = function () { STORE.r3 = null; return _isR3.apply(this, arguments); };
 const r3Judg = key => (R3().judg[key] = R3().judg[key] || []);
-const r3Out = key => R3().out[key] || null;
+const r3Out = key => R3().out[key] || acOutBefore(key) || null; // AC-4: an outcome recorded before programme-scoped keys, only when it is provably this programme's
 const r3Tone = v => v === 'Met' || v === 'Pass' ? 'green' : v === 'Partially Met' ? 'amber' : 'red';
 function r3Add(key, rec) { const r = { id: 'CJ-' + (++R3().n), at: now().toISOString(), ...rec }; r3Judg(key).push(r); return r; }
 // Latest judgement per role for one criterion (both roles are kept side by side; neither overrides the other)

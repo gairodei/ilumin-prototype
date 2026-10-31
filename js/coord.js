@@ -164,7 +164,7 @@ function mySubmissions(all) {
 function subRow(L, base, status, live) {
   const at = live ? live.submittedAt : status === 'Not Started' ? null : D(-(L.coh ? L.coh.seed % 12 : 2) - 1, '19:30');
   const round = live ? live.round : status === 'Resubmission Required' ? 'Resub 1' : (L.coh && L.coh.seed % 4 === 0 && status === 'Completed') ? 'Resub 1' : 'Sub 1';
-  const key = L.lid + '~' + base.id;
+  const key = acKey(L.lid, base.id, L.batch);
   const coo = live ? (live.coordAll || (live.coord ? [live.coord] : [])) : STORE.coo.fb.filter(f => f.key === key);
   const pd = live ? live.qs.some(q => q.state === 'pd') : (L.coh && L.coh.pd.includes(base.id));
   const waiting = ['Submitted'].includes(status) && at ? Math.max(0, -daysTo(at)) : null;

@@ -31,9 +31,12 @@
   // The real checkout: Pay securely, the processing delay (virtual clock), the result dialog
   const payCo = (open, part) => fxFast(ff => { open(); if (!MODAL || !/Pay now/.test(MODAL.title || '')) return { opened: false }; if (part != null) { const r = $1('#modal-root input[name="payamt"][value="part"]'); if (r) { r.checked = true; INP.payAmt(r); } $1('#partAmt').value = part; } const res = prim(); ff(3000); const t = mtxt(); closeModal(); return { opened: true, res, t }; });
   // Register a learner and sign up for the demo programme up to the payment step (the real screens; as ft-dp)
+  // Each test account gets its own mobile, outside the seeded 7700 900xxx numbers. Was: a random 7700 900100–900899, which now
+  // and then matched a demo learner's mobile, so sign-up was (correctly) refused as a duplicate account
+  let REG_N = 0;
   const register = (name, email) => {
     signOutUI(); click($1('#app [data-act="regStart"]'));
-    const v = { '#rg-name': name, '#rg-email': email, '#rg-mob': '7700 900' + String(100 + Math.floor(Math.random() * 800)), '#rg-pw': 'Demo!Pass2026', '#rg-pw2': 'Demo!Pass2026' };
+    const v = { '#rg-name': name, '#rg-email': email, '#rg-mob': '7700 955' + String(100 + REG_N++), '#rg-pw': 'Demo!Pass2026', '#rg-pw2': 'Demo!Pass2026' };
     Object.entries(v).forEach(([k, x]) => { $1(k).value = x; }); $1('#rg-country').value = 'United Kingdom'; $1('#rg-terms').checked = true; $1('#rg-priv').checked = true;
     submit('form[data-submit="regSubmit"]'); press(); $a('.otp-i').forEach((i, k) => { i.value = '123456'[k]; }); submit('form[data-submit="regCode"]');
     click($1('#app [data-act="finishWelcome"]')); return W;

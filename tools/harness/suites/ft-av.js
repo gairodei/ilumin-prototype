@@ -142,14 +142,16 @@
     fresh(); const L = learnerById(CHLOE), cohOf = code => { const b = ADMIN.batches.find(x => x.code === code); return (b.coh = b.coh || []); };
     const join = (code, title, sponsor, id) => { L._enr.push({ id, title, type: 'NVQ / RQF', status: 'Active', enrolled: D(-30), start: D(-30), end: D(300), progress: 10, sponsor, version: 'Version 1' }); cohOf(code).push({ lid: CHLOE, flags: [], last: D(-1), att: 80, pd: [], seed: 7, subs: { a1: 'Submitted', a4: 'Submitted', a5: 'Submitted', a6: 'Submitted' } }); };
     join('L2DC-JAN27', P2, BCN, 'x1'); join('L2PW-DEC26-ONL', P5, null, 'x2'); (STORE.agy.linked[BCN] = STORE.agy.linked[BCN] || []).push(CHLOE);
+    // AC-1 (PD-AC-08): each programme has its own assessment record for Chloe (learner~assignment~programme). Was: K(CHLOE, aid), one record per learner and assignment
+    const KP = (aid, code) => acKey(CHLOE, aid, ADMIN.batches.find(b => b.code === code));
     ok('AV-P1 (setup) one learner, three NVQ enrolments: Level 3 sponsored by CarePlus, Level 2 by BrightCare, a Level 2 Certificate self-funded; on both agencies\' rosters',
       avNvqs(L).length === 3 && avNvqs(L).filter(e => e.sponsor === CPN).length === 1 && avNvqs(L).filter(e => e.sponsor === BCN).length === 1 && inRoster(CHLOE, CPN) && inRoster(CHLOE, BCN));
     // Programme 1: the real publication by Chloe's Level 3 Assessor, stamped with its programme and batch
-    TCH('A'); decide(K(CHLOE, 'a4'), 'Pass', 'AVP overall: Level 3 work (CarePlus programme).'); const o4 = r3Out(K(CHLOE, 'a4'));
+    TCH('A'); decide(KP('a4', 'L3AC-JAN26'), 'Pass', 'AVP overall: Level 3 work (CarePlus programme).'); const o4 = r3Out(KP('a4', 'L3AC-JAN26'));
     ok('AV-P publishing stamps the outcome with the programme and batch the Assessor was authorised for', o4 && o4.published && J(o4.own) === J({ prog: P3, batch: 'L3AC-JAN26' }));
     // Programmes 2 and 3: outcomes as the publish step records them (the Level 2 Assessor's declaration check finds her Level 3
     // submission first — an existing R3 limitation, so these two are written in the published shape directly)
-    const mk = (aid, res, fb, own) => (R3().out[K(CHLOE, aid)] = { ...JSON.parse(J(o4)), aid, title: title(aid), result: res, feedback: fb, by: 'James Pryce', note: 'internal', own });
+    const mk = (aid, res, fb, own) => (R3().out[KP(aid, own.batch)] = { ...JSON.parse(J(o4)), aid, title: title(aid), result: res, feedback: fb, by: 'James Pryce', note: 'internal', own });
     mk('a5', 'Fail', 'AVP overall: Level 2 work (BrightCare programme).', { prog: P2, batch: 'L2DC-JAN27' });
     mk('a6', 'Pass', 'AVP overall: Level 5 work (self-funded).', { prog: P5, batch: 'L2PW-DEC26-ONL' });
     AGY(CP); const cpJ = J(agyOutcomes(CHLOE)); page(CHLOE);
@@ -169,9 +171,9 @@
     AGY(CP); ok('AV-P6 …CarePlus (setting on) still gets its own outcome', rowIn(P3, 'a4').result === 'Pass');
     ADMIN.agencies.find(a => a.id === BC).vis.assessment = true;
     // Draft hidden, also for a multi-programme learner
-    TCH('A'); decide(K(CHLOE, 'a1'), 'Fail', 'AVP DRAFT not for agencies.', 'Save draft');
+    TCH('A'); decide(KP('a1', 'L3AC-JAN26'), 'Fail', 'AVP DRAFT not for agencies.', 'Save draft');
     AGY(CP); const dj = J(agyOutcomes(CHLOE)); AGY(BC); const dj2 = J(agyOutcomes(CHLOE));
-    ok('AV-P7 a saved draft decision is hidden from both agencies', !!R3().odraft[K(CHLOE, 'a1')] && !/AVP DRAFT/.test(dj + dj2) && (AGY(CP), rowIn(P3, 'a1').result === null && rowIn(P3, 'a1').label === 'No final outcome recorded' /* a1 was Completed before outcomes: the draft doesn't change that */));
+    ok('AV-P7 a saved draft decision is hidden from both agencies', !!R3().odraft[KP('a1', 'L3AC-JAN26')] && !/AVP DRAFT/.test(dj + dj2) && (AGY(CP), rowIn(P3, 'a1').result === null && rowIn(P3, 'a1').label === 'No final outcome recorded' /* a1 was Completed before outcomes: the draft doesn't change that */));
     // Invalid or ambiguous ownership fails closed
     const own4 = o4.own; o4.own = { ambiguous: true }; AGY(CP); const a1 = rowIn(P3, 'a4'); page(CHLOE);
     ok('AV-P8 an outcome stamped ambiguous is shown to no agency ("Not available — contact the Academy")', a1.result === null && a1.label === 'Not available — contact the Academy' && !/Level 3 work/.test(J(agyOutcomes(CHLOE)) + main()) && (AGY(BC), rowIn(P2, 'a4').result === null && !/Level 3 work/.test(J(agyOutcomes(CHLOE)))));
@@ -184,9 +186,10 @@
     L._enr.pop(); o4.own = own4;
     // A real ambiguous publication: Sarah is also the allocated Assessor for Chloe in a batch of another programme (Level 5)
     L._enr.push({ id: 'x4', title: 'Level 5 Diploma in Leadership and Management for Adult Care', type: 'NVQ / RQF', status: 'Active', sponsor: null }); cohOf('L5LM-JAN25').push({ lid: CHLOE, flags: [], last: D(-1), att: 80, pd: [], seed: 7, subs: { a7: 'Submitted' } });
-    TCH('A'); decide(K(CHLOE, 'a7'), 'Pass', 'AVP overall: published while Sarah assesses Chloe on two programmes.'); const o7 = r3Out(K(CHLOE, 'a7'));
-    AGY(CP); const r7 = rowIn(P3, 'a7'); AGY(BC);
-    ok('AV-P8 publishing when the Assessor assesses the learner on two programmes is stamped ambiguous and shared with no agency', o7 && o7.published && o7.own.ambiguous === true && r7.result === null && r7.label === 'Not available — contact the Academy' && !/two programmes/.test(J(agyOutcomes(CHLOE))));
+    TCH('A'); const k7 = KP('a7', 'L5LM-JAN25'); decide(k7, 'Pass', 'AVP overall: published while Sarah assesses Chloe on two programmes.'); const o7 = r3Out(k7);
+    AGY(CP); const cp7 = J(agyOutcomes(CHLOE)); AGY(BC);
+    // AC-1 (PD-AC-08): the publication is on the Level 5 programme's own record, so it is stamped with that programme (not ambiguous) and stays out of both agencies' programmes. Was: one record for both programmes, stamped ambiguous, shared with no agency
+    ok('AV-P8 publishing when the Assessor assesses the learner on two programmes goes to that programme\'s own record (stamped Level 5) and is shared with no agency', o7 && o7.published && o7.own && !o7.own.ambiguous && o7.own.batch === 'L5LM-JAN25' && !/two programmes/.test(cp7 + J(agyOutcomes(CHLOE))));
   });
 
   await T('AV-P9 single-programme outcomes still work', async () => {

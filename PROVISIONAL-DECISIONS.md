@@ -1072,6 +1072,91 @@ ft-fi2 FI2-R now extracts these from the records and checks them in pence (gross
 - **Seed data:** L-10.
 - **Prototype limits:** enforcement and calculations run in the browser; exports are simulated; there is no scheduler — overdue and holds are evaluated when screens are drawn.
 
+## Batch AC-1: academic integrity and authorization (31 Oct 2026)
+
+Built 31 Oct 2026 on FI-2 (24ae924). The fixes are in `js/ac-integrity.js`, which loads last, after `js/fi-ledger.js`. In-place key changes were made in `js/staff.js`, `js/coord.js`, `js/setup-r3.js` and `js/av-agency.js`. Tests: `ft-ac1.js`. It runs on the client fixture, then the legacy fixture, then reloads the client demo. Each defect is first reproduced with the handler kept from before AC-1 (`_rnAC`, `_adAC`, `_cbAC`, `_blAC`, `_kaAC`, `_uobAC`, `_obAC`, `_mvAC`, `AC_OLD`), on records that the next fixture load discards.
+
+Scope: the Critical defects of the Academic Admin audit only (B3-01, B3-03 / B4-D1 / B4-D2 / B4-D4, B3-04, B2-D1, B2-D2, B2-D3, B2-D5, B2-D6, B1-D3, B4-D7, B4-D12), plus B2-D4 (High), which the AC-3 change covers. The remaining High, Medium and Low items are listed below. They are **not** fixed. The pending Admissions Team access gate is unchanged.
+
+**Root causes.**
+- **Callers were trusted.**
+  - The shared decision path (`applyDecision`, `ACT.qDo`) checked only self-approval.
+  - FI-1's gates covered finance item types only.
+  - The academic handlers had no actor check.
+- **Decided items could be decided again.** The base `applyDecision` applied effects without checking that the item was still open. Request-backed items are rebuilt from their request on every read.
+- **Staff scope only grew.** Teacher and Assessor scope came from a static list that allocation changes added to and never trimmed.
+- **Assessment keys ignored the programme.** Assessment records were keyed `learner~assignment`, so two programmes sharing an assignment ID shared one record.
+
+| ID | Decision | Where |
+|---|---|---|
+| PD-AC-01 | **One decision gate for every non-finance queue item.** It checks three things: the decider's role for the item's type and stage, the admin portal, and that the item is still open. The item's current state is re-read by ID, so a stale copy can't decide it again. Deciders by item type: <ul><li>Academic items (`ACA_TYPES`): an Academic Admin.</li><li>Admission and document items: `admCanDecide()`.</li><li>Data Correction: first review by a System Administrator; final approval by the Super Administrator only.</li><li>Learner profile change and Bundle price below minimum: a System Administrator.</li><li>Link existing learner: a Business Admin.</li><li>Discontinue for non-payment: Finance or a System Administrator.</li><li>Office location, bank details and Super Admin own action: the Super Administrator.</li><li>An escalated item: the Super Administrator.</li></ul>The Super Administrator decides any open item (rules 1–2 of "Who approves what"). Finance types, programme payment terms and discount rate changes keep their own gates (FI-1, E1, S4c). Every refusal is logged (`w0Deny`). | `applyDecision`, `ACT.qDo` wrappers |
+| PD-AC-02 | **An Academy-office observation request** is decided by one of these: the learner's batch Coordinator in the Coordinator portal, an Academic Admin, or the Super Administrator. Once the request is escalated, it is the Super Administrator's. | `acDeciderWhy` |
+| PD-AC-03 | **Decide once; override is separate.** A decided item can't be decided again from any portal, the Super Administrator included. The Super Administrator's existing Override is the one path that changes a decided item. It runs the item's existing effects once. How an override reverses an effect is unchanged (B4-D6 stays open). A decision dialog asks for an item that isn't in the caller's own queue is refused (it used to throw). | `ACT.qOverride`, `ACT.qDo` |
+| PD-AC-04 | **Release of marking.** Allowed only for an Academic Coordinator of the learner's batch in the Coordinator portal (`myRel()`, G6.3 unchanged), or the Super Administrator's own release with a reason. Release stays batch-wide: any Coordinator of the batch may release, not only the learner's designated Coordinator (see PD-MC-06; client question below). | `releaseNow`, `ACT.relSuper` |
+| PD-AC-05 | **Batch cancellation and lifecycle.** Only batch administrators (the Super Administrator, Academic Admins, System Administrators). Cancellation is refused once the batch has started (start date passed, or not Planned / Open). The guard runs again when the dialog is confirmed. Lifecycle changes go to the next step only: Planned → Open → In Progress → Completed → Archived. Every learner with an account in the cancelled batch is handled: a learner moved to another batch is moved like Assign / change batch (PD-AC-10); a learner with a refund choice is notified and the cancellation recorded in their admission history. Seeded learner B keeps its own handling. | `ACT.cancelBatch`, `ACT.batchLife` |
+| PD-AC-06 | **Staff Allocations.** Batch administrators only. An Assessor is not allocated to a batch here; that goes through the batch's Assessors panel (CH-17), where the P-33 Coordinator rule applies. | `ACT.kAlloc` |
+| PD-AC-07 | **Upload on a learner's behalf.** Only the admissions staff in `admCanDecide()`. An upload over an **Approved** document becomes a replacement in review (`d.replacement`); the approved document stays valid and the admission is unchanged. A second upload while a replacement is in review is refused. An upload over a document that isn't approved works as before. | `ACT.uploadOnBehalf` |
+| PD-AC-08 | **Programme-scoped assessment identity.** A learner on one programme keeps `learner~assignment`. A learner on more than one programme gets `learner~assignment~programmeId` for every programme except the one that provably owns the records already kept under `learner~assignment`. The owner is decided once and remembered (`STORE.acOwner`): the programme named by a published outcome's stamp (PD-AV-05), else the only programme with a submission for that assignment. When the owner can't be proved, the old records are kept and shown to **neither** programme (fail closed). The learner's own portal is unaffected: one learner account holds one NVQ. | `acKey`, `acPlainOwner`, `acOutBefore`; staff.js, coord.js, setup-r3.js, av-agency.js |
+| PD-AC-13 | **A learner with an account has one NVQ** (a second sign-up is refused; Add learner refuses a second active batch). Their own records — answers, References, browser drafts (keyed by learner, programme@version and assignment release), evidence, rounds — belong to that programme. The plain `learner~assignment` key always belongs to the account's own NVQ, the key the learner portal reads. If such a learner appears in another programme's cohort (seeded or test data only), that programme's Teacher / Assessor and Coordinator lists show none of their records (fail closed), as the agency view already did. | `acPlainOwner`, `tasSubs` / `mySubmissions` wrappers |
+| PD-AC-09 | **Staff access from current allocations.** A Teacher or Assessor sees a batch only while they meet one of these: <ul><li>they teach it;</li><li>they hold its assignment, PD or observation assessor role;</li><li>they hold a learner override in it.</li></ul>A per-learner override shows that learner only. This narrows the static `TAS_USERS` lists, never widens them. | `tasBatches`, `tasLearners` wrappers |
+| PD-AC-10 | **Assign / change batch** moves three things for a learner with an account: their cohort place, their Coordinator allocation (with an `mcH` "moved" row), and their staff access. Coordinators, assessors and the learner's people are re-synced on both batches. Coordinator notices keep the PD-MC-10 / MC-15 rule; no extra notices are sent. | `chDoMove` wrapper |
+| PD-AC-11 | **Observation confirm / cancel (admin).** Only an Academic Admin or the Super Administrator. Confirm applies only to a proposed observation; a workplace observation also needs the workplace's permission to be Granted. Cancel applies only to a proposed or confirmed observation; a completed, signed-off observation is never changed. | `ACT.obsAdmin` |
+| PD-AC-12 | **Certificate revoke and re-try:** Super Administrator only (the Certificates register is the Super Administrator's). | `ACT.revokeCert`, `ACT.certRetry` |
+
+**Restated test (one).** `ft-av.js` AV-P, Chloe on two programmes, now uses programme-scoped keys (`KP`). AV-P8 used to expect one shared record, stamped ambiguous and shared with no agency. It now expects the Level 5 publication on Level 5's own record, stamped with that programme and still shared with no agency. The "Was:" comments are in the test. No other expectation changed: the ft-setup discount items and the ft-mc MC-15 notices were met by changing the code, not the tests.
+
+**Final verification (1 Nov 2026).** A two-programme learner (test-only Chloe) was checked with the Level 3 and Level 2 records side by side. The two programmes' records are kept separately for:
+- submission rounds and statuses;
+- Coordinator criterion feedback;
+- Assessor judgements and marking drafts;
+- send-for-release and release (only that programme's Coordinator can release);
+- published Pass / Fail;
+- each Coordinator's lists;
+- each agency's published outcomes.
+
+Pre-existing records: an outcome stamped with one programme stays with that programme, and an ambiguous one is kept but shown to neither. No data was migrated by guessing.
+
+Other checks:
+- The single-programme demo learners keep their keys.
+- An approval dialog replayed after its decision is refused.
+- A removed Assessor can't mark, declare or send marking.
+
+**AC-2 handoff: not fixed in AC-1 (from the audit).**
+- **High.**
+  - B1-D1: admission approved with mandatory documents not approved.
+  - B1-D2: no state check on admission and document decisions; arbitrary status.
+  - B1-D8: the demo hooks `approveAllDocs` / `approveAdmission`.
+  - B2-D10 / B3-02: audit actor misattribution outside the new guards.
+  - B4-D6: override reversals.
+- **Medium.**
+  - B1-D4: self-registered learners listed twice.
+  - B1-D5: 7-day admission escalation.
+  - B1-D6: approval without a new file.
+  - B1-D7: the activation link works from any session.
+  - B1-D9: the admission queue path has no capability check. Queue decisions are now covered by PD-AC-01; the direct `docDec` / `appApprove` handlers are not.
+  - B2-D7, B2-D8, B2-D9.
+  - B4-D5: a recommender can reject or decline their own recommendation.
+  - B4-D8: the admin Observations list is empty in the client demo.
+  - B4-D9, B4-D10.
+  - B3-05: the Super Administrator's final approval without the first review is kept, as before.
+  - B4-D7 (remainder): the admin Confirm still doesn't need the learner's acceptance (client question). The role, state and workplace-permission checks are fixed.
+- **Low.**
+  - B1-D10: decision date hard-coded.
+  - B1-D11: initial uploads labelled "Document replacement".
+  - B1-D12 / B4: invalid IDs crash `docDec` / `appApprove` / `appReject`.
+  - B3-06: other roles can open the Raise Data Correction dialog.
+  - B4-D11: duplicate extra-attempt requests.
+  - B4-D13: `obsAccept` on a cancelled observation.
+  - B4-D14: the observation fee keeps the first date after a reschedule.
+- **Not in scope.** The Admissions Team access gate is on hold. It was not implemented or assumed.
+
+**Client questions.**
+- Should release of marking stay batch-wide (any Coordinator of the batch, as now), or be limited to the learner's designated Coordinator?
+- May the Super Administrator give a Data Correction's final approval without the System Administrator's first review (B3-05)?
+- When an override reverses a decision, what should be undone, item type by item type (B4-D6)?
+- When a cancelled batch's learner is moved or refunded, which Coordinators should be told?
+- When a two-programme learner's earlier records can't be tied to a programme, who should be able to see them (now: nobody; the records are kept)?
+
 ## Pending client clarification: confirmed as not decided in the prototype
 
 | Topic | What the prototype does now | Register entry |
