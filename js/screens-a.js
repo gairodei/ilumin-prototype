@@ -23,7 +23,7 @@ function checkout({ title, amount, partial = false, min = 0, onSuccess, cur }) {
       setTimeout(() => {
         if (fail) openModal({ title: 'Payment failed', body: `<div class="note b-red">${ic('alert')}<div><strong>Your bank declined this payment.</strong> No money has been taken. Check your card details or try another card.</div></div><p class="small muted">Reference TXN-${90100 + Math.floor(Math.random() * 800)} · ${fdt(now().toISOString())}</p>`, actions: [{ label: 'Close', cls: 'btn' }, { label: 'Retry payment', cls: 'btn-primary', fn: () => { checkout({ title, amount, partial, min, onSuccess, cur }); return false; } }] });
         else {
-          const ref = 'TXN-' + (90200 + Math.floor(Math.random() * 700));
+          const ref = fiUniqRef('TXN-', 90200, 700); // FI-1: never a reference already in the ledger
           W.tx.unshift({ at: now().toISOString(), ref, method: 'Visa •••• 4417', amount: paid, status: 'Succeeded', desc: title, cur });
           onSuccess && onSuccess(paid, ref);
           openModal({ title: 'Payment successful', body: `<div class="note b-green">${ic('check')}<div><strong>${money(paid, cur)} paid.</strong> Thank you — your receipt has been emailed to ${esc(W.me.email)}.</div></div><dl class="kv"><dt>Reference</dt><dd class="mono">${ref}</dd><dt>Paid at</dt><dd>${fdt(now().toISOString())}</dd><dt>For</dt><dd>${esc(title)}</dd></dl>`, actions: [{ label: 'Download receipt', cls: 'btn', fn: () => { toast('Receipt downloaded (simulated).'); return false; } }, { label: 'Done', cls: 'btn-primary' }] });
