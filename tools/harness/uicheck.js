@@ -504,6 +504,23 @@
     s1Enrol(CATALOGUE.find(x => x.course === fpC.id), fpC, null); const fpE = STORE.worlds[S.variant].enrolments.find(x => x.courseId === fpC.id); go('course', { id: fpE.id, tab: 'certificate' });
     ok('FP learner Certificate tab of a No course: "No certificate for this course"; no page overflow', shown($1('main .fc-none')) && appOver() <= 1, appOver());
     initStore();
+    // CF (client feedback): assignment page, next step, quiz locks, resources and Progress overview — displayed and no page overflow
+    const cfL = v => { S.variant = v; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; };
+    cfL('C'); go('assignment', { id: 'a2' }); ok('CF resubmission page: status card, brief, References-free seeded layout, Evidence and submission with Save draft; no page overflow', shown($1('main .cf-asg-top')) && shown($1('main .cf-brief')) && shown($1('main .cf-submit [data-act="cfSaveDraft"]')) && appOver() <= 1, appOver());
+    go('dashboard'); const cfLeg = () => all('main .five-legend').filter(shown); ok('CF NVQ dashboard: exactly one competency legend, with the counts, inside the course card; no page overflow', cfLeg().length === 1 && !all('main .legend-line').length && !!cfLeg()[0].closest('.enrol-card') && /Not Started · \d+/.test(cfLeg()[0].textContent) && appOver() <= 1, appOver());
+    go('progress'); ok('CF Progress Overview: progress, what to do next, academic work, units; no page overflow', ['.cf-psum', '.cf-pnext', '.cf-pwork', '.cf-units'].every(s => shown($1('main ' + s))) && appOver() <= 1, appOver());
+    go('progress', { tab: 'feedback' }); ok('CF Assessment feedback: the first assignment is open; no page overflow (criterion table scrolls in its frame)', shown($1('main details.cf-fba[open] .cf-fbq')) && appOver() <= 1, appOver());
+    go('resources'); ok('CF Resources: "Not available yet" shown under the course; no page overflow', shown($1('main .cf-later')) && appOver() <= 1, appOver());
+    cfL('A'); go('course', { id: 'mh26', tab: 'quiz' }); ok('CF short course Quiz tab: the module lock lists what is left; no page overflow', all('main .cf-qlock').some(shown) && appOver() <= 1, appOver());
+    go('dashboard'); ok('CF dashboard: Continue learning shown on the course cards; no page overflow', all('main [data-act="cfLearn"]').some(shown) && appOver() <= 1, appOver());
+    fxLoadClient(); ACT.drAs({ dataset: { p: 'nvq-sp' } }); go('assignment', { id: 'a10' });
+    const cfSub = all('main .cf-sub-act .btn').filter(shown);
+    ok('CF client demo assignment: one References box after the question, then Save draft and Review & Submit, fully on screen; no page overflow', all('main .cb-refs').length === 1 && cfSub.length === 2 && cfSub.every(b => b.getBoundingClientRect().right <= window.innerWidth + 1) && appOver() <= 1, appOver());
+    go('course', { id: 'nvq' }); ok('CF programme page: "Your next step" with Start learning; no page overflow', shown($1('main .cf-nextcard [data-act="cfLearn"]')) && appOver() <= 1, appOver());
+    go('resources'); ok('CF Resources (demo): the available handout and the "Not available yet" slides; no page overflow', all('main .card.pad0 [data-act="openRes"]').some(shown) && shown($1('main .cf-later')) && appOver() <= 1, appOver());
+    go('dashboard'); ok('CF client demo NVQ dashboard: exactly one competency legend', all('main .five-legend').filter(shown).length === 1 && !all('main .legend-line').length);
+    go('dashboard'); ok('CF dashboard status: "Nothing overdue" (no prediction); no page overflow', shown($1('main .hello .cs-status')) && /Nothing overdue/.test($1('main .hello .cs-status').textContent) && appOver() <= 1, appOver());
+    fxLoadLegacy();
     // 7. Demo controls: the scenarios button at once
     S.demoOpen = false; render(); click($1('.demo-fab')); ok('Demo controls: "Open the 30 Demo Scenarios" shown at once', shown($1('#demo-root [data-act="scOpen"]')));
     ok('no script errors', !errs.length, errs.join(' | '));

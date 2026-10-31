@@ -45,7 +45,8 @@
     ok('C2 sorted Valid → Expiring soon → Expired → Revoked (Processing last)', order.length === W.certs.length && order.every((s, i) => i === 0 || want.indexOf(order[i - 1]) <= want.indexOf(s)) && order[order.length - 1] === 'Processing', order.join(', '));
     const c1 = W.certs.find(c => c.id === 'c1'), cards = app().querySelectorAll('.cs-exp');
     ok('C2 yellow reminder card for the expiring certificate', cards.length === 1 && cards[0].classList.contains('b-amber') && cards[0].textContent.includes(`Moving and Handling People certificate expires in ${daysTo(c1.expires)} days`), cards[0] && cards[0].textContent);
-    ok('C2 Renew goes to course re-purchase', !!(cards[0] && cards[0].querySelector('[data-act="renewCert"][data-id="c1"]')));
+    // CF (PD-CF-05): the Moving and Handling 2026 enrolment is active, so the card continues it instead of a second purchase. Was: [data-act="renewCert"][data-id="c1"]
+    ok('C2 expiring certificate of a course already active: "Continue your enrolment"', !!(cards[0] && cards[0].querySelector('.cf-renew-cont[data-id="mh26"]')) && !cards[0].querySelector('[data-act="renewCert"]'));
     ok('C2 status filter kept as an option', !!app().querySelector('select#cs-certf'));
     INP.csCertF({ value: 'Expired' }); ok('C2 filter shows only that status', [...app().querySelectorAll('.grid > article')].every(a => /Expired/.test(a.textContent)) && app().querySelectorAll('.grid > article').length === W.certs.filter(c => c.status === 'Expired').length);
     INP.csCertF({ value: '' });
@@ -140,9 +141,11 @@
     W.nvq.projected = D(W.nvq.end ? daysTo(W.nvq.end) + 20 : 200); go('dashboard');
     ok('C7 "Behind schedule for your end date" → Progress, once (temporary data)', count(/^Behind schedule for your end date$/) === 1 && item('Behind schedule for your end date').b.dataset.go === 'progress');
     go('progress'); ok('C7 Progress agrees: behind schedule', /behind schedule/.test(main())); delete W.nvq.projected;
-    go('progress'); ok('C7 Progress unchanged by default: on track', /— on track/.test(main()));
+    // CF (PD-CF-08): "Projected completion ... on track" was today + 84 days for everyone (no record holds a projection), so Progress no longer shows it. Was: ok('C7 Progress unchanged by default: on track', /— on track/.test(main()))
+    go('progress'); ok('C7 Progress shows no invented projection (none is recorded)', !/Projected completion/.test(main()) && !W.nvq.projected);
     W.assignments.forEach(a => { a._k = [a.closed, a.due]; a.closed = false; a.due = D(30); }); const po = W.payOverdue, plans = W.plans; W.payOverdue = null; W.plans = []; const cs = W.certs; W.certs = W.certs.filter(c => c.status !== 'Expiring soon');
-    go('dashboard'); ok('C7 no reason → "On track" (green)', !!badge() && badge().textContent.trim().endsWith('On track') && badge().classList.contains('t-green') && count(/assignments? overdue$|^Behind schedule|^Certificate expires/) === 0);
+    // CF final (PD-CF-10): with no reason the badge is neutral — "On track" predicted progress from today + 84 days, not from the records. Was: endsWith('On track') && t-green
+    go('dashboard'); ok('C7 no reason → "Nothing overdue" (neutral, no prediction)', !!badge() && badge().textContent.trim().endsWith('Nothing overdue') && badge().classList.contains('t-grey') && !/On track/.test(main()) && count(/assignments? overdue$|^Behind schedule|^Certificate expires/) === 0);
     const a2 = W.assignments.find(a => a.id === 'a2'), keep = a2.resubDue; a2.resubDue = D(2); go('dashboard');
     ok('C7 resubmission due in 3 days or fewer → "Needs attention" (temporary data)', badge().textContent.trim().endsWith('Needs attention') && count(/^Resubmission required: Assignment 2/) === 1); a2.resubDue = keep;
     W.assignments.forEach(a => { [a.closed, a.due] = a._k; delete a._k; }); W.payOverdue = po; W.plans = plans; W.certs = cs;
@@ -190,14 +193,18 @@
     ok('C11 Account: Active', !!card('account') && /Active/.test(card('account').textContent));
     const q = sh.filter(e => e.status === 'Active').flatMap(e => e.modules.filter(m => !m.quiz.attempts.some(a => a.result === 'Pass') && m.quiz.max > m.quiz.attempts.length).map(m => e)), ip = sh.filter(e => e.status === 'Active');
     ok('C11 Tasks: module quizzes to complete + courses in progress (CH-26)', card('tasks').textContent.includes(`${q.length} module quizzes to complete`) && card('tasks').textContent.includes(`${ip.length} courses in progress`), card('tasks').textContent);
-    const first = card('tasks').querySelector('[data-go="course"]'); ok('C11 Tasks links to the first task', !!first && first.dataset.id === q[0].id && first.dataset.tab === 'quiz');
+    // CF (PD-CF-04, PD-CF-06): the Tasks card offers the next step (a module's content before its quiz), not "Go to quiz". Was: [data-go="course"] with data-tab quiz
+    const first = card('tasks').querySelector('[data-act="cfLearn"]'); ok('C11 Tasks: Continue learning on the first course with a next step', !!first && first.dataset.id === sh.find(e => cfNext(e)).id && /Continue learning/.test(first.textContent) && !/Go to quiz/.test(card('tasks').textContent));
     const nums = [...card('courses').querySelectorAll('.cs-n')].map(n => +n.textContent);
     ok('C11 Courses: in progress, completed, expired', nums.join() === [ip.length, sh.filter(e => e.status === 'Completed').length, sh.filter(e => e.status === 'Expired-Incomplete').length].join() && !!card('courses').querySelector('[data-go="courses"]'), nums.join());
     S.edge = 'unverified'; ok('C11 Account: Pending verification', /Pending verification/.test(SCREENS.dashboard({}))); S.edge = 'none';
     const c1 = W.certs.find(c => c.id === 'c1'), ex = app().querySelector('.cs-exp');
     ok('C12 "[Course] — expires in N days" card', !!ex && ex.textContent.includes(`Moving and Handling People — expires in ${daysTo(c1.expires)} days`), ex && ex.textContent);
-    ok('C12 Renew → re-purchase', !!(ex && ex.querySelector('[data-act="renewCert"]')));
-    ex.querySelector('[data-act="renewCert"]').click(); ok('C12 Renew opens checkout', !!MODAL || S.route === 'checkout', S.route); closeModal();
+    // CF (PD-CF-05): Daniel's Moving and Handling 2026 enrolment is active, so renewing would be a second active enrolment: the card continues it, and Renew itself is refused. Was: Renew → re-purchase; Renew opens checkout
+    ok('C12 expiring certificate with the course already active: "Continue your enrolment"', !!(ex && ex.querySelector('.cf-renew-cont[data-id="mh26"]')) && !ex.querySelector('[data-act="renewCert"]'));
+    ok('C12 (negative) a direct Renew is refused (no checkout)', ACT.renewCert({ dataset: { id: 'c1' } }) === false && !MODAL); closeModal();
+    W.enrolments.find(e => e.id === 'mh26').status = 'Completed'; go('dashboard'); const ex2 = app().querySelector('.cs-exp');
+    ok('C12 with no active enrolment on that course, Renew opens checkout (renewal kept)', !!(ex2 && ex2.querySelector('[data-act="renewCert"]')) && (ex2.querySelector('[data-act="renewCert"]').click(), !!MODAL)); closeModal(); W.enrolments.find(e => e.id === 'mh26').status = 'Active';
     learner('A'); go('dashboard'); c1.status = 'Valid'; go('dashboard'); ok('C12 hidden when nothing is expiring (same data as C2)', !app().querySelector('.cs-exp')); c1.status = 'Expiring soon';
     learner('C'); go('dashboard'); ok('C11 not on NVQ dashboards', !app().querySelector('.cs-cards'));
   });

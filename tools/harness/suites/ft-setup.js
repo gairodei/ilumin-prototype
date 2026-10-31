@@ -171,7 +171,9 @@
   await T('S1 existing demo behaves as before', async () => {
     fresh(); learner('A'); const e0 = W.enrolments.find(x => x.id === 'mh26');
     ACT.startQuiz({ dataset: { id: 'mh26' } }); prim(); render(); ok('S1 seeded enrolment quiz: today\'s 10 questions', /Question 1 of 10/.test(main()) && main().includes(QUIZ_BANK[0][0]));
-    closeModal(); W.quiz = null; go('browse'); await buy('k5'); const e = W.enrolments.find(x => x.id === 'bk5');
+    // CF (PD-CF-05): Daniel already has an active Moving and Handling enrolment (mh26), so a second purchase is refused; another learner buys it. Was: Daniel bought k5
+    closeModal(); W.quiz = null; ok('S1 (negative) Daniel can\'t buy Moving and Handling again while mh26 is active', ACT.buyCourse({ dataset: { id: 'k5' } }) === false && !MODAL);
+    learner(['D', 'E', 'F', 'H', 'B'].find(v => STORE.worlds[v] && !STORE.worlds[v].enrolments.some(x => x.base === 'Moving and Handling People' && ['Active', 'Payment Pending'].includes(x.status)))); go('browse'); await buy('k5'); const e = W.enrolments.find(x => x.id === 'bk5');
     ok('S1 buying Moving and Handling: same content, modules, quiz settings and requirements as before', !!e && e.content.map(x => x.title).join('|') === shortContent('mh').map(x => x.title).join('|') && e.modules.map(m => m.id + ':' + m.items.join()).join('|') === shModules({ topic: 'mh' }).map(m => m.id + ':' + m.items.join()).join('|') && e.modules.every(m => m.quiz.q === 10 && m.quiz.pass === 80 && m.quiz.max === 3 && m.quiz.limit === 20) && e.reqs.map(r => r[0]).join('|') === 'Open all documents|Watch all videos to at least 90%|Pass every module quiz with 80% or more' && e.end === D(90), e && e.reqs.map(r => r[0]).join('|'));
     ok('S1 bought quiz: today\'s bank questions', e.modules[0].quiz.qs.length === 10 && e.modules[0].quiz.qs[0][0] === QUIZ_BANK[0][0]);
   });
@@ -464,7 +466,7 @@
     const cr = allCrit(), wr = cr.find(c => c.typeName === 'Written reflection');
     ok('A: learner criteria inherit the Learning Outcome type (name kept, rule applied)', !!wr && wr.type === 'Knowledge' && !cr.some(c => s3Other(c.typeName || c.type)));
     ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal();
-    go('progress'); ok('A: learner Progress shows the configured name', /Written reflection/.test(main()) && /Observation \/ Competency/.test(main()));
+    go('progress', { tab: 'tree' }); /* CF (PD-CF-08): the tree is the Criteria & evidence tab. Was: go('progress') */ ok('A: learner Progress shows the configured name', /Written reflection/.test(main()) && /Observation \/ Competency/.test(main()));
     setUi('trType', 'Knowledge'); render(); ok('A: learner "Knowledge" filter includes the written custom type, not the Observation one', /Written reflection/.test(main()) && !/Discuss a recent decision/.test(main())); setUi('trType', '');
   });
 

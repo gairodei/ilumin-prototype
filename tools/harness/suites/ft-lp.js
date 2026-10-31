@@ -171,7 +171,9 @@
     pick('nvq-fa'); click($1('#app [data-go="help"]') || $1('#app nav [data-go="help"]')); $1('#ct-topic').value = 'Payments'; $1('#ct-msg').value = 'LP help question'; $1('main form[data-submit="contact"]').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     const th = W.threads.find(t => t.subject === 'Help: Payments');
     ok('LP-I Help → Contact the Academy is delivered: a conversation with an Academic Admin, in the learner\'s Messages and the admin inbox', !!th && /^Academic Admin — /.test(th.with[0]) && ADMIN.threads.some(t => t.lthread === th.id && /Dev Patel/.test(t.party)));
-    go('browse'); click($a('main [data-act="applyNvq"]')[0]);
+    // CF (PD-CF-05): Browse shows "Continue learning" for the learner's own programme instead of Apply; the Apply handler itself is still checked directly. Was: click($a('main [data-act="applyNvq"]')[0])
+    go('browse'); ok('LP-I Browse: his own programme offers Continue learning, not Apply', !!$1('main .cf-cont[data-go="course"]') && !$a('main [data-act="applyNvq"]').length);
+    ACT.applyNvq({ dataset: { id: CATALOGUE.find(c => c.kind === 'nvq' && c.title === W.nvq.title).id } });
     ok('LP-I Browse → Apply when already enrolled: back to Admission & Documents, no second sign-up', S.route === 'admission' && W.signup && W.signup.batch === CD_B && !MODAL);
     go('requests'); click($a('main [data-go="profile"]')[0]); ok('LP-I My Requests → Profile change opens the profile', S.route === 'profile');
   });
@@ -246,7 +248,8 @@
   await T('LP-L Reset restores the minimal demo', async () => {
     ACT.resetDemo(); signOutUI(); const b = cdBatch(), dev = STORE.worlds.CD2;
     ok('LP-L one published programme, one batch, two admitted NVQ learners, one short-course learner', ADMIN.programmes.filter(p => p.status === 'Active').length === 1 && ADMIN.batches.length === 1 && mcLids(b).length === 2 && CD_KEYS.every(k => STORE.worlds[k]) && STORE.worlds.CD3.enrolments.filter(e => e.kind === 'short').length === 1);
-    ok('LP-L no temporary records: no resources for the programme, four sessions, no submissions, judgements, outcomes or messages', !S4B().res.some(r => r.pid === cdPr().id) && s4bAllSess().length === 4 && dev.assignments.every(a => a.status === 'Not Started') && !r3Judg(dev.me.id + '~a10').length && !r3Out(dev.me.id + '~a10') && CD_KEYS.every(k => !STORE.worlds[k].threads.length) && !ADMIN.learners.some(l => /Nina Fresh/.test(l.name)));
+    // CF final (PD-CF-11): the client demo now has two synthetic resources on its programme (added by the demo build); Reset restores exactly those. Was: !S4B().res.some(r => r.pid === cdPr().id)
+    ok('LP-L no temporary records: only the two demo resources for the programme, four sessions, no submissions, judgements, outcomes or messages', J(S4B().res.filter(r => r.pid === cdPr().id).map(r => r.title).sort()) === J(['Sample handout: person-centred care (client demo)', 'Sample slides: agreeing a care plan (client demo)']) && !S4B().res.some(r => /LP handout/.test(r.title)) && s4bAllSess().length === 4 && dev.assignments.every(a => a.status === 'Not Started') && !r3Judg(dev.me.id + '~a10').length && !r3Out(dev.me.id + '~a10') && CD_KEYS.every(k => !STORE.worlds[k].threads.length) && !ADMIN.learners.some(l => /Nina Fresh/.test(l.name)));
     ok('LP-L allocations: Amira → Dr Helen Carter, Dev → Michael Osei; Teacher Marcus Bell; Assessor James Pryce', mcOf(STORE.worlds.CD1.me.id, b) === 'Dr Helen Carter' && mcOf(dev.me.id, b) === 'Michael Osei' && J(b.teachers) === J(['Marcus Bell']) && chAllocOf(b).asg === 'James Pryce');
   });
 

@@ -1530,3 +1530,34 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 .dr-panel .dr-ctl .btn { justify-self: start; }
 .dr-panel .dr-ctl p { margin: 0; }
 .dr-panel .dr-devl { border-top: 1px solid var(--line); padding-top: 8px; }
+/* CF — client feedback: assignment page, next step, quiz locks, resources, progress overview */
+.cf-asg-top { display: grid; gap: 10px; }
+.cf-st-row { display: flex; flex-wrap: wrap; gap: 12px 32px; align-items: flex-start; }
+.cf-st { display: grid; gap: 4px; min-width: 0; }
+.cf-st p { margin: 0; }
+.cf-due .strong { font-size: 1.05rem; }
+.cf-more summary, .cf-crit summary { cursor: pointer; padding: 4px 0; }
+.cf-more[open] summary, .cf-crit[open] summary { margin-bottom: 6px; }
+.cf-brief { max-width: 100%; }
+.cf-submit { display: grid; gap: 10px; }
+.cf-submit h3 { margin: 0; }
+.cf-sub-act { justify-content: flex-end; align-items: center; gap: 10px; }
+.cf-sub-act .cf-saved { margin-right: auto; }
+.cf-cta { display: grid; gap: 6px; justify-items: start; }
+.cf-nextcard .row-b { gap: 12px; flex-wrap: wrap; }
+.cf-qlock { display: inline-flex; align-items: center; gap: 4px; }
+.cf-qlocked .list { margin: 0; }
+.cf-later h3 { display: flex; align-items: center; gap: 6px; margin: 0; }
+.cf-later .cf-from { display: block; }
+.cf-res-sum { margin: -6px 0 0; }
+.cf-psum-h { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: flex-start; }
+.cf-wgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 12px; }
+.cf-wcol h3 { margin: 0; }
+.cf-pobs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 0; }
+.cf-unit .li-b .bar { max-width: 360px; }
+.cf-fba summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.cf-fbr { display: grid; gap: 2px; margin-top: 6px; }
+.cf-fbr p { margin: 0; }
+.cf-gap { color: var(--redor, #B42318); }
+@media (max-width: 600px) { .cf-sub-act { justify-content: stretch; } .cf-sub-act .btn { flex: 1 1 auto; } .cf-sub-act .cf-saved { flex-basis: 100%; } }
+.cf-wcol .linklike { text-align: left; }

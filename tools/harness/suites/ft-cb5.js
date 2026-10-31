@@ -79,7 +79,8 @@
     fresh(); SA(); const d = author('NV-L3', 'L3 CB5 Learner form', { n: 1, types: ['PDF'], publish: true });
     learner('C'); go('assignment', { id: d.id }); const a = W.assignments.find(x => x.id === d.id);
     ok('CB5-D the question shows its evidence guidance and its own attachment rule', /Evidence to include:/.test(main()) && /Up to 1 file · PDF · 10 MB each/.test(main()));
-    ok('CB5-D no template: "No template — answer in the boxes below"; submission rules shown (never "undefined")', !!q('.cb-notpl') && !/undefined/.test(main()) && /up to 2 resubmissions/.test(main()));
+    // CF (PD-CF-01): with no template the page shows no template heading or note at all. Was: !!q('.cb-notpl')
+    ok('CB5-D no template: no template button or note; submission rules shown (never "undefined")', !q('.cb-notpl') && ![...document.querySelectorAll('main [data-act="fakeDl"]')].some(b => /template/i.test(b.dataset.f || '')) && !/undefined/.test(main()) && /up to 2 resubmissions/.test(main()));
     ok('CB5-D a References box follows the last question (after all questions)', !!q('.cb-refs') && main().lastIndexOf('References') > main().indexOf(a.qs[a.qs.length - 1].text) && !/Assignment template/.test(main()));
     const key = `${d.id}.${a.qs[0].id}.0`, file = (name) => ({ files: [{ name, size: 2048, type: 'application/pdf', arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) }], dataset: { key }, value: '' });
     INP.attach(file('evidence.png')); ok('CB5-D (negative) a PNG is refused for a PDF-only question', !(W.drafts['attid.' + key] || []).length);

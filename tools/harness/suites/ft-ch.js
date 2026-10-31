@@ -476,7 +476,8 @@
     ok('CH-16 earlier attempts moved to Module 1 (bls: Module 1 exhausted)', shModState(W.enrolments.find(e => e.id === 'bls').modules[0]) === 'Attempts exhausted');
     ok('CH-16 completion rule wording', sh.every(e => !e.reqs.some(([r]) => /Pass the quiz|standard quiz/.test(r))) && sh.filter(e => e.reqs.length).every(e => e.reqs.some(([r]) => r === 'Pass every module quiz with 80% or more')));
     go('course', { id: 'mh26', tab: 'content' }); const mods = app().querySelectorAll('main .sh-mod');
-    ok('CH-16 Content tab: modules listed with their progress and their quiz', mods.length === 3 && [...mods].every(m => m.querySelector('[role="progressbar"]') && /What is this module about\?/.test(m.textContent) && m.querySelector('[data-act="shModPick"]')));
+    // CF (PD-CF-06): a module whose required content isn't complete shows when its quiz opens instead of "Go to the quiz". Was: every module had [data-act="shModPick"]
+    ok('CH-16 Content tab: modules listed with their progress and their quiz (open, or when it opens)', mods.length === 3 && [...mods].every(m => m.querySelector('[role="progressbar"]') && /What is this module about\?/.test(m.textContent) && (m.querySelector('[data-act="shModPick"]') || m.querySelector('.cf-qlock'))) && !!mods[0].querySelector('[data-act="shModPick"]') && !!mods[1].querySelector('.cf-qlock'));
     go('course', { id: 'mh26', tab: 'quiz' }); const h2 = [...app().querySelectorAll('main h2')].map(h => h.textContent.trim());
     ok('CH-16 / CH-28 Quiz tab: module quizzes; heading "What is this module about?" with the instructions line', h2.includes('Module quizzes') && h2.includes('What is this module about?') && /Module 1 of 3 · The law and your responsibilities/.test(main()) && /The timer starts when you begin and can't be paused/.test(main()) && ['Questions', 'Time limit', 'Pass mark', 'Attempts used'].every(k => main().includes(k)) && !/Course quiz|final quiz/i.test(main().replace('there is no final course quiz', '')));
     go('dashboard'); const tasks = app().querySelector('.cs-card[data-cs="tasks"]'), n = W.enrolments.filter(e => e.status === 'Active').reduce((a, e) => a + (e.modules || []).filter(m => !shPassed(m) && m.quiz.max > m.quiz.attempts.length).length, 0);
@@ -534,7 +535,7 @@
     ok('CH-18 submitting unchanged: per-criterion answer boxes, no upload template, no references box', !/upload[^.]*template|referenc/i.test([...app().querySelectorAll('main label, main legend, main h2, main h3')].map(l => l.textContent).join(' ')) && app().querySelectorAll('main .q').length === asgById('a2').qs.length);
     ok('CH-15 assignment header shows the module and its code', /U302 · Module 1 — AC M12 Ways of working in adult care \(T\/652\/0001\)/.test(main()));
     go('assignment', { id: 'a6' }); ok('CH-18 no answer key button when the module has none', !app().querySelector('[data-act="chAnsDl"]'));
-    go('progress'); ok('CH-15 progress tree: module codes', /AC M12 Ways of working in adult care \(T\/652\/0001\)/.test(main()) && /Safe working \(R\/652\/0701\)/.test(main()));
+    go('progress', { tab: 'tree' }); /* CF (PD-CF-08): the tree is the Criteria & evidence tab; Overview is the default. Was: go('progress') */ ok('CH-15 progress tree: module codes', /AC M12 Ways of working in adult care \(T\/652\/0001\)/.test(main()) && /Safe working \(R\/652\/0701\)/.test(main()));
     // CB4 correction (PD-CB-33) supersedes CH-15 corrections on the published version that were copied into learners' records: the code
     // is corrected in a draft version only; the published version and Aisha's record keep their code. Answer keys stay on the published version (CH-18).
     role('acaA'); go('a-programmes', { id: 'NV-L3', tab: 'tree' });
