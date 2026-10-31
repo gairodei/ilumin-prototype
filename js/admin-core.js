@@ -43,7 +43,7 @@ function adminRender() {
     <nav class="adm-side ${S.aDrawer ? 'open' : ''}" aria-label="Admin navigation">${(typeof adminNav === 'function' ? adminNav() : ANAV).map(([g, items]) => `<div class="adm-group"><button class="adm-gh" data-act="aGroup" data-g="${g}" aria-expanded="${!(S.ui['ag-' + g])}">${g}<span aria-hidden="true">${S.ui['ag-' + g] ? '+' : '−'}</span></button>${S.ui['ag-' + g] ? '' : `<ul>${items.map(([r, l, i]) => `<li><a href="#${r}" data-go="${r}" ${sec === r ? 'aria-current="page"' : ''}>${ic(i, 16)}<span>${l}</span>${r === 'a-queue' && mine.length ? `<span class="cnt">${mine.length}</span>` : ''}</a></li>`).join('')}</ul>`}</div>`).join('')}
       <div class="adm-group"><a href="#a-index" data-go="a-index" class="small" style="padding:6px 10px;display:block">Admin screen index</a></div></nav>
     ${S.aDrawer ? '<div class="scrim adm-scrim" data-act="aDrawer"></div>' : ''}
-    <main id="main" class="main" tabindex="-1">${adminBanners()}<div class="page adm-page">${adminPage()}</div><footer class="foot"><span>© 2026 Illumin Academy · Admin console</span><span class="spacer"></span><span>Times in ${tzl()} (Europe/London)</span></footer></main>
+    <main id="main" class="main" tabindex="-1">${adminBanners()}<div class="page adm-page">${adminPage()}</div><footer class="foot"><span>© 2026 Illumin Academy · Admin console</span><span class="spacer"></span><span>Times in ${tzl()} (${viewerTZ()})</span></footer></main>
   </div></div>`;
 }
 function adminBanners() {

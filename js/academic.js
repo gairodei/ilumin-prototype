@@ -185,7 +185,7 @@ const recByOf = i => (i.data && i.data.recBy) || null;
 function acaBlocked(i) { const me = ADMIN.me.name; return i.raisedBy === me || recByOf(i) === me || learnerOfI(i) === me; }
 function learnerOfI(i) { return i.v ? VNAME(i.v) : (i.data && i.data.learner) || i.related[0].split(' · ')[0]; }
 function courseOfI(i) { return i.req ? i.req.target : (i.data && i.data.course) || i.related[0].split(' · ').slice(1).join(' · ') || '—'; }
-function batchOfI(i) { if (i.data && i.data.batch) return i.data.batch; const v = i.v || (i.data && i.data.v); if (v && i.type.includes('Discontinue')) { const b = (STORE.worlds[v].nvq.batch || '').split(' — ')[1]; return b || '—'; } return '—'; }
+function batchOfI(i) { if (i.data && i.data.batch) return i.data.batch; const v = i.v || (i.data && i.data.v); if (v && i.type.includes('Discontinue')) { const b = chBatchCodeOfW(STORE.worlds[v]); return b || '—'; } return '—'; }
 function outcomeOfI(i) {
   if (i.outcome) return i.outcome;
   if (i.req) { const s = i.req.status; return s === 'Granted' ? (i.type === 'More time on short course' ? 'Extension' : 'Granted') : s === 'Re-purchase Required' ? 'Re-purchase Required' : s === 'Rejected' ? 'Rejected' : null; }
@@ -392,7 +392,7 @@ ACT.kResolve = el => { const c = STORE.aca.conflicts.find(x => x.id === el.datas
 /* ---------- 6.3 Learners (academic view) ---------- */
 function acaLearnerRow(l) {
   const w = l.v ? STORE.worlds[l.v] : null, crit = w && w.flags.admitted ? withW(l.v, () => allCrit()) : null;
-  const b = w ? (w.flags.admitted && w.nvq ? (w.nvq.batch || '').split(' — ')[1] || '—' : '—') : (ADMIN.batches.find(x => x.roster.some(r => r[1] === l.id)) || ADMIN.batches.find(x => l.courses.some(c => x.course.startsWith(c.split(' (')[0])) && x.status === 'In Progress') || {}).code || '—';
+  const b = w ? (w.flags.admitted && w.nvq ? chBatchCodeOfW(w) || '—' : '—') : (ADMIN.batches.find(x => x.roster.some(r => r[1] === l.id)) || ADMIN.batches.find(x => l.courses.some(c => x.course.startsWith(c.split(' (')[0])) && x.status === 'In Progress') || {}).code || '—';
   const h = hashN(l.id), prog = crit ? pctOf(crit) : l.courses.some(c => c.includes('Diploma')) ? 20 + h % 60 : 30 + h % 70;
   const five = crit ? countStates(crit) : { 'Not Started': 10 - h % 6, 'In Progress': 3 + h % 3, 'Action Required': h % 3, 'Added to PD': h % 2, 'Achieved': 6 + h % 9 };
   const disc = (w && w.enrolments.some(e => e.status === 'Discontinued')) || (w && w.nvq && w.flags.admitted && w.nvq.status === 'Discontinued') || l.flags.includes('Discontinued enrolment');

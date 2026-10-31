@@ -18,7 +18,7 @@ const chCohLids = b => (b.coh || []).map(e => e.lid || (e.v && STORE.worlds[e.v]
 // The learner's current batch: their own world's programme batch, else the live batch whose cohort has them
 const chBatchOfLid = lid => {
   const w = Object.values(STORE.worlds || {}).find(x => x.me && x.me.id === lid && x.nvq);
-  if (w) { const c = (w.nvq.batch || '').split(' — ')[1], b = ADMIN.batches.find(x => x.code === c); if (b) return b; }
+  if (w) { const c = chBatchCodeOfW(w), b = ADMIN.batches.find(x => x.code === c); if (b) return b; }
   return ADMIN.batches.find(b => ['In Progress', 'Open', 'Planned'].includes(b.status) && chCohLids(b).includes(lid)) || ADMIN.batches.find(b => chCohLids(b).includes(lid));
 };
 const chOvOf = (lid, k) => k !== 'asg' && (chOvs()[lid] || {})[k];

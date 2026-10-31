@@ -439,7 +439,8 @@
     // DR (PD-DR-01/03/07) supersedes the CD guided sign-up (the build makes it): the sign-in chooser, Switch demo user and the simulated checkout at this width
     signOut(); ok('DR sign-in page: the demo identities displayed; no page overflow', all('#app .dr-signin .dr-grp:not(.dr-more) [data-act="drAs"]').filter(shown).length === 11 && all('#app .dr-signin [data-act="drAs"]').length === 14 && !$1('#app .demo-hint') && appOver() <= 1, appOver());
     ACT.drAs({ dataset: { p: 'nvq-sp' } }); ACT.drSwitch(); ok('DR Switch demo user: the identity chooser dialog fits', all('#modal-root .dr-grp:not(.dr-more) [data-act="drAs"]').filter(shown).length === 11 && all('#modal-root [data-act="drAs"]').length === 14 && !modalFits(), modalFits()); closeModal();
-    ACT.drAs({ dataset: { p: 'short' } }); go('browse'); click($1('main [data-act="buyCourse"]')); if (MODAL && /About you/.test(MODAL.title)) closeModal();
+    // LP (PD-LP-15): Lena's only short course is active, so her card says "Continue learning"; a demo learner not enrolled on it buys it. Was: ACT.drAs({ dataset: { p: 'short' } })
+    ACT.drAs({ dataset: { p: 'nvq-sp' } }); go('browse'); click($1('main [data-act="buyCourse"]')); if (MODAL && /About you/.test(MODAL.title)) closeModal();
     ok('DR simulated checkout (a demo learner): labelled; the dialog fits', shown($1('#modal-root .cd-sim')) && !modalFits(), modalFits()); closeModal();
     // the 101-learner Coordinator demo is an internal tool (developer mode, PD-DR-07)
     setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; S.drDev = true;

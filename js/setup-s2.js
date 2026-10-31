@@ -151,7 +151,7 @@ INP.mapChange = el => {
 };
 
 /* ---------- S2-05 Publish (its own questions), unpublish, retire ---------- */
-const s2BatchCodeOf = w => (w.signup && w.signup.done && w.signup.batch) || ((w.nvq && w.nvq.batch) || '').split(' — ')[1] || '';
+const s2BatchCodeOf = w => (w.signup && w.signup.done && w.signup.batch) || chBatchCodeOfW(w);
 function s2Targets(d, codes) { return Object.keys(STORE.worlds || {}).filter(v => { const w = STORE.worlds[v]; return w && w.nvq && w.flags && w.flags.admitted && w.nvq.title === d.programme && codes.includes(s2BatchCodeOf(w)); }); }
 function s2CopyTo(v, d) {
   const w = STORE.worlds[v], crit = s2Crit(d), act = d.qs.filter(q => q.status === 'Active'), used = Array.from(new Set(act.flatMap(q => q.crit)));

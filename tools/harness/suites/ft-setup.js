@@ -51,7 +51,9 @@
   const press = () => { const a = MODAL && MODAL.actions.find(x => x.cls && /primary|danger/.test(x.cls)); const r = a && a.fn ? a.fn() : undefined; if (r !== false && MODAL) closeModal(); return r; };
   const fill = o => Object.entries(o).forEach(([k, v]) => { const e = document.querySelector(k); e.value = v; });
   const reason = (r = 'Setup test') => { const t = document.querySelector('#rsn'); if (t) t.value = r; return press(); };
-  const browseIds = () => [...app().querySelectorAll('main [data-act="buyCourse"]')].map(b => b.dataset.id);
+  // LP (PD-LP-15): a course the learner is actively enrolled on shows "Continue learning" (data-cat = its catalogue id) instead of "Buy now"; it is still listed.
+  // Was: [...app().querySelectorAll('main [data-act="buyCourse"]')].map(b => b.dataset.id)
+  const browseIds = () => [...app().querySelectorAll('main [data-act="buyCourse"], main .lp-continue')].map(b => b.dataset.cat || b.dataset.id);
   const buy = async id => { ACT.buyCourse({ dataset: { id } }); prim(); await wait(3000); closeModal(); };
   // Build a complete course through the admin screens: details and price, two modules, content in both, questions
   const buildCourse = async (title, price) => {

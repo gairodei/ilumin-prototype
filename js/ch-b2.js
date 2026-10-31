@@ -15,7 +15,10 @@ const chW = v => STORE.worlds[v];
 let chProgFeeOf = w => NVQ_FEES[w.nvq.title] || 2400, chDepOf = w => CH_DEP, chInstNOf = w => CH_INST_N, chHoldDays = () => CH_HOLD_DAYS;
 const chFee = w => chProgFeeOf(w);
 const chBatch = code => ((typeof ADMIN !== 'undefined' && ADMIN && ADMIN.batches) || []).find(b => b.code === code);
-const chBatchLbl = b => b ? `${b.label} — ${b.code}` : '—';
+// LP (PD-LP-08): a batch whose label is its code is shown once. The learner's batch is identified by its code (the sign-up's batch),
+// not by reading this text; chBatchCodeOfW falls back to the text only for seeded records that have no sign-up.
+const chBatchLbl = b => b ? (b.label && b.label !== b.code ? `${b.label} — ${b.code}` : b.code) : '—';
+const chBatchCodeOfW = w => { if (!w) return ''; if (w.signup && w.signup.batch) return w.signup.batch; const t = (w.nvq && w.nvq.batch) || ''; return t.split(' — ')[1] || ((ADMIN.batches || []).some(b => b.code === t) ? t : ''); };
 const chSponsored = w => !!w.flags.sponsored;
 const chSteps = w => chSponsored(w) ? [['details', 'Personal details'], ['documents', 'Documents'], ['letter', 'Offer letter'], ['start', 'Start']] : [['details', 'Personal details'], ['documents', 'Documents'], ['letter', 'Offer letter'], ['payment', 'Payment'], ['start', 'Start']];
 const chStepKey = w => (chSteps(w)[w.signup.step - 1] || [])[0];

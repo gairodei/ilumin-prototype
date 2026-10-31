@@ -113,7 +113,10 @@
   await T('CD-F the sign-ups and admissions were made through the real steps', async () => {
     fresh(); SA(); ACT.cdLoad(); const b = cdBatch();
     ok('CD-F demo deadlines: 5:00 PM UK time (17:00 GMT in Dec / Jan)', s2Defs().filter(d => cbAsgPid(d) === cdPr().id && d.status === 'Published').every(d => { const x = new Date(crDue(d, CD_B)); return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(x) === '17:00'; }));
-    const sess = s4bAllSess().filter(x => x.batch === CD_B);
+    // LP (PD-LP-10, user decision A4): the schedule template's two classes are now session records too (attendance registers).
+    // Was: 'CD-F two batch sessions added through Add session: …' with sess.length === 2 over every session of the batch.
+    const sess = s4bAllSess().filter(x => x.batch === CD_B && !x.tt), tt = s4bAllSess().filter(x => x.batch === CD_B && x.tt);
+    ok('CD-F the schedule template\'s classes are session records for all learners (Induction, Unit 1 class)', J(tt.map(x => x.title)) === J(['Induction (Zoom)', 'Unit 1 class']) && tt.every(x => !x.aud && x.teacher === CD_TEACHER));
     ok('CD-F two batch sessions added through Add session: a class for both fee options, a check-in for the Self-Paced option only', sess.length === 2 && sess.some(x => /mixed class/.test(x.title) && (x.aud || []).length === 2) && sess.some(x => /Self-Paced check-in/.test(x.title) && J(x.aud) === J([r1Opts(cdPr().id).find(o => o.mode === 'Self-Paced').id])));
     for (const [k, mode, fee] of [['CD1', 'Self-Paced', 1800], ['CD2', 'Fully Assisted', 2600]]) {
       const w = STORE.worlds[k], nm = chFullName(w), lid = w.me.id, pl = w.plans.find(p => p.e === 'nvq');
