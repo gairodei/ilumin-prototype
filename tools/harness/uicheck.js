@@ -506,7 +506,9 @@
     initStore();
     // CF (client feedback): assignment page, next step, quiz locks, resources and Progress overview — displayed and no page overflow
     const cfL = v => { S.variant = v; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; };
-    cfL('C'); go('assignment', { id: 'a2' }); ok('CF resubmission page: status card, brief, References-free seeded layout, Evidence and submission with Save draft; no page overflow', shown($1('main .cf-asg-top')) && shown($1('main .cf-brief')) && shown($1('main .cf-submit [data-act="cfSaveDraft"]')) && appOver() <= 1, appOver());
+    // AR (PD-AR-02): seeded assignments now have the References box while editable. Was: "References-free seeded layout"
+    cfL('C'); go('assignment', { id: 'a2' }); ok('CF resubmission page: status card, brief, Evidence and submission with Save draft; no page overflow', shown($1('main .cf-asg-top')) && shown($1('main .cf-brief')) && shown($1('main .cf-submit [data-act="cfSaveDraft"]')) && appOver() <= 1, appOver());
+    ok('AR seeded resubmission: one References box after the questions, before Evidence and submission', all('main .cb-refs').filter(shown).length === 1 && !!($1('main .cb-refs').compareDocumentPosition($1('main .cf-submit')) & 4));
     go('dashboard'); const cfLeg = () => all('main .five-legend').filter(shown); ok('CF NVQ dashboard: exactly one competency legend, with the counts, inside the course card; no page overflow', cfLeg().length === 1 && !all('main .legend-line').length && !!cfLeg()[0].closest('.enrol-card') && /Not Started · \d+/.test(cfLeg()[0].textContent) && appOver() <= 1, appOver());
     go('progress'); ok('CF Progress Overview: progress, what to do next, academic work, units; no page overflow', ['.cf-psum', '.cf-pnext', '.cf-pwork', '.cf-units'].every(s => shown($1('main ' + s))) && appOver() <= 1, appOver());
     go('progress', { tab: 'feedback' }); ok('CF Assessment feedback: the first assignment is open; no page overflow (criterion table scrolls in its frame)', shown($1('main details.cf-fba[open] .cf-fbq')) && appOver() <= 1, appOver());
@@ -516,6 +518,20 @@
     fxLoadClient(); ACT.drAs({ dataset: { p: 'nvq-sp' } }); go('assignment', { id: 'a10' });
     const cfSub = all('main .cf-sub-act .btn').filter(shown);
     ok('CF client demo assignment: one References box after the question, then Save draft and Review & Submit, fully on screen; no page overflow', all('main .cb-refs').length === 1 && cfSub.length === 2 && cfSub.every(b => b.getBoundingClientRect().right <= window.innerWidth + 1) && appOver() <= 1, appOver());
+    // AR: a restored draft's notes, the Assessor's decision dialog and the learner's published outcome — displayed, no overflow.
+    // (In memory only: the four widths share one browser storage, so nothing is saved there.)
+    { const w = STORE.worlds.CD1, a = w.assignments.find(x => x.id === 'a10'); w.arFrom = { a10: now().toISOString() }; w.arRe = { a10: { [a.qs[0].id]: ['a-long-evidence-file-name-for-the-phone-width-check.pdf'] } }; render();
+      ok('AR restored draft: "Draft restored", "Please reattach your files" and the prototype note with Save draft; no page overflow', shown($1('main .ar-restored')) && shown($1('main .ar-reattach')) && shown($1('main .ar-proto')) && appOver() <= 1, appOver());
+      w.arFrom = {}; w.arRe = {}; w.drafts[`a10.${a.qs[0].id}.0`] = '<p>UI check answer</p>';
+      fxFast(ff => { ACT.reviewSubmit({ dataset: { id: 'a10' } }); const p = MODAL && MODAL.actions.find(x => /primary/.test(x.cls || '')); if (p) p.fn(); ff(16500); }); closeModal();
+      ACT.drAs({ dataset: { p: 'assessor' } }); go('t-mark', { id: 'IA-L-32000~a10' });
+      click($1('main .r3-out [data-act="r3Declare"]'));
+      ok('AR Assessor decision dialog: Save draft and Publish to learner shown; fits the viewport', all('#modal-root .modal-f .btn, #modal-root .modal .btn').some(b => shown(b) && /Save draft/.test(b.textContent)) && all('#modal-root .btn').some(b => shown(b) && /Publish to learner/.test(b.textContent)) && !modalFits(), modalFits());
+      const x = $1('input[name="r3-res"][value="Pass"]'); if (x) x.checked = true; if ($1('#d-ofb')) $1('#d-ofb').value = 'UI check overall feedback'; if ($1('#rsn')) $1('#rsn').value = 'UI check';
+      const pb = MODAL && MODAL.actions.find(y => /primary/.test(y.cls || '')); if (pb) pb.fn(); closeModal();
+      ACT.drAs({ dataset: { p: 'nvq-sp' } }); go('assignment', { id: 'a10' });
+      ok('AR learner: the published Pass in the status card and the Final outcome card; no page overflow', shown($1('main .ar-ost')) && shown($1('main .d-lout')) && appOver() <= 1, appOver()); }
+    fxLoadClient(); ACT.drAs({ dataset: { p: 'nvq-sp' } });
     go('course', { id: 'nvq' }); ok('CF programme page: "Your next step" with Start learning; no page overflow', shown($1('main .cf-nextcard [data-act="cfLearn"]')) && appOver() <= 1, appOver());
     go('resources'); ok('CF Resources (demo): the available handout and the "Not available yet" slides; no page overflow', all('main .card.pad0 [data-act="openRes"]').some(shown) && shown($1('main .cf-later')) && appOver() <= 1, appOver());
     go('dashboard'); ok('CF client demo NVQ dashboard: exactly one competency legend', all('main .five-legend').filter(shown).length === 1 && !all('main .legend-line').length);

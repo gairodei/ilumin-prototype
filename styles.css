@@ -1561,3 +1561,18 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 .cf-gap { color: var(--redor, #B42318); }
 @media (max-width: 600px) { .cf-sub-act { justify-content: stretch; } .cf-sub-act .btn { flex: 1 1 auto; } .cf-sub-act .cf-saved { flex-basis: 100%; } }
 .cf-wcol .linklike { text-align: left; }
+
+/* ---------- Batch AR — assignment outcome, References and saved drafts (31 Oct 2026) ---------- */
+.ar-reattach ul { margin: 6px 0 0; }
+.ar-restored { margin: 0; color: var(--green, #1A6A35); display: flex; gap: 4px; align-items: center; }
+.ar-proto { margin: 0; }
+.cf-saved.ar-fail { color: var(--redor, #B42318); font-weight: 600; }
+.ar-ochip { display: inline-block; margin-left: 6px; }
+.ar-lout { border-left: 3px solid var(--line, #D0D7D8); padding-left: 10px; }
+.ar-lout p { margin: 0 0 4px; }
+.ar-odraft { margin: 4px 0; }
+.save-chip.ar-dirty { background: var(--amber-bg, #FFF4E0); color: var(--amber, #8A5300); }
+.save-chip.ar-saved { background: var(--green-bg); color: var(--green); }
+.save-chip.ar-fail { background: var(--red-bg); color: var(--red); }
+.cf-saved.ar-dirty { color: var(--amber, #8A5300); font-weight: 600; }
+.ar-notyet { margin: 0; font-style: italic; }

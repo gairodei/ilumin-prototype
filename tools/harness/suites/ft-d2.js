@@ -70,8 +70,10 @@
     declareFb(s.key, 'Pass', 'Meets the brief', 'A strong, well-evidenced assignment.');
     const o = r3Out(s.key);
     ok('D2-B Pass declared with overall feedback; history keeps it; status and criteria unchanged (not derived)', o && o.result === 'Pass' && o.feedback === 'A strong, well-evidenced assignment.' && o.hist.slice(-1)[0].includes('A strong, well-evidenced assignment.') && a.status === st0 && JSON.stringify(w.tree.flatMap(u => u.mods.flatMap(m => m.los.flatMap(l => l.crit.map(c => c.code + c.st))))) === crit0);
-    go('t-mark', { id: s.key }); ok('D2-B the workspace shows the overall feedback, "Not yet released to the learner"', /A strong, well-evidenced assignment/.test(app().querySelector('main .r3-out').textContent) && /Not yet released to the learner/.test(main()));
-    learner(s.L.v); go('assignment', { id: a.id }); ok('D2-B before release the learner doesn\'t see the outcome', !app().querySelector('main .d-lout'));
+    // AR (PD-AR-01): a published outcome is shown to the learner at once. Was: 'the workspace shows the overall feedback, "Not yet
+    // released to the learner"' and 'before release the learner doesn't see the outcome' (PD-D-13's release condition, superseded).
+    go('t-mark', { id: s.key }); ok('D2-B the workspace shows the overall feedback, "Published to the learner" (AR)', /A strong, well-evidenced assignment/.test(app().querySelector('main .r3-out').textContent) && /Published to the learner/.test(main()));
+    learner(s.L.v); go('assignment', { id: a.id }); ok('D2-B the learner sees the published outcome at once, before the marking release (AR)', !!app().querySelector('main .d-lout') && /A strong, well-evidenced assignment/.test(app().querySelector('main .d-lout').textContent));
     TCH('A'); sendAll(s, { exit: 'pass', rag: 'G', fb: 'Good.', met: 'Met' }); await relAs('A', s.key);
     learner(s.L.v); go('assignment', { id: a.id }); const lo = app().querySelector('main .d-lout');
     ok('D2-B after the Coordinator\'s release the learner sees Pass, the declaring Assessor and the overall feedback', !!lo && /Pass/.test(lo.textContent) && /Sarah Okonkwo/.test(lo.textContent) && /A strong, well-evidenced assignment/.test(lo.textContent) && /isn't worked out from the individual criteria/.test(lo.textContent));

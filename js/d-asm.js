@@ -6,15 +6,15 @@
      and why, sets the Assessor's marking for that criterion, and reaches the learner with the Assessor's released marking.
    - The final Pass / Fail (allocated Active Assessor only — never the Teacher role, unchanged) now carries overall feedback
      for the learner. It still doesn't derive from criterion judgements and changes no status (PD-R3-07).
-   - The learner sees the final outcome and overall feedback once that round's marking has been released by the existing
-     release step (provisional, reversible: D_OUT_LEARNER). Agencies don't see it.
+   - The learner sees the final outcome and overall feedback as soon as the Assessor publishes it (AR, confirmed 31 Oct 2026 —
+     was: once that round's marking had been released; a saved draft decision stays hidden, ar-assign.js). Agencies don't see it.
    - No late submissions (the stated rule): submitting after the deadline — the extended deadline when an extension was
      granted, or the resubmission deadline — is refused in the action itself, logged. Before, a direct call submitted.
    Submissions, References, attachments and resubmission rounds are unchanged. Loads last.
    ============================================================ */
 'use strict';
 
-const D_OUT_LEARNER = true; // PD-D-13: show the released outcome and overall feedback to the learner (set false to hide)
+const D_OUT_LEARNER = true; // PD-D-13 / PD-AR-01: show the published outcome and overall feedback to the learner (set false to hide)
 
 /* ---------- Override a Coordinator judgement (allocated assignment assessor only) ---------- */
 const dCooJ = (key, crit) => r3Latest(key, crit, 'Academic Coordinator', true);
@@ -56,25 +56,27 @@ r3CritPanel = function (s, a, q) {
 const _declD = ACT.r3Declare;
 ACT.r3Declare = el => {
   const key = el && el.dataset && el.dataset.k, r = _declD(el); if (!MODAL || !/^Final outcome/.test(MODAL.title || '')) return r;
-  MODAL.body = (MODAL.body || '').replace('<p class="xs muted">A declared outcome', '<div class="field"><label for="d-ofb">Overall feedback for the learner (required)</label><textarea class="textarea" id="d-ofb" rows="4"></textarea><span class="hint">Shown to the learner with the outcome once this round\'s marking is released.</span></div><p class="xs muted">A declared outcome'); renderModal();
+  MODAL.body = (MODAL.body || '').replace('<p class="xs muted">A declared outcome', '<div class="field"><label for="d-ofb">Overall feedback for the learner (required)</label><textarea class="textarea" id="d-ofb" rows="4"></textarea><span class="hint">Shown to the learner with the outcome when you publish it.</span></div><p class="xs muted">A declared outcome'); renderModal();
   const act = MODAL.actions.find(x => x.cls && /primary/.test(x.cls)), f = act && act.fn; if (!f) return r;
   act.fn = (...x) => { const fb = (($('#d-ofb') || {}).value || '').trim(); if (!fb) { fieldErr('#d-ofb', 'Write the overall feedback for the learner'); return false; } const before = r3Out(key), res = f(...x), o = r3Out(key); if (res !== false && o && o !== before) { o.feedback = fb; o.hist[o.hist.length - 1].push(fb); } return res; };
   return r;
 };
 const _outCardD = r3OutCard;
 r3OutCard = function (s) {
-  const h = _outCardD.apply(this, arguments), o = r3Out(s.key); if (!o || !o.feedback) return h.replace('the learner doesn\'t see it yet.', 'the learner sees it, with your overall feedback, once this round\'s marking is released.');
-  return h.replace('the learner doesn\'t see it yet.', 'the learner sees it, with your overall feedback, once this round\'s marking is released.').replace(/(<span class="xs muted">[^<]*<\/span><\/p>)/, `$1<div class="d-ofb"><span class="xs strong">Overall feedback</span><p class="small">${esc(o.feedback)}</p><p class="xs muted">${dOutSeen(s.key) ? 'Released to the learner.' : 'Not yet released to the learner.'}</p></div>`);
+  const now_ = 'once you publish it, the learner sees it straight away with your overall feedback (a saved draft stays hidden).';
+  const h = _outCardD.apply(this, arguments), o = r3Out(s.key); if (!o || !o.feedback) return h.replace('the learner doesn\'t see it yet.', now_);
+  return h.replace('the learner doesn\'t see it yet.', now_).replace(/(<span class="xs muted">[^<]*<\/span><\/p>)/, `$1<div class="d-ofb"><span class="xs strong">Overall feedback</span><p class="small">${esc(o.feedback)}</p><p class="xs muted">${dOutSeen(s.key) ? 'Published to the learner.' : 'Not shown to the learner.'}</p></div>`);
 };
 
-/* ---------- The learner sees the released outcome ---------- */
-// Released = an Assessor judgement of the outcome's round was published by the release step
-const dOutSeen = key => { const o = r3Out(key); return !!(D_OUT_LEARNER && o && r3Judg(key).some(j => j.role === 'Assessor' && j.published && j.round === o.round)); };
+/* ---------- The learner sees the published outcome ---------- */
+// AR (PD-AR-01): a declared outcome is the Assessor's published decision — shown at once, with no release step. Was: shown only once
+// an Assessor judgement of the outcome's round had been published by the release step. Draft decisions aren't outcomes (ar-assign.js).
+const dOutSeen = key => { const o = r3Out(key); return !!(D_OUT_LEARNER && o && o.published !== false); };
 const _fbTopD = feedbackTop;
 feedbackTop = function (a) {
   const h = _fbTopD.apply(this, arguments), key = (!S.portal || S.portal === 'learner') && W && W.me ? W.me.id + '~' + a.id : '', o = key && r3Out(key);
   if (!o || !dOutSeen(key)) return h;
-  return h + `<section class="card d-lout" aria-label="Final outcome"><div class="row-b"><h2>Final outcome</h2>${chip(o.result, r3Tone(o.result))}</div><p class="small">${esc(o.round)} — declared by ${esc(o.by)} (your Assessor) on ${fd(o.at)}.</p>${o.feedback ? `<h3>Overall feedback</h3><p class="small">${esc(o.feedback)}</p>` : ''}<p class="xs muted">The outcome is your Assessor's decision for the whole assignment; it isn't worked out from the individual criteria.</p></section>`;
+  return h + `<section class="card d-lout" aria-label="Final outcome"><div class="row-b"><h2>Final outcome</h2>${chip(o.result, r3Tone(o.result))}</div><p class="small">${esc(o.round)} — published by ${esc(o.by)} (your Assessor) on ${fd(o.pubAt || o.at)}.</p>${o.feedback ? `<h3>Overall feedback</h3><p class="small">${esc(o.feedback)}</p>` : ''}<p class="xs muted">The outcome is your Assessor's decision for the whole assignment; it isn't worked out from the individual criteria.</p></section>`;
 };
 
 /* ---------- No late submissions (the stated rule), in the action itself ---------- */
@@ -91,5 +93,5 @@ startUndo = function (a) { if (dLate(a)) { closeModal(); return dLateRefuse(a, '
 /* ---------- Records ---------- */
 UXC.push(['D2', 'Assessments — feedback completion (22 Oct 2026)', [
   'The learner\'s allocated assignment assessor can override a Coordinator\'s published criterion judgement ("Override the Coordinator\'s judgement…" in the marking workspace), with a required reason. The Coordinator\'s judgement stays in the record; the override is the Assessor\'s judgement, says what it overrides and why, and reaches the learner with the released marking. The Coordinator is told.',
-  'Declaring the final Pass / Fail (allocated Assessor only) now needs overall feedback for the learner. The learner sees the outcome and the overall feedback once that round\'s marking is released; it isn\'t worked out from the criteria, and agencies don\'t see it.',
+  'Declaring the final Pass / Fail (allocated Assessor only) now needs overall feedback for the learner. The learner sees the outcome and the overall feedback once the Assessor publishes it (AR; was: once that round\'s marking is released); it isn\'t worked out from the criteria, and agencies don\'t see it.',
   'No late submissions: submitting after the deadline (or the extended or resubmission deadline) is refused and logged, also when called directly.']]);

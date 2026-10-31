@@ -129,7 +129,7 @@ ACT.cdOpen = el => { const t = el.dataset.t; setAdminIdentity('A'); S.portal = '
 };
 
 /* ---------- Demo controls: the datasets (FX, PD-FX-04: the client demo is the default; "Load clean client demo" is gone) ---------- */
-const CD_NOTE = 'Demo only: everything lives in this browser tab. Reloading the page or "Reset demo" returns to the client demo dataset; nothing is saved.';
+const CD_NOTE = 'Demo only: everything lives in this browser tab. Reloading the page or "Reset demo" returns to the client demo dataset; nothing is saved except assignment drafts a learner keeps with Save draft (in this browser, until Reset demo).';
 function cdPanel() {
   const on = cdOn(), b = cdBatch(), n = on ? batchRoster(b).length : 0, legacy = typeof fxClient === 'function' && !fxClient();
   return `<fieldset class="cd-demo"><legend>Demo data</legend><p class="xs muted cd-note">${esc(CD_NOTE)}</p>

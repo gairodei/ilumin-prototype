@@ -66,7 +66,7 @@
     ok('CB5-C created in Section 3: Draft, programme NV-L3, Version 2, References on, no template; audited with the version', d.status === 'Draft' && d.pid === 'NV-L3' && d.pv === 2 && d.refs === true && d.template === false && since(a0).some(x => x.action === 'Assignment created (Draft)' && /NV-L3/.test(x.after) && /Version 2/.test(x.after)));
     ok('CB5-C the question keeps its evidence guidance and attachment limits; mapped', d.qs[0].ev === 'One example from a recent shift' && d.qs[0].attMax === 2 && J(d.qs[0].attTypes) === J(['PDF', 'DOCX']) && d.qs[0].crit.length === 1);
     open('NV-L3'); ok('CB5-C after creating, Section 3 opens the assignment in place (Questions) with its settings table', !!q('.cb-asg-ed') && /One example from a recent shift/.test(q('.cb-asg-qset').textContent) && /Up to 2 files · PDF, DOCX/.test(q('.cb-asg-qset').textContent));
-    ACT.cbAsgOpen({ dataset: { p: 'NV-L3', id: d.id, t: 'details' } }); ok('CB5-C Details shows version, References and template; Save and Publish here', /Version 2/.test(q('.cb-asg-set').textContent) && /Yes — after the last question/.test(q('.cb-asg-set').textContent) && /None — learners answer in the boxes/.test(q('.cb-asg-set').textContent) && !!q('.cb-asg-btns [data-act="s2Save"]') && !!q('.cb-asg-btns [data-act="pubAsg"]'));
+    ACT.cbAsgOpen({ dataset: { p: 'NV-L3', id: d.id, t: 'details' } }); ok('CB5-C Details shows version, References and template; Save and Publish here', /Version 2/.test(q('.cb-asg-set').textContent) && /Always — after the last question/.test(q('.cb-asg-set').textContent) /* AR (PD-AR-02): References are on every assignment. Was: "Yes — after the last question" */ && /None — learners answer in the boxes/.test(q('.cb-asg-set').textContent) && !!q('.cb-asg-btns [data-act="s2Save"]') && !!q('.cb-asg-btns [data-act="pubAsg"]'));
     ACT.pubAsg({ dataset: { id: d.id } }); crPd(); reason('Publish from the builder');
     const a = STORE.worlds.C.assignments.find(x => x.id === d.id);
     ok('CB5-C published from the builder: stays on Section 3; Aisha (Level 3, the batch) gets her copy', d.status === 'Published' && S.route === 'a-programmes' && S.params.tab === 'assessments' && !!a);
@@ -113,11 +113,14 @@
   /* ================= G. References and template settings ================= */
   await T('CB5-G references and template choices', async () => {
     fresh(); SA(); const d = author('NV-L3', 'L3 CB5 Template');
-    ACT.cbAsgSet({ dataset: { id: d.id, k: 'template' } }); ACT.cbAsgSet({ dataset: { id: d.id, k: 'refs' } });
-    ok('CB5-G while Draft: an optional template offered and the References section removed, both audited', d.template === true && d.refs === false && ADMIN.audit[0].action === 'References section changed' && ADMIN.audit[1].action === 'Answer template changed');
+    // AR (PD-AR-02): the user confirmed References on every editable assignment, so the builder no longer removes the section. Was:
+    // 'while Draft: an optional template offered and the References section removed, both audited'; 'the learner copy … has no
+    // References section'; '(negative) published: references and template can't change (logged)' (checked with References).
+    ACT.cbAsgSet({ dataset: { id: d.id, k: 'template' } }); const r0 = ADMIN.audit.length; ACT.cbAsgSet({ dataset: { id: d.id, k: 'refs' } });
+    ok('CB5-G while Draft: an optional template offered (audited); removing References is refused (logged) (AR)', d.template === true && d.refs === true && ADMIN.audit[1].action === 'Answer template changed' && blocked(r0, /references \(always on\)/));
     open('NV-L3'); ACT.pubAsg({ dataset: { id: d.id } }); crPd(); reason('Publish'); const a = STORE.worlds.C.assignments.find(x => x.id === d.id);
-    ok('CB5-G the learner copy offers the template as optional and has no References section', a.resources.some(x => /optional/.test(x[0])) && !a.refsOn);
-    const a0 = ADMIN.audit.length; ACT.cbAsgSet({ dataset: { id: d.id, k: 'refs' } }); ok('CB5-G (negative) published: references and template can\'t change (logged)', d.refs === false && blocked(a0, /published/));
+    ok('CB5-G the learner copy offers the template as optional and has the References section (AR)', a.resources.some(x => /optional/.test(x[0])) && a.refsOn === true);
+    const a0 = ADMIN.audit.length; ACT.cbAsgSet({ dataset: { id: d.id, k: 'template' } }); ok('CB5-G (negative) published: the template can\'t change (logged)', d.template === true && blocked(a0, /published/));
   });
 
   /* ================= H. Role checks on every assignment action ================= */

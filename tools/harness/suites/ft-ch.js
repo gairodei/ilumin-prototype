@@ -532,7 +532,9 @@
     go('assignment', { id: 'a2' }); const kb = app().querySelector('[data-act="chAnsDl"]');
     ok('CH-18 assignment page: "Answer key (guidance)" next to "Download criteria (PDF)"', !!kb && /Answer key \(guidance\)/.test(kb.textContent) && kb.previousElementSibling && kb.previousElementSibling.dataset.act === 'csCritPdf');
     kb.click(); await wait(40); ok('CH-18 downloads the module\'s answer key', /AC M12 Ways of Working in Adult Care — Knowledge Answer Key\.pdf downloaded/.test(document.querySelector('#toasts').textContent));
-    ok('CH-18 submitting unchanged: per-criterion answer boxes, no upload template, no references box', !/upload[^.]*template|referenc/i.test([...app().querySelectorAll('main label, main legend, main h2, main h3')].map(l => l.textContent).join(' ')) && app().querySelectorAll('main .q').length === asgById('a2').qs.length);
+    // AR (PD-AR-02): the user confirmed a References box on every editable assignment, seeded ones included. Was: 'CH-18 submitting
+    // unchanged: per-criterion answer boxes, no upload template, no references box' (no "referenc" heading allowed).
+    ok('CH-18 submitting: per-criterion answer boxes, no upload template; one References box after them (AR)', !/upload[^.]*template/i.test([...app().querySelectorAll('main label, main legend, main h2, main h3')].map(l => l.textContent).join(' ')) && app().querySelectorAll('main .q').length === asgById('a2').qs.length && app().querySelectorAll('main .cb-refs').length === 1);
     ok('CH-15 assignment header shows the module and its code', /U302 · Module 1 — AC M12 Ways of working in adult care \(T\/652\/0001\)/.test(main()));
     go('assignment', { id: 'a6' }); ok('CH-18 no answer key button when the module has none', !app().querySelector('[data-act="chAnsDl"]'));
     go('progress', { tab: 'tree' }); /* CF (PD-CF-08): the tree is the Criteria & evidence tab; Overview is the default. Was: go('progress') */ ok('CH-15 progress tree: module codes', /AC M12 Ways of working in adult care \(T\/652\/0001\)/.test(main()) && /Safe working \(R\/652\/0701\)/.test(main()));

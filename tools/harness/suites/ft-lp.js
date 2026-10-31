@@ -163,7 +163,8 @@
     pick('assessor'); ACT.r3Declare({ dataset: { k: key } }); $1('input[name="r3-res"][value="Pass"]').checked = true; $1('#d-ofb').value = 'Overall: meets the brief.'; const t = $1('#rsn'); if (t) t.value = 'Assessed against the brief'; prim(); closeModal();
     ok('LP-H only James Pryce (allocated Assessor) declares Pass', r3Out(key) && r3Out(key).result === 'Pass' && r3Out(key).by === 'James Pryce');
     pick('nvq-fa'); go('assignment', { id: a.id }); const lc2 = ($1('main .r3-learner') || {}).textContent || '';
-    ok('LP-H Dev now sees the Assessor\'s released judgement; the outcome stays unshown (R3 — pending the client)', /Assessor ·/.test(lc2) && !/Final assignment outcome/.test(main()));
+    // AR (PD-AR-01): the published outcome is shown to the learner. Was: 'the outcome stays unshown (R3 — pending the client)' (LP note, superseded).
+    ok('LP-H Dev now sees the Assessor\'s released judgement and the published Pass with the overall feedback (AR)', /Assessor ·/.test(lc2) && /Pass/.test(($1('main .d-lout') || {}).textContent || '') && /Overall: meets the brief/.test(($1('main .d-lout') || {}).textContent || ''));
     pick('nvq-sp'); ok('LP-H (isolation) Amira\'s Assignment 1 is untouched', W.assignments.find(x => x.id === 'a10').status === 'Not Started' && !r3Judg('IA-L-32000~a10').length);
   });
 

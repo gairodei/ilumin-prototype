@@ -317,7 +317,9 @@
     ACT.r3Declare({ dataset: { k: s.key } }); ok('R3 (negative) the outcome can\'t be re-declared or changed in the same round', !MODAL && r3Out(s.key).result === 'Fail');
     COO('A'); go('c-sub', { id: s.key }); ok('R3 Coordinator sees the declared outcome read-only', /Fail[\s\S]*declared by Sarah Okonkwo, Assessor/.test(app().querySelector('.r3-cooout').textContent) && /Final outcome/.test(app().querySelector('.r3-csum').textContent));
     SA(); go('a-records'); ok('R3 Assessment Records list the declared outcome', /Final assignment outcomes declared/.test(main()) && /Fail/.test(app().querySelector('.r3-recs').textContent));
-    learner(s.L.v); go('assignment', { id: a.id }); ok('R3 the learner isn\'t shown the outcome (publication not confirmed — provisional)', !/Final assignment outcome/.test(main()) && !app().querySelector('main .r3-out'));
+    // AR (PD-AR-01): the user confirmed that the Assessor's published outcome is shown to the learner at once. Was: 'the learner isn't
+    // shown the outcome (publication not confirmed — provisional)' (PD-R3-08, superseded by PD-D-13 and then PD-AR-01).
+    learner(s.L.v); go('assignment', { id: a.id }); ok('R3 the learner sees the published Fail at once; the staff outcome card isn\'t shown to them (AR)', /Fail/.test((app().querySelector('main .d-lout') || {}).textContent || '') && !app().querySelector('main .r3-out'));
     ok('R3 the agency Pass / Fail (course level) is not derived from the assignment outcome', typeof passFail === 'function' && passFail({ status: 'Active' }) === '—');
   });
 

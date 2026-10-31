@@ -229,10 +229,14 @@
     await A('Auto-save chip states (answer sheet)', async () => {
       learner('C'); go('assignment', { id: 'a3' });
       const c = () => document.getElementById('savechip');
-      setSave('busy'); await wait(0); ok('Saving…', c() && c().textContent.trim() === 'Saving…' && /\bbusy\b/.test(c().className), c() && c().textContent);
-      setSave('ok'); await wait(0); ok('Saved with the time', c() && /^Saved \d{1,2}:\d{2}$/.test(c().textContent.trim()), c() && c().textContent);
-      setSave('fail'); await wait(0); ok('Save failed — retrying', c() && c().textContent.trim() === 'Save failed — retrying' && /\bfail\b/.test(c().className));
-      S.offline = true; setSave('fail'); await wait(0); ok('offline reads "Saved on this device"', c() && c().textContent.trim() === 'Saved on this device' && /\blocal\b/.test(c().className), c() && c().textContent); S.offline = false;
+      // AR final review (PD-AR-05): on a learner's assignment the chip shows the Save draft state only — the in-page auto-save states
+      // ("Saving…", "Saved 14:05", "Save failed — retrying", offline "Saved on this device") no longer claim the work is saved. Was:
+      // 'Saving…', 'Saved with the time', 'Save failed — retrying', 'offline reads "Saved on this device"'.
+      const t0 = () => c() && c().textContent.trim();
+      ['busy', 'ok', 'fail'].forEach(st => setSave(st)); S.offline = true; setSave('fail'); await wait(0); S.offline = false;
+      ok('the auto-save states don\'t claim a save: "No draft saved yet" (AR)', t0() === 'No draft saved yet' && !/Saving|Saved|retrying|this device/.test(t0()), t0());
+      const b = document.querySelector('main .paper .rte-body'); b.innerHTML = '<p>x</p>'; INP.rteInput(b); await wait(0);
+      ok('after an edit: "Unsaved changes" (AR)', t0() === 'Unsaved changes' && /\bar-dirty\b/.test(c().className), t0());
       ok('same structure as the Marking Workspace chip (icon + text, polite status, tooltip)', c() && c().getAttribute('role') === 'status' && c().getAttribute('aria-live') === 'polite' && !!c().querySelector('svg') && !!c().title);
       setSave('ok');
     });
