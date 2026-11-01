@@ -228,7 +228,7 @@ function applyDecision(i, a, r, o = {}) {
   }
   if (i.adm && w) {
     const ad = w.admission;
-    if (a === 'approve') { if (w.docs.filter(d => d.mand).some(d => d.status !== 'Approved')) { toast('Approve every mandatory document first.', 'err'); return; } admissionApprove(i.v, r); }
+    if (a === 'approve') { const why = admDocsWhy(w.docs); if (why) { toast(why, 'err'); return false; } if (admissionApprove(i.v, r) === false) return false; }
     if (a === 'reject') { ad.status = 'Rejected'; ad.rejectReason = r; ad.history.push(['Rejected', nowI]); notifyLearner(i.v, 'Admission', 'Admission status changed', 'Your application was not approved.', 'admission'); chRejectedAfterPay(i.v, r); /* CH-12 / CH-13: access stays; Finance decides on any refund */ }
     if (a === 'return' || a === 'info') { ad.status = 'Pending — Documents Required'; ad.history.push(['Pending — Documents Required', nowI]); notifyLearner(i.v, 'Admission', 'More information needed', r, 'admission'); }
   }
@@ -263,10 +263,10 @@ ACT.qOverride = el => {
 /* ---------- Shared learner-data effects ---------- */
 function admissionApprove(v, r) {
   // CH-07: approval confirms the intake the learner chose and paid for at sign-up — no placement, no waitlist
-  const w = STORE.worlds[v], ad = w.admission, nowI = now().toISOString();
+  const w = STORE.worlds[v], ad = w.admission, nowI = now().toISOString(), before = ad.status;
   ad.status = 'Approved'; ad.history.push(['Approved', nowI]);
   notifyLearner(v, 'Admission', 'Admission status changed', `Your application was approved. Your place on ${ad.batch} is confirmed.`, 'admission');
-  logA('Admissions', VNAME(v), 'Admission approved', 'Under Review', 'Approved — intake confirmed: ' + (ad.batch.split(' — ')[1] || ad.batch), r);
+  logA('Admissions', VNAME(v), 'Admission approved', before, 'Approved — intake confirmed: ' + (ad.batch.split(' — ')[1] || ad.batch), r);
 }
 function docDecision(v, d, status, r) {
   if (d.replacement) { const rep = d.replacement, nv = d.versions.find(x => x[0] === rep.file && x[2] === 'Replacement (in review)'), cv = d.versions.find(x => x[2] === 'Current (valid)'); if (status === 'Approved') { if (cv) cv[2] = 'Replaced'; if (nv) nv[2] = 'Approved'; d.file = rep.file; d.uploaded = rep.uploaded; d.repResult = null; } else { if (nv) nv[2] = status === 'Rejected' ? 'Rejected' : 'Resubmission Required'; if (cv) cv[2] = 'Approved'; d.repResult = { status, reason: r }; } delete d.replacement; d.status = 'Approved'; notifyLearner(v, 'Admission', status === 'Approved' ? 'Replacement document approved' : 'Replacement document not accepted', `${d.name}: ${status === 'Approved' ? 'your replacement is now the current document.' : status.toLowerCase() + ' — ' + r + ' Your current document is still valid.'}`, 'admission'); logA('Admissions & Documents', `${VNAME(v)} · ${d.name}`, 'Replacement decision', 'Replacement in review', status, r); return; }
@@ -461,14 +461,25 @@ function assignReviewer(ids) {
   openModal({ title: ids.length > 1 ? `Assign reviewer to ${ids.length} applications` : 'Assign / reassign reviewer', body: `<div class="field"><label for="rv">Reviewer (document-review capability)</label><select class="select" id="rv">${REVIEWERS.map(r => `<option>${r}</option>`).join('')}</select></div>`,
     actions: [{ label: 'Cancel' }, { label: 'Assign', cls: 'btn-primary', fn: () => { const rv = mval('#rv'); allApplications().filter(a => ids.includes(a.id)).forEach(a => { if (a.v) { const ad = STORE.worlds[a.v].admission; ad.reviewer = rv + ' (Admissions)'; if (['Awaiting review', 'Pending — Documents Required'].includes(ad.status)) { ad.status = 'Under Review'; ad.history.push(['Under Review', now().toISOString()]); notifyLearner(a.v, 'Admission', 'Admission status changed', 'Your application is now: Under Review.', 'admission'); } } else { const s = ADMIN.apps.find(x => x.id === a.id); s.reviewer = rv; s.days = 0; } logA('Admissions', a.id, 'Reviewer assigned', a.reviewer, rv, ''); }); dts('apps') && (dts('apps').sel = []); render(); toast(`Reviewer assigned. ${ids.some(x => x.startsWith('APP-') && x.length === 5) ? 'The learner now sees "Under Review".' : ''}`); } }] });
 }
+// B1-D1 (AC-2): an admission is approved only when every MANDATORY item of the learner's own checklist (fixed at sign-up: programme,
+// region, version) is Approved, has no replacement awaiting review and has no recorded expiry date that has passed. Optional items
+// never block. '' = ready.
+function admDocsWhy(docs) {
+  const bad = (docs || []).filter(d => d.mand).map(d => {
+    const why = d.status !== 'Approved' ? (d.status === 'Pending' || !d.file ? 'not uploaded' : d.status === 'Submitted' ? 'awaiting review' : String(d.status).toLowerCase())
+      : d.replacement ? 'replacement awaiting verification' : d.expires && new Date(d.expires) <= now() ? 'expired ' + fd(d.expires) : '';
+    return why ? `${d.name} (${why})` : '';
+  }).filter(Boolean);
+  return bad.length ? `Every mandatory document must be approved and current before the admission is approved. Not yet: ${bad.join('; ')}.` : '';
+}
 function appDetail(id) {
   const a = allApplications().find(x => x.id === id); if (!a) return notFound();
-  const mandOk = a.docs.filter(d => d.mand).every(d => d.status === 'Approved'), open = ['Awaiting review', 'Pending — Documents Required', 'Under Review'].includes(a.status);
+  const mandWhy = admDocsWhy(a.docs), mandOk = !mandWhy, open = ['Awaiting review', 'Pending — Documents Required', 'Under Review'].includes(a.status);
   return `${pageA(esc(a.name), `${esc(a.programme)} · applied ${fd(a.applied)}`, chip(a.status), [['Admissions & Documents', 'a-admissions'], [a.id]])}
   ${a.escalated ? `<div class="note b-red">${ic('alert')}<div><strong>Escalated automatically — no decision by ${esc(a.reviewer)} for 7 days.</strong></div></div>` : ''}
   <section class="card"><div class="row-b"><h2>Checklist</h2><span class="small">${a.docs.filter(d => d.status === 'Approved').length} approved · reviewer ${esc(a.reviewer)} <button class="linklike" data-act="assignRev" data-id="${a.id}">Reassign</button></span></div>
-  <div class="tbl-wrap"><table class="tbl dense"><thead><tr><th>Document</th><th>File</th><th>Status</th><th>Decision history</th><th>Decision</th></tr></thead><tbody>${a.docs.map(d => `<tr><td>${esc(d.name)}<div class="xs muted">${d.mand ? 'Mandatory' : 'Optional'}</div></td><td>${d.file ? `<button class="linklike small" data-act="viewFile" data-f="${esc(d.file)}">${esc(d.file)}</button>` : '—'}</td><td>${chip(d.status)}${d.replacement ? ' ' + chip('Replacement in review', 'blue') : ''}</td><td class="xs">${d.versions.map(x => `${esc(x[0])} · ${fd(x[1])} · ${x[2]}`).join('<br>') || '—'}${d.reason ? `<div class="muted">${esc(d.reason)}</div>` : ''}</td><td>${(open && d.file && d.status !== 'Approved') || d.replacement ? `<div class="row" style="gap:4px"><button class="btn btn-sm btn-primary" data-act="docDec" data-a="${a.id}" data-d="${d.id}" data-s="Approved">Approve</button><button class="btn btn-sm" data-act="docDec" data-a="${a.id}" data-d="${d.id}" data-s="Rejected">Reject</button><button class="btn btn-sm" data-act="docDec" data-a="${a.id}" data-d="${d.id}" data-s="Resubmission Required">Request resubmission</button></div>` : ''}</td></tr>`).join('')}</tbody></table></div></section>
-  ${open ? `<section class="card"><h2>Decision</h2><div class="row"><button class="btn btn-primary" data-act="appApprove" data-id="${a.id}" ${mandOk ? '' : 'disabled'}>Approve admission</button><button class="btn btn-danger" data-act="appReject" data-id="${a.id}">Reject application</button><button class="btn" data-act="appWithdraw" data-id="${a.id}">Withdraw</button></div>${mandOk ? '' : '<p class="small muted">"Approve admission" is enabled when every mandatory document is Approved.</p>'}</section>` : ''}
+  <div class="tbl-wrap"><table class="tbl dense"><thead><tr><th>Document</th><th>File</th><th>Status</th><th>Decision history</th><th>Decision</th></tr></thead><tbody>${a.docs.map(d => `<tr><td>${esc(d.name)}<div class="xs muted">${d.mand ? 'Mandatory' : 'Optional'}</div></td><td>${d.file ? `<button class="linklike small" data-act="viewFile" data-f="${esc(d.file)}">${esc(d.file)}</button>` : '—'}</td><td>${chip(d.status)}${d.replacement ? ' ' + chip('Replacement in review', 'blue') : ''}</td><td class="xs">${d.versions.map(x => `${esc(x[0])} · ${fd(x[1])} · ${x[2]}`).join('<br>') || '—'}${d.reason ? `<div class="muted">${esc(d.reason)}</div>` : ''}</td><td>${(open && d.file && d.status === 'Submitted') || d.replacement ? `<div class="row" style="gap:4px"><button class="btn btn-sm btn-primary" data-act="docDec" data-a="${a.id}" data-d="${d.id}" data-s="Approved">Approve</button><button class="btn btn-sm" data-act="docDec" data-a="${a.id}" data-d="${d.id}" data-s="Rejected">Reject</button><button class="btn btn-sm" data-act="docDec" data-a="${a.id}" data-d="${d.id}" data-s="Resubmission Required">Request resubmission</button></div>` : ''}</td></tr>`).join('')}</tbody></table></div></section>
+  ${open ? `<section class="card"><h2>Decision</h2><div class="row"><button class="btn btn-primary" data-act="appApprove" data-id="${a.id}" ${mandOk ? '' : 'disabled'}>Approve admission</button><button class="btn btn-danger" data-act="appReject" data-id="${a.id}">Reject application</button><button class="btn" data-act="appWithdraw" data-id="${a.id}">Withdraw</button></div>${mandOk ? '' : `<p class="small muted">"Approve admission" is enabled when every mandatory document is approved and current. Optional documents don't count. ${esc(mandWhy.replace(/^.*?Not yet: /, 'Not yet: '))}</p>`}</section>` : ''}
   ${auditPanel(x => x.entity === a.id || x.entity.startsWith(a.name))}`;
 }
 ACT.docDec = el => {
@@ -480,13 +491,15 @@ ACT.appApprove = el => {
   const a = allApplications().find(x => x.id === el.dataset.id);
   const intake = a.v ? STORE.worlds[a.v].admission.batch : (a.intake || 'the batch assigned at sign-up' /* CH-42 */);
   reasonDlg({ title: 'Approve admission — ' + esc(a.name), ok: 'Approve admission', label: 'Note (required)', extra: `<dl class="kv"><dt>Intake</dt><dd>${esc(intake)} <span class="xs muted">(assigned at sign-up — approval confirms it)</span></dd></dl>`,
-    onOk: r => { if (a.v) admissionApprove(a.v, r); else { const s = ADMIN.apps.find(x => x.id === a.id); s.status = 'Approved'; s.escalated = false; logA('Admissions', a.id, 'Admission approved', 'Under Review', 'Approved', r); } render(); toast('Admission approved.' + (a.v ? ' The learner\'s tracker has updated.' : '')); } });
+    onOk: r => { if (a.v) admissionApprove(a.v, r); else { const s = ADMIN.apps.find(x => x.id === a.id), before = s.status; s.status = 'Approved'; s.escalated = false; logA('Admissions', a.id, 'Admission approved', before, 'Approved', r); } render(); toast('Admission approved.' + (a.v ? ' The learner\'s tracker has updated.' : '')); } });
 };
 ACT.appReject = el => { const a = allApplications().find(x => x.id === el.dataset.id); reasonDlg({ title: 'Reject application — ' + esc(a.name), ok: 'Reject application', danger: true, label: 'Reason (shown to the applicant)', onOk: r => { if (a.v) { const ad = STORE.worlds[a.v].admission; ad.status = 'Rejected'; ad.rejectReason = r; ad.history.push(['Rejected', now().toISOString()]); notifyLearner(a.v, 'Admission', 'Admission status changed', 'Your application was not approved.', 'admission'); chRejectedAfterPay(a.v, r); /* CH-12 / CH-13: access stays; Finance decides on any refund */ } else ADMIN.apps.find(x => x.id === a.id).status = 'Rejected'; logA('Admissions', a.id, 'Application rejected', a.status, 'Rejected', r); render(); toast('Application rejected.'); } }); };
 ACT.appWithdraw = el => { const a = allApplications().find(x => x.id === el.dataset.id); reasonDlg({ title: 'Withdraw application — ' + esc(a.name), ok: 'Withdraw', danger: true, onOk: r => { if (a.v) { const ad = STORE.worlds[a.v].admission; ad.status = 'Withdrawn'; ad.history.push(['Withdrawn', now().toISOString()]); } else ADMIN.apps.find(x => x.id === a.id).status = 'Withdrawn'; logA('Admissions', a.id, 'Application withdrawn', a.status, 'Withdrawn', r); render(); } }); };
 // Admission decisions need the Admissions & Documents capability (Roles & Capabilities: Super / System Administrator, Academic Admin,
 // Admissions Officer). A direct call by another role (for example the Finance Admin) is refused and logged; no dialog opens.
-const admCanDecide = () => !!(ADMIN && ADMIN.me) && ((typeof isSA === 'function' && isSA()) || (typeof isAca === 'function' && isAca()) || (typeof isSys === 'function' && isSys()) || (ADMIN.me.roles || []).includes('Admissions Officer (custom)'));
+// AC-2: the Admissions Officer role counts in the admin portal only (like isSA / isAca / isSys), so the admin identity that stays
+// loaded while someone views another portal grants nothing there
+const admCanDecide = () => !!(ADMIN && ADMIN.me) && ((typeof isSA === 'function' && isSA()) || (typeof isAca === 'function' && isAca()) || (typeof isSys === 'function' && isSys()) || (S.portal === 'admin' && (ADMIN.me.roles || []).includes('Admissions Officer (custom)')));
 ['docDec', 'appApprove', 'appReject', 'appWithdraw'].forEach(n => { const f = ACT[n]; ACT[n] = el => {
   if (!admCanDecide()) { logA('Admissions', (el && el.dataset && (el.dataset.id || el.dataset.a)) || '—', 'Blocked: admission decision', '—', '—', `${ADMIN && ADMIN.me ? ADMIN.me.name : '—'} has no Admissions & Documents capability`); toast('Admission decisions are made by the Academic Admin, the Admissions Officer or the System / Super Administrator.', 'err'); return; }
   return f(el); }; });

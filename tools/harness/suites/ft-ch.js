@@ -372,7 +372,9 @@
 
   /* ---------- CH-07 approval confirms the intake; placement and waitlist removed ---------- */
   await T('CH-07 approval confirms the intake; no placement or waitlist', async () => {
-    fresh(); chQuickSignup(STORE.worlds.B); SA(); ACT.appApprove({ dataset: { id: 'APP-B' } });
+    // PD-AC2-01: approval (and its dialog) needs every mandatory document approved and current, so the test data has them approved
+    // first. Was: the dialog opened by a direct call while B's mandatory documents were still rejected or awaiting review (B1-D1).
+    fresh(); chQuickSignup(STORE.worlds.B); STORE.worlds.B.docs.filter(d => d.mand).forEach(d => { d.status = 'Approved'; d.file = d.file || 'document.pdf'; delete d.replacement; }); SA(); ACT.appApprove({ dataset: { id: 'APP-B' } });
     ok('CH-07 approve dialog shows the intake chosen at sign-up; no placement select', !!MODAL && !$('#ab') && /Abu Dhabi Cohort 1 — L3AC-DEC26-AUH/.test(MODAL.body) && /assigned at sign-up/.test(MODAL.body) /* CH-42: was "chosen at sign-up" */); closeModal();
     ok('CH-07 waitlist edge, Accept next intake and Place removed', !EDGES.some(e => e[0] === 'waitlist') && !ACT.acceptIntake && !ACT.stayWaitlist && !ACT.kPlace && !ACT.payDeposit);
     role('acaA'); go('k-dashboard'); ok('CH-07 Academic Admin dashboard: no "awaiting batch placement"', !/awaiting batch placement/i.test(main()));
