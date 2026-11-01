@@ -42,7 +42,7 @@ function docCard(d, ro) {
   const exp = d.expires ? daysTo(d.expires) : null, inWindow = exp !== null && exp <= 30 && exp > 0;
   const upl = ui('upl-' + d.id);
   let body = '';
-  if (['Rejected', 'Resubmission Required'].includes(d.status)) body = `<div class="reason ${d.status === 'Resubmission Required' ? 'amber' : ''}"><span class="r-t">${ic('alert', 15)}${d.status === 'Rejected' ? 'Why it was rejected' : 'What to change'}</span><span>${esc(d.reason)}</span><span class="xs muted">${esc(d.reviewer)} · ${fd(D(-10))}</span></div>${ro ? '' : `<button class="btn btn-primary btn-sm" data-act="reupload" data-id="${d.id}">${ic('upload', 14)}Re-upload</button>`}`;
+  if (['Rejected', 'Resubmission Required'].includes(d.status)) body = `<div class="reason ${d.status === 'Resubmission Required' ? 'amber' : ''}"><span class="r-t">${ic('alert', 15)}${d.status === 'Rejected' ? 'Why it was rejected' : 'What to change'}</span><span>${esc(d.reason)}</span><span class="xs muted">${esc(d.reviewer || 'The Academy')}${d.decidedAt ? ' · ' + fd(d.decidedAt) : ''}</span></div>${ro ? '' : `<button class="btn btn-primary btn-sm" data-act="reupload" data-id="${d.id}">${ic('upload', 14)}Re-upload</button>`}`;
   else if (d.status === 'Pending' && !ro) body = dropZone(d);
   else if (d.status === 'Submitted') body = `<p class="small">${ic('doc', 14)} <span class="mono">${esc(d.file)}</span><br><span class="muted">${d.uploaded ? 'Uploaded ' + fdt(d.uploaded) + ' — ' : ''}waiting for review</span></p>`;
   else if (d.status === 'Approved') body = `<p class="small">${ic('doc', 14)} <span class="mono">${esc(d.file || 'document.pdf')}</span>${d.uploaded ? `<br><span class="muted">Uploaded ${fdt(d.uploaded)}</span>` : ''}</p>`;

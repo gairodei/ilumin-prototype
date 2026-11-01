@@ -859,6 +859,9 @@
     ok('P-28 a Data Correction item: current → proposed, region move flagged, final Super Admin', !!i && i.data.current === was && i.data.proposed === to && i.data.regionMove === true && i.finalSuper && i.status === 'Pending');
     ok('P-28 nothing changes before final approval', STORE.worlds.A.me.country === was);
     SA(); go('a-queue', { id: i.id }); ok('P-28 queue item: country correction note', /Country correction/.test(main()) && /an admin moves the learner's data \(audited, one-off\)/.test(main()));
+    // PD-AC3-05 (B3-05): the Super Administrator's final approval follows the System Administrator's first review, so a System
+    // Administrator who didn't raise it forwards it first. Was: the Super Administrator approved it without the first review.
+    { setAdminIdentity(i.raisedBy === 'Owen Price' ? 'SB' : 'SY'); S.portal = 'admin'; S.signedIn = true; ACT.qDo({ dataset: { id: i.id, a: 'forward' } }); if (document.querySelector('#rsn')) document.querySelector('#rsn').value = 'First review (PD-AC3-05)'; { const fa = MODAL && MODAL.actions.find(y => /primary/.test(y.cls || '')); if (fa) fa.fn(); } closeModal(); setAdminIdentity('A'); S.portal = 'admin'; } 
     applyDecision(i, 'approveFinal', 'Evidence checked.', {});
     ok('P-28 Super Admin final → country corrected, audited, region move logged once', STORE.worlds.A.me.country === to && ADMIN.audit.some(a => a.action === 'Data correction (final)' && a.after === to) && ADMIN.audit.filter(a => a.action === 'Data region move (one-off)' && a.entity === lid).length === 1);
     learner('A'); go('profile'); const row = [...app().querySelectorAll('main .li')].find(li => /Country of residence/.test(li.textContent));

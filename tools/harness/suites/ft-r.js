@@ -330,6 +330,9 @@
     document.querySelector('#dc-rec').value = 'r3-outcome'; fill({ '#dc-new': 'Pass', '#dc-r': 'Wrong outcome' }); ok('R3 (negative) the correction must change the outcome', prim() === false);
     fill({ '#dc-new': 'Fail' }); const n0 = ADMIN.queue.length; prim(); closeModal(); const dc = ADMIN.queue[0];
     ok('R3 correction raised to the Approvals Queue; the outcome is unchanged until approved', ADMIN.queue.length === n0 + 1 && dc.data && dc.data.r3out && dc.data.r3out.to === 'Fail' && r3Out(s.key).result === 'Pass');
+    // PD-AC3-05 (B3-05): the Super Administrator's final approval follows the System Administrator's first review, so a System
+    // Administrator who didn't raise it forwards it first. Was: the Super Administrator approved it without the first review.
+    { setAdminIdentity(dc.raisedBy === 'Owen Price' ? 'SB' : 'SY'); S.portal = 'admin'; S.signedIn = true; ACT.qDo({ dataset: { id: dc.id, a: 'forward' } }); if (document.querySelector('#rsn')) document.querySelector('#rsn').value = 'First review (PD-AC3-05)'; { const fa = MODAL && MODAL.actions.find(y => /primary/.test(y.cls || '')); if (fa) fa.fn(); } closeModal(); setAdminIdentity('A'); S.portal = 'admin'; } 
     SA(); for (let k = 0; k < 3 && dc.status !== 'Approved'; k++) { go('a-queue', { id: dc.id }); const acts = [...document.querySelectorAll('main [data-act="qDo"]')].map(b => b.dataset.a); if (!acts.length) break; ACT.qDo({ dataset: { id: dc.id, a: acts.includes('approveFinal') ? 'approveFinal' : acts[0] } }); rsn('Checked'); prim(); closeModal(); }
     const o = r3Out(s.key);
     ok('R3 after final approval: outcome corrected, history keeps the original, audited', o.result === 'Fail' && o.corrected && o.hist.length === 2 && o.hist[0][3] === 'Pass' && ADMIN.audit.some(x => x.action === 'Final outcome corrected'));

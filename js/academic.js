@@ -565,7 +565,7 @@ ACT.batchStaff = el => {
 };
 // Add learner — add-after-start override, blocked for learners in another active batch
 ACT.addToBatch = el => {
-  const b = ADMIN.batches.find(x => x.code === el.dataset.id), inProg = b.status === 'In Progress';
+  const b = ADMIN.batches.find(x => x.code === el.dataset.id), inProg = chStarted(b); // AC-3 (B2-D7): was b.status === 'In Progress'
   const activeOf = id => ADMIN.batches.find(x => x.code !== b.code && ['Open', 'In Progress'].includes(x.status) && batchRoster(x).some(r => r[1] === id));
   const elig = ADMIN.learners.filter(l => l.acct === 'Active' && l.rec === 'Active').slice(0, 12);
   const opts = elig.map(l => { const o = activeOf(l.id); return `<option value="${l.id}" ${el.dataset.pre === l.id ? 'selected' : ''}>${esc(l.name)} (${l.id})${o ? ' — in ' + o.code : ''}${l.agency ? ' · ' + esc(l.agency) : ''}</option>`; }).join('');

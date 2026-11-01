@@ -548,7 +548,11 @@
       ok('AV agency learner Progress: "Final assessment outcomes" with the published Pass and overall feedback, an awaiting row; no card or page overflow', shown($1('main .av-out')) && all('main .av-out .av-row').some(r => shown(r) && /Pass/.test(r.textContent) && /UI check overall feedback/.test(r.textContent)) && /Awaiting final assessment/.test($1('main .av-out').textContent) && !over($1('main .av-out')) && appOver() <= 1, appOver());
       initStore(); }
     // AC-2: an application whose mandatory documents aren't all approved, its reject dialog, and a decided item without an override
-    { closeModal(); acaEnter('KA'); S.signedIn = true; go('a-admissions', { id: 'APP-2207' }); const ab = $1('main [data-act="appApprove"]');
+    // AC-3 (PD-AC3-02): APP-2207 is escalated, so the Academic Admin sees the escalation note and the Super Administrator decides.
+    // Was: the Academic Admin's view was checked for the disabled approval and the reject dialog.
+    { closeModal(); acaEnter('KA'); S.signedIn = true; go('a-admissions', { id: 'APP-2207' });
+      ok('AC-3 escalated application (Academic Admin): the Super Administrator decides it — note shown, no decision buttons; no page overflow', shown($1('main .ac3-esc')) && !$1('main [data-act="appReject"]') && appOver() <= 1, appOver());
+      setAdminIdentity('A'); S.portal = 'admin'; go('a-admissions', { id: 'APP-2207' }); const ab = $1('main [data-act="appApprove"]');
       ok('AC-2 application: "Approve admission" disabled with the documents still awaiting review named; no page overflow', !!ab && ab.disabled && /Not yet: .*awaiting review/.test(main()) && appOver() <= 1, appOver());
       click($1('main [data-act="appReject"]')); ok('AC-2 application: the reject dialog fits the viewport', !!$1('#modal-root #rsn') && !modalFits(), modalFits()); closeModal();
       setAdminIdentity('A'); S.portal = 'admin'; go('a-queue', { id: 'AQ-1006' });
