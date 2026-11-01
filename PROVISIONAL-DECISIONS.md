@@ -1178,6 +1178,16 @@ Built on cd0334e. Code: `js/fc-finance.js` (loads last) and one line in `js/core
 | PD-FC-13 | A deposit larger than payment 1 isn't offered with instalments (the option is shown disabled with the reason). There is no rule for the excess. | Client question |
 | PD-FC-14 | **A batch date change on the deposit-then-instalments route.** If the batch start changes, or the learner is moved, before the seat is secured, the seat-hold deadline and instalment 1's due date (the hold) stay as agreed, and the signed terms (`w.signup.pin`) are not altered. Later unpaid instalments follow the existing revision rule (PD-CB-10). The change is written to the audit log as "impact review needed". **Outstanding requirement:** an administrative impact review of batch date changes for deposit-route learners — who reviews, and whether the hold or the terms may then be changed — is not built. | Built (protection); review process outstanding |
 
+## Batch FD: minimal Finance Admin demo data (1 Nov 2026)
+
+Built on 6f8d774. The Finance Admin screens were nearly empty because the client demo's whole financial history was three first payments; no deposit, bank transfer, refund or overdue event had happened (read-only investigation, 1 Nov 2026). Code: `js/cd-demo.js` (the demo build), `js/dr-demo.js` (persona list), `js/fc-finance.js` (filter reset). Tests: `ft-fd.js` (FIXTURE=client).
+
+| ID | Decision | Status |
+|---|---|---|
+| PD-FD-01 | **Two more demo learners, created by the demo build through the real handlers.** After Amira, Dev and Lena are built as before, so their records, signed terms (original plan version, £300 Academy default deposit) and admissions are unchanged, the Academic Admin sets the programme's own deposit to £100 on Fees & Payments and a Finance Admin approves it. That creates a new plan version; the Academy default stays £300. Then, each with an Add learner record, an activation and their own portal account: **Sam Deposit (demo)** signs up Self-Paced on "Deposit, then 6 payments" (PD-FC-11), pays the £100 deposit by card and then £200 on instalment 1 (two transactions, seat secured). **Tom Transfer (demo)** signs up the same way and tells Finance about a £100 bank-transfer deposit, which is left unconfirmed (seat reserved, £0 received). Neither is admitted; their applications await the normal academic review. Totals from the records: £1,078.33 received, £6,966.67 outstanding, £100 awaiting confirmation, batch 4 of 16. | Built |
+| PD-FD-02 | **Nothing else is seeded:** no refunds, waivers, overdue debt, agency purchases, observation-fee payments or other approvals. Refunds are raised live. Overdue is shown by moving the simulated date forward (Payment Plans → Payment reminders). Doing that also ends Tom's 28-day seat hold, because his transfer is unconfirmed, and DP releases the seat; use Reset demo afterwards to return to the starting records. | Built |
+| PD-FD-03 | A change of demo identity or role resets the Finance screens' filters to the defaults: course, batch and course type, the report period, agency and method, the learner picker, and the Finance tables' search and filters. Records are never touched. | Built |
+
 ## Pending client clarification: confirmed as not decided in the prototype
 
 | Topic | What the prototype does now | Register entry |

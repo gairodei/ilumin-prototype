@@ -74,8 +74,11 @@
 
   let ava, hal;
   await T('FCD-A the configured deposit and the payment step', async () => {
-    ok('FCD-A the demo programme takes the Academy default deposit (£300.00) at the start', cb8Cur(cdPr().id).dep.eff === 300);
-    ok('FCD-A the Academic Admin sets a £100.00 deposit and a Finance Admin approves it (new plan version)', setDeposit(100) === 100 && S4().cfg.deposit === 300);
+    // PD-FD-01: the demo programme now starts on its own approved £100.00 deposit (Academy default stays £300.00). Was: programme on the £300.00 Academy default.
+    ok('FCD-A the demo programme starts on its own approved £100.00 deposit (Academy default £300.00)', cb8Cur(cdPr().id).dep.mode === 'own' && cb8Cur(cdPr().id).dep.eff === 100 && S4().cfg.deposit === 300);
+    // PD-FD-01: the deposit is already £100.00, so the flow is proved by approving a different amount (£150.00) and then £100.00 again, each a new plan version. Was: one change £300.00 → £100.00.
+    const v0 = s4PlanCur(cdPr().id).v, d150 = setDeposit(150), v1 = s4PlanCur(cdPr().id).v, d100 = setDeposit(100), v2 = s4PlanCur(cdPr().id).v;
+    ok('FCD-A the Academic Admin sets a £150.00 then a £100.00 deposit and a Finance Admin approves each (new plan version each time)', d150 === 150 && d100 === 100 && v1 > v0 && v2 > v1 && S4().cfg.deposit === 300, J([d150, d100, v0, v1, v2]));
     ok('FCD-A Amira and Dev keep their signed terms (their pinned deposit is unchanged)', cb9Pin(A).dep.eff === 300 && cb9Pin(Dv).dep.eff === 300);
     ava = signUp('Ava Instal', 'ava.instal@fcd.example');
     ok('FCD-A the payment step offers "Deposit, then 6 payments — £100.00 now" beside the existing routes', /Deposit, then 6 payments — £100\.00 now/.test(main()) && !!$1('main input[name="cb9-pay"][value="dep6"]') && !!$1('main input[name="cb9-pay"][value="deposit"]') && !!$1('main input[name="cb9-pay"][value="6"]'));
@@ -177,7 +180,8 @@
     setUi('fcC-fr', cdPr().id); setUi('fcB-fr', hal.signup.batch); go('f-reports', { tab: 'coursewise' }); const sec = $1('main .fi-rep');
     ok('FCD-P batch-wise report: net received for the batch = the learners\' own records (pence)', +sec.dataset.received - +sec.dataset.refunded === expect, (+sec.dataset.received - +sec.dataset.refunded) + ' vs ' + expect);
     setUi('fcC-fr', ''); setUi('fcB-fr', ''); setUi('fcC-fl', ''); setUi('fcB-fl', '');
-    ACT.resetDemo(); ok('FCD-K Reset demo: the starting records, the £300.00 Academy default deposit again, no test learners', cb8Cur(cdPr().id).dep.eff === 300 && allTx().length === 3 && !learnerAccounts().some(v => /^G/.test(v)));
+    // PD-FD-01: after Reset the programme has its own £100.00 deposit and the demo has 5 payments. Was: £300.00 Academy default, 3 payments.
+    ACT.resetDemo(); ok('FCD-K Reset demo: the starting records, the programme £100.00 deposit again (Academy default £300.00), no test learners', cb8Cur(cdPr().id).dep.mode === 'own' && cb8Cur(cdPr().id).dep.eff === 100 && S4().cfg.deposit === 300 && allTx().length === 5 && !learnerAccounts().some(v => /^G/.test(v)));
   });
   signOutUI();
   const pre = document.createElement('pre'); pre.id = 'ft-out'; pre.textContent = R.join('\n'); document.body.appendChild(pre);

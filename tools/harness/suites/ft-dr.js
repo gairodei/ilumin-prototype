@@ -18,7 +18,8 @@
   const rowsOf = () => $a('main table tbody tr').filter(r => !r.querySelector('td[colspan]'));
   const LEGACY = ['Aisha Rahman', 'Grace Mensah', 'Daniel Okafor', 'Priya Raman', 'Oliver Bennett', 'Level 2 Diploma in Care (England)', 'Level 3 Diploma in Adult Care (England)', 'L3AC-JAN26', 'L2DC-MAR26', 'Leicester Cohort 7', 'Gulf Care Recruitment', 'BrightCare Staffing', 'Ben Holloway', 'Chloe Adeyemi', 'Sarah Okonkwo'];
   const leaks = t => LEGACY.filter(n => t.includes(n));
-  const NAMES = { sp: 'Amira Shah (demo)', fa: 'Dev Patel (demo)', sc: 'Lena Hart (demo)' };
+  // PD-FD-01: two more demo learners (Sam: deposit then instalments; Tom: bank-transfer deposit awaiting Finance). Was: sp, fa, sc only.
+  const NAMES = { sp: 'Amira Shah (demo)', fa: 'Dev Patel (demo)', sc: 'Lena Hart (demo)', dp: 'Sam Deposit (demo)', bk: 'Tom Transfer (demo)' };
   // the logical dataset: what every list, count and relationship reads (ids and references made at load time excluded)
   const snap = () => J({
     progs: ADMIN.programmes.map(p => [p.title, p.status, p.version]), batches: ADMIN.batches.map(b => [b.code, b.status, b.enrolled, b.cap, crBModes(b), b.coords, b.teachers, b.assessors]),
@@ -35,10 +36,12 @@
     ok('DR-A a fresh start loads the client demo and shows the sign-in page', boot.mode === 'client' && !boot.signedIn && boot.auth === 'signin' && shown($1('#app form[data-submit="signin"]')));
     const ids = $a('#app .dr-signin [data-act="drAs"]'), lab = ids.map(b => b.querySelector('.dr-id-r').textContent);
     ok('DR-A one chooser of demo identities; the sample sign-in buttons are gone (no "Sign in as Learner (Aisha)", no Gulf Care, no duplicate A/B variants)', !!$1('#app .dr-signin') && !$1('#app .demo-hint') && !/Aisha|Gulf Care|Admin B|Finance Admin B|Teacher \+ Assessor/.test(app()));
-    ok('DR-A the identities: three learners, two Coordinators, Teacher, Assessor, Academic, Finance, System and Super Administrators, IQA, Agency, Business Admin', J(lab) === J(['NVQ Learner — Self-Paced', 'NVQ Learner — Fully Assisted', 'Short-Course Learner', 'Academic Coordinator 1', 'Academic Coordinator 2', 'Teacher', 'Assessor', 'Academic Administrator', 'Finance Administrator', 'System Administrator', 'Super Administrator', 'Internal Quality Assurer', 'Agency', 'Business Administrator']), J(lab));
+    // PD-FD-01: two more learner identities after the three (Sam, Tom). Was: three learner identities.
+    ok('DR-A the identities: five learners, two Coordinators, Teacher, Assessor, Academic, Finance, System and Super Administrators, IQA, Agency, Business Admin', J(lab) === J(['NVQ Learner — Self-Paced', 'NVQ Learner — Fully Assisted', 'Short-Course Learner', 'NVQ Learner — Deposit, then instalments', 'NVQ Learner — Deposit by bank transfer (awaiting Finance)', 'Academic Coordinator 1', 'Academic Coordinator 2', 'Teacher', 'Assessor', 'Academic Administrator', 'Finance Administrator', 'System Administrator', 'Super Administrator', 'Internal Quality Assurer', 'Agency', 'Business Administrator']), J(lab));
     const d = p => ($1(`#app .dr-signin [data-p="${p}"]`) || {}).textContent || '';
     ok('DR-A each learner identity is described from its records (name, programme, batch, mode, Coordinator; the short course)', /Amira Shah \(demo\).*Level 3 Diploma in Care Practice \(client demo\).*DEMO-L3-JAN27.*Self-Paced.*Coordinator: Dr Helen Carter/.test(d('nvq-sp')) && /Dev Patel \(demo\).*DEMO-L3-JAN27.*Fully Assisted.*Coordinator: Michael Osei/.test(d('nvq-fa')) && /Lena Hart \(demo\).*Moving and Handling People.*enrolled/.test(d('short')));
-    ok('DR-A staff identities name their allocation (Coordinator 1: Amira; Coordinator 2: Dev; Teacher and Assessor on the batch)', /Dr Helen Carter.*1 allocated learner: Amira Shah/.test(d('coord1')) && /Michael Osei.*1 allocated learner: Dev Patel/.test(d('coord2')) && /Marcus Bell.*Teaches DEMO-L3-JAN27/.test(d('teacher')) && /James Pryce.*Assesses DEMO-L3-JAN27/.test(d('assessor')));
+    // PD-FD-01: each Coordinator has two learners (Helen: Amira + Sam; Michael: Dev + Tom). Was: 1 allocated learner each.
+    ok('DR-A staff identities name their allocation (Coordinator 1: Amira, Sam; Coordinator 2: Dev, Tom; Teacher and Assessor on the batch)', /Dr Helen Carter.*2 allocated learners: /.test(d('coord1')) && ['Amira Shah', 'Sam Deposit'].every(n => d('coord1').includes(n)) && !/Dev Patel|Tom Transfer/.test(d('coord1')) && /Michael Osei.*2 allocated learners: /.test(d('coord2')) && ['Dev Patel', 'Tom Transfer'].every(n => d('coord2').includes(n)) && !/Amira Shah|Sam Deposit/.test(d('coord2')) && /Marcus Bell.*Teaches DEMO-L3-JAN27/.test(d('teacher')) && /James Pryce.*Assesses DEMO-L3-JAN27/.test(d('assessor')));
     ok('DR-A no legacy person, programme or batch on the sign-in page', !leaks(app()).length, leaks(app()).join());
   });
 
@@ -95,7 +98,8 @@
     go('a-programmes'); ok('DR-E Programmes: exactly one (published)', rowsOf().length === 1 && /Level 3 Diploma in Care Practice \(client demo\)/.test(main()));
     go('a-batches'); ok('DR-E Batches: exactly one (DEMO-L3-JAN27, Open, 2 learners)', rowsOf().length === 1 && /DEMO-L3-JAN27/.test(main()));
     go('a-courses'); ok('DR-E Short courses: exactly one (Moving and Handling People)', rowsOf().length === 1 && /Moving and Handling People/.test(main()));
-    go('a-learners'); ok('DR-E Learners: the three demo learners, each with their course', rowsOf().length === 3 && /3 registered learners/.test(main()) && ADMIN.learners.every(l => l.courses.length === 1));
+    // PD-FD-01: five demo learners. Was: 3 rows, "3 registered learners".
+    go('a-learners'); ok('DR-E Learners: the five demo learners, each with their course', rowsOf().length === 5 && /5 registered learners/.test(main()) && ADMIN.learners.every(l => l.courses.length === 1));
     ok('DR-E admin lists show no legacy records', ['a-programmes', 'a-batches', 'a-courses', 'a-learners', 'a-dashboard', 'a-queue'].every(r => { go(r); return !leaks(main()).length; }));
     go('a-batches'); click($1('main [data-act="newBatch"]')); const co = $1('#modal-root #nb-co');
     ok('DR-E Create batch offers the NVQ programme (the only one)', !!co && [...co.options].map(o => o.value).filter(Boolean).join() === CD_T);
@@ -106,19 +110,23 @@
   });
 
   await T('DR-F Coordinators: each sees their allocated learner', async () => {
-    for (const [p, me, other] of [['coord1', NAMES.sp, NAMES.fa], ['coord2', NAMES.fa, NAMES.sp]]) {
+    // PD-FD-01: each Coordinator has two learners (Helen: Amira + Sam; Michael: Dev + Tom) of the batch four. Was: one each, of 2.
+    for (const [p, me, other] of [['coord1', [NAMES.sp, NAMES.dp], NAMES.fa], ['coord2', [NAMES.fa, NAMES.bk], NAMES.sp]]) {
       signOutUI(); pick(p); go('c-batches', { id: CD_B, tab: 'roster' }); const t = main();
-      ok(`DR-F ${COO_USERS[S.coo.v].name}: the roster lists ${me} as theirs; the batch has 2 learners, 1 allocated to them`, S.portal === 'coord' && t.includes(me) && /1 of 2 learners are allocated to you/.test(t) && /Total batch learners ?2/.test(t), t.slice(t.indexOf('My learners'), t.indexOf('My learners') + 160));
-      go('c-dashboard'); ok(`DR-F ${COO_USERS[S.coo.v].name}: dashboard counts 1 batch, 2 learners (no phantom counts)`, /1 batch · 2 learners/.test(main()));
+      // PD-FD-01: 2 of 4 allocated, 4 in the batch. Was: 1 of 2, Total batch learners 2.
+      ok(`DR-F ${COO_USERS[S.coo.v].name}: the roster lists ${me.join(' and ')} as theirs; the batch has 4 learners, 2 allocated to them`, S.portal === 'coord' && me.every(n => t.includes(n)) && /2 of 4 learners are allocated to you/.test(t) && /Total batch learners ?4/.test(t), t.slice(t.indexOf('My learners'), t.indexOf('My learners') + 160));
+      // PD-FD-01: the batch has four learners. Was: 1 batch · 2 learners.
+      go('c-dashboard'); ok(`DR-F ${COO_USERS[S.coo.v].name}: dashboard counts 1 batch, 4 learners (no phantom counts)`, /1 batch · 4 learners/.test(main()), (main().match(/\d+ batch[^·]*· \d+ learners/) || [''])[0]);
       void other;
     }
   });
 
   await T('DR-G Teacher and Assessor: the batch and its learners', async () => {
     signOutUI(); pick('teacher');
-    ok('DR-G Teacher Marcus Bell: teaching portal on DEMO-L3-JAN27 with its 2 learners; no marking', S.portal === 'staff' && TME().name === 'Marcus Bell' && J(tasBatches().map(b => b.code)) === J([CD_B]) && tasLearners(true).length === 2 && CAN('mark') === 'no');
+    // PD-FD-01: the batch has four learners (Amira, Dev, Sam, Tom). Was: tasLearners(true).length === 2.
+    ok('DR-G Teacher Marcus Bell: teaching portal on DEMO-L3-JAN27 with its 4 learners; no marking', S.portal === 'staff' && TME().name === 'Marcus Bell' && J(tasBatches().map(b => b.code)) === J([CD_B]) && tasLearners(true).length === 4 && CAN('mark') === 'no');
     signOutUI(); pick('assessor');
-    ok('DR-G Assessor James Pryce: marking portal on DEMO-L3-JAN27 with the same 2 learners', TME().name === 'James Pryce' && J(tasBatches().map(b => b.code)) === J([CD_B]) && J(tasLearners(true).map(l => l.lid).sort()) === J(mcLids(cdBatch()).slice().sort()) && CAN('mark') === 'yes');
+    ok('DR-G Assessor James Pryce: marking portal on DEMO-L3-JAN27 with the same 4 learners', TME().name === 'James Pryce' && J(tasBatches().map(b => b.code)) === J([CD_B]) && J(tasLearners(true).map(l => l.lid).sort()) === J(mcLids(cdBatch()).slice().sort()) && CAN('mark') === 'yes');
     ok('DR-G nothing marked or observed has been invented (no submissions to mark)', tasSubs(true).every(s => !/Submitted|Marked|Competent/.test(s.status || '')) || tasSubs(true).length === 0, J(tasSubs(true).map(s => s.status)));
   });
 
@@ -126,12 +134,15 @@
     signOutUI(); pick('fin'); code2fa();
     ok('DR-H Finance Admin Leila Haddad, through the two-step code', S.signedIn && ADMIN.me.name === 'Leila Haddad');
     go('f-plans'); const opts = $a('main #fpl option').map(o => o.textContent);
-    ok('DR-H Payment Plans: the three demo learners in the learner selector', J(opts) === J([NAMES.sp, NAMES.fa, NAMES.sc]), J(opts));
+    // PD-FD-01: Sam and Tom have payment plans too. Was: [sp, fa, sc].
+    ok('DR-H Payment Plans: the five demo learners in the learner selector', J(opts) === J([NAMES.sp, NAMES.fa, NAMES.sc, NAMES.dp, NAMES.bk]), J(opts));
     ok('DR-H Amira Shah: her six-payment schedule, payment 1 paid', /Instalments/.test(main()) && /£300\.00/.test(main()) && $a('main section.card table tbody tr').length >= 6);
     change($1('main #fpl'), 'CD2'); ok('DR-H Dev Patel: his schedule (£433.33 first payment)', /£433\.33/.test(main()));
     go('f-ledger'); const t = main();
-    ok('DR-H Ledger: the three simulated payments, by name (Amira £300, Dev £433.33, Lena £45)', [NAMES.sp, NAMES.fa, NAMES.sc].every(n => t.includes(n)) && allTx().length === 3);
-    ok('DR-H the payments are audited as demonstration events', ADMIN.audit.filter(a => a.action === 'Demonstration: simulated payment').length === 3);
+    // PD-FD-01: Sam paid £100 + £200; Tom transfer is awaiting confirmation (listed, not a payment). Was: three payments (Amira, Dev, Lena), allTx 3.
+    ok('DR-H Ledger: the five simulated payments, by name (Amira £300, Dev £433.33, Lena £45, Sam £100 + £200) and Tom awaiting transfer', [NAMES.sp, NAMES.fa, NAMES.sc, NAMES.dp, NAMES.bk].every(n => t.includes(n)) && allTx().length === 5 && J(allTx().map(x => [x.payer, x.amount]).sort()) === J([[NAMES.sp, 300], [NAMES.fa, 433.33], [NAMES.sc, 45], [NAMES.dp, 100], [NAMES.dp, 200]].sort()), J(allTx().map(x => [x.payer, x.amount])));
+    // PD-FD-01: five demonstration payments (Sam two, Tom none). Was: 3.
+    ok('DR-H the payments are audited as demonstration events', ADMIN.audit.filter(a => a.action === 'Demonstration: simulated payment').length === 5);
   });
 
   await T('DR-I Global search, counts and related dropdowns agree', async () => {
@@ -139,10 +150,12 @@
     const sr = q => searchResults(q).replace(/<[^>]+>/g, ' ');
     ok('DR-I search finds each demo learner, the batch and the short course', /Amira Shah/.test(sr('Amira')) && /Dev Patel/.test(sr('Patel')) && /Lena Hart/.test(sr('Lena')) && /DEMO-L3-JAN27/.test(sr('DEMO-L3')) && /Moving and Handling/.test(sr('Moving')));
     ok('DR-I search finds no legacy records ("Aisha", "Grace", "L3AC")', ['Aisha', 'Grace', 'L3AC', 'Leicester'].every(q => /No matches/.test(sr(q))));
-    ok('DR-I counts agree: 3 learners everywhere; the batch counts its 2 members once', allLearners().length === 3 && cdBatch().enrolled === 2 && mcLids(cdBatch()).length === 2 && batchRoster(cdBatch()).length === 2);
+    // PD-FD-01: five learners, four on the batch. Was: 3 learners, 2 members.
+    ok('DR-I counts agree: 5 learners everywhere; the batch counts its 4 members once', allLearners().length === 5 && cdBatch().enrolled === 4 && mcLids(cdBatch()).length === 4 && batchRoster(cdBatch()).length === 4);
     go('a-batches', { id: CD_B }); click($1('main [data-act="addToBatch"]'));
     const sel = $a('#modal-root #ab-l option').map(o => o.textContent);
-    ok('DR-I Add to batch lists the registered learners (the dropdown reads the same records)', sel.length === 3 && [NAMES.sp, NAMES.fa, NAMES.sc].every(n => sel.some(s => s.includes(n))), J(sel)); closeModal();
+    // PD-FD-01: five registered learners. Was: sel.length === 3 (Amira, Dev, Lena).
+    ok('DR-I Add to batch lists the registered learners (the dropdown reads the same records)', sel.length === 5 && [NAMES.sp, NAMES.fa, NAMES.sc, NAMES.dp, NAMES.bk].every(n => sel.some(s => s.includes(n))), J(sel)); closeModal();
   });
 
   await T('DR-J the batch takes new learners', async () => {
@@ -154,7 +167,8 @@
     l.acct = 'Active'; // the learner sets their password from the activation link (no admin step exists; as in the build)
     go('a-batches', { id: CD_B }); ACT.addToBatch({ dataset: { id: CD_B } }); $1('#modal-root #ab-l').value = l.id; const o = $1('#modal-root #r2-ab-o'); if (o) o.value = [...o.options].find(x => /Fully Assisted/.test(x.textContent)).value;
     MODAL.actions.find(a => /primary/.test(a.cls || '')).fn(); closeModal();
-    ok('DR-J and Add to batch enrols them (3 learners; the batch is still Open)', mcLids(cdBatch()).includes(l.id) && cdBatch().enrolled === 3 && cdBatch().status === 'Open');
+    // PD-FD-01: the batch starts with four learners. Was: enrolled === 3 (from 2).
+    ok('DR-J and Add to batch enrols them (5 learners; the batch is still Open)', mcLids(cdBatch()).includes(l.id) && cdBatch().enrolled === 5 && cdBatch().status === 'Open');
   });
 
   await T('DR-K Demo controls: Switch demo user, Reset demo, developer mode', async () => {
@@ -163,7 +177,8 @@
     ok('DR-K no scenario, variant, legacy or 101-learner controls in the client panel', !/Scenario|variant|legacy|101-learner|Aisha|Edge state/i.test(p.textContent));
     ok('DR-K it says who is signed in, and what Reset discards', /Viewing as Rachel Hughes — Academic Administrator/.test(p.textContent) && /Discards every change made in this browser tab/.test(p.textContent));
     click($1('#demo-root [data-act="drSwitch"]'));
-    ok('DR-K Switch demo user opens the same identity chooser', /Switch demo user/.test(MODAL.title) && $a('#modal-root [data-act="drAs"]').length === 14);
+    // PD-FD-01: two more learner identities (Sam, Tom). Was: 14.
+    ok('DR-K Switch demo user opens the same identity chooser', /Switch demo user/.test(MODAL.title) && $a('#modal-root [data-act="drAs"]').length === 16);
     click($1('#modal-root [data-act="drAs"][data-p="nvq-fa"]'));
     ok('DR-K choosing an identity there switches to it', !MODAL && S.portal === 'learner' && S.variant === 'CD2' && S.route === 'dashboard');
     S.demoOpen = true; renderDemo(); click($1('#demo-root [data-act="drDevOn"]')); ok('DR-K developer mode asks first', !!MODAL && /developer mode/i.test(MODAL.title));
@@ -255,7 +270,8 @@
   await T('DR-Q3 not started is not At risk; genuine risk still flagged', async () => {
     ACT.resetDemo(); signOutUI(); const b = cdBatch(), f0 = JSON.stringify(b.coh.map(e => e.flags));
     pick('teacher'); const ls = tasLearners(true);
-    ok('DR-Q3 Teacher view: Amira and Dev at 0 % before their batch starts are "Not started", not At risk', ls.length === 2 && ls.every(l => !l.flags.includes('At risk') && l.flags.includes('Not started')), JSON.stringify(ls.map(l => l.flags)));
+    // PD-FD-01: the batch has four learners (Sam and Tom too). Was: ls.length === 2 (Amira, Dev).
+    ok('DR-Q3 Teacher view: Amira, Dev, Sam and Tom at 0 % before their batch starts are "Not started", not At risk', ls.length === 4 && ls.every(l => !l.flags.includes('At risk') && l.flags.includes('Not started')), JSON.stringify(ls.map(l => l.flags)));
     go('t-dashboard'); ok('DR-Q3 Teacher dashboard: 0 learners at risk', /0 learners at risk/.test(main()));
     signOutUI(); pick('coord1'); ok('DR-Q3 Coordinator view: no At risk for her learner', myLearners(true).every(l => !l.flags.includes('At risk')));
     go('c-dashboard'); ok('DR-Q3 Coordinator dashboard: 0 learners at risk', /0 learners at risk/.test(main()));
@@ -274,7 +290,8 @@
     signOutUI(); pick('aca'); go('a-batches'); ok('DR-Q4 Academic Admin Batches: both Coordinators', cell() === 'Dr Helen Carter, Michael Osei', cell());
     const x = { ...cdBatch() }; x.coords = ['Dr Helen Carter', 'Michael Osei', 'Laura Kemp']; x.mcA = {}; x.mcH = [];
     const h = mcCell(x); ok('DR-Q4 more than two: the first name and "+2 more", every name in the title and for screen readers', /Dr Helen Carter/.test(h) && /\+2 more/.test(h) && /title="Dr Helen Carter, Michael Osei, Laura Kemp"/.test(h) && /class="sr">, Michael Osei, Laura Kemp/.test(h), h);
-    ok('DR-Q4 display only: the batch\'s Coordinators and allocations unchanged', JSON.stringify(mcList(cdBatch())) === JSON.stringify(['Dr Helen Carter', 'Michael Osei']) && mcLids(cdBatch()).map(l => mcOf(l, cdBatch())).join() === 'Dr Helen Carter,Michael Osei');
+    // PD-FD-01: Sam (Helen) and Tom (Michael) on the batch too. Was: allocations 'Dr Helen Carter,Michael Osei' (Amira, Dev).
+    ok('DR-Q4 display only: the batch\'s Coordinators and allocations unchanged', JSON.stringify(mcList(cdBatch())) === JSON.stringify(['Dr Helen Carter', 'Michael Osei']) && mcLids(cdBatch()).map(l => cdKeyOf(l) + ':' + mcOf(l, cdBatch())).sort().join() === 'CD1:Dr Helen Carter,CD2:Michael Osei,CD4:Dr Helen Carter,CD5:Michael Osei');
   });
 
   await T('DR-O the legacy fixture stays separate and unchanged', async () => {

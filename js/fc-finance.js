@@ -238,6 +238,14 @@ fiRepDeposits = function (f = fcRepF()) {
   ${lv.length ? `<div class="tbl-wrap"><table class="tbl dense"><thead><tr><th>Learner</th><th>Programme / batch</th><th class="r">Deposit</th><th>Received</th><th>Confirmation</th><th class="r">Credited to first payment</th><th class="r">First payment remaining</th></tr></thead><tbody>${lv.map(d => `<tr><td>${esc(d.name)}</td><td class="small">${esc(d.programme)}<div class="xs muted mono">${esc(d.batch || 'Not batch-specific')}</div></td><td class="r num">${fiG(d.a.dep)}</td><td class="small">${d.a.received ? `${fiG(d.a.received)} · ${d.a.paidAt ? fd(d.a.paidAt) : ''}` : 'Not yet'}</td><td>${chip(d.a.state)}${d.a.refunded ? ` <span class="xs">${fiG(d.a.refunded)} refunded</span>` : ''}</td><td class="r num">${fiG(d.a.credited)}</td><td class="r num">${d.hist ? 'Not payable' : fiG(d.a.firstDue)}</td></tr>`).join('')}</tbody></table></div>` : ''}<p class="xs muted">From Finance → Deposits${seeded.length ? ' and the seeded deposit records' : ''}. The later payment toward the first instalment or balance is a separate transaction (Ledger), not a second deposit.</p></section>`;
 };
 
+/* ---------- FD (PD-FD-03): a change of demo identity or role starts the Finance views unfiltered ----------
+   Course / batch / course-type selections, the report period, agency and method, and the search and column filters of the Finance tables
+   are screen state of one person's session: they are reset to the defaults (all) whenever the demo identity or role changes. Records are
+   never touched. */
+const FC_FILTER_UI = /^(fc[CBT]-|fr(Range|Agency|Mode|Grp|Course)$|fpL$|odTab$|dt-(fledger|ledger-tx|fdep|frefunds|flearners|fod-|lu-h-fwaiv))/;
+function fcFiltersReset() { if (S && S.ui) Object.keys(S.ui).filter(k => FC_FILTER_UI.test(k)).forEach(k => delete S.ui[k]); }
+['drAs', 'switchRole'].forEach(n => { const f = ACT[n]; if (typeof f === 'function') ACT[n] = function () { fcFiltersReset(); return f.apply(this, arguments); }; });
+
 /* ---------- Finance Reports: the tabs and the filters on every one that can use them ---------- */
 const _frFC = SCREENS['f-reports'];
 SCREENS['f-reports'] = p => {

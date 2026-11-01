@@ -50,6 +50,8 @@
   const advance = d => { FA(); ACT.cb10Advance({ dataset: { d: String(d) } }); render(); };
   const back = () => { FA(); ACT.cb10Reset(); render(); };
   const A = STORE.worlds.CD1, Dv = STORE.worlds.CD2;
+  // PD-FD-01: the client demo adds Sam (CD4, deposit + instalment 1 paid) and Tom (CD5, £100.00 deposit transfer awaiting confirmation). Was: Amira, Dev and Lena only.
+  const Sm = STORE.worlds.CD4, Tm = STORE.worlds.CD5;
   const LS = () => window.localStorage.getItem(FCP_KEY);
   const rcv = w => w.tx.filter(t => t.amount > 0 && ['Succeeded', 'Refunded'].includes(t.status)).reduce((a, t) => a + P(t.amount), 0);
   const refd = w => w.tx.filter(t => t.amount < 0).reduce((a, t) => a + P(-t.amount), 0);
@@ -68,7 +70,8 @@
     ok('FC-A Finance account (fiAcct) = the learner\'s own record, both learners', fiAcct(A).outstanding === a.out && fiAcct(A).received === a.got && fiAcct(Dv).outstanding === d.out && fiAcct(Dv).received === d.got);
     FA(); go('f-learners'); ok('FC-B Learner Accounts shows Amira £1,500.00 and Dev £2,166.67 outstanding', /£1,500\.00/.test(rowOf('', 'Amira').textContent) && /£2,166\.67/.test(rowOf('', 'Dev Patel').textContent));
     go('f-ledger'); ok('FC-B Ledger lists Amira and Dev with programme and batch', ['Amira', 'Dev Patel'].every(n => { const r = rowOf('', n); return r && /NVQ programme/.test(r.textContent) && /DEMO-L3-JAN27/.test(r.textContent); }));
-    const f = $1('.fc-led-foot'); ok('FC-B Ledger footer: received £778.33, nothing pending (pence)', f && +f.dataset.received === 30000 + 43333 + 4500 && +f.dataset.pending === 0, f && f.textContent);
+    // PD-FD-01: 5 receipts (Sam £100.00 + £200.00 added) and Tom £100.00 transfer pending. Was: received £778.33, nothing pending.
+    const f = $1('.fc-led-foot'); ok('FC-B Ledger footer: received £1,078.33, only Tom £100.00 deposit transfer pending (pence)', f && +f.dataset.received === 30000 + 43333 + 4500 + 10000 + 20000 && +f.dataset.received === rcv(A) + rcv(Dv) + rcv(STORE.worlds.CD3) + rcv(Sm) && +f.dataset.pending === 10000 && (STORE.chBank || []).filter(x => x.status === 'Awaiting confirmation').length === 1 && (STORE.chBank || []).some(x => x.v === 'CD5' && x.status === 'Awaiting confirmation'), f && f.textContent);
     ACT.fcQuick({ dataset: { v: 'Short course' } }); const rows = $a('main table tbody tr');
     ok('FC-C "Short courses" shows only Lena\'s £45.00 Moving and Handling People payment', rows.length === 1 && /Lena Hart/.test(rows[0].textContent) && /Moving and Handling People/.test(rows[0].textContent) && /£45\.00/.test(rows[0].textContent) && /Not batch-specific/.test(rows[0].textContent));
     ok('FC-C its receipt and method are shown', rows[0] && /RCP-\d+/.test(rows[0].textContent) && /Gateway card/.test(rows[0].textContent));
@@ -85,26 +88,36 @@
   /* ================= D: course and batch filters across the reports ================= */
   await T('FC-D course and batch filters', async () => {
     FA(); setF('fr'); const all = repData('coursewise', 'received');
-    ok('FC-D Coursewise, no filters: received £778.33 (pence, from the learners\' records)', all === rcv(A) + rcv(Dv) + rcv(STORE.worlds.CD3), all);
-    setF('fr', 'NV-N1'); ok('FC-D course = the demo programme: £733.33', repData('coursewise', 'received') === rcv(A) + rcv(Dv));
+    // PD-FD-01: Sam £300.00 added. Was: £778.33 (Amira + Dev + Lena).
+    ok('FC-D Coursewise, no filters: received £1,078.33 (pence, from the learners\' records)', all === rcv(A) + rcv(Dv) + rcv(STORE.worlds.CD3) + rcv(Sm) + rcv(Tm) && all === 107833, all);
+    // PD-FD-01: Sam £300.00 added to the programme. Was: £733.33 (Amira + Dev).
+    setF('fr', 'NV-N1'); ok('FC-D course = the demo programme: £1,033.33', repData('coursewise', 'received') === rcv(A) + rcv(Dv) + rcv(Sm) + rcv(Tm) && rcv(Tm) === 0);
     ok('FC-D the batch list follows the course: the demo batch and "Not batch-specific"', $a('#fcB-fr option').map(o => o.value).join() === ',DEMO-L3-JAN27,' + FC_NB, $a('#fcB-fr option').map(o => o.value).join());
-    setF('fr', 'NV-N1', 'DEMO-L3-JAN27'); ok('FC-D course + batch: £733.33; outstanding £3,666.67', repData('coursewise', 'received') === 73333 && +$1('main .fi-rep').dataset.outstanding === 150000 + 216667);
+    // PD-FD-01: Sam and Tom in the batch. Was: £733.33 received, £3,666.67 outstanding (Amira + Dev).
+    setF('fr', 'NV-N1', 'DEMO-L3-JAN27'); ok('FC-D course + batch: £1,033.33; outstanding £6,966.67', repData('coursewise', 'received') === 103333 && +$1('main .fi-rep').dataset.outstanding === 150000 + 216667 + 150000 + 180000, J([+$1('main .fi-rep').dataset.received, +$1('main .fi-rep').dataset.outstanding]));
     setF('fr', '', FC_NB); ok('FC-D "Not batch-specific": Lena\'s £45.00 only', repData('coursewise', 'received') === 4500);
     setF('fr', 'NV-N1', FC_NB); go('f-reports', { tab: 'coursewise' }); ok('FC-D an empty result says so (no rows invented)', !$1('main .fi-rep') && /No programme, course or bundle has payments for these filters/.test(main()));
-    setF('fr', 'NV-N1', 'DEMO-L3-JAN27'); ok('FC-D Datewise follows the filters (£733.33)', repData('datewise', 'received') === 73333);
+    // PD-FD-01: Sam £300.00 added. Was: £733.33.
+    setF('fr', 'NV-N1', 'DEMO-L3-JAN27'); ok('FC-D Datewise follows the filters (£1,033.33)', repData('datewise', 'received') === 103333);
     const xn = ($1('main [data-act="aExport"]') || { dataset: {} }).dataset.n || '';
     ok('FC-D the report export names the filters', /course: Level 3 Diploma in Care Practice \(client demo\) \(NV-N1\) · batch: DEMO-L3-JAN27/.test(xn), xn);
     setF('fr', 'SC:SC-01'); ok('FC-D Datewise for the short course: £45.00', repData('datewise', 'received') === 4500);
     go('f-reports', { tab: 'agency' }); ok('FC-D Agency revenue: no course/batch filter, with the reason shown', !$1('#fcC-fr') && /can't be split by course or batch/.test(main()));
-    setF('fl', 'NV-N1', 'DEMO-L3-JAN27'); go('f-ledger'); ok('FC-D Ledger course + batch: 2 rows, £733.33', $a('main table tbody tr').length === 2 && +$1('.fc-led-foot').dataset.received === 73333);
+    // PD-FD-01: Sam two receipts and Tom awaiting-confirmation row added. Was: 2 rows (Amira, Dev), £733.33.
+    setF('fl', 'NV-N1', 'DEMO-L3-JAN27'); go('f-ledger'); const lr = $a('main table tbody tr').map(tr => tr.textContent.replace(/\s+/g, ' '));
+    ok('FC-D Ledger course + batch: 5 rows (Amira, Dev, Sam x2, Tom awaiting), £1,033.33', lr.length === 5 && lr.filter(t => /Sam Deposit/.test(t)).length === 2 && lr.filter(t => /Tom Transfer/.test(t) && /Awaiting confirmation/.test(t)).length === 1 && !lr.some(t => /Lena/.test(t)) && +$1('.fc-led-foot').dataset.received === 103333 && +$1('.fc-led-foot').dataset.pending === 10000, J(lr.map(t => t.slice(0, 120))));
     ok('FC-D the Ledger export names the filters', /batch: DEMO-L3-JAN27/.test(($1('main [data-act="aExport"][data-tid="fledger"]') || { dataset: {} }).dataset.n || ''));
-    setF('fla', 'NV-N1', 'DEMO-L3-JAN27'); go('f-learners'); ok('FC-D Learner Accounts by batch: Amira and Dev only', $a('main table tbody tr').length === 2 && !/Lena/.test(main()));
+    // PD-FD-01: Sam and Tom are in the batch. Was: Amira and Dev only (2 rows).
+    setF('fla', 'NV-N1', 'DEMO-L3-JAN27'); go('f-learners'); const la = $a('main table tbody tr').map(tr => tr.textContent);
+    ok('FC-D Learner Accounts by batch: Amira, Dev, Sam and Tom only', la.length === 4 && ['Amira', 'Dev Patel', 'Sam Deposit', 'Tom Transfer'].every(n => la.some(t => t.includes(n))) && !/Lena/.test(main()), J(la.map(t => t.replace(/\s+/g, ' ').slice(0, 60))));
     setF('fla', 'SC:SC-01'); go('f-learners'); ok('FC-D Learner Accounts by short course: Lena only', $a('main table tbody tr').length === 1 && /Lena/.test(main()));
-    SA(); setF('fr', 'NV-N1'); go('a-finance', { tab: 'reports' }); ok('FC-D admin console Reports (Super Admin): the same filters and £733.33', !!$1('#fcC-fr') && +$1('main .fi-rep').dataset.received === 73333);
+    // PD-FD-01: Sam £300.00 added. Was: £733.33.
+    SA(); setF('fr', 'NV-N1'); go('a-finance', { tab: 'reports' }); ok('FC-D admin console Reports (Super Admin): the same filters and £1,033.33', !!$1('#fcC-fr') && +$1('main .fi-rep').dataset.received === 103333);
     setF('fl', 'SC:SC-01'); go('a-finance', { tab: 'ledger' }); ok('FC-D admin console ledger: course filter, KPIs follow it (£45.00)', $a('main table tbody tr').length === 1 && /Received£45\.00/.test(main().replace(/\s/g, '')));
     FA(); setF('fr', 'NV-N1'); const before = repData('coursewise', 'received'); rec('CD1|nvq|2', 300); setF('fr', 'NV-N1');
     ok('FC-D no stale totals: a payment recorded under the same filter is in the next figure (+£300.00)', repData('coursewise', 'received') === before + 30000);
-    role('bizA'); FA(); setF('fr', 'NV-N1'); ok('FC-D after switching role and back, the figure is recomputed from the records', repData('coursewise', 'received') === rcv(A) + rcv(Dv));
+    // PD-FD-01: Sam and Tom are on the programme too. Was: rcv(Amira) + rcv(Dev).
+    role('bizA'); FA(); setF('fr', 'NV-N1'); ok('FC-D after switching role and back, the figure is recomputed from the records', repData('coursewise', 'received') === rcv(A) + rcv(Dv) + rcv(Sm) + rcv(Tm));
     setF('fr'); setF('fl'); setF('fla');
   });
 
@@ -114,9 +127,11 @@
     const r = rowOf('', ref); ok('FC-E Finance\'s offline payment is a ledger row at once: Amira, £300.00, NVQ programme, DEMO-L3-JAN27', allTx().length === n0 + 1 && r && /Amira/.test(r.textContent) && /£300\.00/.test(r.textContent) && /DEMO-L3-JAN27/.test(r.textContent));
     learner('CD2'); go('payments'); payCo(() => ACT.payInst({ dataset: { e: 'nvq', n: '2' } }));
     FA(); go('f-ledger'); ok('FC-E Dev\'s own card payment is a ledger row (Gateway, £433.33)', allTx().filter(t => t.v === 'CD2' && !t.refund).length === 2 && /£433\.33/.test(rowOf('', 'Dev Patel').textContent));
+    // PD-FD-01: Tom £100.00 transfer is already awaiting confirmation, so pending is measured from that baseline and the row must be Amira. Was: first Awaiting row, pending >= £300.00, received = Amira + Dev + Lena.
+    FA(); go('f-ledger'); const pend0 = +$1('.fc-led-foot').dataset.pending;
     learner('CD1'); go('payments'); ACT.chPayBank({ dataset: { e: 'nvq', n: '4' } }); if (MODAL) press();
-    FA(); go('f-ledger'); const aw = $a('main table tbody tr').find(tr => /Awaiting confirmation/.test(tr.textContent));
-    ok('FC-E a bank transfer the learner has notified is listed as Awaiting confirmation — not counted as received', !!aw && +$1('.fc-led-foot').dataset.pending >= 30000 && +$1('.fc-led-foot').dataset.received === rcv(A) + rcv(Dv) + rcv(STORE.worlds.CD3));
+    FA(); go('f-ledger'); const aw = $a('main table tbody tr').find(tr => /Awaiting confirmation/.test(tr.textContent) && /Amira/.test(tr.textContent));
+    ok('FC-E a bank transfer the learner has notified is listed as Awaiting confirmation — not counted as received', !!aw && pend0 === 10000 && +$1('.fc-led-foot').dataset.pending === pend0 + 30000 && +$1('.fc-led-foot').dataset.received === rcv(A) + rcv(Dv) + rcv(STORE.worlds.CD3) + rcv(Sm), J([pend0, +$1('.fc-led-foot').dataset.pending, +$1('.fc-led-foot').dataset.received]));
     click(aw.querySelector('[data-act="fcAwRec"]')); ok('FC-E its Confirm… opens Record offline payment on that transfer', !!MODAL && /Record offline payment/.test(MODAL.title) && /instalment 4/.test($1('#op-t').selectedOptions[0].textContent));
     $1('#rsn').value = 'confirmed'; press(); ok('FC-E once confirmed it is a receipt (Amira received £1,200.00)', rcv(A) === 120000, rcv(A));
   });
@@ -126,15 +141,20 @@
     const p = register('Pia Pend', 'pia.pend@fc.example'); toPayment(p); choose('deposit', 'bank'); click($1('main [data-act="suPay"]')); press();
     ok('FC-1 a pending deposit transfer is not a payment: nothing received, £1,800.00 outstanding', rcv(p) === 0 && fiAcct(p).outstanding === 180000 && pl(p).deposit.status !== 'Paid', fiAcct(p).outstanding);
     FA(); go('f-deposits'); let r = rowOf('', 'Pia Pend'); ok('FC-2 Deposits: Pia — Awaiting confirmation, nothing received yet, batch shown', r && /Awaiting confirmation/.test(r.textContent) && /DEMO-L3-JAN27/.test(r.textContent) && /Not yet/.test(r.textContent));
-    ok('FC-1 a part deposit (£150.00) is refused', rec(p.v + '|dep', 150) === false && pl(p).deposit.status !== 'Paid');
-    ok('FC-1 more than the deposit (£350.00) is refused', rec(p.v + '|dep', 350) === false);
-    const t0 = tgt(p.v + '|dep'); ok('FC-1 the full £300.00 confirms it', rec(p.v + '|dep', 300, p.signup.pay.ref) !== false && pl(p).deposit.status === 'Paid' && rcv(p) === 30000);
-    FA(); ok('FC-1 confirming it again is refused (credited once): no target is offered, and the old one is refused', !tgt(p.v + '|dep') && recordPayment(t0, 300, 'BACS-AGAIN-1', 'Bank transfer', 'x') === false && rcv(p) === 30000);
+    // PD-FD-01: the programme deposit is now £100.00 (balance £1,700.00). Was: £300.00 deposit, part £150.00, over £350.00.
+    ok('FC-1 the deposit is the programme £100.00 (pinned terms)', P(pl(p).deposit.amount) === 10000 && cb9Pin(p).dep.eff === 100, J(pl(p).deposit));
+    ok('FC-1 a part deposit (£50.00) is refused', rec(p.v + '|dep', 50) === false && pl(p).deposit.status !== 'Paid');
+    ok('FC-1 more than the deposit (£150.00) is refused', rec(p.v + '|dep', 150) === false && pl(p).deposit.status !== 'Paid');
+    const t0 = tgt(p.v + '|dep'); ok('FC-1 the full £100.00 confirms it', rec(p.v + '|dep', 100, p.signup.pay.ref) !== false && pl(p).deposit.status === 'Paid' && rcv(p) === 10000);
+    FA(); ok('FC-1 confirming it again is refused (credited once): no target is offered, and the old one is refused', !tgt(p.v + '|dep') && recordPayment(t0, 100, 'BACS-AGAIN-1', 'Bank transfer', 'x') === false && rcv(p) === 10000);
     go('f-deposits'); r = rowOf('', 'Pia Pend'); const rt = r ? r.textContent.replace(/\s+/g, ' ') : '';
-    ok('FC-2 Deposits: received £300.00, Confirmed, £300.00 credited to the first payment, £1,500.00 of it remaining', /Confirmed/.test(rt) && /£300\.00[\s\S]*£300\.00[\s\S]*£1,500\.00/.test(rt), rt);
-    ok('FC-1 deposit only: £300.00 received, £1,500.00 outstanding (pence)', rcv(p) === 30000 && due(p) === 150000 && fiAcct(p).outstanding === 150000);
-    const n = allTx().filter(t => t.v === p.v).length; rec(p.v + '|nvq|1', 1500);
-    ok('FC-1 balance £1,500.00 recorded: £1,800.00 received, nothing outstanding, a separate ledger transaction', rcv(p) === 180000 && due(p) === 0 && allTx().filter(t => t.v === p.v).length === n + 1);
+    // PD-FD-01: £100.00 deposit, £1,700.00 balance. Was: £300.00 received and credited, £1,500.00 remaining.
+    ok('FC-2 Deposits: received £100.00, Confirmed, £100.00 credited to the first payment, £1,700.00 of it remaining', /Confirmed/.test(rt) && /£100\.00[\s\S]*£100\.00[\s\S]*£1,700\.00/.test(rt), rt);
+    // PD-FD-01: £100.00 deposit, £1,700.00 balance. Was: £300.00 received, £1,500.00 outstanding.
+    ok('FC-1 deposit only: £100.00 received, £1,700.00 outstanding (pence)', rcv(p) === 10000 && due(p) === 170000 && fiAcct(p).outstanding === 170000);
+    // PD-FD-01: the balance is £1,700.00. Was: £1,500.00.
+    const n = allTx().filter(t => t.v === p.v).length; rec(p.v + '|nvq|1', 1700);
+    ok('FC-1 balance £1,700.00 recorded: £1,800.00 received, nothing outstanding, a separate ledger transaction', rcv(p) === 180000 && due(p) === 0 && allTx().filter(t => t.v === p.v).length === n + 1);
     const tx = allTx().filter(t => t.v === p.v && !t.refund); ok('FC-2 the balance is not shown as another deposit', tx.filter(t => /deposit/i.test(t.course)).length === 1, J(tx.map(t => t.course)));
     go('f-deposits'); r = rowOf('', 'Pia Pend'); ok('FC-2 Deposits: first payment Paid, balance paid', r && /Paid/.test(r.textContent) && /Balance paid/.test(r.textContent));
     ok('FC-1 nothing more can be recorded on the balance (no overpayment)', rec(p.v + '|nvq|1', 1) !== true && due(p) === 0 && rcv(p) === 180000);
@@ -178,8 +198,10 @@
   });
   await T('FC-1 seat hold expiry, the same payment twice, multiple enrolments', async () => {
     const hh = register('Hal Hold', 'hal.hold@fc.example'); toPayment(hh); choose('deposit', 'card'); payCo(() => click($1('main [data-act="suPay"]')));
-    ok('FC-1 card deposit: seat reserved, £300.00 received', dpSeat(hh).st === 'reserved' && rcv(hh) === 30000);
-    advance(29); ok('FC-1 hold ended: seat released, no balance can be recorded, deposit still £300.00 received', dpSeat(hh).st === 'released' && !tgt(hh.v + '|nvq|1') && rcv(hh) === 30000);
+    // PD-FD-01: the programme deposit is £100.00. Was: £300.00 received.
+    ok('FC-1 card deposit: seat reserved, £100.00 received', dpSeat(hh).st === 'reserved' && rcv(hh) === 10000);
+    // PD-FD-01: the programme deposit is £100.00. Was: deposit still £300.00 received.
+    advance(29); ok('FC-1 hold ended: seat released, no balance can be recorded, deposit still £100.00 received', dpSeat(hh).st === 'released' && !tgt(hh.v + '|nvq|1') && rcv(hh) === 10000);
     FA(); go('f-deposits'); ok('FC-2 Deposits: the released seat\'s first payment is "Not payable"', /Not payable/.test((rowOf('', 'Hal Hold') || {}).textContent || '')); back();
     const ref = allTx().find(t => t.v === 'CD1' && !t.refund).ref; ok('FC-1 the same payment (reference) twice is refused', rec('CD1|nvq|5', 300, ref) === false);
     learner('CD1'); go('payments'); const n = A.tx.length; ACT.payInst({ dataset: { e: 'nvq', n: '1' } }); ok('FC-1 Pay now on a paid instalment opens no checkout', (!MODAL || !/Pay now/.test(MODAL.title || '')) && A.tx.length === n); closeModal();
@@ -200,7 +222,8 @@
     const t = tgt('CD2|nvq|3');
     ACA(); ok('FC-I an Academic Admin can\'t record a payment', recordPayment(t, 433.33, 'BACS-FCI1', 'Bank transfer', 'x') === false);
     go('f-ledger'); ok('FC-I an Academic Admin can\'t open the Transaction Ledger', !/TXN-|Lena Hart/.test(main()));
-    go('f-reports', { tab: 'coursewise' }); ok('FC-I … nor Finance Reports', !/£778\.33|Moving and Handling People/.test(main()));
+    // PD-FD-01: the starting total received is £1,078.33. Was: £778.33 only.
+    go('f-reports', { tab: 'coursewise' }); ok('FC-I … nor Finance Reports', !/£778\.33|£1,078\.33|Moving and Handling People/.test(main()));
     role('bizA'); ok('FC-I a Business Admin can\'t record a payment', recordPayment(t, 433.33, 'BACS-FCI2', 'Bank transfer', 'x') === false);
     learner('CD1'); ok('FC-I a learner can\'t record a payment', recordPayment(t, 433.33, 'BACS-FCI3', 'Bank transfer', 'x') === false); ACT.finOffline({ dataset: {} }); ok('FC-I … nor open Record offline payment', !MODAL || !/Record offline payment/.test(MODAL.title)); closeModal();
     AGY('AG-02'); go('g-purchases'); ok('FC-I the agency portal shows none of the learners\' payments', !/Amira|Dev Patel|Lena Hart|433\.33/.test(main()));
@@ -215,14 +238,16 @@
     go('f-ledger'); ok('FC-F the Ledger says it is a prototype copy kept in this browser only', /Prototype only/.test(main()) && /isn't shared with other browsers or devices/.test(main()));
     ACT.fxLegacy(); const k0 = LS(); const c = STORE.worlds.C, cr = c.plans[0].rows.find(r => r.status !== 'Paid'); if (cr) rec('C|' + c.plans[0].e + '|' + cr.n, 10);
     ok('FC-H legacy test data is never saved: the client copy is unchanged', LS() === k0 && FX.mode === 'legacy');
-    ACT.resetDemo(); ok('FC-G Reset demo: the saved copy is deleted and the starting demo loaded (3 payments, no legacy rows)', !LS() && allTx().length === 3 && !allTx().some(t => /TXN-90011|Gulf Care/.test(t.ref + t.payer)), allTx().length);
+    // PD-FD-01: the starting demo has 5 payments. Was: 3 payments.
+    ACT.resetDemo(); ok('FC-G Reset demo: the saved copy is deleted and the starting demo loaded (5 payments, no legacy rows)', !LS() && allTx().length === 5 && !allTx().some(t => /TXN-90011|Gulf Care/.test(t.ref + t.payer)), allTx().length);
     S.drDev = true; FA(); S.drDev = true; rec('CD1|nvq|2', 300); render(); ok('FC-H a change in developer mode is not saved', !LS() && FCP.st === 'paused', FCP.st);
     S.drDev = false; render(); ok('FC-H … nor after leaving developer mode (until Reset)', !LS() && FCP.st === 'paused');
     ACT.resetDemo(); S.drDev = false; FA(); rec('CD1|nvq|2', 300); render(); ok('FC-H after Reset, changes are saved again', !!LS() && FCP.st === 'saved', FCP.st);
     const ls = window.localStorage, sig = JSON.parse(LS()).sig;
     ls.setItem(FCP_KEY, '{not json'); ok('FC-F a corrupt saved copy is discarded with a notice, not loaded', /couldn't be read/.test(fcpRestore() || '') && !LS());
     ls.setItem(FCP_KEY, J({ v: FCP_V, fx: 'client', sig: 'other', data: '{}' })); ok('FC-F a copy from another version is discarded with a notice', /was updated/.test(fcpRestore() || '') && !LS());
-    ls.setItem(FCP_KEY, J({ v: FCP_V, fx: 'client', sig, data: J({ $i: 0, o: { STORE: { $i: 1, o: {} } } }) })); ok('FC-F an incomplete copy is discarded and the starting demo loaded', /couldn't be restored/.test(fcpRestore() || '') && !LS() && !!STORE.worlds.CD1 && allTx().length === 3, allTx().length);
+    // PD-FD-01: the starting demo has 5 payments. Was: 3.
+    ls.setItem(FCP_KEY, J({ v: FCP_V, fx: 'client', sig, data: J({ $i: 0, o: { STORE: { $i: 1, o: {} } } }) })); ok('FC-F an incomplete copy is discarded and the starting demo loaded (5 payments)', /couldn't be restored/.test(fcpRestore() || '') && !LS() && !!STORE.worlds.CD1 && allTx().length === 5, allTx().length);
     const f0 = fcpLS; fcpLS = () => null; try { FA(); rec('CD1|nvq|2', 300); render(); ok('FC-F storage unavailable: it says changes are not kept — never "saved"', FCP.st === 'unavailable' && /lost on refresh/.test(fcpStatusTxt())); } finally { fcpLS = f0; }
     const st0 = window.Storage.prototype.setItem; window.Storage.prototype.setItem = function (k) { if (k === FCP_KEY) { const e = new Error('full'); e.name = 'QuotaExceededError'; throw e; } return st0.apply(this, arguments); };
     try { FA(); rec('CD2|nvq|2', 433.33); render(); ok('FC-F storage full: reported as not saved', FCP.st === 'error' && /full/.test(FCP.why), FCP.st + ' ' + FCP.why); } finally { window.Storage.prototype.setItem = st0; }

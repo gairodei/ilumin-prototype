@@ -53,6 +53,8 @@
   const snapCD = () => J(['CD1', 'CD2', 'CD3'].map(k => { const w = STORE.worlds[k]; return [w.plans.map(x => x.rows.map(r => [r.n, r.amount, r.status, r.paid])), w.tx.length]; }));
   const cd0 = snapCD();
   const A = STORE.worlds.CD1, Dv = STORE.worlds.CD2;
+  // PD-FD-01: the client demo also has Sam (CD4, deposit then 6 payments) and Tom (CD5, bank-transfer deposit awaiting Finance). Was: Amira and Dev only.
+  const Sm = STORE.worlds.CD4, Tm = STORE.worlds.CD5, demoOut = () => [A, Dv, Sm, Tm].reduce((s, w) => s + own(w).out, 0);
 
   /* ================= A / B: Amira and Dev reconcile across every screen ================= */
   await T('FI2-A/B starting balances on every screen', async () => {
@@ -61,7 +63,8 @@
     ok('FI2-B Dev\'s record: fee £2,600.00, received £433.33, outstanding £2,166.67', d.fee === 260000 && d.got === 43333 && d.out === 216667, J(d));
     FA(); go('f-learners'); const ra = rowOf('', 'Amira Shah'), rd = rowOf('', 'Dev Patel');
     ok('FI2-A/B Finance → Learner Accounts shows Amira £1,500.00 and Dev £2,166.67 outstanding (was "—")', !!ra && ra.textContent.includes(G(a.out)) && !!rd && rd.textContent.includes(G(d.out)), (ra || {}).textContent);
-    ok('FI2-A/B Learner Accounts footer: £3,666.67 outstanding in all', main().includes('Outstanding (filtered): ' + G(a.out + d.out)));
+    // PD-FD-01: four NVQ learners now owe money (Amira, Dev, Sam, Tom): £6,966.67. Was: £3,666.67 (Amira + Dev).
+    ok('FI2-A/B Learner Accounts footer: £6,966.67 outstanding in all', demoOut() === 696667 && main().includes('Outstanding (filtered): ' + G(demoOut())), G(demoOut()));
     go('f-learner', { id: A.me.id, tab: 'payments' }); ok('FI2-A Finance learner → Payments: Amira\'s schedule and "Outstanding £1,500.00"', /Programme fee\s*£1,800\.00/.test(main()) && main().includes('Outstanding' + G(a.out)) && pl(A).rows.every(r => main().includes(money(r.amount, 'GBP'))));
     go('f-learner', { id: Dv.me.id, tab: 'payments' }); ok('FI2-B Finance learner → Payments: Dev\'s schedule (5 × £433.33 + £433.35) and "Outstanding £2,166.67"', /Programme fee\s*£2,600\.00/.test(main()) && main().includes('Outstanding' + G(d.out)) && main().includes('£433.35'));
     SA(); go('a-learner', { id: A.me.id, tab: 'payments' }); ok('FI2-A Admin Learner 360 → Payments: Amira\'s plan, not "No outstanding amounts"', !/No outstanding amounts/.test(main()) && main().includes('Outstanding' + G(a.out)));
@@ -75,7 +78,8 @@
     const due = {}; [A, Dv, STORE.worlds.CD3].forEach(w => w.plans.forEach(p => p.rows.forEach(r => { const m = r.due.slice(0, 7); due[m] = (due[m] || 0) + P(r.amount); })));
     const bars = $a('.fcb-due').map(x => x.title), months = [5, 4, 3, 2, 1, 0].map(n => { const d = new Date(now()); d.setUTCMonth(d.getUTCMonth() - n); return d.toISOString().slice(0, 7); });
     ok('FI2-K the "Due" bars are the instalments scheduled each month (was 1.18 × collected + £300)', bars.length === 6 && bars.every((t, k) => t === 'Due ' + G(due[months[k]] || 0)), J(bars));
-    ok('FI2-K Outstanding balance tile £3,666.67 — every unpaid instalment (was £0.00)', main().includes(G(own(A).out + own(Dv).out)) && /unpaid instalments that can be paid/.test(main()));
+    // PD-FD-01: Sam and Tom unpaid instalments count too: £6,966.67. Was: £3,666.67 (Amira + Dev).
+    ok('FI2-K Outstanding balance tile £6,966.67 — every unpaid instalment (was £0.00)', demoOut() === 696667 && main().includes(G(demoOut())) && /unpaid instalments that can be paid/.test(main()));
   });
 
   /* ================= I: mixed-mode fees stay independent ================= */
@@ -104,8 +108,9 @@
     ok('FI2-K Datewise: received, refunded and net equal the ledger', !!s && +s.dataset.received === got && +s.dataset.refunded === out && +s.dataset.net === got - out, J({ got, out, s: s && s.dataset }));
     ok('FI2-K Datewise shows Received / Refunded / Net and the bank transfers awaiting confirmation separately', /Received£/.test(main()) && /Refunded−£100\.00/.test(main()) && /Net received/.test(main()) && /Bank transfers awaiting confirmation/.test(main()));
     go('f-reports', { tab: 'coursewise' }); const c = $1('.fi-rep'), prog = rowOf('', CD_T);
-    const pGot = [A, Dv].reduce((a, w) => a + w.tx.filter(t => t.amount > 0 && t.status === 'Succeeded').reduce((s, t) => s + P(t.amount), 0), 0), pOut = own(A).out + own(Dv).out;
-    ok('FI2-K Coursewise: the programme row has both learners, £' + (pGot / 100).toFixed(2) + ' received, £100.00 refunded, £' + (pOut / 100).toFixed(2) + ' outstanding (no "NVQ payment 1 of 6" rows)', !!prog && prog.textContent.includes(G(pGot)) && prog.textContent.includes(G(10000)) && prog.textContent.includes(G(pOut)) && !/NVQ payment 1 of 6/.test(main()) && +c.dataset.received === got, prog && prog.textContent);
+    // PD-FD-01: the programme row has four learners (Amira, Dev, Sam, Tom). Was: [A, Dv] only.
+    const pGot = [A, Dv, Sm, Tm].reduce((a, w) => a + w.tx.filter(t => t.amount > 0 && t.status === 'Succeeded').reduce((s, t) => s + P(t.amount), 0), 0), pOut = demoOut();
+    ok('FI2-K Coursewise: the programme row has all four demo learners, £' + (pGot / 100).toFixed(2) + ' received, £100.00 refunded, £' + (pOut / 100).toFixed(2) + ' outstanding (no "NVQ payment 1 of 6" rows)', !!prog && prog.textContent.includes(G(pGot)) && prog.textContent.includes(G(10000)) && prog.textContent.includes(G(pOut)) && !/NVQ payment 1 of 6/.test(main()) && +c.dataset.received === got, prog && prog.textContent);
     setUi('frMode', 'Bank transfer'); go('f-reports', { tab: 'datewise' });
     ok('FI2-K the method filter works: Bank transfer received £433.33', +$1('.fi-rep').dataset.received === 43333);
     const e0 = (ADMIN.exportsLog || []).length; click($1('main [data-act="aExport"][data-f="CSV"]'));
@@ -150,7 +155,8 @@
     const lou = register('Lou Ref', 'lou.ref@fi2.example'); toPayment(lou); choose('deposit', 'bank'); click($1('main [data-act="suPay"]')); press();
     FA(); ACT.finOffline({ dataset: { k: lou.v + '|dep' } }); INP.opPrev(); const exp = lou.signup.pay.ref;
     ok('FI2 D-17 the dialog shows the reference the learner was given (' + exp + ') and flags a different one', mtxt().includes(exp) && /reference entered is different/.test(mtxt())); $1('#op-r').value = exp; INP.opPrev(); ok('FI2 D-17 … and not when it matches', !/reference entered is different/.test(mtxt())); $1('#rsn').value = 'received'; press();
-    const lt = allTx().find(x => x.v === lou.v && x.ref === exp); raise(lt, 300, 'refund the deposit'); FA('FB'); applyDecision(ADMIN.queue[0], 'approve', 'ok');
+    // PD-FD-01: the deposit Lou paid is £100, so the full refund is £100 (a £300 request now exceeds the payment and is refused). Was: raise(lt, 300).
+    const lt = allTx().find(x => x.v === lou.v && x.ref === exp); raise(lt, lt.amount, 'refund the deposit'); FA('FB'); applyDecision(ADMIN.queue[0], 'approve', 'ok');
     advance(30);
     const kh = kit.admission.history.map(h => h[0]).join(' | '), lh = lou.admission.history.map(h => h[0]).join(' | ');
     ok('FI2 M-10 Kit\'s release record names the £600.00 of the balance received (it said only "deposit received")', /Seat released/.test(kh) && /£600\.00 of the balance/.test(kh), kh.slice(-220));

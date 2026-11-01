@@ -28,11 +28,14 @@
     ok('CD-A loaded: a published Level 3 programme and one batch; the 101-learner demo isn\'t loaded with it', !!pr && !!b && pr.status === 'Active' && pr.level === 'Level 3' && !mcdBatch());
     ok('CD-A the programme is eligible for new batches: approved Self-Paced and Fully Assisted fee options in force', crElig(pr) && J(crOptModes(pr.id)) === J(M_MODES));
     // FX (PD-FX-01): the client demo starts from a store without seeded approvals — was "ADMIN.queue.length === q0 + 1" (one new item on top of the seeded queue)
-    ok('CD-A it was approved by a Finance Admin in the Approvals Queue (its only item) and published by the Academic Admin', ADMIN.queue.length === 1 && cb8Wf(pr).status === 'Approved' && ADMIN.audit.some(a => /Programme published|Version 1 published/.test(a.action) && a.entity.includes(pr.id) && a.actor === 'Rachel Hughes'));
+    // PD-FD-01: the build also approves the programme £100 deposit change (a second payment-terms item). Was: ADMIN.queue.length === 1.
+    ok('CD-A it was approved by a Finance Admin in the Approvals Queue (its two items: the fee options, then the £100 deposit change, both Programme payment terms, both Approved) and published by the Academic Admin', ADMIN.queue.length === 2 && ADMIN.queue.every(i => i.type === 'Programme payment terms' && i.status === 'Approved') && cb8Wf(pr).status === 'Approved' && ADMIN.audit.some(a => /Programme published|Version 1 published/.test(a.action) && a.entity.includes(pr.id) && a.actor === 'Rachel Hughes'));
     ok('CD-A the batch: Open, both modes, two Academic Coordinators', b.status === 'Open' && J(crBModes(b)) === J(M_MODES) && mcList(b).length === 2 && M_MODES.every(m => crReady(b, m) === 'ready'));
     const lids = mcLids(b), modes = lids.map(l => r2LidInfo(l, CD_B).mode), co = lids.map(l => mcOf(l, b));
     // DR (PD-DR-02) supersedes "four demo learners, two in each mode": the batch's two NVQ learners, one per mode and per Coordinator
-    ok('CD-A two demo learners on the batch, one in each mode, one per Coordinator', lids.length === 2 && J(modes) === J(['Self-Paced', 'Fully Assisted']) && J(co) === J(['Dr Helen Carter', 'Michael Osei']) && lids.every(l => /\(demo\)$/.test(ADMIN.learners.find(x => x.id === l).name)));
+    // PD-FD-01: Sam (CD4, Self-Paced, Helen) and Tom (CD5, Self-Paced, Michael) joined the batch. Was: lids.length === 2, modes [Self-Paced, Fully Assisted], one per Coordinator.
+    const byKey = lids.map((l, i) => [cdKeyOf(l), modes[i], co[i]]).sort((x, y) => x[0] < y[0] ? -1 : 1);
+    ok('CD-A four demo learners on the batch: Amira Self-Paced and Sam Self-Paced with Dr Helen Carter, Dev Fully Assisted and Tom Self-Paced with Michael Osei', lids.length === 4 && J(byKey) === J([['CD1', 'Self-Paced', 'Dr Helen Carter'], ['CD2', 'Fully Assisted', 'Michael Osei'], ['CD4', 'Self-Paced', 'Dr Helen Carter'], ['CD5', 'Self-Paced', 'Michael Osei']]) && lids.every(l => /\(demo\)$/.test(ADMIN.learners.find(x => x.id === l).name)));
     ok('CD-A their activation is the one simulated learner step, audited as a demo step', lids.every(l => ADMIN.audit.some(a => a.entity === l && a.action === 'Account activated' && /Demo step/.test(a.reason || ''))));
     const asg = s2Defs().filter(d => cbAsgPid(d) === pr.id);
     ok('CD-A assignments: two published with deadlines for the batch, one draft', asg.length === 3 && asg.filter(d => d.status === 'Published' && !!crDue(d, CD_B)).length === 2 && asg.filter(d => d.status === 'Draft').length === 1);
@@ -40,7 +43,9 @@
     // FX (PD-FX-01): was "the ledger, learners' plans, payments and signed letters are unchanged" (compared with the seeded ones); the client demo has none of them
     // DR (PD-DR-03/05) supersedes "no payments; plans, payments and signatures empty": each learner's own sign-up left their signature, one
     // simulated payment and their schedule; nothing else financial is invented (no seeded ledger, no other payment)
-    ok('CD-A nothing financial or signed is invented beyond each learner\'s own sign-up: no seeded ledger; one simulated payment per learner', !ADMIN.ledger.length && allTx().length === 3 && lids.every(l => { const w = n4World(l); return w && w.tx.length === 1 && w.plans.length === 1 && !!w.signup.sig && !!w.signup.pay; }));
+    // PD-FD-01: Sam paid the £100 deposit and £200 on instalment 1 (two transactions); Tom notified an unconfirmed bank transfer (none). Was: allTx().length === 3 and one transaction per batch learner.
+    const txN = { CD1: 1, CD2: 1, CD4: 2, CD5: 0 };
+    ok('CD-A nothing financial or signed is invented beyond each learner\'s own sign-up: no seeded ledger; five simulated payments (Amira 1, Dev 1, Lena 1, Sam 2, Tom none: his bank transfer awaits Finance)', !ADMIN.ledger.length && allTx().length === 5 && lids.every(l => { const w = n4World(l); return w && w.tx.length === txN[cdKeyOf(l)] && w.plans.length === 1 && !!w.signup.sig && !!w.signup.pay; }) && (STORE.chBank || []).filter(x => x.status === 'Awaiting confirmation').map(x => x.v).join() === 'CD5');
     // FX (PD-FX-02): was "the seeded records are unchanged" after loading the client demo on top of them; the client demo now holds no seeded
     // record, so the check is that the legacy fixture itself is unchanged by it: a reset to the legacy data gives the same seeded records
     fresh(); ok('CD-A the legacy fixture is unchanged by the client demo (programmes, batches, learners, fee options, plans, learner payments)', seedSnap() === s0);
@@ -54,11 +59,12 @@
     const co = qm('#nb-co'); co.value = CD_T; INP.n2NbCourse(co);
     ok('CD-B both modes as checkboxes, both ticked by default; no single-select mode', qma('.m-m').map(x => x.value + (x.checked ? '*' : '')).join() === 'Self-Paced*,Fully Assisted*' && !!qm('#nb-dm').closest('.cr-nc-hid')); closeModal();
     go('a-programmes'); const row = [...document.querySelectorAll('main tr')].find(r => r.textContent.includes(CD_T));
-    ok('CD-B programme list: the client-demo programme shows 1 batch and v1: 2 learners (DR: was 4; counted, as on its batch)', !!row && /v1: 2/.test(row.textContent) && [...row.querySelectorAll('td')].some(td => td.textContent.trim() === '1'));
+    // PD-FD-01: Sam and Tom are on the batch too. Was: v1: 2.
+    ok('CD-B programme list: the client-demo programme shows 1 batch and v1: 4 learners (counted, as on its batch)', !!row && /v1: 4/.test(row.textContent) && [...row.querySelectorAll('td')].some(td => td.textContent.trim() === '1'));
     fresh(); SA(); go('a-programmes'); // FX (PD-FX-01): the seeded Level 2 is in the legacy fixture only (was checked with the client demo loaded on top of it)
     const l2row = [...document.querySelectorAll('main tr')].find(r => r.textContent.includes('Level 2 Diploma in Care (England)'));
     ok('CD-B programme list: batches are counted (the seeded Level 2 has 5 batches; it showed a stored 3)', !!l2row && [...l2row.querySelectorAll('td')].some(td => td.textContent.trim() === String(ADMIN.batches.filter(x => x.course === 'Level 2 Diploma in Care (England)').length)));
-    ACT.cdLoad(); SA(); go('a-batches', { id: CD_B }); ok('CD-B batch detail: roster 2 (DR: was 4) and both modes accepted', /Roster \(2\//.test(main()) && /Delivery modes accepted: Self-Paced and Fully Assisted/.test(main()));
+    ACT.cdLoad(); SA(); go('a-batches', { id: CD_B }); ok('CD-B batch detail: roster 4 (PD-FD-01: was 2) and both modes accepted', /Roster \(4\//.test(main()) && /Delivery modes accepted: Self-Paced and Fully Assisted/.test(main()));
     const sr = searchResults('DEMO-L3') + searchResults('(demo)');
     ok('CD-B global search (learners, batches) finds the demo batch and the demo learners', sr.includes(CD_B) && ['Amira Shah (demo)', 'Dev Patel (demo)'].every(n => sr.includes(n)));
     go('a-dashboard'); ok('CD-B dashboard: registered learners are counted from the records (the three demo learners included)', main().includes(String(allLearners().length)));
@@ -87,8 +93,10 @@
   // short-course learner bought the course. The identities are opened from the sign-in chooser (ft-dr.js clicks it); here, drAs.
   await T('CD-E the demo learners in the learner portal', async () => {
     fresh(); SA(); ACT.cdLoad(); const b = cdBatch(), lids = mcLids(b), app = () => document.getElementById('app').textContent.replace(/\s+/g, ' ');
-    ok('CD-E three learner-portal accounts, one per demo learner record (the same learner IDs; no new person)', CD_KEYS.every(k => !!STORE.worlds[k]) && J(CD_KEYS.map(k => STORE.worlds[k].me.id).sort()) === J(ADMIN.learners.map(l => l.id).sort()) && ADMIN.learners.length === 3);
-    ok('CD-E the batch holds the two NVQ learners, placed by their own sign-up (no admin "Add to batch"; counted once)', lids.length === 2 && J(lids.map(l => cdKeyOf(l))) === J(['CD1', 'CD2']) && !(b.roster || []).length && b.enrolled === 2);
+    // PD-FD-01: Sam (CD4) and Tom (CD5) have records and portal accounts. Was: ADMIN.learners.length === 3.
+    ok('CD-E five learner-portal accounts, one per demo learner record (the same learner IDs; no new person)', CD_KEYS.every(k => !!STORE.worlds[k]) && J(CD_KEYS.map(k => STORE.worlds[k].me.id).sort()) === J(ADMIN.learners.map(l => l.id).sort()) && ADMIN.learners.length === 5);
+    // PD-FD-01: Sam and Tom signed up to the batch too. Was: lids CD1, CD2 and b.enrolled === 2.
+    ok('CD-E the batch holds the four NVQ learners, placed by their own sign-up (no admin "Add to batch"; counted once)', lids.length === 4 && J(lids.map(l => cdKeyOf(l)).sort()) === J(['CD1', 'CD2', 'CD4', 'CD5']) && !(b.roster || []).length && b.enrolled === 4);
     [['CD1', 'Self-Paced', 1800, 'Dr Helen Carter'], ['CD2', 'Fully Assisted', 2600, 'Michael Osei']].forEach(([k, mode, fee, coord]) => {
       const w = STORE.worlds[k], lid = w.me.id, others = CD_KEYS.filter(x => x !== k).map(x => chFullName(STORE.worlds[x]));
       ok(`CD-E ${chFullName(w)}: signed up for the demo programme on the ${mode} option (${money(fee, 'GBP')}), in ${CD_B}`, w.signup.batch === CD_B && w.signup.plan.opt.mode === mode && w.signup.plan.fee === fee && r2LidInfo(lid, CD_B).mode === mode && /client demo/.test(w.nvq.title || ''));
@@ -101,7 +109,8 @@
     });
     const sc = STORE.worlds.CD3; ok('CD-E Lena Hart (demo): bought the short course through Browse (simulated checkout); not on the NVQ batch', sc.enrolments.length === 1 && sc.enrolments[0].kind === 'short' && sc.tx.length === 1 && !sc.signup && !lids.includes(sc.me.id));
     ['A', 'B'].forEach(k => { ACT.drAs({ dataset: { p: k === 'A' ? 'coord1' : 'coord2' } }); go('c-batches', { id: CD_B, tab: 'roster' }); const mine = lids.filter(l => mcOf(l, b) === COO_USERS[k].name).map(l => ADMIN.learners.find(x => x.id === l).name), theirs = lids.map(l => ADMIN.learners.find(x => x.id === l).name).filter(n => !mine.includes(n));
-      ok(`CD-E Coordinator ${COO_USERS[k].name}: the roster shows their one demo learner, not the other Coordinator's`, mine.length === 1 && mine.every(n => app().includes(n)) && theirs.every(n => !app().slice(app().indexOf('My learners')).includes(n + ' ')) ); });
+      // PD-FD-01: each Coordinator has two learners (Helen: Amira + Sam; Michael: Dev + Tom). Was: mine.length === 1.
+      ok(`CD-E Coordinator ${COO_USERS[k].name}: the roster shows their two demo learners, not the other Coordinator's`, mine.length === 2 && J(mine.map(n => n.split(' ')[0]).sort()) === J(k === 'A' ? ['Amira', 'Sam'] : ['Dev', 'Tom']) && mine.every(n => app().includes(n)) && theirs.every(n => !app().slice(app().indexOf('My learners')).includes(n + ' ')) ); });
     SA(); const asg = s2Defs().filter(d => cbAsgPid(d) === cdPr().id && d.status === 'Published');
     ok('CD-E assignment deadlines belong to the batch (none for any other batch)', asg.length === 2 && asg.every(d => !!crDue(d, CD_B) && ADMIN.batches.filter(x => x.code !== CD_B).every(x => !crDue(d, x.code))));
     ACT.resetDemo(); ok('CD-E Reset demo removes the demo learners\' portal accounts and switches', CD_KEYS.every(k => !STORE.worlds[k] && !VARIANT_INFO[k] && !PERSONAS[k]) && !CD_KEYS.includes(S.variant));
@@ -123,7 +132,9 @@
       ok(`CD-F ${nm}: synthetic details; the mandatory documents are the sample files ("scan_…"), each approved by the Academic Admin`, /^\d{4}-\d\d-\d\d$/.test(w.signup.details.dob) && /Demo|Example/.test(w.signup.details.address) && w.docs.filter(d => d.mand).every(d => /^scan_/.test(d.file) && d.status === 'Approved') && ADMIN.audit.filter(a => a.action === 'Document decision' && a.actor === 'Rachel Hughes' && a.entity.startsWith(nm + ' · ')).length === w.docs.filter(d => d.mand).length);
       ok(`CD-F ${nm}: offer letter signed by the learner (audited)`, !!w.signup.sig && ADMIN.audit.some(a => a.action === 'Offer letter signed' && a.entity.includes(lid)));
       ok(`CD-F ${nm}: payment 1 of 6 of their own option (${money(fee, 'GBP')}) paid; the rest pending; one transaction; a demonstration event`, pl.rows.length === 6 && pl.rows[0].status === 'Paid' && pl.rows.slice(1).every(r => r.status === 'Pending') && Math.abs(pl.rows.reduce((a, r) => a + r.amount, 0) - fee) < 0.01 && w.tx.length === 1 && ADMIN.audit.some(a => a.action === 'Demonstration: simulated payment' && a.entity.includes(lid)));
-      ok(`CD-F ${nm}: the payment terms are pinned to the plan version in force`, w.signup.plan.v === s4PlanCur(cdPr().id).v);
+      // PD-FD-01: after their sign-up the build set the programme deposit to £100 (the next plan version, which Sam signed); they keep the earlier one. Was: w.signup.plan.v === s4PlanCur(pid).v.
+      const pid = cdPr().id, cur = s4PlanCur(pid), pv = s4Plans(pid).find(p => p.v === w.signup.plan.v);
+      ok(`CD-F ${nm}: the payment terms are pinned to the version in force when they signed up`, !!pv && pv.status === 'Superseded' && pv.deposit == null && cur.v === pv.v + 1 && cur.deposit === 100 && STORE.worlds.CD4.signup.plan.v === cur.v && cb9Pin(w).dep.eff === 300, J([w.signup.plan.v, pv, cur]));
       ok(`CD-F ${nm}: admission approved by the Academic Admin (audited)`, w.admission.status === 'Approved' && ADMIN.audit.some(a => a.action === 'Admission approved' && a.actor === 'Rachel Hughes' && String(a.entity) === nm));
     }
     const a0 = ADMIN.audit.length; FA(); const d0 = STORE.worlds.CD1.docs.find(d => d.mand); ACT.docDec({ dataset: { a: 'APP-CD1', d: d0.id, s: 'Rejected' } }); closeModal();

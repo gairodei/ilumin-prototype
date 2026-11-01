@@ -37,7 +37,7 @@ function drPersonas() {
     () => ACT.demoSignInAsTas({ dataset: { v } }), () => S.portal === 'staff' && S.tas.v === v];
   const A = (id, grp, role, sid, detail, fn) => [id, grp, role, () => drStaff(sid).name || '—', () => detail, fn, () => S.portal === 'admin' && ADMIN && ADMIN.me && ADMIN.me.name === drStaff(sid).name && ADMIN.me.roles.join() === (drStaff(sid).roles || []).join()];
   return [
-    L('nvq-sp', 'CD1', 'NVQ Learner — Self-Paced'), L('nvq-fa', 'CD2', 'NVQ Learner — Fully Assisted'), L('short', 'CD3', 'Short-Course Learner'),
+    L('nvq-sp', 'CD1', 'NVQ Learner — Self-Paced'), L('nvq-fa', 'CD2', 'NVQ Learner — Fully Assisted'), L('short', 'CD3', 'Short-Course Learner'), L('nvq-dep', 'CD4', 'NVQ Learner — Deposit, then instalments'), L('nvq-bank', 'CD5', 'NVQ Learner — Deposit by bank transfer (awaiting Finance)'),
     C('coord1', 'A', 'Academic Coordinator 1'), C('coord2', 'B', 'Academic Coordinator 2'),
     T('teacher', 'T', 'Teacher', 'Teaches'), T('assessor', 'S', 'Assessor', 'Assesses'),
     A('aca', 'Academic staff', 'Academic Administrator', 'ST-009', 'Programmes, batches, admissions and assignments', () => ACT.demoSignInAsAca({ dataset: { v: 'KA' } })),

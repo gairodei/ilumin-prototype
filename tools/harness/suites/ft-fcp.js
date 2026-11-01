@@ -73,7 +73,8 @@
 
   if (st.ph === 1) {
     await T('FCP-1 changes before the refresh', async () => {
-      ok('FCP-1 a fresh start has nothing saved and the starting demo (3 payments)', allTx().length === 3 && !(LS() && JSON.parse(LS()).data.includes('RFD-')));
+      // PD-FD-01: the client demo now starts with 5 payments (Sam deposit + instalment 1 added). Was: 3 payments.
+      ok('FCP-1 a fresh start has nothing saved and the starting demo (5 payments)', allTx().length === 5 && !(LS() && JSON.parse(LS()).data.includes('RFD-')));
       rec('CD1|nvq|2', 300, 'BACS-FCP-1');
       const p = register('Pia Pend', 'pia.pend@fcp.example'); toPayment(p); choose('deposit', 'bank'); click($1('main [data-act="suPay"]')); press();
       const h = register('Hal Hold', 'hal.hold@fcp.example'); toPayment(h); choose('deposit', 'card'); payCo(() => click($1('main [data-act="suPay"]')));
@@ -136,8 +137,10 @@
     return;
   }
   await T('FCP-5 refresh after Reset demo', async () => {
-    ok('FCP-5 the starting demo: three payments, no refunds, no registered learners, nothing saved', allTx().length === 3 && !ADMIN.queue.some(i => i.type === 'Refund') && !learnerAccounts().some(v => /^G/.test(v)) && !LS() && !FCP.restored, J([allTx().length, ADMIN.queue.filter(i => i.type === 'Refund').length, learnerAccounts(), !!LS(), FCP.restored]));
-    ok('FCP-5 the programme deposit is the Academy default (£300.00) again', cb8Cur(cdPr().id).dep.eff === 300);
+    // PD-FD-01: the client demo now starts with 5 payments. Was: three payments.
+    ok('FCP-5 the starting demo: five payments, no refunds, no registered learners, nothing saved', allTx().length === 5 && !ADMIN.queue.some(i => i.type === 'Refund') && !learnerAccounts().some(v => /^G/.test(v)) && !LS() && !FCP.restored, J([allTx().length, ADMIN.queue.filter(i => i.type === 'Refund').length, learnerAccounts(), !!LS(), FCP.restored]));
+    // PD-FD-01: the programme now has its own approved £100.00 deposit; the Academy default stays £300.00. Was: programme on the £300.00 Academy default.
+    ok('FCP-5 the programme deposit is its own approved £100.00 again (Academy default still £300.00)', cb8Cur(cdPr().id).dep.mode === 'own' && cb8Cur(cdPr().id).dep.eff === 100 && S4().cfg.deposit === 300);
     ok('FCP-5 Amira £300.00 / Dev £433.33 / Lena £45.00 as at the start', J(['CD1', 'CD2', 'CD3'].map(v => fiAcct(STORE.worlds[v]).received)) === J([30000, 43333, 4500]));
   });
   window.localStorage.removeItem(TK);

@@ -49,14 +49,15 @@
     click($1('main [data-act="suNext"]')); setUi('suSig', chFullName(w)); setUi('suDecl', true); render(); click($1('main #su-sign'));
   };
   const choose = (opt, method) => { const r = $1(`main input[name="cb9-pay"][value="${opt}"]`); if (r) { r.checked = true; INP.cb9Pay(r); } const m = $1(`main input[name="su-m"][value="${method}"]`); if (m) { m.checked = true; INP.suMethod(m); } };
-  // A registered learner who chose the deposit by bank transfer (deposit £300 awaiting Finance, balance £1,500)
+  // A registered learner who chose the deposit by bank transfer (deposit £100 awaiting Finance, balance £1,700; PD-FD-01, was £300 / £1,500)
   const bankDeposit = (name, email) => { const w = register(name, email); toPayment(w); choose('deposit', 'bank'); click($1('main [data-act="suPay"]')); press(); return w; };
   const snapCD = () => J(['CD1', 'CD2', 'CD3'].map(k => { const w = STORE.worlds[k], p = w.plans; return [p.map(x => x.rows.map(r => [r.n, r.amount, r.status, r.paid])), w.tx.length]; }));
   const cd0 = snapCD(), legacyA0 = STORE.worlds.A.tx.length;
 
   /* ================= Client demo ================= */
   await T('FI-0 starting point', async () => {
-    FA(); ok('FI-0 Finance payment targets in the client demo are the demo learners only (CD1, CD2)', payTargets().every(t => /^CD[12]\|/.test(t.key)) && payTargets().length === 10, J(payTargets().map(t => t.key)));
+    // PD-FD-01: Sam (CD4) and Tom (CD5, incl. his deposit CD5|dep) are demo learners with targets too. Was: CD1/CD2 only, 10 targets.
+    FA(); ok('FI-0 Finance payment targets in the client demo are the demo learners only (CD1, CD2, CD4, CD5)', payTargets().every(t => /^CD[1245]\|/.test(t.key)) && payTargets().length === 21 && payTargets().some(t => t.key === 'CD5|dep'), J(payTargets().map(t => t.key)));
   });
 
   /* ----- CR-8: Record offline payment (admin console) ----- */
@@ -68,7 +69,8 @@
     const s0 = sec(); ACT.offlinePay({ dataset: {} });
     ok('FI CR-8: a System Admin is refused in the handler (no dialog, security event logged)', !MODAL && sec() === s0 + 1 && STORE.worlds.A.tx.length === a0);
     SA(); ACT.offlinePay({ dataset: { l: STORE.worlds.CD1.me.id } }); const opts = $a('#modal-root #op-t option').map(o => o.value);
-    ok('FI CR-8: the Super Administrator gets Finance\'s dialog — the demo learners\' own items only, Amira\'s preselected', MODAL && MODAL.title === 'Record offline payment' && opts.length === 10 && opts.every(k => /^CD[12]\|/.test(k)) && /^CD1\|/.test($1('#op-t').value), J(opts));
+    // PD-FD-01: the demo learners now include Sam (CD4) and Tom (CD5). Was: 10 options, CD1/CD2 only.
+    ok('FI CR-8: the Super Administrator gets Finance\'s dialog — the demo learners\' own items only, Amira\'s preselected', MODAL && MODAL.title === 'Record offline payment' && opts.length === 21 && opts.every(k => /^CD[1245]\|/.test(k)) && /^CD1\|/.test($1('#op-t').value), J(opts));
     const w = STORE.worlds.CD1, n0 = w.tx.length; $1('#op-a').value = '-999'; INP.opPrev(); $1('#rsn').value = 'negative'; const r = prim();
     ok('FI CR-8: −£999 is refused and the dialog stays open; nothing is written', r === false && !!MODAL && w.tx.length === n0 && /pounds and pence, above £0.00/.test(mtxt()));
     closeModal();
@@ -81,34 +83,45 @@
   await T('CR-5 deposit confirmation', async () => {
     const old = bankDeposit('Oli Old', 'oli.old@fi.example'); FA(); const od = pl(old).deposit;
     _rpFI(tgt(old.v + '|dep'), 0.01, 'BACS-FI501', 'Bank transfer', 'OLD');
-    ok('CR-5 OLD: £0.01 marked the £300 deposit Paid (the audit\'s failure)', od.status === 'Paid' && fpLedger(pl(old)).paid === 300);
+    // PD-FD-01: the programme deposit is now £100. Was: £300.
+    ok('CR-5 OLD: £0.01 marked the £100 deposit Paid (the audit\'s failure)', od.status === 'Paid' && P(fpLedger(pl(old)).paid) === 10000);
     jo = bankDeposit('Jo Fi', 'jo.fi@fi.example'); FA(); const d = pl(jo).deposit, b0 = cdBatch().enrolled, n0 = jo.tx.length;
-    [0.01, 299.99, 300.01, 600].forEach(a => { const r = recordPayment(tgt(jo.v + '|dep'), a, 'BACS-FI5' + P(a), 'Bank transfer', 'x'); ok(`FI CR-5: £${a.toFixed(2)} against the £300.00 deposit is refused; deposit not Paid, seat still reserved, no transaction`, r === false && d.status !== 'Paid' && dpSeat(jo).st === 'reserved' && jo.tx.length === n0 && fpLedger(pl(jo)).paid === 0, d.status + ' ' + dpSeat(jo).st); });
+    // PD-FD-01: the deposit is £100.00, so the near-miss amounts move with it. Was: 0.01, 299.99, 300.01, 600 against £300.00.
+    [0.01, 99.99, 100.01, 200].forEach(a => { const r = recordPayment(tgt(jo.v + '|dep'), a, 'BACS-FI5' + P(a), 'Bank transfer', 'x'); ok(`FI CR-5: £${a.toFixed(2)} against the £100.00 deposit is refused; deposit not Paid, seat still reserved, no transaction`, r === false && d.status !== 'Paid' && dpSeat(jo).st === 'reserved' && jo.tx.length === n0 && fpLedger(pl(jo)).paid === 0, d.status + ' ' + dpSeat(jo).st); });
     // Through the dialog: the preview says why, and Confirm keeps the dialog open
     ACT.finOffline({ dataset: { k: jo.v + '|dep' } }); $1('#op-a').value = '0.01'; INP.opPrev(); const prev = mtxt(); $1('#rsn').value = 'part'; const r = prim();
-    ok('FI CR-5: the dialog explains that only the full deposit confirms it, and refuses £0.01', /Can't be recorded/.test(prev) && /full amount \(£300.00\)/.test(prev) && r === false && d.status !== 'Paid');
-    $1('#op-a').value = '300'; INP.opPrev(); $1('#rsn').value = 'received'; press();
-    ok('FI CR-5: £300.00 confirms it once — deposit Paid, outstanding £1,500.00, one £300 transaction, seat count unchanged', d.status === 'Paid' && P(fpLedger(pl(jo)).outstanding) === 150000 && jo.tx.length === n0 + 1 && P(jo.tx[0].amount) === 30000 && cdBatch().enrolled === b0);
-    ok('FI CR-5: a second confirmation is refused ("Already recorded")', recordPayment({ key: jo.v + '|dep', v: jo.v, dep: d, due: 300 }, 300, 'BACS-FI5X', 'Bank transfer', 'again') === false && jo.tx.length === n0 + 1);
+    // PD-FD-01: the full deposit amount is £100.00. Was: £300.00.
+    ok('FI CR-5: the dialog explains that only the full deposit confirms it, and refuses £0.01', /Can't be recorded/.test(prev) && /full amount \(£100.00\)/.test(prev) && r === false && d.status !== 'Paid');
+    $1('#op-a').value = '100'; INP.opPrev(); $1('#rsn').value = 'received'; press();
+    // PD-FD-01: £100 deposit, £1,700 balance. Was: £300.00 confirms, outstanding £1,500.00, one £300 transaction.
+    ok('FI CR-5: £100.00 confirms it once — deposit Paid, outstanding £1,700.00, one £100 transaction, seat count unchanged', d.status === 'Paid' && P(fpLedger(pl(jo)).outstanding) === 170000 && jo.tx.length === n0 + 1 && P(jo.tx[0].amount) === 10000 && cdBatch().enrolled === b0);
+    // PD-FD-01: the deposit due is £100. Was: due 300, £300 again.
+    ok('FI CR-5: a second confirmation is refused ("Already recorded")', recordPayment({ key: jo.v + '|dep', v: jo.v, dep: d, due: 100 }, 100, 'BACS-FI5X', 'Bank transfer', 'again') === false && jo.tx.length === n0 + 1);
   });
 
   /* ----- CR-6: overpayment, decimals, duplicate references, wrong items ----- */
   await T('CR-6 overpayment and reconciliation', async () => {
     const old = STORE.worlds[Object.keys(STORE.worlds).find(k => STORE.worlds[k].me && /Oli Old/.test(chFullName(STORE.worlds[k])))]; FA();
     _rpFI(tgt(old.v + '|nvq|1'), 1000000000, 'BACS-FI601', 'Bank transfer', 'OLD');
-    ok('CR-6 OLD: £1,000,000,000 against the £1,500 balance was booked in full while the row was capped (the audit\'s failure)', P(old.tx[0].amount) === 100000000000 && P(pl(old).rows[0].paid) === 150000);
+    // PD-FD-01: the balance after the £100 deposit is £1,700. Was: £1,500 (row capped at 150000).
+    ok('CR-6 OLD: £1,000,000,000 against the £1,700 balance was booked in full while the row was capped (the audit\'s failure)', P(old.tx[0].amount) === 100000000000 && P(pl(old).rows[0].paid) === 170000);
     const w = jo, row = pl(w).rows[0], t = () => tgt(w.v + '|nvq|1');
-    ok('FI CR-6: the balance row is £1,500.00', P(row.amount) === 150000);
+    // PD-FD-01: balance row £1,700.00. Was: £1,500.00.
+    ok('FI CR-6: the balance row is £1,700.00', P(row.amount) === 170000);
     ok('FI CR-6: £0.01 part payment recorded', recordPayment(t(), 0.01, 'BACS-FI602', 'Bank transfer', 'part') !== false && P(row.paid) === 1);
     ok('FI CR-6: £499.99 part payment recorded (paid £500.00)', recordPayment(t(), 499.99, 'BACS-FI603', 'Bank transfer', 'part') !== false && P(row.paid) === 50000);
-    ok('FI CR-6: £1,000.01 against £1,000.00 due is refused (overpayment), nothing written', recordPayment(t(), 1000.01, 'BACS-FI604', 'Bank transfer', 'over') === false && P(row.paid) === 50000 && !w.tx.some(x => x.ref === 'BACS-FI604'));
+    // PD-FD-01: £1,200.00 remains after £500 paid on the £1,700 balance. Was: £1,000.01 against £1,000.00 due.
+    ok('FI CR-6: £1,200.01 against £1,200.00 due is refused (overpayment), nothing written', recordPayment(t(), 1200.01, 'BACS-FI604', 'Bank transfer', 'over') === false && P(row.paid) === 50000 && !w.tx.some(x => x.ref === 'BACS-FI604'));
     ok('FI CR-6: £1,000,000,000 refused', recordPayment(t(), 1e9, 'BACS-FI605', 'Bank transfer', 'over') === false && P(row.paid) === 50000);
-    ok('FI CR-6: £1,000.005 (fraction of a penny) refused', recordPayment(t(), 1000.005, 'BACS-FI606', 'Bank transfer', 'x') === false);
+    // PD-FD-01: £1,200.00 due. Was: £1,000.005.
+    ok('FI CR-6: £1,200.005 (fraction of a penny) refused', recordPayment(t(), 1200.005, 'BACS-FI606', 'Bank transfer', 'x') === false);
     ok('FI CR-6: a reference already in the ledger is refused', recordPayment(t(), 100, 'BACS-FI603', 'Bank transfer', 'dup') === false && P(row.paid) === 50000);
     ok('FI CR-6: an empty reference is refused', recordPayment(t(), 100, ' ', 'Bank transfer', 'noref') === false);
-    ok('FI CR-6: £1,000.00 settles the balance; the seat is secured', recordPayment(t(), 1000, 'BACS-FI607', 'Bank transfer', 'rest') !== false && row.status === 'Paid' && dpSeat(w).st === 'occupied');
+    // PD-FD-01: £1,200.00 remains due. Was: £1,000.00 settles it.
+    ok('FI CR-6: £1,200.00 settles the balance; the seat is secured', recordPayment(t(), 1200, 'BACS-FI607', 'Bank transfer', 'rest') !== false && row.status === 'Paid' && dpSeat(w).st === 'occupied');
     const L = fpLedger(pl(w));
-    ok('FI CR-6: reconciliation — transactions £1,800.00 = deposit £300 + rows £1,500 = ledger paid; outstanding £0.00', txSum(w) === 180000 && P(L.paid) === 180000 && P(L.outstanding) === 0 && L.ok, `tx ${txSum(w)} paid ${P(L.paid)}`);
+    // PD-FD-01: deposit £100 + rows £1,700 (total still £1,800). Was: deposit £300 + rows £1,500.
+    ok('FI CR-6: reconciliation — transactions £1,800.00 = deposit £100 + rows £1,700 = ledger paid; outstanding £0.00', txSum(w) === 180000 && P(L.paid) === 180000 && P(L.outstanding) === 0 && L.ok, `tx ${txSum(w)} paid ${P(L.paid)}`);
   });
   await T('CR-6 wrong items and identities', async () => {
     FA(); const a = STORE.worlds.CD1, d = STORE.worlds.CD2, a3 = pl(a).rows[2], d3 = pl(d).rows[2], an = a.tx.length, dn = d.tx.length;
@@ -324,7 +337,8 @@
   await T('FI-Z client demo reset', async () => {
     fxLoadClient(); FA();
     ok('FI-Z loading the client demo restores the starting records (Amira, Dev and Lena unchanged; no registrations)', snapCD() === cd0 && !Object.keys(STORE.worlds).some(k => /^G\d*$/.test(k)), snapCD());
-    ok('FI-Z the client demo\'s Finance targets are again the demo learners only', payTargets().every(t => /^CD[12]\|/.test(t.key)));
+    // PD-FD-01: the demo learners with targets are CD1, CD2, CD4, CD5. Was: CD1/CD2 only.
+    ok('FI-Z the client demo\'s Finance targets are again the demo learners only', payTargets().every(t => /^CD[1245]\|/.test(t.key)) && payTargets().length === 21);
   });
   signOutUI();
   const pre = document.createElement('pre'); pre.id = 'ft-out'; pre.textContent = R.join('\n'); document.body.appendChild(pre);

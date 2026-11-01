@@ -20,8 +20,10 @@
 const CD_T = 'Level 3 Diploma in Care Practice (client demo)', CD_B = 'DEMO-L3-JAN27';
 const CD_TEACHER = 'Marcus Bell', CD_ASSESSOR = 'James Pryce'; // demo staff accounts: Teacher only / Assessor only (TAQA)
 // DR (PD-DR-02): two NVQ learners (one per delivery mode, one per Coordinator) and one short-course learner — nobody else
-const CD_LEARNERS = [['Amira Shah (demo)', 'Self-Paced'], ['Dev Patel (demo)', 'Fully Assisted'], ['Lena Hart (demo)', 'Short course']];
-const CD_SIGNUP = { 'Amira Shah (demo)': ['1992-03-14', '12 Demo Street, London'], 'Dev Patel (demo)': ['1988-11-02', '4 Example Road, Leicester'] }; // synthetic
+// FD (PD-FD-01): two more Self-Paced learners on the deposit-then-instalments route (PD-FC-11) — Sam paid the deposit by card and instalment 1;
+// Tom told Finance about a bank-transfer deposit that Finance hasn't confirmed. Both await the normal academic admission review.
+const CD_LEARNERS = [['Amira Shah (demo)', 'Self-Paced'], ['Dev Patel (demo)', 'Fully Assisted'], ['Lena Hart (demo)', 'Short course'], ['Sam Deposit (demo)', 'Self-Paced', 'card'], ['Tom Transfer (demo)', 'Self-Paced', 'bank']];
+const CD_SIGNUP = { 'Amira Shah (demo)': ['1992-03-14', '12 Demo Street, London'], 'Dev Patel (demo)': ['1988-11-02', '4 Example Road, Leicester'], 'Sam Deposit (demo)': ['1995-06-21', '7 Sample Lane, Luton'], 'Tom Transfer (demo)': ['1990-09-09', '23 Example Close, Milton Keynes'] }; // synthetic
 const cdPr = () => (ADMIN.programmes || []).find(p => p.title === CD_T) || null;
 const cdBatch = () => (ADMIN.batches || []).find(b => b.code === CD_B) || null;
 const cdOn = () => !!(cdPr() && cdBatch());
@@ -162,7 +164,7 @@ dt = function (o) { if (o && (o.id === 'kprogs' || o.id === 'progs') && Array.is
    - the short-course learner buys the published short course from Browse through the same simulated checkout.
    Nothing is marked, observed, certified or paid beyond that; the learners start at 0% with their real deadlines and sessions.
    The checkout and upload timers are fast-forwarded during the build (fxFast in fx-fixtures.js) — the same callbacks run. */
-const CD_KEYS = ['CD1', 'CD2', 'CD3'];
+const CD_KEYS = ['CD1', 'CD2', 'CD3', 'CD4', 'CD5'];
 const cdKeyOf = lid => CD_KEYS.find(k => STORE.worlds && STORE.worlds[k] && STORE.worlds[k].me && STORE.worlds[k].me.id === lid) || null;
 function cdClear() {
   CD_KEYS.forEach(k => { delete VARIANT_INFO[k]; delete PERSONAS[k]; delete VARIANTS[k]; });
@@ -195,6 +197,38 @@ function cdSignup(key, m, ff) {
   setUi('suOpt', 'instalment'); setUi('suMethod', 'card'); render(); ACT.suPay(); if (cdPress() !== false) throw cdErr(w, 'Checkout'); ff(3000); closeModal();
   if (!w.signup.done || w.signup.batch !== CD_B) throw cdErr(w, 'Payment');
 }
+// FD (PD-FD-01): the programme's own deposit — the Academic Admin changes it on Fees & Payments, a Finance Admin approves it in the Approvals
+// Queue (the Academy-wide default is unchanged)
+function cdDeposit(amt) {
+  const id = cdPr().id; acaEnter('KA'); S.signedIn = true; S.ui = {}; go('a-programmes', { id, tab: 'fees' });
+  const r = $('main input[name="e1-wdm"][value="own"]'), f = $('main #e1-d'); if (!r || !f) throw new Error('Fees & Payments: no deposit setting'); r.checked = true; f.value = String(amt);
+  ACT.cb8Dep({ dataset: { p: id } }); ACT.cb8Submit({ dataset: { p: id } }); if (MODAL) cdPress(); closeModal();
+  const wf = cb8Wf(cdPr()); if (!wf || !wf.qid) throw new Error('Fees & Payments: the deposit change was not submitted');
+  setAdminIdentity('FA'); S.portal = 'admin'; S.signedIn = true; S.ui = {}; go('a-queue', { id: wf.qid }); ACT.e1Decide({ dataset: { id: wf.qid, a: 'approve' } });
+  if (MODAL) { const t = $('#rsn'); if (t) t.value = `Client demo — programme deposit ${money(amt, 'GBP')} (Academy default unchanged)`; cdPress(); } closeModal();
+  if (cb8Cur(id).dep.eff !== amt || S4().cfg.deposit === amt) throw new Error(`Fees & Payments: the ${money(amt, 'GBP')} programme deposit was not approved`);
+}
+// FD: sign-up on "Deposit, then N payments" (PD-FC-11) — card: the deposit, then instalment 1's remainder from Payments; bank: the transfer
+// is notified only (Finance confirms it in the demo)
+function cdSignupDep(key, m, method, ff) {
+  const w = STORE.worlds[key], [dob, addr] = CD_SIGNUP[w.me.first + ' ' + w.me.last] || ['1990-01-01', '1 Demo Street, London'];
+  cdAs(key); go('browse');
+  const c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === CD_T), opt = r1Opts(cdPr().id).find(o => o.status === 'Active' && o.mode === m); if (!c || !opt) throw new Error('Browse: no approved ' + m + ' fee option');
+  ACT.applyNvq({ dataset: { id: c.id } }); const r = $(`#modal-root input[name="r1-opt"][value="${opt.id}"]`); if (r) r.checked = true;
+  if (cdPress() === false) throw cdErr(w, 'Sign-up'); closeModal(); if (!w.signup) throw cdErr(w, 'Sign-up not started');
+  go('admission'); const fill = (s, v) => { const e = $(s); if (!e) throw cdErr(w, 'Sign-up details: missing ' + s); e.value = v; };
+  fill('#su-dob', dob); fill('#su-ad', addr); ACT.suNext(); if (w.signup.step !== 2) throw cdErr(w, 'Sign-up details');
+  w.docs.filter(d => d.mand).forEach(d => ACT.sampleUpload({ dataset: { id: d.id } })); ff(3000);
+  ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); if (!w.signup.sig) throw cdErr(w, 'Offer letter');
+  const k = (cb9Pin(w).opt.pay.find(x => x.k > 1) || {}).k; if (!k) throw cdErr(w, 'No approved instalment option');
+  setUi('cb9Pay', 'dep' + k); setUi('suMethod', method); render(); ACT.suPay();
+  if (method === 'card') { if (cdPress() !== false) throw cdErr(w, 'Deposit checkout'); ff(3000); closeModal(); } else { if (MODAL) cdPress(); closeModal(); }
+  const pl = (w.plans || []).find(p => p.e === 'nvq');
+  if (!w.signup.done || w.signup.batch !== CD_B || !pl || pl.depRoute !== 'inst') throw cdErr(w, 'Deposit, then instalments');
+  if (method !== 'card') return;
+  go('payments'); ACT.payInst({ dataset: { e: 'nvq', n: '1' } }); if (!MODAL || cdPress() !== false) throw cdErr(w, 'Instalment 1 checkout'); ff(3000); closeModal();
+  if (dpSeat(w).st !== 'occupied') throw cdErr(w, 'Instalment 1');
+}
 // Admissions (Academic Admin): each mandatory document approved, then the admission
 function cdAdmit(key) {
   const w = STORE.worlds[key], id = 'APP-' + key; acaEnter('KA'); S.signedIn = true; S.ui = {}; go('a-admissions', { id });
@@ -216,8 +250,12 @@ function cdLearners() {
   if (!cdBatch()) return;
   fxFast(ff => {
     CD_LEARNERS.forEach(([name, m], k) => { const L = ADMIN.learners.find(x => x.name === name); if (!L) throw new Error('No learner record: ' + name); cdWorld(CD_KEYS[k], L, m); });
-    CD_LEARNERS.forEach(([, m], k) => { if (m === 'Short course') cdShort(CD_KEYS[k], ff); else cdSignup(CD_KEYS[k], m, ff); });
-    CD_LEARNERS.forEach(([, m], k) => { if (m !== 'Short course') cdAdmit(CD_KEYS[k]); });
+    CD_LEARNERS.forEach(([, m, dep], k) => { if (dep) return; if (m === 'Short course') cdShort(CD_KEYS[k], ff); else cdSignup(CD_KEYS[k], m, ff); });
+    CD_LEARNERS.forEach(([, m, dep], k) => { if (m !== 'Short course' && !dep) cdAdmit(CD_KEYS[k]); });
+    // FD: after the first learners signed up on the programme's original terms (their pinned plan is unchanged), the programme's own
+    // £100 deposit is set and approved (a new plan version); then the deposit-route learners sign up. No admission decision for them.
+    if (CD_LEARNERS.some(x => x[2])) { cdDeposit(100); CD_LEARNERS.forEach(([, m, dep], k) => { if (dep) cdSignupDep(CD_KEYS[k], m, dep, ff); }); }
+    if (typeof mcSync === 'function') mcSync(cdBatch()); // every demo learner's Coordinator is allocated before the build ends (the last sign-up is otherwise allocated on first read)
   });
 }
 const _buildCD = cdBuild;
