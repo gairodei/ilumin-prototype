@@ -8,7 +8,8 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const BOOT = Date.now();
 const NOW = new Date('2026-10-04T08:15:00Z');
 const DAY = 864e5;
-const now = () => new Date(NOW.getTime() + (Date.now() - BOOT));
+let CLOCK_SHIFT = 0; // FC: a demo restored from this browser's saved copy continues its clock from the moment it was saved
+const now = () => new Date(NOW.getTime() + (Date.now() - BOOT) + CLOCK_SHIFT);
 // D(days, 'HH:MM[:SS]') → ISO string, time given in UTC
 const D = (days, hm = '09:00') => { const [h, m, s] = hm.split(':').map(Number); return new Date(Date.UTC(2026, 9, 4 + days, h, m, s || 0)).toISOString(); };
 

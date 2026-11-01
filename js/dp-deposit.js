@@ -34,7 +34,8 @@ const dpRowLbl = (pl, r) => (pl.plan === 'Deposit and balance' ? 'balance' : pl.
 /* ---------- The seat: one status for every screen (round 2) ---------- */
 // The date seat holds are checked against: the demo's today plus Finance's simulated-date offset (CB10). No timer runs.
 const dpNow = () => new Date(now().getTime() + ((STORE.cbRem && STORE.cbRem.offset) || 0) * DAY);
-const dpHoldPl = w => { const pl = fpPl(w); return pl && pl.deposit && pl.plan === 'Deposit and balance' ? pl : null; };
+// FC (PD-FC-11): a deposit followed by the approved instalments (depRoute 'inst') holds the seat too, until instalment 1 is settled
+const dpHoldPl = w => { const pl = fpPl(w); return pl && pl.deposit && (pl.plan === 'Deposit and balance' || pl.depRoute === 'inst') ? pl : null; };
 function dpSeat(w) {
   const s = w && w.signup; if (!s) return { st: 'none' };
   const pl = dpHoldPl(w), d = pl && pl.deposit;
@@ -72,16 +73,16 @@ function dpReconcile() {
   if (DP_REC || typeof STORE === 'undefined' || !STORE.worlds || typeof learnerAccounts !== 'function') return; DP_REC = true;
   try {
     learnerAccounts().forEach(v => {
-      const w = STORE.worlds[v], x = dpSeat(w); if (x.st !== 'expired') return; { const hp = dpHoldPl(w); x.paidBal = hp ? hp.rows.reduce((a, r) => a + fpP(r.paid), 0) : 0; }
+      const w = STORE.worlds[v], x = dpSeat(w); if (x.st !== 'expired') return; const bl = (dpHoldPl(w) || {}).depRoute === 'inst' ? 'instalment 1' : 'the balance'; { const hp = dpHoldPl(w); x.paidBal = hp ? hp.rows.reduce((a, r) => a + fpP(r.paid) - fpP(r.credit), 0) : 0; }
       const b = chBatch(x.batch), dep = x.dep, got = dep.status === 'Paid', when = dpNow().toISOString();
       chReleaseSeat(w, true); // P-32: leaves the batch (count −1), materials read-only, Sign up again
       const ref = !got && w.signup.pay && w.signup.pay.method === 'bank' ? w.signup.pay.ref : '', h = w.admission.history, bal = x.paidBal || 0, money0 = fpRefunded(dep) ? `deposit refunded${bal ? `; ${money(fpM(bal), 'GBP')} of the balance received — held (Finance review)` : ''}` : got ? `deposit received${bal ? ` and ${money(fpM(bal), 'GBP')} of the balance` : ''} — held; no refund or retention recorded` : `deposit not received${ref ? ` (bank transfer ${ref} still awaiting confirmation)` : ''}; nothing recorded`; // FI-2 (M-10, M-11)
       // not "deposit kept": keeping the deposit isn't in the learner's signed terms (PD-DP-16)
-      if (h.length && /^Seat released/.test(h[h.length - 1][0])) h[h.length - 1] = [`Seat released — the seat hold ended ${fdt(x.hold)} with the balance unpaid (${money0})`, when];
+      if (h.length && /^Seat released/.test(h[h.length - 1][0])) h[h.length - 1] = [`Seat released — the seat hold ended ${fdt(x.hold)} with ${bl} unpaid (${money0})`, when];
       Object.assign(w.admission.deposit, { releasedAt: when, releasedHold: x.hold, kept: false, held: got });
-      logA('Admissions', `${chFullName(w)} (${w.me.id})`, 'Seat hold ended — seat released', `Reserved in ${x.batch} until ${fdt(x.hold)}`, `Released (checked ${fdt(when)})`, `P-32: the balance was unpaid when the agreed hold ended; ${money0}`);
-      notifyLearner(w.v, 'Admission', 'Your seat hold has ended', `Your seat hold ended on ${fdt(x.hold)} before the balance was paid, so your place on ${b ? b.label + ' (' + b.code + ')' : 'the batch'} has been released. Nothing has been refunded or charged. You can still view your materials; to continue, sign up again.`, 'dashboard');
-      if (b) chCooNotify(b.coord, 'Seat released', `${chFullName(w)} left ${b.label} (${b.code}) — the seat hold ended with the balance unpaid.`, 'c-batches.' + b.code);
+      logA('Admissions', `${chFullName(w)} (${w.me.id})`, 'Seat hold ended — seat released', `Reserved in ${x.batch} until ${fdt(x.hold)}`, `Released (checked ${fdt(when)})`, `P-32: ${bl} was unpaid when the agreed hold ended; ${money0}`);
+      notifyLearner(w.v, 'Admission', 'Your seat hold has ended', `Your seat hold ended on ${fdt(x.hold)} before ${bl} was paid, so your place on ${b ? b.label + ' (' + b.code + ')' : 'the batch'} has been released. Nothing has been refunded or charged. You can still view your materials; to continue, sign up again.`, 'dashboard');
+      if (b) chCooNotify(b.coord, 'Seat released', `${chFullName(w)} left ${b.label} (${b.code}) — the seat hold ended with ${bl} unpaid.`, 'c-batches.' + b.code);
       if (STORE.fin) STORE.fin.notifs.unshift({ to: 'all', t: 'Seat released — hold ended', b: `${chFullName(w)} · ${x.batch} · ${money(dep.amount, 'GBP')} ${money0}`, at: when, go: 'f-deposits', unread: true });
     });
   } finally { DP_REC = false; }

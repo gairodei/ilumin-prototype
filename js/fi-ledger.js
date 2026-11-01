@@ -101,7 +101,9 @@ planCard = function (pl) { const h = _pcFI2.apply(this, arguments), n = fiNetTxt
 /* ---------- Overdue on the simulated date: every learner account ---------- */
 // A row is overdue when its due date has passed (simulated date), it isn't paid, awaiting a transfer confirmation or under an
 // arrangement, and it isn't a deposit-route balance (that is the seat hold's, PD-DP-10: never an overdue instalment).
-const fiRowLate = (w, pl, r) => pl !== dpHoldPl(w) && !r.arrangement && !r.confirming && r.status !== 'Awaiting confirmation by Finance' && fpP(r.amount) > fpP(r.paid) && fiLate(r.due, w) > 0;
+// FC (PD-FC-11): on the deposit-then-instalments route only instalment 1 belongs to the seat hold; once the seat is secured, instalments 2
+// onward follow their dates and the overdue process like any instalment
+const fiRowLate = (w, pl, r) => (pl !== dpHoldPl(w) || (pl.depRoute === 'inst' && r.n > 1 && dpSeat(w).st === 'occupied')) && !r.arrangement && !r.confirming && r.status !== 'Awaiting confirmation by Finance' && fpP(r.amount) > fpP(r.paid) && fiLate(r.due, w) > 0;
 let FI_OD = false;
 function fiOdSync() {
   if (FI_OD || typeof STORE === 'undefined' || !STORE.worlds || !STORE.fin) return; FI_OD = true;
@@ -246,7 +248,7 @@ function fiCancelRefunds(name, lid, b, why) {
 const _faFI2 = ACT.finAdjust;
 ACT.finAdjust = el => {
   const r = _faFI2(el), w = el && el.dataset && STORE.worlds[el.dataset.v], pl = w && w.plans.find(p => p.e === el.dataset.e);
-  if (w && pl && pl === dpHoldPl(w) && $('#modal-root #ad-d')) s5WrapPrimary(() => { const hold = pl.deposit && (pl.deposit.hold || (w.admission.deposit || {}).holdUntil); if (($('#ad-s') || {}).value === 'yes') return (fieldErr('#ad-s', 'A deposit balance is one payment within the seat hold — it can\'t be split into instalments (PD-E1-05).'), true); if (hold && new Date($('#ad-d').value + 'T12:00:00Z') > new Date(hold)) return (fieldErr('#ad-d', `The balance is due within the seat hold (by ${fd(hold)}). Extending a hold is a client question.`), true); return ''; });
+  if (w && pl && pl === dpHoldPl(w) && pl.plan === 'Deposit and balance' && $('#modal-root #ad-d')) s5WrapPrimary(() => { const hold = pl.deposit && (pl.deposit.hold || (w.admission.deposit || {}).holdUntil); if (($('#ad-s') || {}).value === 'yes') return (fieldErr('#ad-s', 'A deposit balance is one payment within the seat hold — it can\'t be split into instalments (PD-E1-05).'), true); if (hold && new Date($('#ad-d').value + 'T12:00:00Z') > new Date(hold)) return (fieldErr('#ad-d', `The balance is due within the seat hold (by ${fd(hold)}). Extending a hold is a client question.`), true); return ''; });
   return r;
 };
 // M-14: the learner's part-payment permission is the one agreed (it was always "yes")

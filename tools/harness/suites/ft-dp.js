@@ -190,7 +190,8 @@
     ok('DP-E the learner\'s first instalment checkout asks £200', c.amt === '£200.00', c.amt);
     const L = fpLedger(p); ok('DP-E ledger: £300 paid (deposit £100 + £200), £1,500 outstanding = £1,800; reconciles', L.paid === 300 && L.outstanding === 1500 && L.ok);
     p = mk([300, 300, 300, 300, 300, 300], 500); FA(); recordPayment(payTargets().find(x => x.key === w2.v + '|dep'), 500, 'BACS-77101', 'Bank transfer', 'Deposit received');
-    ok('DP-E deposit greater than the first instalment (£500 vs £300): instalment 1 fully credited (£300), £200 carried to instalment 2, never below zero', p.rows[0].credit === 300 && p.rows[0].status === 'Paid' && p.rows[1].credit === 200 && p.rows[1].amount - p.rows[1].paid === 100 && p.rows.every(r => r.amount - r.paid >= 0) && fpLedger(p).ok);
+    // PD-FC-12 supersedes the carry-forward. Was: "£200 carried to instalment 2". Now: held unallocated and flagged for Finance review (PD-FC-13: not offered at sign-up).
+    ok('DP-E deposit greater than the first instalment (£500 vs £300): instalment 1 fully credited (£300); the £200 rest is held for Finance review, not moved; never below zero (PD-FC-12)', p.rows[0].credit === 300 && p.rows[0].status === 'Paid' && !p.rows[1].credit && p.rows[1].paid === 0 && p.depReview && p.depReview.amount === 200 && p.rows.every(r => r.amount - r.paid >= 0) && fpLedger(p).ok);
   });
 
   /* ================= F. Edge cases ================= */

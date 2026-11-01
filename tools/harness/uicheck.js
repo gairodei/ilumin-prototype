@@ -363,7 +363,7 @@
       const w9 = STORE.worlds.F; // (W here is the viewport width)
       ok('CB9 (setup) the learner sign-up started with the approved choices fixed', !!(w9.signup && w9.signup.plan && w9.signup.plan.cb8), t9);
       const b9 = chBatch('UI9-NOV26'); chSetBatch(w9, b9); ACT.suNext(); w9.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w9.me.first + ' ' + w9.me.last); setUi('suDecl', true); ACT.suSign(); chSetBatch(w9, b9); setUi('cb9Pay', '6'); go('admission');
-      ok('CB9 payment step: the approved options (deposit, in full, 4, 6) and the chosen schedule displayed', all('main input[name="cb9-pay"]').filter(shown).length === 4 && shown($1('main .cb9-sched')) && all('main .cb9-sched tbody tr').length === 6);
+      ok('CB9 payment step: the approved options (deposit, deposit then 4 / 6 — PD-FC-11, in full, 4, 6) and the chosen schedule displayed', all('main input[name="cb9-pay"]').filter(shown).length === 6 && shown($1('main .cb9-sched')) && all('main .cb9-sched tbody tr').length === 6);
       ok('CB9 payment step: "Collected now" on payment 1; no table, option or page overflow', /Collected now/.test($1('main .cb9-sched').textContent) && !all('main .cb9-sched .tbl-wrap, main .cb9-opt').some(e => e.scrollWidth - e.clientWidth > 1) && appOver() <= 1, appOver());
       click($1('main input[name="cb9-pay"][value="4"]')); ok('CB9 choosing another option shows its schedule (4 payments)', all('main .cb9-sched tbody tr').length === 4 && appOver() <= 1, appOver());
       const _co = checkout; let g9 = null; checkout = o => { g9 = o; return _co(o); }; try { ACT.suPay(); } finally { checkout = _co; } if (g9) g9.onSuccess(g9.amount, 'TXN-UI9'); closeModal();

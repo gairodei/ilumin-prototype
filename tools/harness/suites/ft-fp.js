@@ -95,10 +95,12 @@
   /* ================= A3. Deposit larger than the first instalment ================= */
   await T('FP-A3 deposit > first instalment', async () => {
     fresh(); learner('C'); const w = W, pl = gross(w, [300, 300, 300], 450, 'Paid'); fpCredit(w, 'test');
-    ok('FP-A3 £450 deposit: instalment 1 fully credited (£300, Paid), the £150 rest carried to instalment 2 (£150 left)', pl.rows[0].credit === 300 && pl.rows[0].status === 'Paid' && pl.rows[1].credit === 150 && pl.rows[1].amount - pl.rows[1].paid === 150 && !pl.rows[2].credit);
+    // PD-FC-12 supersedes FP-A's carry-forward. Was: "the £150 rest carried to instalment 2 (£150 left)". Now: credited to instalment 1 only; the rest is
+    // held as a paid, unallocated deposit (it still reduces what is outstanding) and flagged for Finance review — never moved without a decision.
+    ok('FP-A3 £450 deposit: instalment 1 fully credited (£300, Paid); the £150 rest is not moved to instalment 2 — held unallocated, Finance review (PD-FC-12)', pl.rows[0].credit === 300 && pl.rows[0].status === 'Paid' && !pl.rows[1].credit && pl.rows[1].paid === 0 && !pl.rows[2].credit && pl.depReview && pl.depReview.amount === 150);
     ok('FP-A3 never a negative amount due; reconciles', pl.rows.every(r => r.amount - r.paid >= 0) && fpLedger(pl).outstanding === 450 && fpLedger(pl).ok);
     const pl2 = gross(w, [300, 300], 700, 'Paid'); fpCredit(w, 'over');
-    ok('FP-A3 (negative) a deposit bigger than everything left is never pushed below zero — flagged for Finance ("Review")', pl2.rows.every(r => r.amount - r.paid === 0 && r.credit === 300) && !fpLedger(pl2).ok);
+    ok('FP-A3 (negative) a deposit bigger than everything left is never pushed below zero — flagged for Finance ("Review"; PD-FC-12: only instalment 1 credited)', pl2.rows.every(r => r.amount - r.paid >= 0) && pl2.rows[0].credit === 300 && !pl2.rows[1].credit && pl2.depReview && pl2.depReview.amount === 400 && !fpLedger(pl2).ok);
   });
 
   /* ================= A4. Net schedule: no second deduction; the balance is paid once ================= */
@@ -162,9 +164,9 @@
   /* ================= A9. Rounding ================= */
   await T('FP-A9 rounding', async () => {
     fresh(); learner('C'); const w = W, sch = e1Sched(1000, 3), pl = gross(w, sch, 333.34, 'Paid'); fpCredit(w, 'r');
-    ok('FP-A9 £1,000 in 3 (£333.33, £333.33, £333.34) with a £333.34 deposit: £333.33 + £0.01 credited, in pence', J(sch) === J([333.33, 333.33, 333.34]) && pl.rows[0].credit === 333.33 && P2(pl.rows[1].credit) === 1 && P2(pl.rows[1].amount - pl.rows[1].paid) === 33332);
+    ok('FP-A9 £1,000 in 3 (£333.33, £333.33, £333.34) with a £333.34 deposit: £333.33 credited to instalment 1, the £0.01 held for Finance review (PD-FC-12; was carried to instalment 2), in pence', J(sch) === J([333.33, 333.33, 333.34]) && pl.rows[0].credit === 333.33 && !pl.rows[1].credit && P2(pl.rows[1].amount - pl.rows[1].paid) === 33333 && P2(pl.depReview.amount) === 1);
     const L = fpLedger(pl); ok('FP-A9 reconciles to the penny: paid £333.34 + outstanding £666.66 = £1,000.00', P2(L.paid) === 33334 && P2(L.outstanding) === 66666 && L.ok);
-    const pl2 = gross(w, [0.1, 0.2], 0.3, 'Paid'); pl2.total = 0.3; fpCredit(w, 'f'); ok('FP-A9 floating-point: £0.10 + £0.20 with a £0.30 deposit → both rows Paid, £0 outstanding', pl2.rows.every(r => r.status === 'Paid') && fpLedger(pl2).outstanding === 0 && fpLedger(pl2).ok);
+    const pl2 = gross(w, [0.1, 0.2], 0.3, 'Paid'); pl2.total = 0.3; fpCredit(w, 'f'); ok('FP-A9 floating-point: £0.10 + £0.20 with a £0.30 deposit → instalment 1 Paid, £0.20 held for Finance review (PD-FC-12; was both rows Paid), £0 outstanding', pl2.rows[0].status === 'Paid' && P2(pl2.depReview.amount) === 20 && fpLedger(pl2).outstanding === 0 && fpLedger(pl2).ok);
   });
 
   /* ================= A10. Refunded deposit ================= */

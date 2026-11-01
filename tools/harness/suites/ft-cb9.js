@@ -67,7 +67,8 @@
     ok('CB9-A (setup) the batch starts 13 Nov 2026 (in 40 days); today is 4 Oct 2026', S0 === '2026-11-13' && cbToday() === '2026-10-04');
     ok('CB9-A the sign-up dialog lists each fee option\'s approved choices (not the plan\'s single count)', /pay in full, 4 payments, 6 payments/.test(dlg) && /pay in full, 3 payments/.test(dlg));
     ok('CB9-A sign-up start fixes the option\'s approved choices with the terms (by programme ID and plan version)', !!w.signup.plan.cb8 && w.signup.plan.cb8.pid === P.pr.id && w.signup.plan.cb8.opt.id === P.a && J(w.signup.plan.cb8.opt.pay.map(x => x.k)) === '[1,4,6]' && Object.isFrozen(w.signup.plan.cb8));
-    go('admission'); ok('CB9-A step 4 offers the deposit route and the three approved options (in full, 4, 6) — no others', J(qa('input[name="cb9-pay"]').map(x => x.value)) === J(['deposit', '1', '4', '6']) && /Choose how you pay/.test(main()));
+    go('admission'); // PD-FC-11 (deposit, then the approved instalments) adds one deposit-then-N option per approved N > 1. Was: J(values) === J(['deposit', '1', '4', '6']).
+    ok('CB9-A step 4 offers the deposit route, deposit then 4 / 6 payments (PD-FC-11) and the three approved options (in full, 4, 6) — no others', J(qa('input[name="cb9-pay"]').map(x => x.value)) === J(['deposit', 'dep4', 'dep6', '1', '4', '6']) && /Choose how you pay/.test(main()));
     choose(4); const t = q('.cb9-sched').textContent;
     ok('CB9-A choosing 4 payments shows the whole schedule: dates from the batch start and amounts (13 Nov 2026, 28 Dec 2026, 11 Feb 2027, 28 Mar 2027 — 4 × £600.00)', J(qa('.cb9-sched tbody tr td:nth-child(2)').map(x => x.textContent)) === J(['13 Nov 2026', '28 Dec 2026', '11 Feb 2027', '28 Mar 2027']) && qa('.cb9-sched tbody tr td:nth-child(3)').every(x => x.textContent === '£600.00'), qa('.cb9-sched tbody tr td:nth-child(2)').map(x => x.textContent).join());
     ok('CB9-A payment 1 is labelled "Collected now — due 13 Nov 2026 (batch start), paid early at checkout"; the rest "Later"', /Collected now — due 13 Nov 2026 \(batch start\), paid early at checkout/.test(t) && (t.match(/Later/g) || []).length === 3);
@@ -121,7 +122,7 @@
     ok('CB9-E (setup) a new package is in force: £2,600, 4 payments no longer offered', cb8Cur(id).opts.find(o => o.id === P.a).fee === 2600 && !cb8Cur(id).opts.find(o => o.id === P.a).pay.some(x => x.k === 4));
     ok('CB9-E the learner\'s pin, rows and terms are byte-identical after new Finance and package changes', J(w.signup.pin) === pin0 && J(w.plans.find(p => p.e === 'nvq').rows) === rows0 && J(w.signup.plan) === plan0);
     ok('CB9-E seeded learners\' payments and existing observation fee records are unchanged', J(STORE.worlds.C.plans) === C0 && J(STORE.chFees) === fees0);
-    const { w: w2 } = signUp('F', P, P.a); go('admission'); ok('CB9-E a new learner gets the new package: £2,600 with in full, 5 or 6 payments', w2.signup.plan.cb8.opt.fee === 2600 && J(qa('input[name="cb9-pay"]').map(x => x.value).filter(x => x !== 'deposit')) === J(['1', '5', '6']));
+    const { w: w2 } = signUp('F', P, P.a); go('admission'); ok('CB9-E a new learner gets the new package: £2,600 with in full, 5 or 6 payments', w2.signup.plan.cb8.opt.fee === 2600 && J(qa('input[name="cb9-pay"]').map(x => x.value).filter(x => !/^dep/.test(x))) === J(['1', '5', '6'])); // PD-FC-11: the deposit routes (deposit, depN) are filtered out — was x !== 'deposit'
   });
 
   /* ================= F. Batch date changed / learner moved before the start ================= */
