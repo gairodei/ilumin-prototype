@@ -1543,3 +1543,26 @@ Root causes:
 - (f) Which legacy criteria (shared list IA-n, programme IA criteria) should be moved into the library, and with which codes (PD-OBS1-16)?
 - (g) Should agencies see library outcomes for sponsored learners (PD-OBS1-15)?
 - (h) Production must enforce all of this on the server.
+
+## Batch OBS-1b: One observation set-up workflow in the programme builder (2 Nov 2026)
+
+Section 4 of the programme builder still carried the N5a cards "NVQ observation criteria (from the curriculum — both locations)" and "Academy standards (this programme's IA criteria — workplace)" on the Observation configuration tab, next to OBS-1's Workplace and Academy Observation Criteria tabs: criteria were set up in two places.
+
+Coverage check before moving anything:
+- NVQ observation criteria are qualification criteria (Learning Outcomes of the Observation type, Section 2). The library doesn't replace them and must not: they are kept, with their per-criterion evidence settings.
+- Programme Academy (IA) criteria: the library covers code, title, instructions, per-criterion evidence, versions and retirement, at both locations. It does **not** cover the approved explicit mapping of each Academy criterion to NVQ criteria (PD-N5a-07), which publishing checks, observation events and observation records still use. So the IA editor is not retired.
+
+| ID | Decision | Why / requirement | Where |
+|---|---|---|---|
+| PD-OBS1B-01 | **Observation configuration = settings only.** Settings (required / workplace / Academy office), the publishing checks, a new "Criteria by location" summary (per enabled location: library Academy standards + qualification (NVQ) criteria + programme Academy criteria where the version has any, with a link to the tab), the version list and the audit. The NVQ card, the IA card and the old "What an observation covers" card are no longer on this tab. | User 1, 5. | `n5Section` wrapper (obs1b-builder.js) |
+| PD-OBS1B-02 | **The criteria cards are on the location tabs, unchanged in behaviour.** Workplace Observation Criteria: library criteria, then "Qualification criteria (NVQ) — from the curriculum" (the same table and Evidence editor), then "Programme Academy criteria (earlier set-up)" when the version has any (the same table with Edit, Retire / Restore / Remove, Add and the NVQ mapping). Academy Observation Criteria: library criteria (same as Workplace, exclusions, Academy-only) and the qualification criteria; programme Academy criteria stay workplace-only (G6.6) and the tab says so. NVQ evidence settings are one set for both locations. | User 1–4. | `ol1Panel` wrapper |
+| PD-OBS1B-03 | **NVQ criteria and Academy standards stay separate.** Different cards, headings and sources; nothing is converted or copied between the curriculum, the programme's IA criteria and the library. | User 4. | — |
+| PD-OBS1B-04 | **What is shown follows the settings; nothing is deleted.** Observation required not chosen or No: no criteria tabs and no criteria cards (the summary says why); location off: its tab is hidden. NVQ evidence settings, IA criteria and library selections are kept and come back unchanged. | OBS-1 B3; user 6. | `ol1bMoved`, `ol1bMap` |
+| PD-OBS1B-05 | **Historical versions keep their view.** A published version without location tabs (published before N5, or observation not recorded / not required) keeps its NVQ and IA cards on the configuration tab, read-only. Stored configurations (`STORE.n5`), published snapshots, signed-off observations and curriculum Learning Outcomes are untouched. | User 6. | `ol1bMoved` |
+| PD-OBS1B-06 | **Programme Academy criteria are not retired** (the library has no NVQ mapping). New programmes use the library; the IA card appears only for versions that already have IA criteria. | User 5: retire only after coverage is proven. | — |
+
+**Restated tests:** `ft-n5a` N5a-E6 and N5a-C3 read the NVQ card on the Workplace tab (C3 first records the draft's settings with the suite's own settings helper); N5a-T4 reads the same counts from the new summary. `uicheck.js` N5a journey: the draft configuration panel shows settings and checks only; Evidence and Add criterion are checked on the Workplace tab after the settings are saved (one added check per width). Assertions otherwise unchanged.
+
+**Open (client):**
+- (a) Should library criteria carry an explicit mapping to NVQ criteria? If so, the programme Academy (IA) criteria could then be migrated into the library and the IA editor retired.
+- (b) Should programmes with IA criteria (Level 2, Level 3) move to library categories, and with which codes (also PD-OBS1-16 (f))?

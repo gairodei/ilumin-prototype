@@ -146,7 +146,7 @@
     ok('N5a-E4 criteria without evidence types still block a required version', n5Check(pr('NV-L3')).block.some(b => /permitted evidence for 4 NVQ criteria/.test(b)));
     ACT.n5NvqEv({ dataset: { p: 'NV-L3', c: '301 1.1' } });
     ok('N5a-E5 a Knowledge criterion has no observation evidence settings (refused)', !MODAL);
-    go('a-programmes', { id: 'NV-L3', tab: 'obs' });
+    go('a-programmes', { id: 'NV-L3', tab: 'wpcrit' }); // OBS-1b (PD-OBS1B-02): the criteria cards are on the Workplace tab
     ok('N5a-E6 the tab shows each criterion\'s permitted evidence and instructions', /Photos/.test(document.querySelector('main .n5-nvq tr[data-code="301 2.1"]').textContent) && /Authorised references/.test(document.querySelector('main .n5-nvq tr[data-code="301 2.1"]').textContent) && /None chosen/.test(document.querySelector('main .n5-nvq tr[data-code="301 2.2"]').textContent));
   });
 
@@ -161,7 +161,7 @@
     ok('N5a-C2 mapping saved explicitly; evidence saved; the criterion gets version 2 in this draft', c3.map.join() === '301 2.1,302 2.1' && c3.ev.types.join() === 'notes,photos' && c3.v === 2 && c3.title === 'Treats people with dignity (2027 wording)');
     iaEdit('NV-L3', 'IA-1', { d: 'Second edit in the same draft' });
     ok('N5a-C2 …a second edit in the same draft keeps version 2', D('NV-L3').ia.find(c => c.code === 'IA-1').v === 2);
-    go('a-programmes', { id: 'NV-L3', tab: 'obs' });
+    settings('NV-L3', 'yes', 'Permitted', 'Available'); go('a-programmes', { id: 'NV-L3', tab: 'wpcrit' }); // OBS-1b (PD-OBS1B-02): the criteria cards are on the Workplace tab, shown once the draft records its locations
     ok('N5a-C3 the NVQ row shows the Academy criteria mapped to it', /IA-1/.test(document.querySelector('main .n5-nvq tr[data-code="301 2.1"]').lastElementChild.previousElementSibling.textContent));
     ok('N5a-C4 isolation: Level 2\'s IA-1, Level 3\'s published IA-1 and the library\'s IA-1 are unchanged', D('NV-L2').ia.find(c => c.code === 'IA-1').title === T1 && P('NV-L3', 2).ia.find(c => c.code === 'IA-1').title === T1 && P('NV-L3', 2).ia[0].v === 1 && STORE.aca.obsLib.find(c => c.code === 'IA-1').title === T1);
     ok('N5a-C4 …and today\'s observation forms are unchanged by the programme draft', JSON.stringify(JSON.parse(hist()).forms) === JSON.stringify(JSON.parse(before).forms));
@@ -195,7 +195,7 @@
     ok('N5a-T2 Academy office: NVQ criteria only', off.ok && off.items.length === 6 && off.items.every(i => i.kind === 'NVQ'));
     ok('N5a-T3 nothing on a checklist carries an outcome', wp.items.every(i => !('st' in i) && !('outcome' in i) && !('result' in i)));
     go('a-programmes', { id: 'NV-L3', tab: 'obs' });
-    ok('N5a-T4 the tab states both: workplace = 4 Academy + 6 NVQ; office = 6 NVQ only', /4 Academy criteria of this programme \+ 6 NVQ criteria/.test(document.querySelector('main .n5-cover .n5-cov-wp').textContent) && /6 NVQ criteria only — no Academy criteria/.test(document.querySelector('main .n5-cover .n5-cov-off').textContent));
+    ok('N5a-T4 the tab states both (OBS-1b summary): workplace = 6 NVQ + 4 programme Academy criteria; office = 6 NVQ and no programme Academy criteria', /6 qualification \(NVQ\) criteria \+ 4 programme Academy criteria/.test(document.querySelector('main .ol1b-map .ol1b-wp').textContent) && /6 qualification \(NVQ\) criteria/.test(document.querySelector('main .ol1b-map .ol1b-off').textContent) && !/programme Academy/.test(document.querySelector('main .ol1b-map .ol1b-off').textContent));
     settings('NV-L3', null, 'Not permitted'); ok('N5a-T5 workplace not permitted: no workplace checklist; the office one is unchanged', !n5Checklist(p, d, 'workplace').ok && n5Checklist(p, d, 'office').items.length === 6);
     settings('NV-L3', null, 'Permitted', 'Not available'); ok('N5a-T6 office not available: no office checklist', !n5Checklist(p, d, 'office').ok && n5Checklist(p, d, 'workplace').ok);
     settings('NV-L3', 'no'); ok('N5a-T7 observation not required: no checklist of either type', !n5Checklist(p, d, 'workplace').ok && !n5Checklist(p, d, 'office').ok);
