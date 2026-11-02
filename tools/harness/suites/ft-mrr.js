@@ -232,6 +232,8 @@
 
   /* ================= Legacy data ================= */
   fxLoadLegacy();
+  // MRR-27: the seeded Coordinator / staff notices, recorded at load (runtime notices' ids 'cn' / 'tn' + time [+ random] can look the same)
+  const nKey = n => n.id + '|' + n.t + '|' + n.at, legacySeed = { coo: new Set(STORE.coo.notifs.map(nKey)), tas: new Set(STORE.tas.notifs.map(nKey)) };
   await T('MRR-35 legacy: seeded AQ-1004 is at the final stage', async () => {
     const i = qItem('AQ-1004'), c = STORE.worlds[i.data.v].certs.find(x => x.id === i.data.cert), no0 = c.no;
     SA(); go('a-dashboard'); ok('MRR-35 AQ-1004 is listed as awaiting the final approval (its first review is recorded)', i.stage === 'final' && main().includes('AQ-1004'));
@@ -241,10 +243,10 @@
   });
 
   await T('MRR-27 legacy persona lists', async () => {
-    const seeded = STORE.tas.notifs.filter(n => /^tn\d+$/.test(n.id)).map(n => n.id);
-    TCH('A'); const a = tasNotifs().filter(n => seeded.includes(n.id)).length; TCH('T'); const t = tasNotifs().filter(n => seeded.includes(n.id)).length;
+    const seeded = STORE.tas.notifs.filter(n => legacySeed.tas.has(nKey(n))).map(nKey);
+    TCH('A'); const a = tasNotifs().filter(n => legacySeed.tas.has(nKey(n))).length; TCH('T'); const t = tasNotifs().filter(n => legacySeed.tas.has(nKey(n))).length;
     ok('MRR-27 legacy: Sarah keeps her seeded notices; the Teacher-only persona no longer gets a fixed slice of them', a === seeded.length && t === 0, J([seeded.length, a, t]));
-    COO('A'); const ca = cooNotifs().filter(n => /^cn\d+$/.test(n.id)).length; COO('B'); const cb = cooNotifs().filter(n => /^cn\d+$/.test(n.id) && !n.mc).length;
+    COO('A'); const ca = cooNotifs().filter(n => legacySeed.coo.has(nKey(n))).length; COO('B'); const cb = cooNotifs().filter(n => legacySeed.coo.has(nKey(n)) && !n.mc).length;
     ok('MRR-27 legacy: Coordinator A keeps her seeded notices; Coordinator B no longer sees four of them', ca > 0 && cb === 0, J([ca, cb]));
   });
 
