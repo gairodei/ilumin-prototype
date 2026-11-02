@@ -54,10 +54,10 @@ ACT.agySimComplete = () => {
   const name = S.portal === 'agency' ? AGN() : 'CarePlus Recruitment (demo)';
   const a = agyAssign(name).filter(x => x.status === 'Active' && x.kind === 'short').sort((x, y) => (learnerById(y.lid).v ? 1 : 0) - (learnerById(x.lid).v ? 1 : 0))[0];
   if (!a) return _simFC();
-  const L = learnerById(a.lid), w = L.v && STORE.worlds[L.v], e = w && a.enrolId ? w.enrolments.find(x => x.id === a.enrolId) : null;
+  const L = learnerById(a.lid), k = agyWorldKey(L), w = k && STORE.worlds[k], e = w && a.enrolId ? w.enrolments.find(x => x.id === a.enrolId) : null;
   if (e ? fcOnE(e) : fcOnAt(fcRowByTitle(a.course), a.at)) return _simFC();
   const at = agNow().toISOString(); Object.assign(a, { status: 'Completed', progress: 100, quiz: { used: 1, max: 3, result: 'Pass' }, noCert: true });
-  if (e) { Object.assign(e, { status: 'Completed', progress: 100, completedAt: at, noCert: true }); notifyLearner(L.v, 'Courses', 'Course completed', `You completed ${e.title}. This course doesn't issue a certificate.`, 'courses'); }
+  if (e) { Object.assign(e, { status: 'Completed', progress: 100, completedAt: at, noCert: true }); notifyLearner(k, 'Courses', 'Course completed', `You completed ${e.title}. This course doesn't issue a certificate.`, 'courses'); }
   agyNotify('Learner completed a course', `${a.learner} completed ${a.course} (no certificate for this course).`, 'g-learner.' + a.lid, 'Courses & certificates', a.agency);
   render(); toast(`Demo only: ${a.learner} completed ${a.course}. This course doesn't issue a certificate.`, 'info');
 };

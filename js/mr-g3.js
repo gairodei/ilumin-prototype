@@ -149,7 +149,7 @@ function mrg3SeatDup(b, course, id) {
   const L = learnerById(id); if (!L) return '';
   const a = STORE.agy.assign.find(x => x.lid === id && x.agency === b.agency && sameCourse(x.course, course) && ['Active', 'Approved', 'Under review', 'Admission pending'].includes(x.status));
   if (a) return `${L.name} already has a seat on ${course} (${a.id}, ${a.status})`;
-  const e = L.v && STORE.worlds[L.v] && STORE.worlds[L.v].enrolments.find(x => (x.base || x.title || '').startsWith(course) && x.status === 'Active');
+  const k = agyWorldKey(L), e = k && STORE.worlds[k].enrolments.find(x => (x.base || x.title || '').startsWith(course) && x.status === 'Active');
   return e ? `${L.name} is already enrolled on ${course}` : '';
 }
 const _assignG3 = agyDoAssign;

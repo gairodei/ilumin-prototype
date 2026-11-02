@@ -23,12 +23,13 @@ const consentEnds = c => new Date(new Date(c.sent).getTime() + CONSENT_DAYS * DA
 function agyOtherSponsor(L, course, ag = AGN()) {
   if (!L || !course) return false;
   if (STORE.agy.assign.some(x => x.lid === L.id && x.agency !== ag && sameCourse(x.course, course) && !['Unassigned', 'Rejected — seat returned'].includes(x.status))) return true;
-  if (L.agency && L.agency !== ag && !L.v && (L.courses || []).some(c => sameCourse(c, course))) return true;
-  return !!(L.v && STORE.worlds[L.v].enrolments.some(e => e.sponsor && e.sponsor !== ag && sameCourse(e.base || e.title, course) && e.status !== 'Unassigned'));
+  const k = agyWorldKey(L); // AG-1: the learner's own account, by ID
+  if (L.agency && L.agency !== ag && !k && (L.courses || []).some(c => sameCourse(c, course))) return true;
+  return !!(k && STORE.worlds[k].enrolments.some(e => e.sponsor && e.sponsor !== ag && sameCourse(e.base || e.title, course) && e.status !== 'Unassigned'));
 }
 function agyEnrolledOn(L, course) {
   if (!L) return false;
-  if (L.v) return STORE.worlds[L.v].enrolments.some(e => sameCourse(e.base || e.title, course) && !['Unassigned', 'Cancelled', 'Payment Pending'].includes(e.status));
+  const k = agyWorldKey(L); if (k) return STORE.worlds[k].enrolments.some(e => sameCourse(e.base || e.title, course) && !['Unassigned', 'Cancelled', 'Payment Pending'].includes(e.status));
   return (L.courses || []).some(c => sameCourse(c, course));
 }
 
@@ -70,7 +71,7 @@ function agyRequestConsent(L, key, course, note, ag = AGN()) {
   if (agyConsents().some(c => c.agency === ag && c.lid && L && c.lid === L.id && sameCourse(c.course, course) && ['Awaiting learner consent', 'Awaiting Academy approval'].includes(c.status))) return { err: 'A request for this learner and course is already open.' };
   const c = { id: 'CON-' + (10 + STORE.agy.consents.length), agency: ag, lid: L ? L.id : null, learner: L ? L.name : key, email: L ? L.email : key, course, sent: agNow().toISOString(), status: 'Awaiting learner consent', note: note || '', v: L && L.v };
   STORE.agy.consents.unshift(c); consentMail(c);
-  if (L && L.v) notifyLearner(L.v, 'Account', `${ag} wants to sponsor you`, `${ag} wants to sponsor you for ${course}. Approve or decline on your dashboard.`, 'dashboard');
+  const lk = agyWorldKey(L); if (lk) notifyLearner(lk, 'Account', `${ag} wants to sponsor you`, `${ag} wants to sponsor you for ${course}. Approve or decline on your dashboard.`, 'dashboard');
   ADMIN.audit.unshift({ id: 'AU-' + (9960 + ADMIN.audit.length), actor: S.portal === 'agency' ? AG_CONTACT() : ag, role: 'Agency Administrator', at: now().toISOString(), module: 'Agency learners', entity: c.id, action: 'Link consent requested', before: '—', after: course, reason: note || '—', ip: '86.12.44.10' });
   agyNotify('Consent request sent', `${c.email} · ${course} — the learner has ${CONSENT_DAYS} days to respond`, 'g-learners', 'Learners', ag);
   return c;

@@ -68,6 +68,8 @@
     const cur = w.observations.find(x => x.status === 'Confirmed'); if (!cur) { ok('MRG2-C3 a confirmed observation exists', false); return; }
     pick('assessor'); const r = tasObs().find(x => x.src === cur); go('t-obsrec', { id: r.id }); const d = STORE.tas.obsDraft[r.id], cl = dChecklist(r);
     cl.items.forEach(i => { ACT.orT({ dataset: { s: i.set, c: i.code, k: 'o', v: '1' } }); ACT.orT({ dataset: { s: i.set, c: i.code, k: 'c', v: '1' } }); }); d.evt = (cl.e.ev || []).slice(0, 1);
+    // OBS-1 (PD-OBS1-14): the client demo version now has library criteria; each needs an outcome chosen by the assessor before sign-off
+    if (typeof ol1RecItems === 'function') ol1RecItems(r).forEach(i => ACT.ol1Out({ dataset: { id: r.id, c: i.id, v: 'Not yet met' } }));
     S.tas.v = 'T'; const s0 = csnap(); ACT.orSign({ dataset: { id: r.id } }); const op = !!MODAL; if (MODAL) act('Sign off and lock');
     ok('MRG2-C3 MR-04: a Teacher cannot sign off (no dialog, zero mutation)', !op && csnap() === s0 && cur.status === 'Confirmed');
     S.tas.v = 'T'; ACT.orT({ dataset: { s: cl.items[0].set, c: cl.items[0].code, k: 'o', v: '0' } }); ok('MRG2-C3 MR-04: a Teacher cannot change the record draft', csnap() === s0);

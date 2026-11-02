@@ -123,6 +123,12 @@ const _isG = initStore; initStore = function () { _isG(); agyPatch(); };
 
 /* ---------- Data helpers (always scoped to one agency) ---------- */
 const linkedIds = name => (STORE.agy.linked[name] || []);
+// AG-1: a learner record's portal account, found by the record's own ID (the account's me.id). A record's "v" is used only when that
+// account carries the same ID. Scrubbed persona templates (client demo) are never an account.
+function agyWorldKey(L) {
+  if (!L || !L.id || !STORE.worlds) return null; const ws = STORE.worlds, own = k => !!(ws[k] && !ws[k].fxTemplate && ws[k].me && ws[k].me.id === L.id);
+  return L.v && own(L.v) ? L.v : Object.keys(ws).find(own) || null;
+}
 function agyRoster(name = AGN()) { return allLearners().filter(l => l.agency === name || linkedIds(name).includes(l.id)); }
 const inRoster = (id, name = AGN()) => agyRoster(name).some(l => l.id === id);
 const agyMeta = l => STORE.agy.meta[l.id] || { how: 'Created', added: D(-60), staffRef: '—' };
@@ -137,7 +143,7 @@ function agyAssign(name = AGN()) { return STORE.agy.assign.filter(a => a.agency 
 function cStatus(c) { if (c.revoked) return 'Revoked'; if (!c.expires) return 'Valid'; const d = agDays(c.expires); return d < 0 ? 'Expired' : d <= 60 ? 'Expiring soon' : 'Valid'; }
 function agyCerts(name = AGN()) {
   const out = STORE.agy.certs.filter(c => c.agency === name).map(c => ({ ...c, src: c, status: cStatus(c) }));
-  linkedIds(name).concat(agyRoster(name).filter(l => l.v).map(l => l.id)).forEach(id => { const L = learnerById(id); if (!L || !L.v) return; const w = STORE.worlds[L.v]; w.certs.filter(c => c.sponsorAgency === name || (c.status !== 'Processing' && w.me.sponsor === name)).forEach(c => out.push({ no: c.no, agency: name, lid: id, learner: L.name, course: c.course, issued: c.issued, expires: c.expires, revoked: c.status === 'Revoked' ? (c.revoked || 'Revoked by the Academy') : null, status: c.status === 'Revoked' ? 'Revoked' : cStatus(c), world: L.v })); });
+  [...new Set(linkedIds(name).concat(agyRoster(name).filter(l => agyWorldKey(l)).map(l => l.id)))].forEach(id => { const L = learnerById(id), k = agyWorldKey(L); if (!k) return; const w = STORE.worlds[k]; w.certs.filter(c => c.sponsorAgency === name || (c.status !== 'Processing' && w.me.sponsor === name)).forEach(c => out.push({ no: c.no, agency: name, lid: id, learner: L.name, course: c.course, issued: c.issued, expires: c.expires, revoked: c.status === 'Revoked' ? (c.revoked || 'Revoked by the Academy') : null, status: c.status === 'Revoked' ? 'Revoked' : cStatus(c), world: k })); });
   return out;
 }
 function agyLedger(bid) { const rows = STORE.agy.ledger.filter(l => l.bundle === bid).sort((a, b) => a.at > b.at ? 1 : -1); let bal = 0; return rows.map(r => { bal += ['Credited', 'Returned'].includes(r.type) ? r.qty : -r.qty; return { ...r, bal }; }); }
@@ -289,7 +295,7 @@ SCREENS['g-seats'] = (p) => {
 };
 function assignWizard(st) {
   const bs = agyBundles().filter(b => bStatus(b) !== 'Expired' && left(b) > 0), b = bs.find(x => x.id === st.b), roster = agyRoster();
-  const check = (l, course) => { if (l.acct === 'Deactivated') return ['block', 'Account deactivated']; if (agyOtherSponsor(l, course)) return ['block', SAME_COURSE_MSG]; const act = agyAssign().find(x => x.lid === l.id && x.course === course && ['Active', 'Approved', 'Under review', 'Admission pending'].includes(x.status)) || (l.v && STORE.worlds[l.v].enrolments.find(e => (e.base || e.title).startsWith(course) && e.status === 'Active')); if (act) return ['block', 'Already enrolled']; const cert = agyCerts().find(c => c.lid === l.id && c.course.startsWith(course) && c.status === 'Valid'); if (cert) return ['warn', 'Has a valid certificate — renewal?']; return ['ok', '']; };
+  const check = (l, course) => { if (l.acct === 'Deactivated') return ['block', 'Account deactivated']; if (agyOtherSponsor(l, course)) return ['block', SAME_COURSE_MSG]; const act = agyAssign().find(x => x.lid === l.id && x.course === course && ['Active', 'Approved', 'Under review', 'Admission pending'].includes(x.status)) || (typeof agySeatDupWhy === 'function' && agySeatDupWhy(l, course)); /* AG-1: the learner's own account, an open application or sign-up */ if (act) return ['block', 'Already enrolled']; const cert = agyCerts().find(c => c.lid === l.id && c.course.startsWith(course) && c.status === 'Valid'); if (cert) return ['warn', 'Has a valid certificate — renewal?']; return ['ok', '']; };
   const steps = ['Bundle', 'Course', 'Learners', 'Review'];
   const step = st.step || 1;
   let body = '';
@@ -479,8 +485,10 @@ function agyDoAssign(b, course, ids, quiet) {
   ids.forEach(id => {
     if (left(b) <= 0) return; const L = learnerById(id); if (!L || L.acct === 'Deactivated' || agyOtherSponsor(L, course, b.agency)) return;
     const a = { id: 'SA-' + (2000 + STORE.agy.assign.length), agency: b.agency, lid: id, learner: L.name, course, bundle: b.id, at: agNow().toISOString(), start: agNow().toISOString(), end: b.validity, status: nvq ? 'Admission pending' : 'Active', progress: 0, quiz: { used: 0, max: 3, result: '—' }, by: AG_CONTACT(), kind: nvq ? 'nvq' : 'short' };
-    STORE.agy.assign.push(a); b.used++; n++; pushLedger(b, 'Assigned', 1, L.name, a.id); if (!L.v && !L.courses.includes(course)) L.courses.push(course);
-    if (L.v && !nvq) { const w = STORE.worlds[L.v]; let tpl = null; [...'ABCDEF'].some(v => (tpl = STORE.worlds[v].enrolments.find(e => e.kind === 'short' && (e.base === course || e.title.startsWith(course))))); if (tpl) { const e = JSON.parse(JSON.stringify(tpl)); Object.assign(e, { id: 'sp' + a.id.slice(3), status: 'Active', enrolled: a.at, start: a.at, end: b.validity, progress: 0, sponsor: b.agency, price: null, certId: undefined, completedAt: undefined, reason: undefined, agyAssign: a.id }); e.modules = shModules({ topic: e.topic }); e.content = (e.content || []).map(freshItem); /* DR-P (PD-DR-12): the copied template's content starts unopened */ (e.reqs || []).forEach(r => r[1] = false); w.enrolments.unshift(e); a.enrolId = e.id; w.unassigned = null; notifyLearner(L.v, 'Courses', 'New course from ' + b.agency, `${b.agency} assigned you a seat on ${e.title}. Access until ${fd(b.validity)}.`, 'course.' + e.id); } }
+    STORE.agy.assign.push(a); b.used++; n++; pushLedger(b, 'Assigned', 1, L.name, a.id); if (!agyWorldKey(L) && !L.courses.includes(course)) L.courses.push(course);
+    // AG-1: the seat reaches the learner's own account (ag1-agency.js): a short course from its course definition; an NVQ seat opens its
+    // admission application. Was: the account only through L.v, and the course copied from a persona learner's enrolment.
+    if (typeof agySeatDeliver === 'function') agySeatDeliver(a, L, b);
     ADMIN.audit.unshift({ id: 'AU-' + (9960 + ADMIN.audit.length), actor: AG_CONTACT(), role: 'Agency Administrator', at: now().toISOString(), module: 'Bundles & Licences', entity: `${b.id} · ${L.name}`, action: 'Seat assigned', before: String(b.used - 1), after: String(b.used), reason: course, ip: '86.12.44.10' });
   });
   if (n && !quiet) agyNotify('Seat assignment confirmed', `${n} seat${n === 1 ? '' : 's'} on ${course} (${b.name})`, 'g-seats', 'Seats & bundles', b.agency);
@@ -494,7 +502,7 @@ ACT.agUnassign = el => {
     actions: [{ label: 'Cancel' }, { label: 'Unassign seat', cls: 'btn-danger', fn: () => {
       a.status = 'Unassigned'; a.unassignedAt = now().toISOString(); pushLedger(b, 'Unassigned', 0, a.learner, a.id);
       if (ret) { b.used = Math.max(0, b.used - 1); STORE.agy.ledger.push({ bundle: b.id, agency: b.agency, at: agNow().toISOString(), type: 'Returned', qty: 1, learner: a.learner, ref: 'Unassigned' }); ADMIN.ledger.unshift({ agency: b.agency, bundle: b.id, at: now().toISOString(), kind: 'Credit', qty: 1, note: `Seat returned — unassignment (${a.learner}, ${a.course})` }); } else { a.noReturn = true; ADMIN.ledger.unshift({ agency: b.agency, bundle: b.id, at: now().toISOString(), kind: 'Debit', qty: 0, note: `Seat not returned — unassignment at ${a.progress}% (${a.learner})` }); }
-      const L = learnerById(a.lid); if (L && L.v && a.enrolId) { const w = STORE.worlds[L.v]; w.enrolments = w.enrolments.filter(e => e.id !== a.enrolId); w.unassigned = { course: a.course, agency: b.agency, at: now().toISOString() }; notifyLearner(L.v, 'Courses', 'Seat unassigned by your agency', `${b.agency} removed your seat on ${a.course}. Your progress is kept on record.`, 'courses'); }
+      const L = learnerById(a.lid), k = agyWorldKey(L); a.awaitAct = false; if (k && a.enrolId) { const w = STORE.worlds[k]; w.enrolments = w.enrolments.filter(e => e.id !== a.enrolId); w.unassigned = { course: a.course, agency: b.agency, at: now().toISOString() }; notifyLearner(k,'Courses', 'Seat unassigned by your agency', `${b.agency} removed your seat on ${a.course}. Your progress is kept on record.`, 'courses'); }
       render(); toast(`Seat unassigned. ${ret ? '1 seat returned to ' + b.name + '.' : 'The seat was not returned.'} The learner has been notified.`);
     } }] });
 };
@@ -641,7 +649,7 @@ ACT.agySimComplete = () => {
   const a = agyAssign(name).filter(x => x.status === 'Active' && x.kind === 'short').sort((x, y) => (learnerById(y.lid).v ? 1 : 0) - (learnerById(x.lid).v ? 1 : 0))[0]; if (!a) { toast('No active short-course seat to complete.', 'info'); return; }
   a.status = 'Completed'; a.progress = 100; a.quiz = { used: 1, max: 3, result: 'Pass' };
   const L = learnerById(a.lid), iss = agNow().toISOString(), exp = new Date(agNow().getTime() + 365 * DAY).toISOString(), no = 'WEL-2026-0' + (3500 + STORE.agy.certs.length);
-  if (L.v && a.enrolId) { const w = STORE.worlds[L.v], e = w.enrolments.find(x => x.id === a.enrolId); if (e) { e.status = 'Completed'; e.progress = 100; e.completedAt = iss; const cid = 'cg' + a.id; w.certs.unshift({ id: cid, course: e.title, no, issued: iss, expires: exp, status: 'Valid', sponsorAgency: a.agency }); e.certId = cid; notifyLearner(L.v, 'Certificates', 'Certificate issued', e.title + ' certificate is ready.', 'certificates'); } }
+  const k = agyWorldKey(L); if (k && a.enrolId) { const w = STORE.worlds[k], e = w.enrolments.find(x => x.id === a.enrolId); if (e) { e.status = 'Completed'; e.progress = 100; e.completedAt = iss; const cid = 'cg' + a.id; w.certs.unshift({ id: cid, course: e.title, no, issued: iss, expires: exp, status: 'Valid', sponsorAgency: a.agency }); e.certId = cid; notifyLearner(k, 'Certificates', 'Certificate issued', e.title + ' certificate is ready.', 'certificates'); } }
   else STORE.agy.certs.unshift({ no, agency: a.agency, lid: a.lid, learner: a.learner, course: a.course, issued: iss, expires: exp });
   agyNotify('Learner completed a course', `${a.learner} completed ${a.course}.`, 'g-learner.' + a.lid, 'Courses & certificates', a.agency); agyNotify('Certificate issued', `${a.learner} — ${a.course} (${no})`, 'g-certs', 'Courses & certificates', a.agency);
   render(); toast(`Demo only: ${a.learner} completed ${a.course}. The certificate is in Certificates.`, 'info');
@@ -662,7 +670,7 @@ applyDecision = function (i, a, r, o) {
   _applyG(i, a, r, o);
   if (i.type !== 'Link existing learner to agency' || !i.data || !i.data.agency || !STORE.agy) return;
   const ag = i.data.agency;
-  if (a === 'approve' && i.data.lid) { const L = learnerById(i.data.lid); if (L) { if (!L.v && !L.agency) L.agency = ag; else (STORE.agy.linked[ag] = STORE.agy.linked[ag] || []).includes(L.id) || STORE.agy.linked[ag].push(L.id); STORE.agy.meta[L.id] = STORE.agy.meta[L.id] || { how: 'Linked', added: now().toISOString(), staffRef: '—' }; STORE.agy.meta[L.id].how = 'Linked'; } agyNotify('Link request approved', `${i.data.email} is now in your learners.`, 'g-learners', 'Learners', ag); }
+  if (a === 'approve' && i.data.lid) { const L = learnerById(i.data.lid); if (L) { if (!agyWorldKey(L) && !L.agency) L.agency = ag; else (STORE.agy.linked[ag] = STORE.agy.linked[ag] || []).includes(L.id) || STORE.agy.linked[ag].push(L.id); STORE.agy.meta[L.id] = STORE.agy.meta[L.id] || { how: 'Linked', added: now().toISOString(), staffRef: '—' }; STORE.agy.meta[L.id].how = 'Linked'; } agyNotify('Link request approved', `${i.data.email} is now in your learners.`, 'g-learners', 'Learners', ag); }
   if (a === 'reject') agyNotify('Link request rejected', `${i.data.email}: ${r}`, 'g-learners', 'Learners', ag);
   if (a === 'approve' || a === 'reject') { i.decision = i.decision || (a === 'reject' ? 'Rejected — ' + r : 'Approved'); }
 };

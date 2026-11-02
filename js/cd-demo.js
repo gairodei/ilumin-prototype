@@ -56,6 +56,8 @@ function cdBuild() {
   nvq.forEach(c => { ACT.n5NvqEv({ dataset: { p: id, c } }); tick('.n5-ev', ['notes']); ok1(); });
   ia.forEach(c => { ACT.n5IaEdit({ dataset: { p: id, c } }); tick('.n5-ev', ['notes']); tick('.n5-map', [nvq[0]]); ok1(); });
   ACT.cbObsEv({ dataset: { p: id, e: '' } }); put({ '#ev-n': 'Workplace or Academy-office observation' }); tick('.ev-l', ['workplace', 'office']); tick('.ev-c', nvq.concat(ia)); tick('.ev-e', ['notes']); ok1();
+  // OBS-1 (PD-OBS1-15): one small library category (ABS) for the Workplace criteria; the Academy office inherits them plus one Academy-only criterion
+  if (typeof ol1DemoBuild === 'function') ol1DemoBuild(pr, { put, ok1, tick });
   // 4. Assignments (drafts until the batch has its deadlines)
   const kcrit = s2 => s2Crit(s2).filter(c => c.type === 'Knowledge').map(c => c.code);
   const asgs = ['Assignment 1 — Person-centred values', 'Assignment 2 — Agreeing a care plan', 'Assignment 3 — Reflective account'].map((t, k) => {
