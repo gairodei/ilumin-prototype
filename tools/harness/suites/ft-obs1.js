@@ -86,7 +86,7 @@
     /* ---------- 3–6. Course builder ---------- */
     await T('OBS1-B course builder (published Version 1)', async () => {
       ACA(); go('a-programmes', { id: pr.id, tab: 'wpcrit' });
-      ok('OBS1-B the Observations section has the tabs Observation configuration, Workplace Observation Criteria, Academy Observation Criteria, Observation events', J(tabs()) === J(['Observation configuration', 'Workplace Observation Criteria', 'Academy Observation Criteria', 'Observation events']), J(tabs()));
+      ok('OBS1-B the Observations section has the tabs Observation configuration, Workplace Observation Criteria, Academy Observation Criteria, Observation events', J(tabs()) === J(['Observation settings', 'Workplace Observation Criteria', 'Academy Observation Criteria', 'Observation events']) /* CBX (PD-CBX-03): renamed */, J(tabs()));
       ok('OBS1-B (3) Workplace tab: ABS-01, ABS-02, ABS-03 from the library (published, frozen) with their evidence fields; not ABS-04', codes(V1.ol1snap.wp) === 'ABS-01,ABS-02,ABS-03' && $a('main .ol1-prev tr[data-code]').map(r => r.dataset.code).join() === 'ABS-01,ABS-02,ABS-03' && /Photos · required|Photos/.test(main()) && !$1('main [data-act="ol1Sel"]'));
       go('a-programmes', { id: pr.id, tab: 'offcrit' });
       ok('OBS1-B (4, 5) Academy tab: A (same as Workplace) — ABS-01…03 inherited and ABS-04 Academy only, clearly labelled', V1.ol1snap.mode === 'same' && codes(V1.ol1snap.off) === 'ABS-01,ABS-02,ABS-03,ABS-04' && $a('main .ol1-prev tr[data-from="inherited"]').length === 3 && $a('main .ol1-prev tr[data-from="office"]').length === 1 && /Inherited from Workplace/.test(main()) && /Academy only/.test(main()));

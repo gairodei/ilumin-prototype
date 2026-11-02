@@ -1566,3 +1566,53 @@ Coverage check before moving anything:
 **Open (client):**
 - (a) Should library criteria carry an explicit mapping to NVQ criteria? If so, the programme Academy (IA) criteria could then be migrated into the library and the IA editor retired.
 - (b) Should programmes with IA criteria (Level 2, Level 3) move to library categories, and with which codes (also PD-OBS1-16 (f))?
+
+## Batch CBX: NVQ course builder restructure (2 Nov 2026)
+
+Client feedback: "The NVQ Course Builder is cluttered, confusing, difficult to navigate, and difficult to understand." Audited read-only on 3d7697f, with a full inventory of every section, panel, card, action and gate. Main findings:
+- Two sections carried legacy panels: "Shared library (legacy)" in Observations (a read-only copy of a page with its own menu entry), and "Legacy observation fee rate" in Fees & Payments for package programmes.
+- Permitted observation locations were editable from two panels.
+- "Fix in Section" links for library-criteria problems went to the settings panel, not the criteria tab.
+- The section bar showed problems only, never progress.
+- Back / Next didn't say where they went.
+- Delivery modes, batches, live sessions and learning resources were not reachable from the builder.
+
+The approved order and numbering (PD-CB-01, confirmed 20 Oct) is kept for sections 1–6, because blockers, guidance and decisions cite "Section N — name". About 290 test assertions depend on it.
+
+| ID | Decision | Why | Where |
+|---|---|---|---|
+| PD-CBX-01 | **Eight steps:** 1 Course Details · 2 Curriculum & Outcomes · 3 Assignments & Assessments · 4 Observations · 5 Fees & Payments · 6 Offer Letter & Documents · **7 Resources & Delivery (new)** · 8 Review & Publish. Section keys are unchanged; every old route still opens its section (PD-CB-83). The bar is one row of eight on desktop and two rows of four from 940 px down. | Client feedback; user brief Phase 2. | `CB_SECTIONS`, `CB_ROUTE` (cbx-builder.js) |
+| PD-CBX-02 | **Orientation.** Each step shows "Step N of 8" and one plain sentence on what it is for. Back / Next name the step they open ("← Back: Course Details", "Next: Assignments & Assessments →"). The section bar shows each step's state from the same records and checks Review & Publish uses: **Complete**, **N to fix**, **Not started**, **In progress**, **Optional**, **Not applicable**, Unsaved, With Finance, Approved. Only the strongest state is shown, and a retired programme shows none. | Phase 5. | `cbBadges`, `cbPage` wrappers |
+| PD-CBX-03 | **Observations: one settings editor, no legacy tab.** "Observation configuration" is renamed "Observation settings". The "Shared library (legacy)" panel is removed: its old link opens Observation settings, which has a "Legacy shared criteria list" card linking to that list's own page (unchanged) and to the Observation Criteria Library. Observation events shows the permitted locations read-only, with "Change in Observation settings". OBS-1 / OBS-1B behaviour is unchanged. | Duplicate configuration (Phase 2, 4). | `cbPanels`, `cbObsEventsPanel` wrappers |
+| PD-CBX-04 | **Fees & Payments (package programmes):** "Fees & payment options" and "Financial history" (financial versions, then the legacy observation fee rate, still editable as before). The old "support" route opens Financial history. Programmes on legacy terms keep their panels unchanged. | Legacy panel folded away. | `cbPanels`, `cbPage` |
+| PD-CBX-05 | **Resources & Delivery is an overview with links — nothing is set there** (stated in its description and in a note on both tabs, "Batches & live sessions" and "Learning resources (by module)"). Learning resources are managed within modules (Learning Resources); live sessions are managed within batches (Scheduling). It shows, each managed where it already is, with no new data or rules: <ul><li>Delivery modes (from the fee options, linked to Section 5).</li><li>The course's batches (status, start, modes, learners, Open; Create batch once the course is published).</li><li>Live sessions: scheduled per batch, linked to Scheduling.</li><li>Learning resources mapped to the course (status, release, version), linked to Learning Resources.</li></ul> | The brief's "Learning Resources" and "Sessions & Delivery" steps. Neither is programme configuration today (resources are mapped per module; sessions and Zoom links per batch), so one step shows and links rather than duplicating editors. | `cbxDelivery`, `cbxResources` |
+| PD-CBX-06 | **Review & Publish** summarises all seven sections (+ Resources & Delivery). "Fix in" links for Workplace / Academy Observation Criteria problems open those tabs. Publishing, approvals and blockers are unchanged. | Validation links go to the right step. | `cbRvWhere`, `cbRvSummary`, `CB_RV_SEC` |
+| PD-CBX-07 | **Kept where it is:** "Does this course contain observations?" stays in Course Details (PD-CB-14 / -16, approved). It is the same stored field as Observation settings' "Observation required", not a second copy. | Approved placement; one field. | — |
+| PD-CBX-08 | **Nothing else changes:** data model, IDs, versions, audit, permissions, approvals, publishing actions, published programmes and learners' records. | Phase 3. | — |
+
+**Feature map: every capability before and where it is now.**
+- **Course details form, qualification details, observation answer, delivery modes (read-only), fee-option list (read-only):** 1 (unchanged).
+- **Structure editor and assessment types:** 2.
+- **Assignments, their editor and answer keys:** 3.
+- **Observation settings, Workplace criteria, Academy criteria and events:** 4.
+- **Shared library (legacy):** now a link on Observation settings.
+- **Fee options, payment options, deposit and Finance submission:** 5.
+- **Financial versions and the legacy observation fee rate:** 5 → Financial history.
+- **Legacy-terms fee options, payment plan and observation fee rate:** 5 (unchanged).
+- **Offer letter, signed versions, payment wording and required enrolment documents:** 6.
+- **Delivery modes overview, batches with Create batch, live sessions link and learning resources:** 7 (new).
+- **Blockers, section summaries, Publish and Create new version:** 8.
+- **Version history and the version bar:** unchanged.
+
+**Restated tests (assertions unchanged except the structure):**
+- The section count and order are 8 / Next walks 7 in ft-cb, ft-cb2, ft-cb12, ft-ch, ft-n5a, ft-nav and uicheck.
+- Review summaries: 7 (ft-cb11, uicheck).
+- Panel lists:
+  - ft-cb6, ft-n5a and ft-obs1: "Observation settings", no legacy tab.
+  - ft-cb and ft-cb8: fees, payhist.
+- The library route opens settings with the legacy link (ft-cb, ft-n5a K2, ft-setup S3-05, uicheck).
+- "Not marked read-only" now checks for no "Read-only" badge, because sections carry state badges (ft-cb, ft-cb5).
+
+**Open (client):**
+- (a) Should learning resources and live-session defaults become programme configuration (set in the builder), rather than per module / per batch as now?
+- (b) Should NVQ certificates and completion rules be configured per programme? Today they exist for short courses only, so the builder has no step for them.

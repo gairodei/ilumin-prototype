@@ -1596,3 +1596,10 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 .co1-pd dl.kv, .co1-cell { margin: 0; }
 .co1-pdo { margin-top: 4px; }
 .co1-pd-l .pd-tag + .pd-tag { margin-top: 8px; }
+
+/* CBX — NVQ course builder restructure: eight sections, step line, section states */
+.cb-nav ol { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+@container cb (max-width: 940px) { .cb-nav ol { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.cbx-desc { margin: -4px 0 12px; }
+.cbx-step { font-weight: 600; color: var(--text); }
+.cbx-sub { margin: 18px 0 8px; font-size: 1rem; }

@@ -70,11 +70,11 @@
     open('NV-L3', 'plan'); ok('CB12-D legacy: seeded NV-L3 keeps its plan in force, read-only, with Finance as owner', /Version \d in force/.test(main()) && /Finance/.test(main()));
   });
 
-  await T('CB12-E the seven sections in order', async () => {
+  await T('CB12-E the eight sections in order', async () => {
     fresh(); SA(); open('NV-N1', 'details'); const seen = [q('.cb').dataset.sec];
-    for (let i = 0; i < 6; i++) { const nx = q('.cb-foot .btn-primary'); if (!nx) break; nx.click(); seen.push(q('.cb').dataset.sec); }
-    ok('CB12-E "Next" walks Course Details → Curriculum → Assessments → Observations → Fees & Payments → Offer Letter & Documents → Review & Publish', seen.join(',') === 'details,curriculum,assessments,observations,payments,documents,review', seen.join(','));
-    ok('CB12-E Review & Publish is the last section (no Next) and has Back to Offer Letter & Documents', !q('.cb-foot .btn-primary') && /Offer Letter & Documents/.test(q('.cb-foot').textContent));
+    for (let i = 0; i < 7; i++) { const nx = q('.cb-foot .btn-primary'); if (!nx) break; nx.click(); seen.push(q('.cb').dataset.sec); } // CBX: eight sections
+    ok('CB12-E "Next" walks Course Details → Curriculum → Assessments → Observations → Fees & Payments → Offer Letter & Documents → Resources & Delivery → Review & Publish', seen.join(',') === 'details,curriculum,assessments,observations,payments,documents,delivery,review', seen.join(','));
+    ok('CB12-E Review & Publish is the last section (no Next) and has Back to Resources & Delivery', !q('.cb-foot .btn-primary') && /Back: Resources & Delivery/.test(q('.cb-foot').textContent));
   });
 
   const pre = document.createElement('pre'); pre.id = 'ft-out'; pre.textContent = R.join('\n'); document.body.appendChild(pre);

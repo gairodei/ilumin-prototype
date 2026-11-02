@@ -42,7 +42,7 @@
     ok('CB5-A seeded definitions are linked to their programme by an unambiguous title; the title is kept; no version invented', s2Def('a1').pid === 'NV-L3' && s2Def('a1').pidFrom === 'title' && s2Def('a1').programme === L3.title && s2Def('a1').pv === undefined && s2Def('l2a1').pid === 'NV-L2');
     SA(); open('NV-L3');
     ok('CB5-A Section 3 lists Level 3\'s assignments (and not Level 2\'s), with version, References and status', qa('.cb-assess tbody tr').length === s2Defs().filter(d => d.pid === 'NV-L3' && d.status !== 'Deleted').length && !q('.cb-assess tr[data-id="l2a1"]') && /Version not recorded/.test(q('.cb-assess').textContent));
-    ok('CB5-A New assignment is offered to the Super Admin; Section 3 no longer marked read-only', !!q('[data-act="cbAsgNew"]') && !q('.cb-sec[data-tab="assessments"] .cb-badge'));
+    ok('CB5-A New assignment is offered to the Super Admin; Section 3 no longer marked read-only', !!q('[data-act="cbAsgNew"]') && !/Read-only/.test(q('.cb-sec[data-tab="assessments"]').textContent)); // CBX: a state badge, not "Read-only"
     open('NV-L2'); ok('CB5-A Level 2 lists its own assignment only', !!q('.cb-assess tr[data-id="l2a1"]') && !q('.cb-assess tr[data-id="a1"]'));
   });
 

@@ -37,7 +37,7 @@
       clickEl(row); await tick();
       ok(`NAV ${who}: clicking a programme in the list opens it (${id})`, S.params.id === id && h1() === title && !is404() && location.hash === '#a-programmes.' + id, `h1 "${h1()}"`);
       // CB1 (PD-CB-01) supersedes: was the programme's tab bar (.subtabs, at least 3 tabs); now the seven course-builder sections
-      ok(`NAV ${who}: the programme's course-builder sections render`, document.querySelectorAll('main .cb-nav .cb-sec[data-tab]').length === 7);
+      ok(`NAV ${who}: the programme's course-builder sections render`, document.querySelectorAll('main .cb-nav .cb-sec[data-tab]').length === 8); // CBX (PD-CBX-01)
       history.back(); await new Promise(res => setTimeout(res, 50));
       ok(`NAV ${who}: Back returns to the list`, listShown() && location.hash === '#a-programmes', location.hash);
       clickEl(q('main [data-act="chProgNew"]'));

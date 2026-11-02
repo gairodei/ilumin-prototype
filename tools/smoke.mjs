@@ -69,7 +69,7 @@ document.getElementById('f').addEventListener('load', () => setTimeout(() => {
     const n = nav(cw, d); n.signIn(); n.side();
     r.navList = n.h1() === 'NVQ Programmes' && !n.is404() && n.rows() > 0 && cw.location.hash === '#a-programmes';
     n.q('main table tbody a[data-go="a-programmes"][data-id]').click();
-    r.navOpen = !n.is404() && /^#a-programmes\\.NV-/.test(cw.location.hash) && d.querySelectorAll('main .cb-nav .cb-sec[data-tab]').length === 7; // CB1 (PD-CB-01): the seven course-builder sections (was the tab bar)
+    r.navOpen = !n.is404() && /^#a-programmes\\.NV-/.test(cw.location.hash) && d.querySelectorAll('main .cb-nav .cb-sec[data-tab]').length === 8; // CB1 (PD-CB-01): the course-builder sections (was the tab bar); CBX (PD-CBX-01): eight
     n.side(); n.q('main [data-act="chProgNew"]').click();
     r.navWizard = !cw.eval('MODAL') && /#a-programmes\\.new\\.details$/.test(cw.location.hash) && !!n.q('main .cb-new #np-t') && !!n.q('main #np-obs-yes'); // CB2 (PD-CB-14): Course Details of an unsaved course, not a dialog
     r.errs = (cw.__smokeErrs || []).slice();

@@ -394,7 +394,7 @@
     ok('S3-05 untick "Use on observation forms": removed from forms', !STORE.worlds.C.iaCriteria.some(x => x[0] === 'IA-3'));
     // N5a review supersedes: the programme's library tab offered the shared library's edit actions (was: kLibAttach on this tab).
     // It is now "Shared library (legacy)": the same list, read-only, pointing to the Observations tab; the library page itself stays editable.
-    pb('NV-L3', 'library'); ok('S3-05 / N5a review: the programme\'s legacy library tab shows the same list, read-only, with the way to Observations', /IA-16/.test(main()) && !app().querySelector('main [data-act="kLibAttach"], main [data-act="kLib"]') && !!app().querySelector('main .n5-legacy-note [data-tab="obs"]'));
+    pb('NV-L3', 'library'); ok('S3-05 / N5a review (CBX PD-CBX-03): the old library link opens Observation settings, with no library actions and a link to the legacy shared list', !app().querySelector('main [data-act="kLibAttach"], main [data-act="kLib"]') && !!app().querySelector('main .cbx-legacy [data-go="k-obslib"]'));
   });
 
   await T('S3-06 assessment types: add, edit, retire', async () => {

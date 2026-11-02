@@ -1127,7 +1127,7 @@
     ok('NP created as Draft, Version 1, with details and Support type', !!pr && pr.status === 'Draft' && pr.version === 1 && pr.price === 2600 && pr.level === 'Level 4' && chSupportOf(pr.id) === 'Self-paced' && S.route === 'a-programmes' && S.params && true);
     ok('NP audited', ADMIN.audit.some(a => a.module === 'NVQ Programmes' && a.action === 'Programme created (Draft, Version 1)' && a.entity.includes(pr.id)));
     // CB1 (PD-CB-01) supersedes: was the seven-step wizard bar with Observations third; now the seven builder sections, Observations fourth
-    go('a-programmes', { id: pr.id, tab: 'details' }); ok('NP course builder: seven sections (Observations is section 4), Course Details current, Draft chip', app().querySelectorAll('.cb-nav .cb-sec').length === 7 && app().querySelectorAll('.cb-nav .cb-sec')[3].textContent.includes('Observations') && !!app().querySelector('.cb-sec.cur[data-tab="details"]') && /Draft/.test(main()) && /Version 1/.test(main()));
+    go('a-programmes', { id: pr.id, tab: 'details' }); ok('NP course builder: eight sections (Observations is section 4), Course Details current, Draft chip', app().querySelectorAll('.cb-nav .cb-sec').length === 8 && app().querySelectorAll('.cb-nav .cb-sec')[3].textContent.includes('Observations') && !!app().querySelector('.cb-sec.cur[data-tab="details"]') && /Draft/.test(main()) && /Version 1/.test(main()));
     document.querySelector('#np-p').value = '2700'; ACT.ch8SaveDetails({ dataset: { id: pr.id } }); ok('NP details editable while Draft, audited', pr.price === 2700 && ADMIN.audit[0].action === 'Details changed');
     go('a-programmes'); ok('NP listed on NVQ Programmes as Draft', /Level 4 Certificate in Care Leadership/.test(main()));
   });

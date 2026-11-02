@@ -54,7 +54,7 @@
   /* ================= A. Where the events live ================= */
   await T('CB6-A the Observation events panel', async () => {
     fresh(); SA(); open('NV-L3');
-    ok('CB6-A Section 4 has "Observation events" next to the configuration; the .events link opens it', (q('.cb-sec.cur') || {}).dataset.tab === 'observations' && qa('.cb-panels .tab').map(t => t.textContent).join('|') === 'Observation configuration|Observation events|Shared library (legacy)' && q('.cb-panels .tab[aria-selected="true"]').dataset.tab === 'events');
+    ok('CB6-A Section 4 has "Observation events" next to the configuration; the .events link opens it', (q('.cb-sec.cur') || {}).dataset.tab === 'observations' && qa('.cb-panels .tab').map(t => t.textContent).join('|') === 'Observation settings|Observation events' /* CBX (PD-CBX-03): renamed; the legacy list is a link */ && q('.cb-panels .tab[aria-selected="true"]').dataset.tab === 'events');
     ok('CB6-A published Level 3 (migrated): read-only, "no events were recorded" (nothing invented), locations "Not recorded"', /No observation events were recorded for Version 2/.test(main()) && !q('[data-act="cbObsEv"]') && /Not recorded/.test(q('.cb-locs').textContent) && cbObsEventsFor('NV-L3', 2).length === 0);
     ok('CB6-A no observation fee controls in this section', !/£|GBP/.test(q('.cb-ev').textContent) && /Observation fees are set in Section 5/.test(main()));
   });

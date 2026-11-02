@@ -50,7 +50,7 @@
   const oldNav = () => qa('.subtabs, ol.ch8-steps, .ch-nav').length;
   const blocked = (a0, re) => ADMIN.audit.slice(0, ADMIN.audit.length - a0).some(x => /^Blocked/.test(x.action) && (!re || re.test(x.action)));
   const state = () => JSON.stringify({ p: ADMIN.programmes.map(p => [p.id, p.status, p.version, !!p.nextDraft, p.title]), t: STORE.chProgTree, d: STORE.s3 && STORE.s3.drafts, l: STORE.chLetters, s: chSupports(), r1: STORE.r1, ck: STORE.s4 && STORE.s4.lists, n5: STORE.n5 && STORE.n5.draft });
-  const SECS = ['details', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'review'];
+  const SECS = ['details', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'delivery', 'review']; // CBX (PD-CBX-01): Section 7 Resources & Delivery
   const WRITE = CB_WRITE.concat(CB_HIDE_RO);
 
   await T('CB1-A create-programme entry point', async () => {
@@ -63,7 +63,7 @@
     const set = (s, v) => { const e = document.querySelector(s); e.value = v; e.dispatchEvent(new Event('change', { bubbles: true })); };
     set('#np-l', 'Level 4'); set('#np-t', 'Level 4 CB1 programme'); set('#np-r', 'QN 610/7777/1'); set('#np-d', '12'); set('#np-du', 'months'); set('#np-p', '2400'); dmpPrice(); /* DM (PD-DM-01): no modes-offered field — was q('.cr-dm-c').click() */ q('#np-obs-no').click(); // CR (PD-CR-06, PD-CR-01): no course code; the modes offered are required
     q('[data-act="cbDetCreate"]').click(); const pr = (STORE.chNewProgs || []).slice(-1)[0];
-    ok('CB1-A "Save and continue" opens the new programme in the course builder (Curriculum, as before), seven sections, Draft, Version 1', !!pr && pr.title === 'Level 4 CB1 programme' && S.params.id === pr.id && cur() === 'curriculum' && qa('.cb-nav .cb-sec').length === 7 && /Draft/.test(q('.page-h').textContent) && /Version 1/.test(q('.page-h').textContent));
+    ok('CB1-A "Save and continue" opens the new programme in the course builder (Curriculum, as before), eight sections (CBX), Draft, Version 1', !!pr && pr.title === 'Level 4 CB1 programme' && S.params.id === pr.id && cur() === 'curriculum' && qa('.cb-nav .cb-sec').length === 8 && /Draft/.test(q('.page-h').textContent) && /Version 1/.test(q('.page-h').textContent));
     ok('CB1-A header: title, level, reference, status, version and "Version history"', q('.page-h h1').textContent === pr.title && /Level 4/.test(q('.page-h').textContent) && /QN 610\/7777\/1/.test(q('.page-h').textContent) && !!q('.page-h [data-tab="versions"]'));
     ok('CB1-A no old step bar or tab bar anywhere', oldNav() === 0);
     q('.cb-sec[data-tab="details"]').click(); ok('CB1-A Course Details: the details form, editable while Draft (CB2: "Save details" / "Save and continue")', cur() === 'details' && !!q('#np-t') && !!q('[data-act="cbDetSave"]'));
@@ -86,7 +86,7 @@
     open('NV-L3', 'details'); ok('CB1-B published seeded Course Details: read-only (no inputs) with the reason; nothing promised for CB2', !qa('.cb-body input, .cb-body select, .cb-body textarea').length && /existed before the course builder are read-only/.test(q('.cb-body').textContent) && !/planned for CB2/.test(main()) && /QN 603\/2851\/9/.test(main()));
     // CB5 (PD-CB-34) supersedes the read-only list ("authoring arrives in CB5", "Open" → Assignments & Criteria Mapping): assignments are
     // authored in Section 3; "Open" opens the assignment in place
-    open('NV-L3', 'assessments'); ok('CB1-B Assessments: the programme\'s assignments listed with New assignment; not marked read-only for the Super Admin; nothing promised for CB5', qa('.cb-assess tbody tr').length >= 5 && !!q('.cb-assess [data-act="cbAsgNew"]') && !/planned for CB5/.test(main()) && !q('.cb-sec[data-tab="assessments"] .cb-badge'));
+    open('NV-L3', 'assessments'); ok('CB1-B Assessments: the programme\'s assignments listed with New assignment; not marked read-only for the Super Admin; nothing promised for CB5', qa('.cb-assess tbody tr').length >= 5 && !!q('.cb-assess [data-act="cbAsgNew"]') && !/planned for CB5/.test(main()) && !/Read-only/.test(q('.cb-sec[data-tab="assessments"]').textContent)); // CBX: sections carry a state badge now; the point is "not read-only"
     q('.cb-assess [data-act="cbAsgOpen"][data-id]').click(); ok('CB1-B …"Open" opens that assignment in Section 3 (Details, Questions, Criteria mapping)', S.route === 'a-programmes' && !!q('.cb-asg-ed') && qa('.cb-asg-tabs .tab').length === 3 && !/We can't find that page/.test(main()));
   });
 
@@ -123,9 +123,9 @@
     SA(); const pr = (() => { go('a-programmes'); ACT.chProgNew(); const f = (s, v) => { document.querySelector(s).value = v; }; f('#np-t', 'Level 3 CB1 options'); f('#np-l', 'Level 3'); INP.r1NpLevel(document.querySelector('#np-l')); f('#np-r', 'QN 603/7777/3'); f('#np-d', '6'); f('#np-du', 'months'); const r = document.querySelector('main .r1-np-row'); r.querySelector('.r1-np-l').value = 'Self-Paced'; r.querySelector('.r1-np-f').value = '1800'; r.querySelector('.r1-np-m').value = 'Self-Paced'; document.querySelector('#np-obs-yes').checked = true; (document.querySelector('#np-code') || {}).value = 'CB1-L3'; crT(ACT.cbDetCreate)(); return (STORE.chNewProgs || []).slice(-1)[0]; })(); // CB2 (PD-CB-14): the Course Details page, not the dialog
     // CB8 (PD-CB-48) supersedes the panels "plan, fees, support" and the R1 options card for a new programme: "Fees & payment options"
     // (one card per fee option, with its observation fees and payment options), "Financial versions", and the legacy rate
-    open(pr.id, 'payments'); ok('CB1-D new Level 3 programme: Fees & Payments shows its fee options, its financial versions and the observation fee rate', qa('.cb-panels .tab').map(t => t.dataset.tab).join() === 'fees,payhist,support');
+    open(pr.id, 'payments'); ok('CB1-D new Level 3 programme: Fees & Payments shows its fee options and its financial history (with the observation fee rate, CBX PD-CBX-04)', qa('.cb-panels .tab').map(t => t.dataset.tab).join() === 'fees,payhist');
     q('.cb-panels [data-tab="fees"]').click(); ok('CB1-D …its fee option is a card with its ID', !!q('.cb8-opt') && main().includes(pr.id + '-FO-001'));
-    q('.cb-panels [data-tab="support"]').click(); document.querySelector('input[name="ch-sup"][value="Self-paced"]').checked = true; ACT.chSupSave({ dataset: { id: pr.id } }); reason('CB1 rate');
+    q('.cb-panels [data-tab="payhist"]').click(); document.querySelector('input[name="ch-sup"][value="Self-paced"]').checked = true; ACT.chSupSave({ dataset: { id: pr.id } }); reason('CB1 rate');
     ok('CB1-D …the observation fee rate it was silently given can now be seen and changed (audited), in the same store CH-38 reads', chSupportOf(pr.id) === 'Self-paced' && chFeeAmt(chSupportOf(pr.id)) === 100 && ADMIN.audit[0].action === 'Support type changed');
   });
 
@@ -150,16 +150,16 @@
 
   await T('CB1-F navigation between sections and panels', async () => {
     fresh(); SA(); open('NV-L3', 'details');
-    const walk = []; for (let i = 0; i < 6; i++) { q('.cb-foot .btn-primary').click(); walk.push(cur()); }
-    ok('CB1-F the "next" button walks the seven sections in order', walk.join() === SECS.slice(1).join(), walk.join());
-    ok('CB1-F …no "next" on the last section; "previous" goes back', !q('.cb-foot .btn-primary') && (q('.cb-foot .btn').click(), cur() === 'documents'));
+    const walk = []; for (let i = 0; i < 7; i++) { q('.cb-foot .btn-primary').click(); walk.push(cur()); } // CBX: eight sections
+    ok('CB1-F the "next" button walks the eight sections in order', walk.join() === SECS.slice(1).join(), walk.join());
+    ok('CB1-F …no "next" on the last section; "previous" goes back', !q('.cb-foot .btn-primary') && (q('.cb-foot .btn').click(), cur() === 'delivery'));
     open('NV-L3', 'curriculum'); q('.cb-panels [data-tab="types"]').click(); ok('CB1-F a panel switches within its section', cur() === 'curriculum' && pan() === 'types' && /Assessment types/.test(q('.cb-body').textContent));
     ok('CB1-F the address follows the section or panel (old links stay meaningful)', location.hash === '#a-programmes.NV-L3.types');
   });
 
   await T('CB1-G old links and deep links', async () => {
     fresh(); SA();
-    const seeded = [['tree', 'curriculum', 'structure'], ['types', 'curriculum', 'types'], ['versions', null, 'versions'], ['library', 'observations', 'library'], ['obs', 'observations', 'obs'], ['letter', 'documents', 'letter'], ['support', 'payments', 'support'], ['fees', 'payments', 'fees']];
+    const seeded = [['tree', 'curriculum', 'structure'], ['types', 'curriculum', 'types'], ['versions', null, 'versions'], ['library', 'observations', 'obs'] /* CBX (PD-CBX-03): the legacy list is linked from Observation settings */, ['obs', 'observations', 'obs'], ['letter', 'documents', 'letter'], ['support', 'payments', 'support'], ['fees', 'payments', 'fees']];
     seeded.forEach(([t, s, p]) => { open('NV-L3', t); ok(`CB1-G seeded #a-programmes.NV-L3.${t} → ${s || 'Version history'}${p ? ' / ' + p : ''}`, (s ? cur() === s : !q('.cb-nav') && /Version history/.test(main())) && (pan() === p || (!q('.cb-panels') && p === 'versions')), cur() + '/' + pan()); });
     SYS(); const wiz = [['details', 'details'], ['structure', 'curriculum'], ['obs', 'observations'], ['letter', 'documents'], ['docs', 'documents'], ['plan', 'payments'], ['review', 'review']];
     wiz.forEach(([t, s]) => { open('NV-N1', t); ok(`CB1-G new-programme step #a-programmes.NV-N1.${t} → ${s}`, cur() === s); });
