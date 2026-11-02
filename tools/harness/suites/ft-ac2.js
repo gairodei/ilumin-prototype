@@ -148,9 +148,12 @@
     ok('AC2-L Amira\'s submission: every audit entry names Amira as a Learner', sub.every(a => a.actor === amira && a.role === 'Learner'), J(sub.map(a => [a.actor, a.action])));
     pick('assessor'); const k = STORE.worlds.CD1.me.id + '~a11', d = dft(k);
     const mk = rowsOf(() => { markable(tasAsg(tasSubs(true).find(s => s.key === k))).forEach(q => { d.items[q.id] = { exit: 'pass', rag: 'G', fb: 'AC-2', met: 'Met' }; }); ACT.mkRelease({ dataset: { k } }); prim(); closeModal(); });
-    ok('AC2-L the Assessor sends marking for release: the entries name James Pryce (Assessor), not an administrator', mk.length > 0 && mk.every(a => a.actor === 'James Pryce' && /Assessor|Teacher/.test(a.role)), J(mk.map(a => [a.actor, a.role, a.action])));
-    pick('coord1'); const co = CME().name, rl = rowsOf(() => { ACT.relOne({ dataset: { k } }); prim(); closeModal(); });
-    ok('AC2-L the Coordinator releases it: the entries name ' + co + ' (Academic Coordinator)', rl.length > 0 && rl.every(a => a.actor === co && a.role === 'Academic Coordinator'), J(rl.map(a => [a.actor, a.role, a.action])));
+    // TA-1 (PD-TA1-03): the Assessor publishes to the learner; there is no Coordinator release of new marking. Was: 'AC2-L the Assessor
+    // sends marking for release …' and 'AC2-L the Coordinator releases it: the entries name <Coordinator> (Academic Coordinator)'.
+    // The Coordinator's release of an item sent before TA-1 is still attributed to the Coordinator (ft-ac1 AC1-R).
+    ok('AC2-L the Assessor publishes the marking: the entries name James Pryce (Assessor), not an administrator', mk.length > 0 && mk.every(a => a.actor === 'James Pryce' && /Assessor|Teacher/.test(a.role)) && mk.some(a => a.action === 'Feedback published to learner'), J(mk.map(a => [a.actor, a.role, a.action])));
+    pick('coord1'); const rl = rowsOf(() => { ACT.relOne({ dataset: { k } }); prim(); closeModal(); });
+    ok('AC2-L nothing is left for the Coordinator to release (no entry, no change)', rl.length === 0 && !relStore()[k], J(rl.map(a => [a.actor, a.action])));
     pick('teacher'); const tch = w0Who().name, dn = rowsOf(() => { releaseNow(k); });
     ok('AC2-L an AC-1 refusal (a Teacher releasing marking) is still logged as a refusal naming the Teacher', dn.length === 1 && /^Blocked/.test(dn[0].action) && dn[0].actor === tch);
     pick('fin'); const sys = rowsOf(() => { ACT.cb10Advance({ dataset: { d: '45' } }); render(); dpReconcile(); render(); }); ACT.cb10Reset(); render();

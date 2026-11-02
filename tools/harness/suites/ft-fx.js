@@ -172,7 +172,9 @@
 
   await T('FX-I demo Teacher and Assessor on the batch (PD-FX-09)', async () => {
     ACT.resetDemo(); const b = cdBatch(), a = chAllocOf(b), st = n => ADMIN.staff.find(s => s.name === n);
-    ok('FX-I the batch: Teacher Marcus Bell, Assessor James Pryce, Coordinators unchanged', J(b.teachers) === J([CD_TEACHER]) && J(b.assessors) === J([CD_ASSESSOR]) && J(mcList(b)) === J(['Dr Helen Carter', 'Michael Osei']));
+    // TA-1 (PD-TA1-05): Omar Siddiqui (Teacher + Assessor) co-teaches the demo batch and is Sam Deposit's PD assessor (override).
+    // Was: b.teachers === [Marcus Bell] and b.assessors === [James Pryce].
+    ok('FX-I the batch: Teacher Marcus Bell (+ Omar Siddiqui, TA-1), Assessor James Pryce (+ Omar for one learner\'s PD), Coordinators unchanged', J(b.teachers) === J([CD_TEACHER, 'Omar Siddiqui']) && J(b.assessors) === J([CD_ASSESSOR, 'Omar Siddiqui']) && chEff(STORE.worlds.CD4.me.id, 'pd') === 'Omar Siddiqui' && J(mcList(b)) === J(['Dr Helen Carter', 'Michael Osei']));
     ok('FX-I they hold the roles (Teacher only; Assessor only), neither is a Coordinator', J(st(CD_TEACHER).roles) === J(['Teacher']) && J(st(CD_ASSESSOR).roles) === J(['Assessor']) && !mcList(b).includes(CD_ASSESSOR) && !mcList(b).includes(CD_TEACHER));
     ok('FX-I assessment allocation: assignments, PD and observations to the Assessor only; the Teacher and the Coordinators mark nothing', a.asg === CD_ASSESSOR && a.pd === CD_ASSESSOR && a.obs === CD_ASSESSOR && [CD_TEACHER, ...mcList(b)].every(n => !chRoleOn(b, n).length));
     // DR (PD-DR-02/03): two learners, the fee option they agreed at sign-up

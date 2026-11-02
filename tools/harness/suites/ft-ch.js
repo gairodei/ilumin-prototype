@@ -600,7 +600,9 @@
     tas('S'); go('t-mark', { id: key }); ok('CH-17 the assignment assessor can open it', !/You don't have access/.test(main()));
     tas('M'); ok('CH-17 Michael (Croydon\'s Coordinator) has no Croydon PD or observations (P-33)', !tasPdList().some(p => marLids().includes(p.lid) || p.lid === 'IA-L-33107') && !tasObs().some(o => o.id === 'TO-9' || marLids().includes(o.lid)));
     const g = STORE.worlds.D.me.id, a0 = ADMIN.audit.length; ACT.pdPropose({ dataset: { l: g } });
-    ok('CH-17 PD: a non-allocated assessor\'s direct call is refused and logged', !MODAL && ADMIN.audit.length === a0 + 1 && ADMIN.audit[0].action === 'Blocked: not the PD assessor');
+    // TA-1 (PD-TA1-04): Michael holds no assessor allocation, so the PD capability itself is closed and the MR-G2 guard refuses first.
+    // Was: ADMIN.audit[0].action === 'Blocked: not the PD assessor' (the CH-17 per-learner guard). Still one refusal, logged.
+    ok('CH-17 PD: a non-allocated assessor\'s direct call is refused and logged', !MODAL && ADMIN.audit.length === a0 + 1 && /^Blocked: (not the PD assessor|propose PD session)$/.test(ADMIN.audit[0].action), ADMIN.audit[0].action);
     tas('S'); ok('CH-17 observations: James (Croydon observation assessor, P-33) has TO-9 and Grace\'s', tasObs().some(o => o.id === 'TO-9') && tasObs().some(o => o.lid === g));
     go('t-obsrec', { id: 'TO-9' }); ok('CH-17 the observation assessor can record it', !/You don't have access/.test(main()));
     tas('A'); ok('CH-17 Sarah: Grace\'s PD (batch default) but not her observations or TO-9; not Olivia\'s PD (override)', !tasObs().some(o => o.lid === g) && !tasObs().some(o => o.id === 'TO-9') && tasPdList().some(p => p.lid === g) && !tasPdList().some(p => p.lid === 'IA-L-33107'));

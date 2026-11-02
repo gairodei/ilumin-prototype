@@ -439,9 +439,9 @@
     setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; go('a-dashboard'); ok('CD admin dashboard: the demonstration-figures note under the figures', shown($1('main .cd-dash-note')));
     // DR (PD-DR-01/03/07) supersedes the CD guided sign-up (the build makes it): the sign-in chooser, Switch demo user and the simulated checkout at this width
     // PD-FD-01: two more learner identities (Sam, Tom). Was: 11 shown, 14 in all.
-    signOut(); ok('DR sign-in page: the demo identities displayed; no page overflow', all('#app .dr-signin .dr-grp:not(.dr-more) [data-act="drAs"]').filter(shown).length === 13 && all('#app .dr-signin [data-act="drAs"]').length === 16 && !$1('#app .demo-hint') && appOver() <= 1, appOver());
+    signOut(); ok('DR sign-in page: the demo identities displayed; no page overflow', all('#app .dr-signin .dr-grp:not(.dr-more) [data-act="drAs"]').filter(shown).length === 14 && all('#app .dr-signin [data-act="drAs"]').length === 17 /* TA-1 (PD-TA1-05): + Teacher + Assessor. Was: 13 shown / 16 */ && !$1('#app .demo-hint') && appOver() <= 1, appOver());
     // PD-FD-01: two more learner identities (Sam, Tom). Was: 11 shown, 14 in all.
-    ACT.drAs({ dataset: { p: 'nvq-sp' } }); ACT.drSwitch(); ok('DR Switch demo user: the identity chooser dialog fits', all('#modal-root .dr-grp:not(.dr-more) [data-act="drAs"]').filter(shown).length === 13 && all('#modal-root [data-act="drAs"]').length === 16 && !modalFits(), modalFits()); closeModal();
+    ACT.drAs({ dataset: { p: 'nvq-sp' } }); ACT.drSwitch(); ok('DR Switch demo user: the identity chooser dialog fits', all('#modal-root .dr-grp:not(.dr-more) [data-act="drAs"]').filter(shown).length === 14 && all('#modal-root [data-act="drAs"]').length === 17 /* TA-1 (PD-TA1-05). Was: 13 / 16 */ && !modalFits(), modalFits()); closeModal();
     // LP (PD-LP-15): Lena's only short course is active, so her card says "Continue learning"; a demo learner not enrolled on it buys it. Was: ACT.drAs({ dataset: { p: 'short' } })
     ACT.drAs({ dataset: { p: 'nvq-sp' } }); go('browse'); click($1('main [data-act="buyCourse"]')); if (MODAL && /About you/.test(MODAL.title)) closeModal();
     ok('DR simulated checkout (a demo learner): labelled; the dialog fits', shown($1('#modal-root .cd-sim')) && !modalFits(), modalFits()); closeModal();

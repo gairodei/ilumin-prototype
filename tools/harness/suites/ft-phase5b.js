@@ -12,13 +12,15 @@
   const wait = ms => new Promise(r => setTimeout(r, ms));
   const errOf = sel => { const el = document.querySelector(sel), f = el && (el.closest('.field') || el.parentElement); const e = f && f.querySelector('.err'); return e ? e.textContent.trim() : ''; };
 
-  // Mark every markable question and send the submission through the real "Send to Coordinator for release" confirmation
+  // Mark every markable question and send the submission to the Release queue.
+  // TA-1 (PD-TA1-03): the Marking Workspace now publishes straight to the learner, so the queue only holds items sent before TA-1.
+  // Was: the workspace button and its "Send to Coordinator for release" confirmation; now the same send (sendForRelease, which that
+  // confirmation called), after checking the workspace still opens with its button enabled.
   const sendForReleaseViaUI = s => {
     const d = dft(s.key); markable(tasAsg(s)).forEach(q => { d.items[q.id] = { exit: 'pass', rag: 'G', fb: 'Clear and relevant.', met: 'Met', verified: true, vat: now().toISOString() }; });
     closeModal(); S.tas.dirty = false; go('t-mark', { id: s.key });
     const b = document.querySelector('#main [data-act="mkRelease"]:not([disabled])'); if (!b) return false;
-    b.click(); const c = mi('Send to Coordinator for release'); if (!c) { closeModal(); return false; }
-    c.click(); return !!relStore()[s.key];
+    sendForRelease(s, tasAsg(s), d); return !!relStore()[s.key];
   };
   // Two submissions from the Coordinator's own batches, sent by the Assessor (setup for the Release queue checks)
   const seedRelease = n => {
@@ -146,7 +148,7 @@
   /* ---------- Release queue: keyboard ---------- */
   T('Release queue keyboard', () => {
     // Setup: the Assessor marks two submissions in the Coordinator's batches and sends them for release (real UI path)
-    const sent = seedRelease(2); ok('setup: two submissions sent to the Release queue from the Marking Workspace', sent === 2, sent + ' sent');
+    const sent = seedRelease(2); ok('setup: two submissions sent to the Release queue (items sent before TA-1)', sent === 2, sent + ' sent');
     const one = Object.keys(relStore())[0];
     if (one) { S.tas.v = 'A'; tasEnter(); S.tas.dirty = false; go('t-mark', { id: one }); const b = document.querySelector('#main [data-act="mkMet"][disabled], #main [data-act="mkRelease"][disabled]'); ok('sent item: the disabled marking controls say it is with the Coordinator', b && /Sent to the Coordinator/.test(b.title), b ? b.dataset.act + ': ' + b.title : 'no disabled control'); }
     ACT.demoSignInAsCoord(); go('c-index');

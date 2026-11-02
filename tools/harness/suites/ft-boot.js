@@ -14,12 +14,14 @@
     ok(when + ': teacher identities are plain data', Object.values(TAS_USERS).every(u => { const d = Object.getOwnPropertyDescriptor(u, 'batches'); return d && 'value' in d && d.writable && Array.isArray(u.batches); }));
   };
   check('After load');
-  ok('After load: Tom Whitfield teaches Croydon Cohort 4', TAS_USERS.W && TAS_USERS.W.batches.length === 1, TAS_USERS.W && TAS_USERS.W.batches.join());
+  // TA-1 (PD-TA1-01): an identity's batches are the batches it is allocated to — Tom teaches Croydon Cohort 4 and Croydon Cohort 4's
+  // successor L2DC-JAN27 (its Teacher in the batch record). Was: batches.length === 1 (the stored list).
+  ok('After load: Tom Whitfield teaches Croydon Cohort 4', TAS_USERS.W && TAS_USERS.W.batches.join() === ADMIN.batches.filter(b => (b.teachers || []).includes('Tom Whitfield')).map(b => b.code).join() && TAS_USERS.W.batches.includes('L2DC-MAR26'), TAS_USERS.W && TAS_USERS.W.batches.join());
   let err = null; try { initStore(); } catch (e) { err = e; }
   ok('initStore() runs without throwing', !err, err && (err.message + ' ' + (err.stack || '').split('\n')[1]));
   err = null; try { setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; ACT.resetDemo(); } catch (e) { err = e; }
   ok('Reset demo data runs without throwing', !err, err && (err.message + ' ' + (err.stack || '').split('\n')[1]));
   check('After Reset');
-  ok('Tom Whitfield teaches Croydon Cohort 4', TAS_USERS.W && TAS_USERS.W.batches.length === 1, TAS_USERS.W && TAS_USERS.W.batches.join());
+  ok('Tom Whitfield teaches Croydon Cohort 4', TAS_USERS.W && TAS_USERS.W.batches.join() === ADMIN.batches.filter(b => (b.teachers || []).includes('Tom Whitfield')).map(b => b.code).join() && TAS_USERS.W.batches.includes('L2DC-MAR26'), TAS_USERS.W && TAS_USERS.W.batches.join()); // TA-1, as above
   const out = document.createElement('pre'); out.id = 'ft-out'; out.textContent = R.join('\n') + '\n' + R.filter(x => x.startsWith('PASS')).length + '/' + R.length; document.body.appendChild(out);
 })();

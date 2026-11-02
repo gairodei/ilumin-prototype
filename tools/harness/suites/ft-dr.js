@@ -35,9 +35,13 @@
   await T('DR-A fresh start: the sign-in page and its demo identities', async () => {
     ok('DR-A a fresh start loads the client demo and shows the sign-in page', boot.mode === 'client' && !boot.signedIn && boot.auth === 'signin' && shown($1('#app form[data-submit="signin"]')));
     const ids = $a('#app .dr-signin [data-act="drAs"]'), lab = ids.map(b => b.querySelector('.dr-id-r').textContent);
-    ok('DR-A one chooser of demo identities; the sample sign-in buttons are gone (no "Sign in as Learner (Aisha)", no Gulf Care, no duplicate A/B variants)', !!$1('#app .dr-signin') && !$1('#app .demo-hint') && !/Aisha|Gulf Care|Admin B|Finance Admin B|Teacher \+ Assessor/.test(app()));
+    ok('DR-A one chooser of demo identities; the sample sign-in buttons are gone (no "Sign in as Learner (Aisha)", no Gulf Care, no duplicate A/B variants)', !!$1('#app .dr-signin') && !$1('#app .demo-hint') && !/Aisha|Gulf Care|Admin B|Finance Admin B|Sarah Okonkwo/.test(app()) && !/Teacher \+ Assessor \(default\)/.test(app()));
+    // TA-1 (PD-TA1-05): the client asked for one identity that teaches and assesses — Omar Siddiqui's client-demo staff record, not the
+    // legacy default persona. Was: no "Teacher + Assessor" anywhere on the page (the legacy Sarah Okonkwo variant).
+    ok('DR-A (TA-1) the Teacher + Assessor identity is the client-demo staff record Omar Siddiqui', /Teacher \+ Assessor\s*Omar Siddiqui/.test(($1('#app .dr-signin [data-p="dual"]') || {}).textContent || ''));
     // PD-FD-01: two more learner identities after the three (Sam, Tom). Was: three learner identities.
-    ok('DR-A the identities: five learners, two Coordinators, Teacher, Assessor, Academic, Finance, System and Super Administrators, IQA, Agency, Business Admin', J(lab) === J(['NVQ Learner — Self-Paced', 'NVQ Learner — Fully Assisted', 'Short-Course Learner', 'NVQ Learner — Deposit, then instalments', 'NVQ Learner — Deposit by bank transfer (awaiting Finance)', 'Academic Coordinator 1', 'Academic Coordinator 2', 'Teacher', 'Assessor', 'Academic Administrator', 'Finance Administrator', 'System Administrator', 'Super Administrator', 'Internal Quality Assurer', 'Agency', 'Business Administrator']), J(lab));
+    // TA-1 (PD-TA1-05): "Teacher + Assessor" (Omar Siddiqui) after the Assessor.
+    ok('DR-A the identities: five learners, two Coordinators, Teacher, Assessor, Academic, Finance, System and Super Administrators, IQA, Agency, Business Admin', J(lab) === J(['NVQ Learner — Self-Paced', 'NVQ Learner — Fully Assisted', 'Short-Course Learner', 'NVQ Learner — Deposit, then instalments', 'NVQ Learner — Deposit by bank transfer (awaiting Finance)', 'Academic Coordinator 1', 'Academic Coordinator 2', 'Teacher', 'Assessor', 'Teacher + Assessor', 'Academic Administrator', 'Finance Administrator', 'System Administrator', 'Super Administrator', 'Internal Quality Assurer', 'Agency', 'Business Administrator']), J(lab));
     const d = p => ($1(`#app .dr-signin [data-p="${p}"]`) || {}).textContent || '';
     ok('DR-A each learner identity is described from its records (name, programme, batch, mode, Coordinator; the short course)', /Amira Shah \(demo\).*Level 3 Diploma in Care Practice \(client demo\).*DEMO-L3-JAN27.*Self-Paced.*Coordinator: Dr Helen Carter/.test(d('nvq-sp')) && /Dev Patel \(demo\).*DEMO-L3-JAN27.*Fully Assisted.*Coordinator: Michael Osei/.test(d('nvq-fa')) && /Lena Hart \(demo\).*Moving and Handling People.*enrolled/.test(d('short')));
     // PD-FD-01: each Coordinator has two learners (Helen: Amira + Sam; Michael: Dev + Tom). Was: 1 allocated learner each.
@@ -178,7 +182,7 @@
     ok('DR-K it says who is signed in, and what Reset discards', /Viewing as Rachel Hughes — Academic Administrator/.test(p.textContent) && /Discards every change made in this browser tab/.test(p.textContent));
     click($1('#demo-root [data-act="drSwitch"]'));
     // PD-FD-01: two more learner identities (Sam, Tom). Was: 14.
-    ok('DR-K Switch demo user opens the same identity chooser', /Switch demo user/.test(MODAL.title) && $a('#modal-root [data-act="drAs"]').length === 16);
+    ok('DR-K Switch demo user opens the same identity chooser', /Switch demo user/.test(MODAL.title) && $a('#modal-root [data-act="drAs"]').length === 17); // TA-1 (PD-TA1-05): + Teacher + Assessor. Was: 16
     click($1('#modal-root [data-act="drAs"][data-p="nvq-fa"]'));
     ok('DR-K choosing an identity there switches to it', !MODAL && S.portal === 'learner' && S.variant === 'CD2' && S.route === 'dashboard');
     S.demoOpen = true; renderDemo(); click($1('#demo-root [data-act="drDevOn"]')); ok('DR-K developer mode asks first', !!MODAL && /developer mode/i.test(MODAL.title));

@@ -20,7 +20,8 @@
   const main = () => ($1('main') || document.body).textContent.replace(/\s+/g, ' ');
   const foot = () => (($1('#app footer.foot') || {}).textContent || '').replace(/\s+/g, ' ');
   const AA = () => acaAdmins().map(n => 'Academic Admin — ' + n);
-  const DEV = ['Michael Osei (Academic Coordinator)', 'Marcus Bell (Teacher)', 'James Pryce (Assessor (assignments))', 'James Pryce (Assessor (PD))', 'James Pryce (Assessor (observations))'];
+  // TA-1 (PD-TA1-05): Omar Siddiqui (Teacher + Assessor) co-teaches the demo batch and is Sam Deposit's PD assessor (override). Was: no Omar.
+  const DEV = ['Michael Osei (Academic Coordinator)', 'Marcus Bell (Teacher)', 'Omar Siddiqui (Teacher)', 'James Pryce (Assessor (assignments))', 'James Pryce (Assessor (PD))', 'James Pryce (Assessor (observations))'];
   // a learner's send through New message, with a recipient forced into the list (as a direct call would)
   const send = (to, sub) => { ACT.compose({ dataset: {} }); const sel = $1('#m-to'); if (![...sel.options].some(o => o.textContent === to)) { const o = document.createElement('option'); o.textContent = to; sel.appendChild(o); } sel.value = to; $1('#m-sub').value = sub; $1('#m-body').value = 'LP test message'; const n0 = W.threads.length; prim(); const sent = W.threads.length > n0; closeModal(); return sent; };
 
@@ -28,8 +29,8 @@
     pick('nvq-fa'); openNvq(); const b = cdBatch(), lid = W.me.id;
     ok('LP-A Dev opens his programme page (signed in through the chooser)', S.portal === 'learner' && W === STORE.worlds.CD2 && S.route === 'course' && !!card());
     // LP final (user decision A1, PD-LP-06): G3.7 — the Teacher and Assessor can be messaged. Was: […, ['Marcus Bell', 'Teacher', false], ['James Pryce', …, false]]
-    ok('LP-A three people, one card each, each with Message: his designated Coordinator, the batch Teacher and the batch Assessor', J(people()) === J([['Michael Osei', 'Academic Coordinator', true], ['Marcus Bell', 'Teacher', true], ['James Pryce', 'Assessor (assignments, PD, observations)', true]]), J(people()));
-    ok('LP-A the names are the batch records\' (Coordinator allocation, batch Teachers, assessor allocation)', mcOf(lid, b) === 'Michael Osei' && J(b.teachers) === J(['Marcus Bell']) && ['asg', 'pd', 'obs'].every(k => chEff(lid, k, b) === 'James Pryce'));
+    ok('LP-A four people (TA-1: the batch has two Teachers), one card each, each with Message: his designated Coordinator, the batch Teachers and the batch Assessor', J(people()) === J([['Michael Osei', 'Academic Coordinator', true], ['Marcus Bell', 'Teacher', true], ['Omar Siddiqui', 'Teacher', true], ['James Pryce', 'Assessor (assignments, PD, observations)', true]]), J(people())); // TA-1: + Omar (Teacher)
+    ok('LP-A the names are the batch records\' (Coordinator allocation, batch Teachers, assessor allocation)', mcOf(lid, b) === 'Michael Osei' && J(b.teachers) === J(['Marcus Bell', 'Omar Siddiqui']) && /* TA-1 */ ['asg', 'pd', 'obs'].every(k => chEff(lid, k, b) === 'James Pryce'));
     ok('LP-A no other Coordinator; the Coordinator\'s Academy email only (no Teacher / Assessor contact details, no call action)', !/Helen Carter/.test(card().textContent) && J($a('main .lp-people .mc-contact').map(a => a.textContent)) === J(['michael.osei@illumin-academy.example']) && !/tel:/.test(card().innerHTML));
     ok('LP-A the Assessor\'s responsibility is stated (marks assignments and decides Pass / Fail)', /Marks your assignments and decides Pass \/ Fail/.test(card().textContent) && /Teaches your batch/.test(card().textContent));
     // Was: 'LP-A message recipients unchanged: his Coordinator and the Academic Admins only'
@@ -42,7 +43,7 @@
 
   await T('LP-B Amira Shah (Self-Paced): her own Coordinator, the same batch staff', async () => {
     pick('nvq-sp'); openNvq();
-    ok('LP-B Dr Helen Carter (designated), Marcus Bell (Teacher), James Pryce (Assessor); not Michael Osei', J(people().map(p => [p[0], p[1]])) === J([['Dr Helen Carter', 'Academic Coordinator'], ['Marcus Bell', 'Teacher'], ['James Pryce', 'Assessor (assignments, PD, observations)']]) && !/Michael Osei/.test(card().textContent), J(people()));
+    ok('LP-B Dr Helen Carter (designated), Marcus Bell (Teacher), James Pryce (Assessor); not Michael Osei', J(people().map(p => [p[0], p[1]])) === J([['Dr Helen Carter', 'Academic Coordinator'], ['Marcus Bell', 'Teacher'], ['Omar Siddiqui', 'Teacher'], ['James Pryce', 'Assessor (assignments, PD, observations)']]) /* TA-1: + Omar */ && !/Michael Osei/.test(card().textContent), J(people()));
     ok('LP-B Self-Paced: support stays message-based (no call action on the card)', /Delivery mode ?Self-Paced/.test(main()) && !/tel:|Call/.test(card().innerHTML));
     // Was: 'LP-B recipients: her Coordinator and the Academic Admins only'
     ok('LP-B recipients (G3.7): her Coordinator, Marcus Bell, James Pryce and the Academic Admins', J(recipients()) === J(['Dr Helen Carter (Academic Coordinator)'].concat(DEV.slice(1), AA())), J(recipients()));
@@ -254,7 +255,7 @@
     ok('LP-L one published programme, one batch, four NVQ learners (Amira and Dev admitted, Sam and Tom awaiting review), one short-course learner', ADMIN.programmes.filter(p => p.status === 'Active').length === 1 && ADMIN.batches.length === 1 && mcLids(b).length === 4 && J(['CD1', 'CD2', 'CD4', 'CD5'].map(k => STORE.worlds[k].admission.status)) === J(['Approved', 'Approved', 'Awaiting review', 'Awaiting review']) && CD_KEYS.every(k => STORE.worlds[k]) && STORE.worlds.CD3.enrolments.filter(e => e.kind === 'short').length === 1);
     // CF final (PD-CF-11): the client demo now has two synthetic resources on its programme (added by the demo build); Reset restores exactly those. Was: !S4B().res.some(r => r.pid === cdPr().id)
     ok('LP-L no temporary records: only the two demo resources for the programme, four sessions, no submissions, judgements, outcomes or messages', J(S4B().res.filter(r => r.pid === cdPr().id).map(r => r.title).sort()) === J(['Sample handout: person-centred care (client demo)', 'Sample slides: agreeing a care plan (client demo)']) && !S4B().res.some(r => /LP handout/.test(r.title)) && s4bAllSess().length === 4 && dev.assignments.every(a => a.status === 'Not Started') && !r3Judg(dev.me.id + '~a10').length && !r3Out(dev.me.id + '~a10') && CD_KEYS.every(k => !STORE.worlds[k].threads.length) && !ADMIN.learners.some(l => /Nina Fresh/.test(l.name)));
-    ok('LP-L allocations: Amira → Dr Helen Carter, Dev → Michael Osei; Teacher Marcus Bell; Assessor James Pryce', mcOf(STORE.worlds.CD1.me.id, b) === 'Dr Helen Carter' && mcOf(dev.me.id, b) === 'Michael Osei' && J(b.teachers) === J(['Marcus Bell']) && chAllocOf(b).asg === 'James Pryce');
+    ok('LP-L allocations: Amira → Dr Helen Carter, Dev → Michael Osei; Teacher Marcus Bell; Assessor James Pryce', mcOf(STORE.worlds.CD1.me.id, b) === 'Dr Helen Carter' && mcOf(dev.me.id, b) === 'Michael Osei' && J(b.teachers) === J(['Marcus Bell', 'Omar Siddiqui']) && /* TA-1 */ chAllocOf(b).asg === 'James Pryce');
   });
 
   await T('LP-M Legacy fixture: historical learners', async () => {

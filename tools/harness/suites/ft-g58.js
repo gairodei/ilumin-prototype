@@ -14,9 +14,12 @@
     const snap = () => JSON.stringify({ st: a.status, due: a.resubDue, fb: a.qs.map(q => q.fb.length), state: a.qs.map(q => q.state), pd: w.pd.items.length, crit: w.tree.flatMap(u => u.mods.flatMap(m => m.los.flatMap(l => l.crit.map(c => c.code + ':' + c.st)))), notifs: w.notifs.length });
     const before = snap(), learnerNotifsBefore = w.notifs.length;
     const d = dft(s.key); its.forEach((q, k) => { d.items[q.id] = k === 0 ? { exit: 'resub', rag: 'R', fb: 'Add a second example.', corrections: 'Add a second example from your workplace.', met: 'Not Met', days: 12 } : k === 1 && its.length > 2 ? { exit: 'pd', rag: 'A', fb: 'Discuss at PD.', pdReason: 'Better covered in discussion.', met: 'Not Met' } : { exit: 'pass', rag: 'G', fb: 'Good.', met: 'Met', verified: true, vat: now().toISOString() }; });
+    // TA-1 (PD-TA1-03): the Marking Workspace now publishes straight to the learner (ft-ta1). Was: 'assessor sees "Send to Coordinator
+    // for release"', and confirming sent it. The Release queue is checked below with an item sent before TA-1 (sendForRelease, the
+    // function the old button called); every release check is unchanged.
     ACT.mkRelease({ dataset: { k: s.key } });
-    ok('assessor sees "Send to Coordinator for release"', MODAL && /Send to Coordinator for release/.test(MODAL.title + MODAL.actions.map(x => x.label).join()));
-    prim();
+    ok('assessor sees "Publish feedback to the learner?" (TA-1; was "Send to Coordinator for release")', MODAL && /Publish feedback to the learner/.test(MODAL.title) && MODAL.actions.some(x => x.label === 'Publish to learner'));
+    closeModal(); sendForRelease(s, a, d);
     ok('pending recorded', !!STORE.tas.pending[s.key]);
     // BEFORE release: learner sees nothing new
     ok('before release: learner status still Submitted', a.status === 'Submitted', a.status);
@@ -46,7 +49,7 @@
   });
   T('G6.3 dashboards + Super Admin release', () => {
     S.tas.v = 'S'; tasEnter(); S.signedIn = true; const s = tasSubs(true).find(x => x.live && x.toMark && markable(tasAsg(x)).length); if (!s) { ok('second live submission (marked by its assignment assessor, CH-17)', false); return; }
-    const d = dft(s.key); markable(tasAsg(s)).forEach(q => d.items[q.id] = { exit: 'pass', rag: 'G', fb: 'Good.', met: 'Met', verified: true, vat: now().toISOString() }); ACT.mkRelease({ dataset: { k: s.key } }); prim();
+    const d = dft(s.key); markable(tasAsg(s)).forEach(q => d.items[q.id] = { exit: 'pass', rag: 'G', fb: 'Good.', met: 'Met', verified: true, vat: now().toISOString() }); sendForRelease(s, tasAsg(s), d); // TA-1 (PD-TA1-03): an item sent before TA-1. Was: ACT.mkRelease + confirm
     acaEnter('KA'); S.signedIn = true; go('k-dashboard'); ok('Academic Admin dashboard: Awaiting release (read-only)', /Awaiting release/.test(main()) && !document.querySelector('[data-act="relSuper"]'));
     SA(); go('a-dashboard'); ok('Super Admin dashboard: Awaiting release with override', /Awaiting release/.test(main()) && !!document.querySelector('[data-act="relSuper"]'));
     go('a-records'); ok('admin records show Awaiting release', DT.subs.rows.some(r => r.status === 'Awaiting release'));

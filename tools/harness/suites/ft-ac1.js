@@ -42,7 +42,7 @@
   await T('AC1-R release of marking', async () => {
     const a = submitAsg('nvq-sp', 'a11');
     pick('assessor'); const d = dft(kA11); markable(tasAsg(tasSubs(true).find(s => s.key === kA11))).forEach(q => { d.items[q.id] = { exit: 'pass', rag: 'G', fb: 'AC-1 fine.', met: 'Met' }; });
-    ACT.mkRelease({ dataset: { k: kA11 } }); prim(); closeModal();
+    { const s_ = tasSubs(true).find(s => s.key === kA11); sendForRelease(s_, tasAsg(s_), dft(kA11)); } // TA-1 (PD-TA1-03): an item sent before TA-1 — the workspace now publishes directly. Was: ACT.mkRelease + confirm
     P0 = JSON.parse(J(relStore()[kA11] || null)); ok('AC1-R setup: Amira\'s a11 marking is waiting for her Coordinator\'s release', !!P0 && a.status === 'Submitted');
     for (const p of CROLES.filter(x => !['coord1', 'coord2'].includes(x))) {
       relStore()[kA11] = JSON.parse(J(P0)); pick(p); const s0 = sec(), n0 = STORE.worlds.CD1.notifs.length;
@@ -151,7 +151,9 @@
     ACT.chAssessSave({ dataset: { b: code } }); reason('AC-1 reassign');
     ok('AC1-S the Assessors panel now names ' + other.name + ' for every role', CH_AROLES.every(([k]) => chAllocOf(b)[k] === other.name), J(chAllocOf(b)));
     TCH('S'); const oldB = AC_OLD.tasBatches().map(x => x.code);
-    ok('AC1-S baseline: before AC-1 the removed Assessor\'s batch list still had the batch', oldB.includes(code), J(oldB));
+    // TA-1 (PD-TA1-01): the stored batch list the pre-AC-1 rule read is now rebuilt from the allocations, so even that rule no longer
+    // has the batch. Was: 'AC1-S baseline: before AC-1 the removed Assessor's batch list still had the batch' (oldB included it).
+    ok('AC1-S baseline (TA-1): the identity\'s batch list itself now follows the allocation — the pre-AC-1 rule no longer has the batch', !oldB.includes(code), J(oldB));
     const bs = tasBatches().map(x => x.code), ls = tasLearners(true).map(l => l.lid);
     ok('AC1-S the removed Assessor (James) no longer has the batch or its learners', !bs.includes(code) && !ls.includes(AM) && !ls.includes(DV), J({ bs, ls }));
     go('t-students'); ok('AC1-S screen: James\'s My Students no longer lists Amira or Dev', !/Amira|Dev Patel/.test(main()));
@@ -176,7 +178,7 @@
   // Reproduce the original defects with the handlers kept from before AC-1 (these records are discarded by the next fixture load)
   await T('AC1-0 client baseline reproductions', async () => {
     const kD11 = DV + '~a11', a = submitAsg('nvq-fa', 'a11');
-    pick('assessor'); const d0 = dft(kD11); markable(tasAsg(tasSubs(true).find(s => s.key === kD11))).forEach(q => { d0.items[q.id] = { exit: 'pass', rag: 'G', fb: 'AC-1 baseline.', met: 'Met' }; }); ACT.mkRelease({ dataset: { k: kD11 } }); prim(); closeModal();
+    pick('assessor'); const d0 = dft(kD11); markable(tasAsg(tasSubs(true).find(s => s.key === kD11))).forEach(q => { d0.items[q.id] = { exit: 'pass', rag: 'G', fb: 'AC-1 baseline.', met: 'Met' }; }); { const s_ = tasSubs(true).find(s => s.key === kD11); sendForRelease(s_, tasAsg(s_), dft(kD11)); } // TA-1 (PD-TA1-03): an item sent before TA-1 — the workspace now publishes directly. Was: ACT.mkRelease + confirm
     pick('nvq-fa'); const pend = !!relStore()[kD11]; _rnAC(kD11); await sleep(20);
     ok('AC1-0 baseline: before AC-1 the learner released his own marking (releaseNow had no actor check)', pend && !relStore()[kD11] && a.status !== 'Submitted', a.status);
     pick('assessor'); const r0 = r3Out(kA10).result; ACT.tasDC({ dataset: { k: kA10 } }); $1('#dc-rec').value = 'r3-outcome'; $1('#dc-new').value = r0 === 'Pass' ? 'Fail' : 'Pass'; $1('#dc-r').value = 'AC-1 baseline'; prim(); closeModal();
@@ -342,7 +344,7 @@
     ok('AC1-P criterion judgements are separate (James\'s Level 2 judgement is not on the Level 3 record)', r3Judg(kJ5).length > 0 && !r3Judg(kS5).some(j => j.by === 'James Pryce'));
     TCH('A'); const d3 = dft(kS5); ok('AC1-P marking drafts are separate', !Object.values(d3.items || {}).some(x => x.met === 'Not Met'));
     const before = (TCH('A'), tasSubs(true).find(s => s.key === kS5)).status;
-    TCH('S'); const d = dft(kJ5); markable(tasAsg(tasSubs(true).find(s => s.key === kJ5))).forEach(qq => { d.items[qq.id] = { exit: 'pass', rag: 'G', fb: 'L2 fine', met: 'Met' }; }); ACT.mkRelease({ dataset: { k: kJ5 } }); prim(); closeModal();
+    TCH('S'); const d = dft(kJ5); markable(tasAsg(tasSubs(true).find(s => s.key === kJ5))).forEach(qq => { d.items[qq.id] = { exit: 'pass', rag: 'G', fb: 'L2 fine', met: 'Met' }; }); { const s_ = tasSubs(true).find(s => s.key === kJ5); sendForRelease(s_, tasAsg(s_), dft(kJ5)); } // TA-1 (PD-TA1-03): an item sent before TA-1 — the workspace now publishes directly. Was: ACT.mkRelease + confirm
     TCH('A'); const s3 = tasSubs(true).find(s => s.key === kS5);
     ok('AC1-P a Level 2 send-for-release does not lock or change the Level 3 record', !!relStore()[kJ5] && !relStore()[kS5] && s3.status === before && !s3.staffStatus, J({ st: s3.status, ss: s3.staffStatus }));
     const rS4 = (TCH('A'), tasSubs(true).find(s => s.key === kS4)), rJ4 = (TCH('S'), tasSubs(true).find(s => s.key === kJ4));

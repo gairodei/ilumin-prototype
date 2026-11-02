@@ -88,8 +88,8 @@
     S.tas.v = 'A'; tasEnter(); S.signedIn = true; const s = tasSubs().find(x => x.toMark); if (!s) { ok('a submission to mark', false); return; }
     const its = markable(tasAsg(s)), d = dft(s.key); its.forEach(q => { d.items[q.id] = { exit: 'pass', rag: 'G', fb: 'Clear and relevant.', met: 'Met', verified: true, vat: now().toISOString() }; });
     go('t-mark', { id: s.key }); closeModal(); document.body.focus(); key('s');
-    ok('S opens "Send to Coordinator for release?"', MODAL && /Send to Coordinator for release/.test(MODAL.title), MODAL && MODAL.title);
-    ok('nothing is sent until you confirm', !relStore()[s.key]); closeModal();
+    ok('S opens "Publish feedback to the learner?" (TA-1 / PD-TA1-03; was "Send to Coordinator for release?")', MODAL && /Publish feedback to the learner/.test(MODAL.title), MODAL && MODAL.title);
+    ok('nothing is published until you confirm', !relStore()[s.key] && tasAsg(s).status === 'Submitted'); closeModal();
   });
 
   // Undo bar: announced once, then only the countdown changes (async: waits for a real timer tick)

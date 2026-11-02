@@ -17,9 +17,10 @@
     step(1, 2); const key = W.me ? null : null; const s = tasSubs(true).find(x => x.L.v === 'C' && tasAsg(x).id === a.id);
     ok('#1.2 in the assessor\'s queue', !!(s && s.toMark), s && s.key); if (!s) return;
     const d = dft(s.key), its = markable(tasAsg(s)); its.forEach((q, k) => { d.items[q.id] = k === 0 ? { exit: 'resub', rag: 'R', fb: 'Add an example.', corrections: 'Add a second example.', met: 'Not Met', days: 10 } : { exit: 'pass', rag: 'G', fb: 'Good.', met: 'Met', verified: true, vat: now().toISOString() }; });
-    ACT.mkRelease({ dataset: { k: s.key } }); prim(); ok('#1.2 sent to Coordinator for release', !!STORE.tas.pending[s.key] && a.status === 'Submitted');
-    step(1, 3); ok('#1.3 in the release queue', DT.crel && DT.crel.rows.some(P => P.key === s.key)); ACT.relOne({ dataset: { k: s.key } }); prim();
-    ok('#1.3 released', !STORE.tas.pending[s.key] && a.status === 'Resubmission Required', a.status);
+    // TA-1 (PD-TA1-03): the Assessor publishes to the learner; no Coordinator release. Was: '#1.2 sent to Coordinator for release' (pending,
+    // status Submitted), '#1.3 in the release queue', then relOne → '#1.3 released'.
+    ACT.mkRelease({ dataset: { k: s.key } }); prim(); ok('#1.2 published to the learner at once (TA-1)', !STORE.tas.pending[s.key] && a.status === 'Resubmission Required', a.status);
+    step(1, 3); ok('#1.3 nothing waits in the release queue (TA-1)', !(DT.crel && DT.crel.rows.some(P => P.key === s.key)));
     step(1, 4); go('assignment', { id: a.id }); ok('#1.4 learner sees feedback + resubmission date', /Add an example/.test(main()) && main().includes(fd(a.resubDue)));
     step(1, 5); STORE.coo.drafts[s.key] = { text: 'Well structured — keep going.', kind: 'plain' }; go('c-sub', { id: s.key }); ACT.cfPost({ dataset: { k: s.key } }); prim();
     ACT.scStep({ dataset: { r: 'learner:C', t: 'assignment.' + a.id } }); ok('#1.5 Coordinator feedback posted and visible to the learner', /Well structured — keep going/.test(main()));

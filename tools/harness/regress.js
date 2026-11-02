@@ -14,6 +14,8 @@
     ['Coordinator', () => { S.coo.v = 'A'; cooEnter(); S.signedIn = true; }],
     ['Teacher/Assessor', () => { S.tas.v = 'A'; tasEnter(); S.signedIn = true; }],
     ['Teacher only', () => { S.tas.v = 'T'; tasEnter(); S.signedIn = true; }],
+    // TA-1 (PD-TA1-05): one identity with Teacher and Assessor allocations (Omar Siddiqui) — the client demo's real dual-role screens
+    ['Teacher + Assessor', () => { S.tas.v = 'O'; tasEnter(); S.signedIn = true; }],
     ['Agency', () => { agyEnter('AG-02', true); S.signedIn = true; }],
   ];
   const FRAME = window.__FRAME || 'desktop';
