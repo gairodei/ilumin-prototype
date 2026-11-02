@@ -1435,3 +1435,38 @@ This batch resolves the four Teacher / Assessor items of the client bug sheet on
 - (c) Should the batch Coordinator be told when an Assessor publishes? Nothing is sent now.
 - (d) Teacher allocation is batch-level only; there is no per-learner Teacher override.
 - (e) Is a second Teacher on the demo batch acceptable for the client demo, given learners see both?
+
+## Batch CO-1: Competency map and PD in assignment evaluation (2 Nov 2026)
+
+This batch fixes two Academic Coordinator bug-sheet items, investigated read-only on 2cba871:
+1. The Cohort Competency Map was unclear and didn't update from learners' work.
+2. PD provisions were missing from Assignment Evaluation.
+
+Root causes:
+- The map drew its columns, unit bars and cell details from `STORE.worlds.C`, the legacy Level 3 Adult Care curriculum. Every client-demo learner is on Care Practice (`001 *`), so no column matched them and every cell showed Not Started.
+- Learners without a learner record got `hashN(code + id) % 7`.
+- `tasPdList` listed only the legacy learners Aisha and Grace, so demo PD items were unreachable and `pdPropose` threw.
+- The learner checklist hid items while a session was "Not scheduled".
+- Neither evaluation screen showed any PD session information or outcome.
+- PD notes on Met items were discarded.
+
+| ID | Decision | Why / requirement | Where |
+|---|---|---|---|
+| PD-CO1-01 | **The map reads each learner's own programme and criterion record.** It draws one table per batch and programme, headed with both, with that programme's criteria as columns in curriculum order. One legend shows the five states with their meanings, plus "—" for no record. Cells, unit bars, readiness, the Batch readiness KPI and the cell details are all read from the same record. The same map serves the Coordinator's Progress & Competency screen and a learner's Progress tab, and the Assessor's Progress & Gap Analysis. The gap summary counts only criteria with a record. | Bug sheet 1. PD-CF-08 (progress from the criteria records); PD-F-06 / PD-MRG2-07 (a learner's own programme, never another learner's tree). | co1-competency.js (`co1Rec`, `heatmap`, `ACT.hmCell`, `t-progress` gap) |
+| PD-CO1-02 | **No invented states.** A learner without a learner record shows "—", except for a state backed by a stored record: a verified lock (`STORE.tas.locks`), or Assessor marking published under that learner's own learner · assignment · batch key (`STORE.tas.rel`). Their readiness is "—". Their Progress / Competency tab shows their programme's tree (`fPortCtx`) the same way. | The hash states had no source. | `co1Published`, `synthTreeHtml` |
+| PD-CO1-03 | **Submission and resubmission** put the submitted questions' unlocked criteria In Progress if they were Not Started or Action Required. They never set Achieved and never touch Added to PD or a locked criterion. | The legend: Not Started = "No evidence submitted yet"; In Progress = "Evidence submitted … not yet judged". | `finaliseSubmit`, `ACT.tasSimResub` wrappers |
+| PD-CO1-04 | **What changes a criterion stays as it was.** The Assessor's published marking does it (verified Met → Achieved; Met not verified or Partially Met → In Progress; Not Met or resubmission → Action Required; PD exit → Added to PD), and so does the PD assessor's recorded outcome. Coordinator judgements and comments don't (PD-R3-02 / -03). They are shown separately, by role, in the cell details. The final Pass / Fail doesn't either (R3): nothing is inferred from it. | R3, PD-TA1-03. | (unchanged), `ACT.hmCell` |
+| PD-CO1-05 | **Assessor PD lists come from the caseload.** Every learner the person holds the PD allocation for appears: the batch allocation, then any per-learner override (CH-17 `chEff`). A PD action on a learner with no PD record is refused with a message, not an error. The PD screen's "What the learner sees" preview is the first listed learner's own checklist; it was always Aisha's. An unscheduled session shows "Not scheduled", not a 1970 date. | Bug sheet 2. PD-LP-01, G6.1. | `tasPdList`, `pdCard`, `t-pd` |
+| PD-CO1-06 | **A PD item records who added it, when and from which assignment.** Proposing the first session for a learner whose session is "Not scheduled" adds no history line and puts the PD event in the learner's calendar. | Attribution: the learner page named "Sarah Okonkwo" in the code. | `releaseFeedback`, `ACT.pdPropose` wrappers |
+| PD-CO1-07 | **The learner sees their PD items before a session is scheduled.** The checklist names the PD assessor and who added each item. Their assignment page shows each PD question's item, reason, author, status, session and outcome. | Items were hidden while "Not scheduled". | `pdSection`, `SCREENS.assignment` |
+| PD-CO1-08 | **A read-only PD panel** on the Coordinator's assignment review and the Assessor's marking view. It shows: criterion, assignment / question, the Assessor's reason, added by and date, item status, session status and date, PD assessor, outcome, notes, sign-off author and date. It has no controls. Items recorded before CO-1 keep their status and say that no notes or sign-off were stored. History is not rewritten. | Bug sheet 2. | `co1PdRows`, `co1PdPanel` |
+| PD-CO1-09 | **The PD outcome needs an explicit Met or Not Met for each item.** Nothing is preselected (Met was), and saving without a choice is refused. Notes, author and date are kept for both results on the item, the session is stamped with the sign-off, and the audit log records each outcome with its notes. The existing effects and permission checks are unchanged: Met → Achieved and locked; Not Met → Action Required plus an improvement-plan action; only the PD assessor; the MR-G2 re-check on confirm. | Met notes were discarded; a single tick of the sign-off box marked everything Met. | `ACT.pdOutcome` wrapper |
+| PD-CO1-10 | **Learners without a learner record (legacy data):** the Coordinator's list and review show the Assessor's published status, feedback and PD reason only when that marking is stored under the same learner · assignment · batch key. A stored record whose questions aren't the assignment's is ignored (fail closed). A published PD exit for such a learner joins their PD checklist (`STORE.tas.pd`), once. | The Coordinator kept the seeded status and a generic PD line. | `subRow`, `synthAsg`, `releaseFeedback` wrappers |
+
+**Tests:** ft-co1 (FIXTURE=client; a real reload, Reset, then the legacy fixture). No existing assertion was changed.
+
+**Open (client):**
+- (a) Should a Coordinator's Met judgement appear on the map at all, for example as a marker? Today it appears only in the cell details. This is linked to "Which judgement counts when they differ?".
+- (b) Should a final Pass make the assignment's criteria Achieved? R3 keeps them separate; "Can Pass be declared while answers are Added to PD?" is also still open.
+- (c) Should a PD outcome be recordable before a session is held? The legacy behaviour allowed it for learners with a learner record, and it is kept.
+- (d) Should the Coordinator's PD overview (Observations screen) show each item's outcome? It shows open counts and the session only.

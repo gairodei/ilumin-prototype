@@ -1582,3 +1582,17 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 .av-row { align-items: flex-start; }
 .av-row .chip { flex: none; }
 .av-fb { margin: 4px 0 0; }
+
+/* ---------- Batch CO-1 — competency map and PD in assignment evaluation (2 Nov 2026) ---------- */
+.hc.co1-none { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
+.co1-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 4px 0 6px; }
+.co1-k { display: inline-flex; align-items: center; gap: 6px; font-size: .82rem; max-width: 100%; }
+.co1-k .hc { cursor: default; flex: none; width: 28px; height: 20px; display: inline-flex; align-items: center; justify-content: center; }
+.co1-grp { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 4px; display: grid; gap: 8px; min-width: 0; }
+.co1-gh { margin: 0; overflow-wrap: anywhere; }
+.co1-units { display: grid; gap: 4px; }
+.co1-ready { font-weight: 600; }
+.co1-pd-row + .co1-pd-row { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
+.co1-pd dl.kv, .co1-cell { margin: 0; }
+.co1-pdo { margin-top: 4px; }
+.co1-pd-l .pd-tag + .pd-tag { margin-top: 8px; }
