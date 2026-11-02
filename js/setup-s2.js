@@ -145,7 +145,7 @@ ACT.addQ = el => { toast('Short-course quiz questions are added per module on th
 /* ---------- S2-04 Criteria mapping (saved) ---------- */
 INP.mapChange = el => {
   const d = s2Def(el.dataset.id); if (!d) return; const q = d.qs.find(x => x.id === el.dataset.q), c = el.dataset.c, on = el.checked;
-  const apply = r => { q.crit = on ? Array.from(new Set(q.crit.concat(c))) : q.crit.filter(x => x !== c); d.copies.forEach(cp => { const a = s2Copy(cp); if (!a) return; const aq = a.qs.find(x => x.id === q.id); if (aq && !aq.rounds.length) { aq.crit = q.crit[0] || ''; aq.crits = q.crit.slice(); } }); s2Log(d, r ? 'Mapping changed after submissions' : 'Mapping changed', `${q.id}: ${on ? '—' : c}`, `${q.id}: ${on ? c : 'removed'}`, r || ''); render(); };
+  const apply = r => { q.crit = on ? Array.from(new Set(q.crit.concat(c))) : q.crit.filter(x => x !== c); d.copies.forEach(cp => { const a = s2Copy(cp); if (!a) return; const aq = a.qs.find(x => x.id === q.id); if (aq && !aq.rounds.length) { aq.crit = q.crit[0] || ''; aq.crits = q.crit.slice(); } const cr = s2Crit(d); a.crit = Array.from(new Set(a.qs.flatMap(qCrits))).map(code => (a.crit || []).find(x => x[0] === code) || (c0 => [code, c0.d, c0.typeName || 'Knowledge'])(cr.find(x => x.code === code) || { d: code })); }); s2Log(d, r ? 'Mapping changed after submissions' : 'Mapping changed', `${q.id}: ${on ? '—' : c}`, `${q.id}: ${on ? c : 'removed'}`, r || ''); render(); };
   if (el.dataset.subs === '1') { el.checked = !on; reasonDlg({ title: 'Change mapping after submissions?', ok: 'Change mapping', danger: true, body: '<p class="small">Restricted and audited. Existing judgements stay against their original criteria.</p>', onOk: r => apply(r) }); return; }
   apply('');
 };

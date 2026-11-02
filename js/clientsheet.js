@@ -40,16 +40,18 @@ function csCrit(a, code) {
 }
 let CS_ASG = null;
 function csQHead(q, i) {
-  const c = csCrit(CS_ASG, q.crit);
-  return `<div class="q-h"><span class="q-n">Q${i + 1}</span><div class="stack" style="gap:6px"><span class="q-t">${esc(q.text)}</span><div class="row"><span class="code">${q.crit}</span>${critType(c.typeName || c.type)}</div>
-    <dl class="cs-crit small"><dt>Criterion</dt><dd>${esc(c.d)}</dd><dt>Evidence requirements</dt><dd>${esc(c.ev)}</dd></dl></div></div>`;
+  // AA-1 (D2): a question mapped to several criteria shows each of them (each is judged separately)
+  const one = code => { const c = csCrit(CS_ASG, code); return `<div class="row"><span class="code">${esc(code)}</span>${critType(c.typeName || c.type)}</div>
+    <dl class="cs-crit small"><dt>Criterion</dt><dd>${esc(c.d)}</dd><dt>Evidence requirements</dt><dd>${esc(c.ev)}</dd></dl>`; };
+  const cs = qCrits(q);
+  return `<div class="q-h"><span class="q-n">Q${i + 1}</span><div class="stack" style="gap:6px"><span class="q-t">${esc(q.text)}</span>${cs.length > 1 ? `<span class="xs muted aa1-qn">This question is assessed against ${cs.length} criteria — each is judged separately.</span>` : ''}${(cs.length ? cs : [q.crit]).map(one).join('')}</div></div>`;
 }
 const csUnitTitle = a => { const code = (a.unit || '').split(' ')[0], u = (W.tree || []).find(x => x.code === code); return u ? u.title : ''; };
 function csCritDoc(a) {
   return `<div class="cs-pdf"><p class="xs muted">Illumin Academy · Assessment criteria</p><h3>${esc(a.title)}</h3>
     <dl class="cs-dl small"><dt>Programme</dt><dd>${esc(W.nvq.title)}</dd><dt>Unit / module</dt><dd>${esc(a.unit)}${csUnitTitle(a) ? ' — ' + esc(csUnitTitle(a)) : ''}</dd></dl>
-    <ol class="cs-pdf-q">${a.qs.map((q, i) => { const c = csCrit(a, q.crit); return `<li data-q="${i + 1}"><strong>Q${i + 1}. ${esc(q.text)}</strong>
-      <dl class="cs-dl small"><dt>Code</dt><dd class="mono">${esc(c.code)}</dd><dt>Descriptor</dt><dd>${esc(c.d)}</dd><dt>Assessment type</dt><dd>${esc(critTypeLabel(c.typeName || c.type))}</dd><dt>Evidence requirements</dt><dd>${esc(c.ev)}</dd></dl></li>`; }).join('')}</ol></div>`;
+    <ol class="cs-pdf-q">${a.qs.map((q, i) => `<li data-q="${i + 1}"><strong>Q${i + 1}. ${esc(q.text)}</strong>${(qCrits(q).length ? qCrits(q) : [q.crit]).map(code => { const c = csCrit(a, code); return `
+      <dl class="cs-dl small"><dt>Code</dt><dd class="mono">${esc(c.code)}</dd><dt>Descriptor</dt><dd>${esc(c.d)}</dd><dt>Assessment type</dt><dd>${esc(critTypeLabel(c.typeName || c.type))}</dd><dt>Evidence requirements</dt><dd>${esc(c.ev)}</dd></dl>`; }).join('')}</li>`).join('')}</ol></div>`;
 }
 ACT.csCritPdf = el => {
   const a = asgById(el.dataset.id); if (!a) return;

@@ -1603,3 +1603,7 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 .cbx-desc { margin: -4px 0 12px; }
 .cbx-step { font-weight: 600; color: var(--text); }
 .cbx-sub { margin: 18px 0 8px; font-size: 1rem; }
+/* AA-1: further criteria of one question, judged one by one */
+.aa1-xc { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 10px; }
+.aa1-qn { margin: 0 0 6px; }
+.aa1-abq { margin-bottom: 6px; }

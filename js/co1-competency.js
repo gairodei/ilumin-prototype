@@ -139,10 +139,10 @@ const _finCO1 = finaliseSubmit;
 finaliseSubmit = function (a, resub, at) {
   const w = W, qs = a && a.qs ? (resub ? a.qs.filter(q => q.state === 'rework') : a.qs) : [];
   const r = _finCO1.apply(this, arguments);
-  if (a && a.status === 'Submitted' && a.submittedAt === at && w && w.assignments && w.assignments.includes(a)) co1Submitted(w, qs.map(q => q.crit).filter(Boolean));
+  if (a && a.status === 'Submitted' && a.submittedAt === at && w && w.assignments && w.assignments.includes(a)) co1Submitted(w, qs.flatMap(qCrits)); // AA-1 (D2): every mapped criterion
   return r;
 };
-if (ACT.tasSimResub) { const _simCO1 = ACT.tasSimResub; ACT.tasSimResub = el => { const w = STORE.worlds.C, a = w && w.assignments.find(x => x.id === 'a2'), qs = a ? a.qs.filter(q => q.state === 'rework') : [], n = a ? a.resubUsed : 0; const r = _simCO1(el); if (a && a.resubUsed === n + 1 && a.status === 'Submitted') co1Submitted(w, qs.map(q => q.crit)); return r; }; }
+if (ACT.tasSimResub) { const _simCO1 = ACT.tasSimResub; ACT.tasSimResub = el => { const w = STORE.worlds.C, a = w && w.assignments.find(x => x.id === 'a2'), qs = a ? a.qs.filter(q => q.state === 'rework') : [], n = a ? a.resubUsed : 0; const r = _simCO1(el); if (a && a.resubUsed === n + 1 && a.status === 'Submitted') co1Submitted(w, qs.flatMap(qCrits)); return r; }; }
 
 /* ---------- 3. Published marking under the same learner · assignment · batch key reaches the Coordinator ---------- */
 // Ownership: the record is the one the Assessor published for this learner, assignment and batch (acKey); a record whose questions
@@ -273,10 +273,10 @@ function co1PdRows(L, a, key) {
   const out = [], tag = a.title.split(' —')[0];
   if (L.v && STORE.worlds[L.v]) {
     const w = STORE.worlds[L.v]; if (!w.pd) return out; const s = w.pd.session;
-    a.qs.forEach((q, k) => {
-      const it = (w.pd.items || []).find(i => i.ref === q.crit && i.go === 'assignment.' + a.id); if (q.state !== 'pd' && !it) return;
-      out.push({ q: k + 1, crit: q.crit, from: it ? it.from : `${tag} · Q${k + 1}`, reason: (it && it.reason) || q.pdReason || '', by: (it && co1PdItemBy(w, it)) || co1FbBy(q) || a.assessor || '', at: it && it.at, status: it ? it.status : '', outcome: it && it.outcome, session: s, who: co1PdWho(L.lid, s, L.batch) });
-    });
+    a.qs.forEach((q, k) => qCrits(q).forEach(code => { // AA-1 (D2): one row per mapped criterion
+      const it = (w.pd.items || []).find(i => i.ref === code && i.go === 'assignment.' + a.id); if (q.state !== 'pd' && !it) return;
+      out.push({ q: k + 1, crit: code, from: it ? it.from : `${tag} · Q${k + 1}`, reason: (it && it.reason) || q.pdReason || '', by: (it && co1PdItemBy(w, it)) || co1FbBy(q) || a.assessor || '', at: it && it.at, status: it ? it.status : '', outcome: it && it.outcome, session: s, who: co1PdWho(L.lid, s, L.batch) });
+    }));
     return out;
   }
   const rel = STORE.tas.rel[key], t = STORE.tas.pd.find(x => x.lid === L.lid); if (!rel || !rel.items) return out;

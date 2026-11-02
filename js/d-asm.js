@@ -21,7 +21,7 @@ const dCooJ = (key, crit) => r3Latest(key, crit, 'Academic Coordinator', true);
 const dOvOf = (key, jid) => r3Judg(key).filter(j => j.override && j.override.of === jid);
 ACT.dOverride = el => {
   const key = el && el.dataset && el.dataset.k, why = r3MarkWhy(key); if (why) return r3Deny(String(key || '—'), 'override a Coordinator judgement', why, tasLog);
-  const s = r3StaffSub(key), a = tasAsg(s), q = a && a.qs.find(x => x.id === el.dataset.q), j = q && dCooJ(key, q.crit);
+  const s = r3StaffSub(key), a = tasAsg(s), q = aqById(a, el.dataset.q), j = q && dCooJ(key, q.crit); // AA-1 (D2): or one further criterion of the question
   if (!q || !j) return toast('There is no published Coordinator judgement for this criterion.', 'err');
   const round = a.round || 'Sub 1';
   reasonDlg({ title: `Override the Coordinator's judgement — ${esc(q.crit)}`, ok: 'Record override', label: 'Reason (required — the learner sees it with your released marking)',
@@ -29,8 +29,8 @@ ACT.dOverride = el => {
     onOk: r => {
       const w = r3MarkWhy(key); if (w) { r3Deny(String(key), 'override a Coordinator judgement', w, tasLog); return false; }
       const v = ($('input[name="d-ov"]:checked') || {}).value; if (!R3_VALS.includes(v) || v === j.value) { fieldErr('#d-ov-v', 'Choose a judgement different from the Coordinator\'s'); return false; }
-      const me = TME().name, rec = r3Add(key, { aid: a.id, title: a.title, qid: q.id, crit: q.crit, value: v, text: `Overrides the Coordinator's "${j.value}" (${j.by}): ${r}`, by: me, role: 'Assessor', round, published: false, override: { of: j.id, from: j.value, coord: j.by, reason: r } });
-      const d = dft(key); d.items[q.id] = { ...(d.items[q.id] || {}), met: v }; // the Assessor's marking for this criterion (applied when the marking is released)
+      const me = TME().name, rec = r3Add(key, { aid: a.id, title: a.title, qid: q.baseId || q.id, crit: q.crit, value: v, text: `Overrides the Coordinator's "${j.value}" (${j.by}): ${r}`, by: me, role: 'Assessor', round, published: false, override: { of: j.id, from: j.value, coord: j.by, reason: r } });
+      if (q.baseId) itmC(key, q.baseId, q.crit).met = v; else { const d = dft(key); d.items[q.id] = { ...(d.items[q.id] || {}), met: v }; } // the Assessor's marking for this criterion (applied when the marking is released)
       tasLog('Assessment', `${s.L.name} · ${a.title}`, 'Coordinator judgement overridden', `${q.crit}: ${j.value} (${j.by})`, `${q.crit}: ${v} (${me})`, r);
       if (s.L.batch && s.L.batch.coord) chCooNotify(s.L.batch.coord, 'Criterion judgement overridden by the Assessor', `${s.L.name} · ${a.title} · ${q.crit}: ${j.value} → ${v} — ${r}`, 'c-sub.' + key);
       render(); toast(`Override recorded (${rec.id}). The learner sees it when your marking is released.`);

@@ -188,7 +188,7 @@ SCREENS.assignment = (p) => {
   else main = lockedView(a);
   return head + asgHeader(a) + main;
 };
-function qHead(q, i) { const c = allCrit().find(x => x.code === q.crit); return `<div class="q-h"><span class="q-n">Q${i + 1}</span><div class="stack" style="gap:6px"><span class="q-t">${esc(q.text)}</span><div class="row"><span class="code">${q.crit}</span>${critType(c ? c.typeName || c.type : 'Knowledge')}</div></div></div>`; }
+function qHead(q, i) { const row = code => { const c = allCrit().find(x => x.code === code); return `<div class="row"><span class="code">${code}</span>${critType(c ? c.typeName || c.type : 'Knowledge')}</div>`; }; return `<div class="q-h"><span class="q-n">Q${i + 1}</span><div class="stack" style="gap:6px"><span class="q-t">${esc(q.text)}</span>${(typeof qCrits === 'function' && qCrits(q).length ? qCrits(q) : [q.crit]).map(row).join('')}</div></div>`; } // AA-1 (D2): every mapped criterion
 function answerSheet(a) {
   return `<section class="stack"><div class="row-b" style="position:sticky;top:calc(var(--hdr) + 8px);z-index:5;background:var(--bg);padding:6px 0"><h2>Answer sheet</h2><div class="row"><span id="savechip" class="save-chip ok" role="status" aria-live="polite">${ic('check', 13)}${Object.keys(W.drafts).some(k => k.startsWith(a.id)) ? 'Saved' : 'Auto-save on'}</span><button class="btn btn-primary" data-act="reviewSubmit" data-id="${a.id}">Review &amp; Submit</button></div></div>
   <p class="small muted">Your answers save automatically as you type and at least every 10 seconds.</p>

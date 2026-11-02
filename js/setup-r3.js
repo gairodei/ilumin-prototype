@@ -45,7 +45,7 @@ ACT.mkMet = (el, e) => {
   const key = el.dataset.k, s = r3StaffSub(key), v = el.dataset.v; if (!R3_VALS.includes(v)) return toast('Choose Met, Partially Met or Not Met.', 'err');
   const r = _mkMetR3(el, e); if (r === false || !s) return r;
   const a = tasAsg(s), q = a.qs.find(x => x.id === el.dataset.q); if (!q) return r;
-  r3Add(key, { aid: a.id, title: a.title, qid: q.id, crit: q.crit, value: v, by: TME().name, role: 'Assessor', round: a.round || 'Sub 1', published: false });
+  r3Add(key, { aid: a.id, title: a.title, qid: q.id, crit: el.dataset.c || q.crit, value: v, by: TME().name, role: 'Assessor', round: a.round || 'Sub 1', published: false }); // AA-1 (D2): the criterion judged
   return r;
 };
 // Workspace: a third judgement (Partially Met — not verifiable), the outcome card and the judgement history
@@ -61,12 +61,14 @@ SCREENS['t-mark'] = p => {
 };
 // Partially Met reaches the criterion as "In Progress" (it is neither Achieved nor Action Required); it can't be verified
 const _consR3 = consistency;
-consistency = function (a, d, s) { const w = _consR3.apply(this, arguments); markable(a).forEach(q => { const x = d.items[q.id] || {}; if (x.met === 'Partially Met' && x.exit === 'pass') w.push(`Q${a.qs.indexOf(q) + 1}: criterion ${q.crit} is Partially Met with exit Passed`); }); return w; };
+consistency = function (a, d, s) { const w = _consR3.apply(this, arguments); markable(a).forEach(q => { const x = d.items[q.id] || {}; if (x.met === 'Partially Met' && x.exit === 'pass') w.push(`Q${a.qs.indexOf(q) + 1}: criterion ${q.crit} is Partially Met with exit Passed`);
+  // AA-1 (D2): a question's further criteria are judged one by one — a missing or contradicting judgement is pointed out (never decided for the Assessor)
+  qCrits(q).filter(c => c !== q.crit).forEach(c => { const y = (x.cj || {})[c] || {}, n = `Q${a.qs.indexOf(q) + 1}: criterion ${c}`; if (s && critLock(s, c)) return; if (!y.met) w.push(`${n} has no judgement yet`); else if (y.met !== 'Met' && x.exit === 'pass') w.push(`${n} is ${y.met} with exit Passed`); }); }); return w; };
 // On release, the Assessor's judgements for this marking are published with it (and any set without the buttons are logged)
 const _relR3 = releaseFeedback;
 releaseFeedback = function (s, a, d) {
   const key = s.key, its = markable(a), round = a.round || 'Sub 1', me = TME().name;
-  its.forEach(q => { const x = d.items[q.id] || {}; if (!R3_VALS.includes(x.met)) return; const last = r3Judg(key).filter(j => j.qid === q.id && j.role === 'Assessor' && j.round === round).slice(-1)[0]; if (!last || last.value !== x.met) r3Add(key, { aid: a.id, title: a.title, qid: q.id, crit: q.crit, value: x.met, by: me, role: 'Assessor', round, published: false }); });
+  its.forEach(q => { const x = d.items[q.id] || {}; qCrits(q).forEach(code => { const y = code === q.crit ? x : (x.cj || {})[code] || {}; if (!R3_VALS.includes(y.met)) return; const last = r3Judg(key).filter(j => j.qid === q.id && (j.crit || q.crit) === code && j.role === 'Assessor' && j.round === round).slice(-1)[0]; if (!last || last.value !== y.met) r3Add(key, { aid: a.id, title: a.title, qid: q.id, crit: code, value: y.met, by: me, role: 'Assessor', round, published: false }); }); }); // AA-1 (D2): one judgement per mapped criterion
   const r = _relR3.apply(this, arguments), at = now().toISOString();
   r3Judg(key).forEach(j => { if (j.role === 'Assessor' && !j.published) { j.published = true; j.pubAt = at; } });
   return r;
@@ -140,7 +142,7 @@ function r3CritPanel(s, a, q, why) {
 }
 // Publish one judgement (from the form or the saved draft); the draft is cleared
 function r3CooPublish(s, a, q, v, t) {
-  const key = s.key, at = now().toISOString(), j = r3Add(key, { aid: a.id, title: a.title, qid: q.id, crit: q.crit, value: v, text: t, by: CME().name, role: 'Academic Coordinator', round: s.round || a.round || 'Sub 1', published: true, pubAt: at });
+  const key = s.key, at = now().toISOString(), j = r3Add(key, { aid: a.id, title: a.title, qid: q.baseId || q.id, crit: q.crit, value: v, text: t, by: CME().name, role: 'Academic Coordinator', round: s.round || a.round || 'Sub 1', published: true, pubAt: at });
   delete r3CDraft(key)[q.id];
   if (s.live && s.L.v) notifyLearner(s.L.v, 'Assignments', 'Criterion feedback from your Coordinator', `${a.title}: ${q.crit} — ${v}.`, 'assignment.' + a.id);
   cooLog('Assessment', `${s.L.name} · ${a.title}`, 'Criterion judgement published', '—', `${q.crit}: ${v} (${j.round})`, t);
@@ -149,12 +151,12 @@ function r3CooPublish(s, a, q, v, t) {
 const r3CooCtx = (el, what) => { const key = el && el.dataset && el.dataset.k, why = r3CooWhy(key); if (why) { r3Deny(String(key || '—'), what, why, S.portal === 'coord' ? cooLog : logA); return null; } const s = mySubmissions(true).find(x => x.key === key), a = synthAsg(s); return { key, s, a }; };
 const r3FormVal = qid => ({ v: ($('#r3-cv-' + qid) || {}).value || '', t: (($('#r3-ct-' + qid) || {}).value || '').trim() });
 ACT.r3CooDraft = el => {
-  const c = r3CooCtx(el, 'save a criterion draft'); if (!c) return false; const q = c.a.qs.find(x => x.id === el.dataset.q); if (!q) return;
+  const c = r3CooCtx(el, 'save a criterion draft'); if (!c) return false; const q = aqById(c.a, el.dataset.q); if (!q) return;
   const { v, t } = r3FormVal(q.id); if (!v && !t) return fieldErr('#r3-cv-' + q.id, 'Choose a judgement or write feedback first');
   r3CDraft(c.key)[q.id] = { value: v, text: t, at: now().toISOString(), by: CME().name }; render(); toast('Draft saved — not visible to the learner.');
 };
 ACT.r3CooJudge = el => {
-  const c = r3CooCtx(el, 'publish a criterion judgement'); if (!c) return false; const q = c.a.qs.find(x => x.id === el.dataset.q); if (!q) return;
+  const c = r3CooCtx(el, 'publish a criterion judgement'); if (!c) return false; const q = aqById(c.a, el.dataset.q); if (!q) return;
   const f = r3FormVal(q.id), d = r3CDraft(c.key)[q.id] || {}, v = f.v || d.value || '', t = f.t || (d.text || '').trim();
   if (!R3_VALS.includes(v)) return fieldErr('#r3-cv-' + q.id, 'Choose Met, Partially Met or Not Met');
   if (!t) return fieldErr('#r3-ct-' + q.id, 'Enter the feedback');
@@ -164,8 +166,8 @@ ACT.r3CooPubAll = el => {
   const c = r3CooCtx(el, 'publish criterion judgements'); if (!c) return false; const dr = r3CDraft(c.key), ids = Object.keys(dr);
   const ready = ids.filter(id => R3_VALS.includes(dr[id].value) && (dr[id].text || '').trim()), open = ids.length - ready.length;
   if (!ready.length) return toast('No complete drafts — each needs a judgement and feedback.', 'err');
-  confirmDlg({ title: 'Publish ' + plural(ready.length, 'draft') + ' to the learner?', ok: 'Publish', body: `<ul class="list small">${ready.map(id => { const q = c.a.qs.find(x => x.id === id); return `<li class="li"><span class="code">${esc(q.crit)}</span> ${chip(dr[id].value, r3Tone(dr[id].value))} <span class="small">${esc(dr[id].text)}</span></li>`; }).join('')}</ul>${open ? `<p class="xs muted">${plural(open, 'draft')} without a judgement or feedback stay as drafts.</p>` : ''}`,
-    onOk: () => { if (!r3CooCtx(el, 'publish criterion judgements')) return false; ready.forEach(id => { const q = c.a.qs.find(x => x.id === id); r3CooPublish(c.s, c.a, q, dr[id].value, dr[id].text.trim()); }); render(); toast(plural(ready.length, 'judgement') + ' published to the learner.'); } });
+  confirmDlg({ title: 'Publish ' + plural(ready.length, 'draft') + ' to the learner?', ok: 'Publish', body: `<ul class="list small">${ready.map(id => { const q = aqById(c.a, id); if (!q) return ''; return `<li class="li"><span class="code">${esc(q.crit)}</span> ${chip(dr[id].value, r3Tone(dr[id].value))} <span class="small">${esc(dr[id].text)}</span></li>`; }).join('')}</ul>${open ? `<p class="xs muted">${plural(open, 'draft')} without a judgement or feedback stay as drafts.</p>` : ''}`,
+    onOk: () => { if (!r3CooCtx(el, 'publish criterion judgements')) return false; ready.forEach(id => { const q = aqById(c.a, id); if (q) r3CooPublish(c.s, c.a, q, dr[id].value, dr[id].text.trim()); }); render(); toast(plural(ready.length, 'judgement') + ' published to the learner.'); } });
 };
 // The Coordinator's assignment review: each answer beside its criterion assessment; the written comment is secondary
 SCREENS['c-sub'] = p => {
