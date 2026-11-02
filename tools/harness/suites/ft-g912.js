@@ -36,14 +36,16 @@
   });
   T('G9.2 consent flow (already enrolled → Business Admin)', () => {
     ACT.scConsentEnrolled(); const c = agyConsents()[0]; ok('request raised for enrolled course', c.status === 'Awaiting learner consent', c.course);
-    ACT.consentDo({ dataset: { id: c.id, y: '1' } }); ok('→ Awaiting Academy approval + queue item', c.status === 'Awaiting Academy approval' && !!c.qid, c.qid);
+    // MR-12: the learner answers (was called straight after the agency raised it, i.e. as the agency)
+    S.variant = 'A'; ACT.switchRole({ dataset: { r: 'learner' } }); ACT.consentDo({ dataset: { id: c.id, y: '1' } }); ok('→ Awaiting Academy approval + queue item', c.status === 'Awaiting Academy approval' && !!c.qid, c.qid);
     const i = qItem(c.qid); ok('queue item for Business Admin with consent', i && i.first === 'Sophie Turner' && !!i.data.consentAt);
     ACT.switchRole({ dataset: { r: 'bizA' } }); go('a-queue', { id: c.qid }); ok('detail shows consent, no checkbox, no TBD', /Consented/.test(main()) && !document.getElementById('bl-consent') && !/consent \/ verification/.test(html()));
     ACT.qDo({ dataset: { id: c.qid, a: 'approve' } }); $('#rsn').value ='Learner consented; works for Hartwell'; prim(); ok('approved → Linked', c.status === 'Linked', c.status + ' / ' + i.status);
   });
   T('G9.2 decline + expiry', () => {
     ok('seeded statuses cover all five', ['Awaiting learner consent', 'Awaiting Academy approval', 'Linked', 'Declined', 'Expired'].every(s => agyConsents().some(c => c.status === s)));
-    agy('AG-02'); const L = allLearners().find(l => l.name === 'Zainab Hussain'); const c = agyRequestConsent(L, L.email, 'Dementia Awareness', 'test'); ACT.consentDo({ dataset: { id: c.id, y: '0' } }); ok('declined', c.status === 'Declined');
+    // MR-12: Zainab declines from her consent email in the learner inbox (was answered as the agency AG-02)
+    agy('AG-02'); const L = allLearners().find(l => l.name === 'Zainab Hussain'); const c = agyRequestConsent(L, L.email, 'Dementia Awareness', 'test'); go('m-inbox', { id: 'LM-K' + c.id }); ACT.consentDo({ dataset: { id: c.id, y: '0' } }); ok('declined', c.status === 'Declined');
     const L2 = allLearners().find(l => l.name === 'Megan Roberts'); const c2 = agyRequestConsent(L2, L2.email, 'Fire Safety Awareness', 'test'); const n0 = STORE.agy.notifs.length; STORE.agy.offset += 8; agyConsents(); ok('expires after 7 days + agency notified', c2.status === 'Expired' && STORE.agy.notifs.length > n0 && /expired/i.test(STORE.agy.notifs[0].t), c2.status); STORE.agy.offset -= 8;
   });
   // ---------- G9.3 ----------

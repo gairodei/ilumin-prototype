@@ -357,7 +357,9 @@ ACT.qEdge = el => {
   if (e === 'empty') { S.ui['dt-qrec'] = { q: 'zzz-no-match', f: {}, sort: null, page: 0, hide: [], sel: [] }; go('q-records'); }
 };
 ACT.qSimAdv = () => { const r = STORE.iqa.recs.find(x => x.kind === 'sub' && !recAdvisory(x) && !recSets(x).length); STORE.tas.advisory[r.key] = 'Borderline decision — a second view would help.'; iqaNotify('Assessor added an advisory note', `${r.id} · ${r.assessor}`, 'q-record.' + r.id); render(); toast(`Demo only: ${r.assessor} flagged ${r.id} as worth IQA attention. It shows as a marker only — filters are unchanged.`, 'info'); };
-ACT.qSimCorr = () => { const i = ADMIN.queue.find(x => x.id === 'AQ-7001'); if (!i || !isOpen(i)) { toast('No pending correction.', 'info'); return; } const sv = ADMIN.me; ADMIN.me = { ...sv, name: 'Nadia Qureshi' }; try { applyDecision(i, 'approveFinal', 'Mapping corrected', {}); } finally { ADMIN.me = sv; } render(); toast('Demo only: the Super Administrator approved AQ-7001.', 'info'); };
+// MR-35: the demo control no longer acts as the Super Administrator from the IQA portal (it was refused and logged under a borrowed
+// name). It says where the correction is decided; the System Administrator forwards it and the Super Administrator approves it.
+ACT.qSimCorr = () => { const i = ADMIN.queue.find(x => x.id === 'AQ-7001'); if (!i || !isOpen(i)) { toast('No pending correction.', 'info'); return; } toast(`Demo only: ${i.id} is decided in the Approvals Queue — the System Administrator's first review (Forward), then the Super Administrator's final approval. Sign in as them to approve it; the correction history then appears here.`, 'info'); };
 // Data Correction approved on a record → correction history + notify finding authors
 const _applyQ = applyDecision;
 applyDecision = function (i, a, r, o) {

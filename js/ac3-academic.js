@@ -115,7 +115,7 @@ const _qDoAC3 = ACT.qDo;
 ACT.qDo = el => {
   const id = el && el.dataset && el.dataset.id, i = id && acFind(id), a = el && el.dataset && el.dataset.a;
   // B3-05: the final approval waits for the System Administrator's first review
-  if (i && i.type === 'Data correction' && a === 'approveFinal' && i.stage !== 'final' && isOpen(i)) return w0Deny('Approvals Queue', i.id, 'give a Data Correction\'s final approval', AC3_DC_WHY);
+  if (i && i.type === 'Data correction' && a === 'approveFinal' && !ac3DcReady(i) && isOpen(i)) return w0Deny('Approvals Queue', i.id, 'give a Data Correction\'s final approval', AC3_DC_WHY);
   // B4-D9: the decision dialog says how many attempts the grant gives
   if (i && i.type === 'Extra quiz attempts' && a === 'grant') { const r = _qDoAC3(el), rm = i.req && i.v && shReqMod(STORE.worlds[i.v], i.req); if (MODAL && rm) { MODAL.body = MODAL.body.replace('the quiz\'s original number of attempts (3)', `the quiz's original number of attempts (${ac3Base(rm.m.quiz)})`); renderModal(); } return r; }
   const r = _qDoAC3(el);
@@ -125,10 +125,15 @@ ACT.qDo = el => {
 
 /* ---------- B3-05 / B3-06 / B4-D5: Data Corrections and recommendations ---------- */
 const AC3_DC_WHY = 'A Data Correction is approved by the Super Administrator after the System Administrator\'s first review. Waiting for that review (Forward).';
+// MR-23 (SYS_VARIANTS.SC: "own items route to the Super Administrator"): the first review is waited for only while another active
+// System Administrator — not the raiser and not the learner the item is about — can give it. When none exists the Super
+// Administrator may give the final approval without it (the item says so).
+const ac3NoReviewer = i => typeof sysNames === 'function' && !sysNames().some(n => n !== i.raisedBy && !String((i.related || [])[0] || '').startsWith(n + ' ·'));
+const ac3DcReady = i => !!i && (i.stage === 'final' || ac3NoReviewer(i));
 const _adAC3 = applyDecision;
 applyDecision = function (i, a, r, o) {
   if (i && a !== 'note' && !AC_OVERRIDE) {
-    if (i.type === 'Data correction' && a === 'approveFinal' && i.stage !== 'final' && !i._sa && isOpen(i)) return w0Deny('Approvals Queue', i.id, 'give a Data Correction\'s final approval', AC3_DC_WHY);
+    if (i.type === 'Data correction' && a === 'approveFinal' && !ac3DcReady(i) && !i._sa && isOpen(i)) return w0Deny('Approvals Queue', i.id, 'give a Data Correction\'s final approval', AC3_DC_WHY);
     // The Academic Admin who raised an academic item, recorded its recommendation or is its learner decides none of its verbs
     // (approve-type verbs were already blocked; reject / decline / return weren't for the recorder). The Super Administrator is exempt (rule 1).
     if (ACA_TYPES.includes(i.type) && isOpen(i) && !isSA() && typeof acaBlocked === 'function' && acaBlocked(i)) return w0Deny('Approvals Queue', i.id, 'decide an item you recorded or raised', 'You raised this item or recorded its recommendation, so another Academic Admin (or the Super Administrator) decides it.');
@@ -142,7 +147,7 @@ applyDecision = function (i, a, r, o) {
 const _qDetAC3 = SCREENS['a-queue'];
 SCREENS['a-queue'] = function (p) {
   let h = _qDetAC3.apply(this, arguments); const i = p && p.id && typeof h === 'string' ? acFind(p.id) : null; if (!i) return h;
-  if (i.type === 'Data correction' && isOpen(i) && i.stage !== 'final' && isSA()) h = h.replace(/<button class="btn [^"]*" data-act="qDo" data-id="[^"]*" data-a="approveFinal"[^>]*>[^<]*<\/button>/, `<span class="xs muted ac3-dcw">${esc(AC3_DC_WHY)}</span>`);
+  if (i.type === 'Data correction' && isOpen(i) && !ac3DcReady(i) && isSA()) h = h.replace(/<button class="btn [^"]*" data-act="qDo" data-id="[^"]*" data-a="approveFinal"[^>]*>[^<]*<\/button>/, `<span class="xs muted ac3-dcw">${esc(AC3_DC_WHY)}</span>`);
   if (i.type === 'Extra quiz attempts' && i.req && i.v) { const rm = shReqMod(STORE.worlds[i.v], i.req); if (rm) h = h.replace('3 of 3 — not passed', `${rm.m.quiz.attempts.length} of ${rm.m.quiz.max} — not passed`).replace('the quiz\'s original number of attempts (3)', `the quiz's original number of attempts (${ac3Base(rm.m.quiz)})`); }
   return h;
 };

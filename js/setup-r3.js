@@ -122,7 +122,8 @@ function r3CooWhy(key) {
   return '';
 }
 // The Coordinator's unpublished drafts (one per question / criterion) — never shown to the learner
-const r3CDraft = key => { const s = R3(); s.cdraft = s.cdraft || {}; return (s.cdraft[key] = s.cdraft[key] || {}); };
+// MR-18: one set of drafts per submission and Coordinator — another Coordinator's private drafts are never shown, saved over or published
+const r3CDraft = key => { const s = R3(); s.cdraft = s.cdraft || {}; const k = key + '|' + (typeof CME === 'function' ? CME().name : '—'); return (s.cdraft[k] = s.cdraft[k] || {}); };
 const r3CritOf = (a, code) => a.crit.find(c => c[0] === code) || [code, '', ''];
 const r3PubRow = j => `<div class="r3-pubrow">${chip(j.value, r3Tone(j.value))} <span class="xs muted">${j.role === 'Assessor' ? 'Assessor' : 'Coordinator'} · ${esc(j.by)} · ${fdt(j.pubAt || j.at)} · ${esc(j.round)}</span>${j.text ? `<div class="small">${esc(j.text)}</div>` : ''}</div>`;
 // One criterion's assessment panel: what the learner already sees, the Coordinator's draft / publish form, history
@@ -170,7 +171,7 @@ ACT.r3CooPubAll = el => {
 SCREENS['c-sub'] = p => {
   const s = mySubmissions(true).find(x => x.key === (p && p.id)); if (!s) return denied('submission ' + (p && p.id));
   const a = synthAsg(s), why = r3CooWhy(s.key), o = r3Out(s.key), ro = roBatch(s.L.batch) || s.L.status === 'Discontinued', drafts = Object.keys(r3CDraft(s.key)).length;
-  const draft = STORE.coo.drafts[s.key] || { text: '', scope: 'Overall submission' };
+  const draft = cooDraft(s.key) || { text: '', scope: 'Overall submission' };
   const qs = a.qs.map((q, k) => { const last = q.rounds.length - 1;
     const ans = last >= 0 ? `${roundBlock(q, last, q.rounds[last])}${last > 0 ? `<details><summary class="xs">Earlier rounds (${last})</summary>${q.rounds.slice(0, last).map((r, n) => roundBlock(q, n, r)).join('')}</details>` : ''}<div class="row"><button class="attach" data-act="viewFile" data-f="Q${k + 1}_attachment.pdf">${ic('clip2', 13)}Q${k + 1}_attachment.pdf</button></div>` : '<p class="small muted">No answer submitted for this question.</p>';
     return `<section class="card r3-cq" data-q="${q.id}"><div class="r3-cq-grid"><div class="r3-cq-ans">${qHead(q, k)}${ans}${q.state === 'pd' ? `<div class="pd-tag">${ic('users', 16)}<div><strong>Added to Professional Discussion — no rework needed</strong><div class="small">${esc(q.pdReason || '')}</div></div></div>` : ''}</div>${r3CritPanel(s, a, q, why)}</div></section>`; }).join('');

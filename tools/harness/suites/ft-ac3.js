@@ -139,7 +139,9 @@
   });
 
   await T('AC3-05 Data Correction: first review before the final approval (B3-05)', async () => {
-    const i = Q('AQ-1004'), c = STORE.worlds[i.data.v].certs.find(x => x.id === i.data.cert), no0 = c.no;
+    // MR-35: seeded AQ-1004 now carries its recorded first review (stage 'final'), so the rule is checked on an unforwarded copy (test-only)
+    { const x = JSON.parse(J(Q('AQ-1004'))); x.id = 'AQ-AC3DC'; delete x.stage; delete x.forwardedBy; x.data.firstReview = 'Awaiting System Administrator first review'; ADMIN.queue.push(x); }
+    const i = Q('AQ-AC3DC'), c = STORE.worlds[i.data.v].certs.find(x => x.id === i.data.cert), no0 = c.no;
     SA(); const s0 = sec(); ACT.qDo({ dataset: { id: i.id, a: 'approveFinal' } }); const m = !!MODAL; closeModal(); const r = applyDecision(i, 'approveFinal', 'skip review', {});
     ok('AC3-05 the Super Administrator cannot give the final approval before the System Administrator\'s first review (dialog and direct call); nothing re-issued', !m && r === false && isOpen(i) && c.no === no0 && sec() === s0 + 2);
     go('a-queue', { id: i.id }); ok('AC3-05 screen: no final-approval button yet; it says the first review is awaited', !$1('main [data-act="qDo"][data-a="approveFinal"]') && !!$1('main .ac3-dcw'));

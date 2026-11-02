@@ -9,6 +9,17 @@ const COO_USERS = {
 };
 S.coo = { v: 'A', mode: 'D2', edge: 'none', ctx: 'Academic Coordinator', batch: 'all', dirty: false, failNext: false, seen: {} };
 const CME = () => COO_USERS[S.coo.v];
+// MR-18: a Coordinator's written-comment draft is their own — kept per submission and Coordinator, never shown to, saved over or
+// posted by another Coordinator. A draft stored under the submission alone (older data) belongs to whoever wrote it (by), or, when
+// unattributed, to the first Coordinator who opens it.
+const cooDraft = (k, init) => {
+  const all = STORE.coo.drafts, me = CME().name, mk = k + '|' + me, old = all[k];
+  if (!all[mk] && old && (!old.by || old.by === me)) { all[mk] = { ...old, by: me }; delete all[k]; }
+  if (!all[mk] && init) all[mk] = { ...init, by: me };
+  return all[mk] || null;
+};
+const cooDraftDel = k => { delete STORE.coo.drafts[k + '|' + CME().name]; };
+const MR_COO_SCOPE = 'This submission isn\'t in your batches.';
 const ACAD_ADMIN = 'Rachel Hughes (Academic Admin)', SYS_ADMIN = 'Owen Price (System Administrator)';
 
 /* ---------- Shared-store patches (additive) ---------- */
@@ -198,7 +209,8 @@ function cooNotifs() {
     else if (a.module === 'Learners' && /Enrolment (discontinued|reactivated)/.test(a.action) && names.some(n => a.entity.includes(n) || myLearners(true).some(l => a.entity.startsWith(l.lid)))) der.push({ id: 'd' + a.id, t: 'Learner ' + (a.action.includes('discontinued') ? 'discontinued' : 'reactivated') + ' in my batch', b: a.entity, at: a.at, go: 'c-learners', unread: !S.coo.seen[a.id] });
     else if (a.module === 'Scheduling' && a.action === 'Session added') der.push({ id: 'd' + a.id, t: 'Schedule changed', b: fxClient() ? 'New session: ' + a.entity : 'New session for Leicester Cohort 7', at: a.at, go: 'c-timeline', unread: !S.coo.seen[a.id] });
   });
-  return der.concat(S.coo.v === 'B' ? STORE.coo.notifs.slice(4, 8) : STORE.coo.notifs).sort((x, y) => new Date(y.at) - new Date(x.at));
+  // MR-27: every notice names its recipient(s) (mr-r.js addresses them); a Coordinator sees their own — no fixed slice per persona
+  return der.concat(STORE.coo.notifs.filter(n => typeof mrFor === 'function' ? mrFor(n, me, 'coo') : true)).sort((x, y) => new Date(y.at) - new Date(x.at));
 }
 function cooThreads() {
   const me = CME().name;
@@ -490,7 +502,7 @@ SCREENS['c-sub'] = (p) => {
   const s = mySubmissions(true).find(x => x.key === p.id);
   if (!s) return denied('submission ' + p.id);
   const a = synthAsg(s), ro = roBatch(s.L.batch) || s.L.status === 'Discontinued';
-  const draft = STORE.coo.drafts[s.key] || { text: '', scope: 'Overall submission' };
+  const draft = cooDraft(s.key) || { text: '', scope: 'Overall submission' };
   return `${pageA(esc(a.title), `${esc(s.L.name)} · ${esc(s.L.batch.label)} · submitted ${fdt(s.at)}`, `${chip(s.status)}<span class="code">${s.round}</span>${s.pd ? chip('Added to PD', 'purple') : ''}`, [['Submissions & Feedback', 'c-submissions'], [s.L.name]])}
   <div class="split"><div class="stack-lg">
     <section class="card"><h3>Linked criteria</h3><ul class="list small">${a.crit.map(([c, d, t]) => `<li class="li"><span class="code">${c}</span><div class="li-b">${esc(d)}</div>${critType(t)}</li>`).join('')}</ul><h3>Status</h3>${statusTimeline(a)}${lockNote()}</section>
@@ -507,21 +519,21 @@ SCREENS['c-sub'] = (p) => {
   </aside></div>`;
 };
 function cfPreview(d) { return d.text ? `<div class="coord"><div class="c-h">${ic('users')}Coordinator feedback${d.scope !== 'Overall submission' ? ' · ' + esc(d.scope) : ''}</div><p class="small">${esc(d.text)}</p><p class="xs muted">${esc(CME().name)}, Academic Coordinator · ${fdt(now().toISOString())}</p><p class="xs strong">This does not change your submission status.</p></div>` : '<p class="small muted">Start typing to preview.</p>'; }
-INP.cfInput = el => { const d = STORE.coo.drafts[el.dataset.k] = STORE.coo.drafts[el.dataset.k] || { scope: 'Overall submission' }; d.html = el.innerHTML; d.text = el.innerText !== undefined ? el.innerText.trim() : el.textContent.trim(); S.coo.dirty = !!d.text; $('#cf-prev').innerHTML = cfPreview(d); const c = $('#cf-save'); c.className = 'save-chip busy'; c.textContent = 'Saving…'; clearTimeout(INP._cft); INP._cft = setTimeout(() => { if ($('#cf-save')) { c.className = 'save-chip ok'; c.innerHTML = ic('check', 12) + 'Draft saved ' + fmt(now().toISOString(), { hour: '2-digit', minute: '2-digit', hour12: false }); } }, 500); };
-INP.cfScope = el => { const d = STORE.coo.drafts[el.dataset.k] = STORE.coo.drafts[el.dataset.k] || { text: '' }; d.scope = el.value; $('#cf-prev').innerHTML = cfPreview(d); };
+INP.cfInput = el => { const d = cooDraft(el.dataset.k, { scope: 'Overall submission' }); d.html = el.innerHTML; d.text = el.innerText !== undefined ? el.innerText.trim() : el.textContent.trim(); S.coo.dirty = !!d.text; $('#cf-prev').innerHTML = cfPreview(d); const c = $('#cf-save'); c.className = 'save-chip busy'; c.textContent = 'Saving…'; clearTimeout(INP._cft); INP._cft = setTimeout(() => { if ($('#cf-save')) { c.className = 'save-chip ok'; c.innerHTML = ic('check', 12) + 'Draft saved ' + fmt(now().toISOString(), { hour: '2-digit', minute: '2-digit', hour12: false }); } }, 500); };
+INP.cfScope = el => { const d = cooDraft(el.dataset.k, { text: '' }); d.scope = el.value; $('#cf-prev').innerHTML = cfPreview(d); };
 ACT.cfPost = el => {
-  const k = el.dataset.k, d = STORE.coo.drafts[k];
+  const k = el.dataset.k; if (!mySubmissions(true).some(x => x.key === k)) return w0Deny('Assessment', String(k || '—'), 'post coordinator feedback', MR_COO_SCOPE); const d = cooDraft(k);
   if (!d || !d.text) { toast('Write some feedback first.', 'err'); $('#cf-body')?.focus(); return; }
   openModal({ title: 'Post coordinator feedback?', body: `${cfPreview(d)}<div class="note b-amber">${ic('lock')}<div class="small">Once posted, feedback is kept permanently in the submission history and cannot be edited or deleted.</div></div>`, actions: [{ label: 'Cancel' }, { label: 'Post feedback', cls: 'btn-primary', fn: () => postFeedback(k) }] });
 };
 function postFeedback(k) {
   if (S.coo.failNext || S.offline) { S.coo.failNext = false; toast('Feedback couldn\'t be posted. Your draft is kept — try again.', 'err'); openModal({ title: 'Feedback not posted', body: `<div class="note b-red">${ic('alert')}<div>Something went wrong while posting. Your draft is still saved on this submission.</div></div>`, actions: [{ label: 'Close' }, { label: 'Retry', cls: 'btn-primary', fn: () => { setTimeout(() => postFeedback(k), 0); } }] }); return false; }
-  const s = mySubmissions(true).find(x => x.key === k), d = STORE.coo.drafts[k];
+  const s = mySubmissions(true).find(x => x.key === k), d = cooDraft(k); if (!s) return w0Deny('Assessment', String(k || '—'), 'post coordinator feedback', MR_COO_SCOPE); if (!d || !d.text) { toast('Write some feedback first.', 'err'); return false; }
   const item = { by: CME().name, at: now().toISOString(), text: d.text, scope: d.scope || 'Overall submission' };
   if (s.live) { const a = s.live; a.coordAll = a.coordAll || (a.coord ? [a.coord] : []); a.coordAll.push(item); notifyLearner(s.L.v, 'Assignments', 'Coordinator feedback posted', `${CME().name} added feedback to ${a.title}.`, 'assignment.' + a.id); }
   else STORE.coo.fb.push({ key: k, ...item });
   cooLog('Assessment', `${s.L.name} · ${s.a.title}`, 'Coordinator feedback posted', '—', item.scope, 'Status unchanged: ' + s.status);
-  delete STORE.coo.drafts[k]; S.coo.dirty = false; render(); toast('Feedback posted — learner notified.');
+  cooDraftDel(k); S.coo.dirty = false; render(); toast('Feedback posted — learner notified.');
 }
 
 /* ---------- 6.5 Progress & Competency ---------- */
@@ -541,7 +553,7 @@ function heatmap(ls) {
     : crit.map(c => `<tr><td class="nowrap"><span class="code">${c.code}</span> ${critType(c.typeName || c.type)}</td>${ls.map(l => { const st = stOf(l, c); return `<td><button class="hc f-${TONE[st]}" data-act="hmCell" data-l="${l.lid}" data-c="${c.code}" title="${l.name}: ${st}">${ab[st]}</button></td>`; }).join('')}<td>${Math.round(ls.filter(l => stOf(l, c) === 'Achieved').length / ls.length * 100)}%</td></tr>`).join('')}</tbody></table></div><p class="xs muted">Key: A = Achieved · IP = In Progress · AR = Action Required · PD = Added to PD · NS = Not Started. Click a cell to see the evidence.</p></section>`;
 }
 ACT.hmBy = el => { setUi('hmBy', el.dataset.b); render(); };
-ACT.hmCell = el => { const L = myLearners(true).find(l => l.lid === el.dataset.l), c = withW('C', () => allCrit()).find(x => x.code === el.dataset.c); openModal({ title: `${c.code} — ${esc(L.name)}`, body: `<p>${esc(c.d)}</p><p>${critType(c.type)} ${chip(el.title.split(': ').pop())}</p><p class="small">Evidence: ${esc(c.src || 'Assignment / observation per programme plan')}</p>${lockNote()}`, actions: [{ label: 'Open learner', cls: 'btn', fn: () => go('c-learner', { id: L.lid, tab: 'progress' }) }, { label: 'Close', cls: 'btn-primary' }] }); };
+ACT.hmCell = el => { const L = myLearners(true).find(l => l.lid === (el && el.dataset && el.dataset.l)), c = withW('C', () => allCrit()).find(x => x.code === (el && el.dataset && el.dataset.c)); if (!L) return w0Deny('Progress', String((el && el.dataset && el.dataset.l) || '—'), 'open a learner\'s competency', 'This learner isn\'t in your batches.'); if (!c) return toast('That criterion isn\'t in this programme.', 'err'); openModal({ title: `${c.code} — ${esc(L.name)}`, body: `<p>${esc(c.d)}</p><p>${critType(c.type)} ${chip(el.title.split(': ').pop())}</p><p class="small">Evidence: ${esc(c.src || 'Assignment / observation per programme plan')}</p>${lockNote()}`, actions: [{ label: 'Open learner', cls: 'btn', fn: () => go('c-learner', { id: L.lid, tab: 'progress' }) }, { label: 'Close', cls: 'btn-primary' }] }); };
 
 /* ---------- 6.6 Timeline & Calendar ---------- */
 SCREENS['c-timeline'] = (p) => {

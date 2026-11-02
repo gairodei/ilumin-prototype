@@ -61,7 +61,10 @@ if (typeof STORE !== 'undefined' && STORE.worlds && ADMIN) chAssessSeed();
 
 /* ---------- Who can act (Teacher / Assessor portal) ---------- */
 const chMe = () => TME().name;
-const chScoped = () => hasRole('Assessor') && !S.chRaw;
+const chScoped = () => hasRole('Assessor') && !S.chRaw; // list visibility (an Assessor sees only the learners they are allocated)
+// MR-04 (MR-G2): the allocation guards on actions apply to every staff persona, not only Assessors — a Teacher-only user is never
+// the learner's assignment / PD / observation assessor, so each guarded action below refuses them too
+const chActScoped = () => !S.chRaw;
 const chRaw = f => { S.chRaw = true; try { return f(); } finally { S.chRaw = false; } };
 // Marking: only the learner's assignment assessor sees and marks their submissions (resubmissions included)
 const _tsCh5 = tasSubs;
@@ -78,19 +81,19 @@ SCREENS['t-mark'] = p => {
 // PD: only the learner's PD assessor proposes, records and postpones
 const _pdlCh5 = tasPdList;
 tasPdList = function () { const l = _pdlCh5(); return chScoped() ? l.filter(p => chEff(p.lid, 'pd') === chMe()) : l; };
-['pdPropose', 'pdPostpone', 'pdOutcome'].forEach(a => { const f = ACT[a]; ACT[a] = el => { const lid = el && el.dataset && el.dataset.l; if (chScoped() && lid && chEff(lid, 'pd') !== chMe()) { const L = allLearners().find(x => x.id === lid); chRefuse('PD', `${a} · ${L ? L.name : lid}`, chEff(lid, 'pd'), 'PD assessor'); toast(`Only ${L ? L.name + '\'s' : 'the learner\'s'} PD assessor (${chEff(lid, 'pd') || '—'}) can do this.`, 'err'); return; } return f(el); }; });
+['pdPropose', 'pdPostpone', 'pdOutcome'].forEach(a => { const f = ACT[a]; ACT[a] = el => { const lid = el && el.dataset && el.dataset.l; if (chActScoped() && lid && chEff(lid, 'pd') !== chMe()) { const L = allLearners().find(x => x.id === lid); chRefuse('PD', `${a} · ${L ? L.name : lid}`, chEff(lid, 'pd'), 'PD assessor'); toast(`Only ${L ? L.name + '\'s' : 'the learner\'s'} PD assessor (${chEff(lid, 'pd') || '—'}) can do this.`, 'err'); return; } return f(el); }; });
 // Observations: only the learner's observation assessor proposes, records and signs off
 const _obsCh5 = tasObs;
 tasObs = function () { const l = _obsCh5(); return chScoped() ? l.filter(o => chEff(o.lid, 'obs') === chMe()) : l; };
 const _obPropCh5 = ACT.obPropose;
 ACT.obPropose = el => {
-  if (chScoped() && el && el.dataset && el.dataset.l && chEff(el.dataset.l, 'obs') !== chMe()) { chRefuse('Observations', 'obPropose · ' + el.dataset.l, chEff(el.dataset.l, 'obs'), 'observation assessor'); toast(`Only the learner's observation assessor (${chEff(el.dataset.l, 'obs')}) can propose observations.`, 'err'); return; }
-  _obPropCh5(el); const sel = $('#op-l'); if (!sel || !chScoped()) return;
+  if (chActScoped() && el && el.dataset && el.dataset.l && chEff(el.dataset.l, 'obs') !== chMe()) { chRefuse('Observations', 'obPropose · ' + el.dataset.l, chEff(el.dataset.l, 'obs'), 'observation assessor'); toast(`Only the learner's observation assessor (${chEff(el.dataset.l, 'obs')}) can propose observations.`, 'err'); return; }
+  _obPropCh5(el); const sel = $('#op-l'); if (!sel || !chActScoped()) return;
   [...sel.options].forEach(o => { if (chEff(o.value, 'obs') !== chMe()) o.remove(); });
   if (!sel.options.length) { closeModal(); toast('You are not the observation assessor for any of your learners.', 'info'); return; }
   INP.obPerm && INP.obPerm(sel);
 };
-['orSign', 'obCancel', 'obFollow'].forEach(a => { const f = ACT[a]; ACT[a] = el => { const id = (el && el.dataset && el.dataset.id) || (S.params || {}).id; if (chScoped() && id && !tasObs().some(o => o.id === id)) { const raw = chRaw(() => tasObs().find(o => o.id === id)); if (raw) { chRefuse('Observations', `${a} · ${raw.learner}`, chEff(raw.lid, 'obs'), 'observation assessor'); toast(`Only ${raw.learner}'s observation assessor (${chEff(raw.lid, 'obs')}) can do this.`, 'err'); return; } } return f(el); }; });
+['orSign', 'obCancel', 'obFollow'].forEach(a => { const f = ACT[a]; ACT[a] = el => { const id = (el && el.dataset && el.dataset.id) || (S.params || {}).id; if (chActScoped() && id) { const raw = chRaw(() => tasObs().find(o => o.id === id)); if (raw && chEff(raw.lid, 'obs') !== chMe()) { chRefuse('Observations', `${a} · ${raw.learner}`, chEff(raw.lid, 'obs'), 'observation assessor'); toast(`Only ${raw.learner}'s observation assessor (${chEff(raw.lid, 'obs')}) can do this.`, 'err'); return; } } return f(el); }; });
 const _orCh5 = SCREENS['t-obsrec'];
 SCREENS['t-obsrec'] = p => { if (chScoped() && p && p.id && !tasObs().some(o => o.id === p.id)) { const raw = chRaw(() => tasObs().find(o => o.id === p.id)); if (raw) chRefuse('Observations', 't-obsrec · ' + raw.learner, chEff(raw.lid, 'obs'), 'observation assessor'); } return _orCh5(p); };
 

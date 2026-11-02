@@ -51,7 +51,8 @@ function agyConsents() {
     ADMIN.queue.filter(i => i.type === 'Link existing learner to agency' && i.data && i.data.consentId).forEach(i => G.consents.push({ id: i.data.consentId, agency: i.data.agency, lid: i.data.lid, learner: i.related[0].split(' → ')[0], email: i.data.email, course: i.data.course, sent: new Date(new Date(i.data.consentAt).getTime() - DAY).toISOString(), answered: i.data.consentAt, status: isOpen(i) ? 'Awaiting Academy approval' : i.status === 'Approved' ? 'Linked' : 'Declined', qid: i.id }));
     G.consents.filter(c => c.status === 'Linked').forEach(c => { const L = learnerById(c.lid); if (L) agyLinkTo(c.agency, L, c.answered); });
     G.consents.filter(c => c.status === 'Awaiting learner consent').forEach(consentMail);
-    G.notifs.push({ id: 'GN-K1', agency: CP, t: 'Link request expired', b: `${(G.consents.find(c => c.id === 'CON-04') || {}).email} · Moving and Handling People — no response in ${CONSENT_DAYS} days`, at: D(-7, '09:00'), go: 'g-learners', unread: false, cat: 'Learners' });
+    const k4 = G.consents.find(c => c.id === 'CON-04'); // MR-38: only when the expired request exists (the client demo has no Megan Roberts)
+    if (k4) G.notifs.push({ id: 'GN-K1', agency: CP, t: 'Link request expired', b: `${k4.email} · Moving and Handling People — no response in ${CONSENT_DAYS} days`, at: D(-7, '09:00'), go: 'g-learners', unread: false, cat: 'Learners' });
   }
   G.consents.forEach(c => { if (c.status === 'Awaiting learner consent' && agNow() - new Date(c.sent) >= CONSENT_DAYS * DAY) { c.status = 'Expired'; c.answered = consentEnds(c); STORE.agy.lmails.filter(m => m.cid === c.id).forEach(m => { m.used = true; m.btn = ''; }); agyNotify('Link request expired', `${c.email} · ${c.course} — no response in ${CONSENT_DAYS} days`, 'g-learners', 'Learners', c.agency); } });
   return G.consents;
