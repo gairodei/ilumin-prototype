@@ -286,8 +286,9 @@
     go('payments'); ok('DP-G1 Tara sees only her own payments', /awaiting confirmation by Finance/.test(main()) && !txOf(um).some(x => main().includes(x.ref)));
   });
   await T('DP-G2 two active holds against limited capacity', async () => {
-    const b = cdBatch(); ve = register('Vera Lane', 'vera.lane@test.example'); startSignup(ve); const st = main(); $1('#su-dob').value = '1992-03-04'; $1('#su-ad').value = '9 Test Road, Luton'; click($1('main [data-act="suNext"]'));
-    ok('DP-G2 with two seats held the batch is full: a third learner cannot get past choosing a batch', ve.signup.step === 1 && !ve.signup.done && b.enrolled === b.cap, st.slice(Math.max(0, st.indexOf('Your batch')), st.indexOf('Your batch') + 300));
+    // NB-1: with no eligible batch Apply creates nothing (was: the sign-up started and stopped at choosing a batch); Vera starts in DP-G4
+    const b = cdBatch(); ve = register('Vera Lane', 'vera.lane@test.example'); go('browse'); ACT.applyNvq({ dataset: { id: CATALOGUE.find(x => x.kind === 'nvq' && x.title === CD_T).id } }); const mt = (MODAL || {}).title, st = mtxt(); closeModal();
+    ok('DP-G2 with two seats held the batch is full: a third learner cannot start a sign-up (no application, seat or charge)', mt === 'No intake available right now' && /can take a new learner at the moment/.test(st) && !ve.signup && !ve.admission && b.enrolled === b.cap, st.slice(0, 300));
     // PD-FD-01: two new holds on top of the baseline (Tom). Was: reserved === 2.
     const c = dpCounts(b); ok('DP-G2 counts: ' + c.occupied + ' confirmed + ' + c.reserved + ' reserved = ' + b.enrolled + ' of ' + b.cap + ' (two new holds + ' + rBase + ' demo hold)', rBase === 1 && dpSeat(STORE.worlds.CD5).st === 'reserved' && c.reserved === rBase + 2 && c.occupied + c.reserved === b.enrolled && b.enrolled === b.cap);
     // PD-FD-01: reserved = baseline + 2. Was: 2 reserved.
@@ -325,7 +326,8 @@
     if ((STORE.cbRem || {}).offset) ACT.cb10Reset();
     // PD-FD-01: three released (Tom too). Was: n0 - 2.
     ok('DP-G4 back to today: the released seats stay released (collecting nothing, restoring nothing)', chReleased(ta) && chReleased(um) && chReleased(STORE.worlds.CD5) && b.enrolled === n0 - 3);
-    asL(ve.v); contSignup(ve); choose('deposit', 'card'); const c = payCo(() => click($1('main [data-act="suPay"]')));
+    // NB-1: Vera starts her sign-up now that a place is free (DP-G2 created none)
+    asL(ve.v); startSignup(ve); contSignup(ve); choose('deposit', 'card'); const c = payCo(() => click($1('main [data-act="suPay"]')));
     // PD-FD-01: one of the three freed places taken. Was: n0 - 1.
     ok('DP-G4 the freed place can now be taken: the third learner reserves it', c.opened && ve.signup.done && dpSeat(ve).st === 'reserved' && b.enrolled === n0 - 2);
   });

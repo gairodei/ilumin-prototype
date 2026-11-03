@@ -662,7 +662,9 @@
     ok('S4-05 Fatima (UAE, Level 3): All + UAE items, including Level 3\'s UAE-only item', f.signup.prog === 'NV-L3' && fnm.includes('Passport') && fnm.includes('Emirates ID and residence visa') && fnm.includes('Police clearance certificate') && fnm.includes('Overseas qualification statement') && !fnm.includes('Enhanced DBS certificate') && !fnm.includes('Right to work (share code letter)') && !fnm.includes('Care Certificate (if you hold one)'));
     const e = apply4('E', T2), en = e.docs.map(x => x.name);
     ok('S4-05 Tom (UK, Level 2): All + UK items and Level 2\'s own item (Level 3 changes don\'t leak)', e.signup.prog === 'NV-L2' && en.includes('Enhanced DBS certificate') && en.includes('Care Certificate (if you hold one)') && en.includes('Employer reference letter') && e.docs.find(x => x.name === 'CV').max === '5 MB' && !en.includes('Passport'));
-    const t = apply4('H', T3, 'India');
+    // NB-1: Apply needs an eligible batch first (no dead-end sign-up); an online place is freed so the India applicant can start
+    const onl = ADMIN.batches.find(x => x.code === 'L3AC-OCT26-ONL'); onl.enrolled--;
+    const t = apply4('H', T3, 'India'); onl.enrolled++;
     ok('S4-05 other country (India): the UK items by the region rule (CH-03), flagged — nothing dropped', t.docs.some(x => x.name === 'Right to work (share code letter)') && t.signup.docsRegion === 'UK' && ADMIN.audit.some(a => a.action === 'Sign-up terms fixed' && /country India/.test(a.after)));
     SA(); go('a-admissions', { id: 'APP-H' }); ok('S4-05 Admissions: the application shows the checklist version and the other-country flag', /Checklist version \d+ — UK items for India/.test(main()) && /provisional, pending client confirmation/.test(main()));
     // Snapshot: a later change doesn't touch an application in progress
@@ -798,7 +800,8 @@
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: Setup S4a entry', /Setup fixes — admission and money/.test(main()));
     SA(); go('a-index'); const sec = [...app().querySelectorAll('main .idx-sec')].find(x => /Setup fixes/.test(x.textContent));
     ok('Admin index: S4a entries with purposes', !!sec && ['a-admissions..builder', 'f-plans..templates', 'a-finance..plans', 'a-programmes.NV-L3.letter'].every(t => !!sec.querySelector('[data-t="' + t + '"]')) && sec.querySelectorAll('li').length === 28 /* S4b: 3, N4: 1, N2: 1, N3: 1, S4c: 1, S5a: 1, S5b: 1, S5d: 1, S5c: 1, S5e: 1 entries added */);
-    fresh(); const z = apply4('F', T2); ACT.suNext(); ok('E2E (negative): the country rule still applies — no Level 2 batch for a UAE applicant (CH-42)', z.signup.step === 1 && !z.signup.batch);
+    // NB-1: with no eligible batch Apply creates nothing (was: a sign-up stuck at step 1 with no batch)
+    fresh(); const z = apply4('F', T2); ok('E2E (negative): the country rule still applies — no Level 2 batch for a UAE applicant (CH-42); no sign-up is created (NB-1)', !z.signup && !z.admission && !!MODAL && MODAL.title === 'No intake available right now'); closeModal();
   });
 
   /* ================= S4a acceptance verification ================= */
@@ -831,7 +834,7 @@
     [1, 21, 28].forEach(h => { FA4(); if (S4().cfg.hold !== h) cfgSet(300, h);
       ok(`CH-10 boundary with a ${h}-day hold: 28 days away → deposit; 27 days away → instalments only`, S4().cfg.hold === h && daysTo(inDays(28)) === 28 && daysTo(inDays(27)) === 27 && chDepositOk({ start: inDays(28) }) && !chDepositOk({ start: inDays(27) })); });
     FA4(); cfgSet(300, 21);
-    const mk = (code, days) => { const b = { code, label: 'Test intake ' + days, course: T3, start: inDays(days), end: D(days + 300), cap: 10, enrolled: 0, mode: 'Online', coord: 'Laura Kemp', teachers: [], assessors: [], status: 'Open', wait: 0, roster: [], coh: [] }; ADMIN.batches.push(b); return b; };
+    const mk = (code, days) => { const b = { code, label: 'Test intake ' + days, course: T3, start: inDays(days), end: D(days + 300), cap: 10, enrolled: 0, mode: 'Online', coord: 'Laura Kemp', teachers: [], assessors: [], status: 'Open', wait: 0, roster: [], coh: [], w1opts: ['L3-FO-STD'], dmode: 'Fully Assisted' }; ADMIN.batches.push(b); return b; }; // NB-1: ready for enrolment like the seeded Level 3 batches (PD-CR-15), since payment re-checks the batch
     const b27 = mk('TST-27', 27), b28 = mk('TST-28', 28);
     const toPay = (v, b) => { const w = apply4(v, T3); ACT.suNext(); w.docs.forEach(x => { x.status = 'Submitted'; }); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); chSetBatch(w, b); setUi('suOpt', ''); render(); return w; };
     const a = toPay('A', b27);

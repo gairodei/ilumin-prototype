@@ -33,7 +33,7 @@
     ACT.chLetterUp({ dataset: { id } }); ACT.chLetterSample(); reason('First version');
     const o = cb8Work(pr).opts[0].id; [1, 4].forEach(k => ACT.cb8PayAdd({ dataset: { p: id, o, k: String(k) } })); ACT.cb8SaApprove({ dataset: { p: id } }); reason('Terms');
     ACT.ch8Publish({ dataset: { id } }); reason('Ready'); closeModal();
-    ADMIN.batches.push({ code: 'CB10-NOV26', label: 'CB10 November batch', course: pr.title, start: D(40, '09:00'), end: D(240, '17:00'), cap: 20, enrolled: 0, mode: 'Online', coord: '', teachers: [], assessors: [], status: 'Open', wait: [], roster: [] });
+    ADMIN.batches.push({ code: 'CB10-NOV26', label: 'CB10 November batch', course: pr.title, start: D(40, '09:00'), end: D(240, '17:00'), cap: 20, enrolled: 0, mode: 'Online', coord: 'Dr Helen Carter', teachers: [], assessors: [], status: 'Open', wait: [], roster: [] }); // NB-1: sign-up needs a batch with an Academic Coordinator (was coord: '')
     return { pr, bt: chBatch('CB10-NOV26') };
   };
   const enrol = (v, P, k) => {

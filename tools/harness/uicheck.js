@@ -360,7 +360,7 @@
       ACT.chLetterUp({ dataset: { id } }); ACT.chLetterSample(); $1('#rsn').value = 'First version'; ok9(); closeModal();
       const o9 = cb8Work(p9).opts[0].id; [1, 4].forEach(k => ACT.cb8PayAdd({ dataset: { p: id, o: o9, k: String(k) } })); ACT.cb8SaApprove({ dataset: { p: id } }); $1('#rsn').value = 'UI'; ok9(); closeModal();
       ACT.ch8Publish({ dataset: { id } }); $1('#rsn').value = 'Ready'; ok9(); closeModal();
-      ADMIN.batches.push({ code: 'UI9-NOV26', label: 'UI schedule batch', course: p9.title, start: D(40, '09:00'), end: D(240, '17:00'), cap: 20, enrolled: 0, mode: 'Online', coord: '', teachers: [], assessors: [], status: 'Open', wait: [], roster: [] });
+      ADMIN.batches.push({ code: 'UI9-NOV26', label: 'UI schedule batch', course: p9.title, start: D(40, '09:00'), end: D(240, '17:00'), cap: 20, enrolled: 0, mode: 'Online', coord: 'Dr Helen Carter', teachers: [], assessors: [], status: 'Open', wait: [], roster: [] }); // NB-1: sign-up needs a batch with an Academic Coordinator (was coord: '')
       S.variant = 'F'; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; go('browse'); const c9 = CATALOGUE.find(x => x.kind === 'nvq' && x.title === p9.title); ACT.applyNvq({ dataset: { id: c9 && c9.id } }); const t9 = MODAL ? MODAL.title + ' | ' + (MODAL.actions || []).map(a => a.label).join(',') : 'no dialog'; ok9(); closeModal();
       const w9 = STORE.worlds.F; // (W here is the viewport width)
       ok('CB9 (setup) the learner sign-up started with the approved choices fixed', !!(w9.signup && w9.signup.plan && w9.signup.plan.cb8), t9);

@@ -84,7 +84,8 @@
   await T('W1-B the Academy assigns only a batch that accepts the learner\'s fee option', async () => {
     fresh(); const o = opts(); ADMIN.batches.filter(b => b.course === T3).forEach(b => { b.enrolled = b.cap; }); // every other Level 3 batch full
     const faOnly = nb('W1-FAONLY', T3, { opts: [o.fa], start: day(40) }).b;
-    let d = apply3('A', o.sp); ok('W1-B (negative) a Self-Paced learner is not assigned a batch that accepts only Fully Assisted', !chNearestFor(d) && /No batch has a place right now/.test(chAssignedHtml(d)));
+    // NB-1: the option no batch takes can't be chosen and Start sign-up refuses it (was: a sign-up stuck at "No batch has a place right now")
+    let d = apply3('A', o.sp); ok('W1-B (negative) a Self-Paced learner is not assigned a batch that accepts only Fully Assisted', !d.signup && !d.admission && !nbProbe(d, s3Progs().find(p => p.title === T3), r1Opt(o.sp))); closeModal();
     const f = apply3('F', o.fa); ok('W1-B a Fully Assisted learner is assigned it', (chNearestFor(f) || {}).code === 'W1-FAONLY');
     SA(); nb('W1-SPONLY', T3, { opts: [o.sp], start: day(45) }); d = apply3('A', o.sp); ok('W1-B …and the Self-Paced learner gets the batch that accepts Self-Paced', (chNearestFor(d) || {}).code === 'W1-SPONLY' && faOnly.enrolled === 0);
   });

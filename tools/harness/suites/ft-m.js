@@ -271,7 +271,7 @@
     const l = freeL(), l2b = freeL([l.id]); ACA();
     ok('M-N (negative) Add learner on a newly added option: refused', /doesn't accept/.test(addL('L3AC-NOV26-LEI', l.id, o.sp)) && !batchRoster(lei).some(r => r[1] === l.id));
     ok('M-N Add learner on the Standard programme fee still works (legacy behaviour)', addL('L3AC-NOV26-LEI', l2b.id, 'L3-FO-STD') === 'added');
-    const d = apply3('A', o.sp), near = w1WithW(d, () => chNearestFor(d)); SA();
+    const d = apply3('A', o.sp), near = d.nvq ? w1WithW(d, () => chNearestFor(d)) : null; closeModal(); SA(); // NB-1: with no batch for the option, Apply creates no sign-up
     ok('M-N sign-up assignment never picks a legacy batch for a newly added option', !near || !SEEDED.includes(near.code), near && near.code);
     ok('M-N no existing learner\'s batch, terms or payments changed', worlds().length > 0 && J(JSON.parse(w0).filter(x => x.s && x.s.p).map(x => [x.s.b, x.s.p, x.plans])) === J(JSON.parse(worlds()).filter(x => x.s && x.s.p && !(x.s.p.opt && x.s.p.opt.id === o.sp)).map(x => [x.s.b, x.s.p, x.plans])));
   });
