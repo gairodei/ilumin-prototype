@@ -33,7 +33,9 @@
       ok('IQA-03 the short-course learner (Lena) is not in IQA scope', !rs.some(r => /Lena Hart/.test(r)));
       ok('IQA-03 truthful status: "No marked work yet", none counted, no records invented', rs.every(r => /No marked work yet/.test(r) && /None yet/.test(r)) && allIqaRecords().length === 0);
       ok('IQA-03 the programme, version and batch are the learner\'s own', rs.every(r => /Level 3 Diploma in Care Practice \(client demo\)/.test(r) && /DEMO-L3-JAN27/.test(r)) && /Version \d/.test(rs[0]), rs[0]);
-      ok('IQA-01 the screen explains how IQA is assigned: IQA role in Staff & Users, academy-wide scope, no batch allocation, independence, client decision', /How IQA is assigned/.test(m) && /Staff & Users/.test(m) && /don't have an IQA allocation/.test(m) && /nobody is assigned automatically/.test(m) && /Independence/.test(m) && /client decision/.test(m));
+      // PD-IQB-01 supersedes PD-SIB-B-02 (client confirmation 3 Nov 2026: IQA allocation is batch-level). Was: "IQA role in Staff &
+      // Users, academy-wide scope, no batch allocation, independence, client decision".
+      ok('IQA-01 (restated, PD-IQB-01) the screen explains how IQA is assigned: by batch, by an Academic Admin, no other batch, independence', /How IQA is assigned/.test(m) && /assigns an IQA to one or more batches/.test(m) && /no other batch/.test(m) && /Independence/.test(m) && !/don't have an IQA allocation/.test(m));
       ok('IQA-03 the empty state says why nothing is listed to sample', /No work has been marked yet/.test(m) && /Nothing is created for sampling/.test(m));
       go('q-records'); ok('IQA-03 Assessment Records explains the empty list and links to Learners', /Nothing has been marked yet, so there is nothing to sample/.test(main()) && /4 learners are in scope/.test(main()) && !!$1('main .sib-q-norec [data-go="q-learners"]'));
       go('q-portfolios', { id: AM }); const pm = main();
@@ -89,7 +91,9 @@
     });
     await T('SIB-B independence and refusals (client)', async () => {
       signOutUI(); ACT.demoSignInAsIqa({ dataset: { v: 'QC' } }); go('q-learners'); const r = rows().find(x => /Amira Shah/.test(x));
-      ok('IQA-01 independence: James Pryce (IQA + this batch\'s Assessor) sees the batch flagged — another IQA samples it', !!r && /You (are an Assessor on this batch|marked this work|are the .* on this batch)/.test(r), r);
+      // PD-IQB-02 supersedes the flag-only rule: an Assessor of the batch can't be its IQA, so James is not allocated and sees none
+      // of it. Was: "James Pryce (IQA + this batch's Assessor) sees the batch flagged — another IQA samples it".
+      ok('IQA-01 (restated, PD-IQB-02) independence: James Pryce (IQA + this batch\'s Assessor) isn\'t allocated to it and sees none of its learners', !r && /You aren't assigned to any batch yet/.test(main()) && !/Amira Shah/.test(main()), r || '');
       const n0 = STORE.iqa.sets.length; ACT.qNewSet({ dataset: {} }); $1('#qs-n').value = 'QC set'; press(); const qs = STORE.iqa.sets[STORE.iqa.sets.length - 1];
       qAddToSet([keep.RID]); closeModal(); ok('IQA-01 (negative) the conflicted IQA can\'t add that work to a sample set', !qs.items.includes(keep.RID) && STORE.iqa.sets.length === n0 + 1);
       for (const p of ['biz', 'fin', 'sys', 'aca']) { pick(p); go('q-learners'); ok(`IQA-03 (negative) ${p} can't open the IQA Learners screen (denied and logged)`, /You don't have permission — logged/.test(main()) && !/Amira Shah/.test(main())); }
@@ -98,7 +102,8 @@
     });
     await T('SIB-B batch staff note', async () => {
       pick('aca'); const b = cdBatch(); const h = chAssessPanel(b);
-      ok('IQA-01 the batch staff panel says IQA isn\'t allocated per batch and why', /IQA isn't allocated per batch/.test(h) && /independence rule/.test(h) && /Staff & Users/.test(h));
+      // PD-IQB-01 supersedes PD-SIB-B-02. Was: "the batch staff panel says IQA isn't allocated per batch and why".
+      ok('IQA-01 (restated, PD-IQB-01) the batch staff panel has the IQA allocation control, its IQA and the independence rule', !/IQA isn't allocated per batch/.test(h) && /Internal Quality Assurer \(IQA\)/.test(h) && /Priyanka Shah/.test(h) && /independence rule/.test(h) && /data-act="iqbAssignDlg"/.test(h));
     });
     await T('SIB-B Reset demo', async () => {
       signOutUI(); ACT.resetDemo(); pick('iqa'); go('q-learners');

@@ -153,6 +153,9 @@
   await T('EB-A2 IQA sees every enrolled learner\'s work', async () => {
     fresh(); const P = setup(); choose(P, 'EV-1', 'workplace'); propose(P, 'EV-1'); const o = recOf(P, 'EV-1'); accept(P, o);
     TAS('A'); go('t-obsrec', { id: rowId(P, o) }); [['nvq', P.c1], ['ia', 'IA-16']].forEach(([s, c]) => ['o', 'c'].forEach(k => ACT.orT({ dataset: { s, c, k, v: '1' } }))); document.querySelector('main .d-evt').checked = true; INP.dEvt(); ACT.orSign({ dataset: { id: rowId(P, o) } }); prim(); closeModal();
+    // PD-IQB-03 (client confirmation: IQA allocation is batch-level): an IQA sees a batch's learners once allocated to it, so the
+    // Super Administrator first allocates IQA A to the new learner's batch (before: every IQA saw every batch).
+    SA(); const qb = chBatchCodeOfW(P.w) || P.w.signup.batch; ok('EB-A2 setup (PD-IQB-03): IQA A allocated to the new learner batch ' + qb, iqbCodesOf(IQA_A).includes(qb) || iqbAssign(qb, IQA_A, 'EB-A2 setup') === true, qb);
     IQA('QA'); const r = recById('L-' + wk(P) + '-' + o.id);
     ok('EB-A2 a new learner\'s signed-off observation is in the IQA records (before: seeded learners only), with programme, level and assessor', !!r && r.kind === 'obs' && r.lid === P.lid && r.pk === 'L3' && r.assessor === 'Sarah Okonkwo' && /Observation 1/.test(r.title));
     go('q-record', { id: r.id }); ok('EB-A2 …and opens', !/Error 404/.test(main()) && main().includes(chFullName(P.w)));

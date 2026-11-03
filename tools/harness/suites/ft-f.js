@@ -274,6 +274,9 @@
     fresh(); const P = setup(); choose(P, 'EV-1', 'workplace'); propose(P, 'EV-1'); const o = recOf(P, 'EV-1'); accept(P, o);
     TAS('A'); go('t-obsrec', { id: rowId(P, o) }); [['nvq', P.c1], ['ia', 'IA-16']].forEach(([s, c]) => ['o', 'c'].forEach(k => ACT.orT({ dataset: { s, c, k, v: '1' } }))); document.querySelector('main .d-evt').checked = true; INP.dEvt(); ACT.orSign({ dataset: { id: rowId(P, o) } }); prim(); closeModal();
     const codes = () => qa('.tree .code').map(x => x.textContent);
+    // PD-IQB-03 (client confirmation: IQA allocation is batch-level): an IQA sees a batch's learners once allocated to it, so the
+    // Super Administrator first allocates IQA A to the new learner's batch (before: every IQA saw every batch).
+    SA(); const qb = chBatchCodeOfW(P.w) || P.w.signup.batch; ok('F-K setup (PD-IQB-03): IQA A allocated to the new learner batch ' + qb, iqbCodesOf(IQA_A).includes(qb) || iqbAssign(qb, IQA_A, 'F-K setup') === true, qb);
     IQA('QA'); go('q-portfolios', { id: P.lid }); const own = P.w.tree.map(u => u.code);
     ok('F-K a new learner\'s portfolio shows their own units (before: the seeded U301 tree)', own.every(c => codes().includes(c)) && !codes().includes('U301') && main().includes(P.pr.title));
     ok('F-K …and their signed-off observation sits against its criterion', qa('.tree [data-go="q-record"]').length >= 1);
