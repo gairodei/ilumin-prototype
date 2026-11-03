@@ -387,7 +387,9 @@
     ACT.crAbcEdit({ dataset: { id: 'CR-J0' } }); fill({ '#ab-abc': 'CG-7788' }); reason('Received from City & Guilds');
     ok('CR-J recorded after creation ("Record"), with history', r0.b.abCode === 'CG-7788' && r0.b.abcHist.length === 1);
     ok('CR-J the batch is still found by its Academy code only', chBatch('CR-J0') === r0.b && !chBatch('CG-7788'));
-    COO('A'); go('c-batches', { id: 'CR-J1' }); ok('CR-J Coordinator overview shows the awarding body batch code', /Awarding body batch code\s*NCFE-2026-0143/.test(main()) || !/Delivery channel/.test(main()));
+    // AA-FINAL (AA-06 / D13): restated — the code is required on the Coordinator overview for every batch, mixed-mode included
+    // (PD-CR-13); it used to be tolerated whenever the overview had no "Delivery channel" row
+    COO('A'); go('c-batches', { id: 'CR-J1' }); ok('CR-J Coordinator overview shows the awarding body batch code', /Awarding body batch code\s*NCFE-2026-0143/.test(main()), main().slice(0, 300));
   });
 
   /* ================= K. Mixed modes with several Coordinators ================= */

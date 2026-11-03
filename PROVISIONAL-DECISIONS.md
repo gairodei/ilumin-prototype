@@ -1636,3 +1636,70 @@ Source: the read-only Academic Admin bug-sheet audit (AA-01…AA-22) on 443b5e8.
 - (a) A course-specific timer: an overall time limit, minimum study time, or only the existing per-quiz limit?
 - (b) On expiry, should completed modules count toward a later re-purchase?
 - (c) May one question assess several criteria? Today the builder allows it and every criterion is now judged.
+
+## Batch AA-FINAL: remaining Academic Admin client feedback (3 Nov 2026)
+
+Covers the rest of the 22-item audit (AA-01…AA-22) and the defects AA-1 left open (D5, D6, D7, D8, D12, D13, D14, and the Lows). No new business policy. Anything the client must decide keeps its current behaviour, says so on screen, and is listed below.
+
+Code lives in five files, loaded after aa1-integrity.js: aaf-a-curriculum.js, aaf-b-batches.js, aaf-c-shortcourse.js, aaf-d-certificates.js and aaf-e-bundles.js. There are small in-place fixes in ch-b8.js, cb-curriculum.js, ac-integrity.js, academic.js, clarity.js, fc-finance.js, business.js, agency.js and ch-b6.js. Tests: ft-aaf-a…e.
+
+| ID | Decision | Why | Where |
+|---|---|---|---|
+| PD-AAF-A-01 | **The awarding body course code stays required.** The form says why. The internal programme ID is shown separately, as automatic and read-only. | No accepted decision makes the code optional (CH-8, PD-CB-19, PD-M-10). | aaf-a |
+| PD-AAF-A-02 | **The module awarding-body code is optional in both stores.** Once recorded it can be corrected but not removed. A missing code shows "Not recorded" and a Review warning, not a blocker (PD-CB-74). Internal unit, module, LO and criterion references are labelled "automatic" and stay read-only. ft-ch's "NP module needs its awarding-body code" check is restated. | AA-02; the existing S3 rule; keys unchanged (PD-CR-09). | ch-b8.js, cb-curriculum.js, aaf-a |
+| PD-AAF-A-03 | **Builder guidance.** An evidence requirement hint, a "three kinds of evidence setting" table, and a guide from curriculum to assignment. Section 3 has a coverage table, a mapping grid grouped by module (still the whole unit, labelled), and a read-only learner preview. Validation is unchanged. | AA-03, AA-04. | aaf-a |
+| PD-AAF-A-04 | **Question numbering is explained.** A question shows "Retired (was Qn)", recorded when it is retired and never back-filled. Question audit entries read "Qn (id)". Ids and submissions are unchanged. | AA-17. | aaf-a |
+| PD-AAF-B-01 | **Coordinators are managed in the Academic Coordinators panel.** "Add Coordinator" ticks one or more people, each checked and audited. The single replacing select in "Change allocations" is removed. Each learner keeps exactly one designated Coordinator (PD-MC-14). CH-17 / P-33 are unchanged. | AA-05. | aaf-b |
+| PD-AAF-B-02 | **The Batch code (b.code) and the Awarding body batch code (b.abCode) are shown side by side** on the batch detail, every Batches list and the Coordinator overview, mixed-mode batches included. A missing code reads "Not recorded". The two codes are never invented or merged. | AA-06, D13, PD-CR-13. ft-cr CR-J is restated to require the code (it used to tolerate its absence). | aaf-b |
+| PD-AAF-B-03 | **Add learner is learner-first:** find the learner, see eligibility at once, choose the fee option, then confirm. A learner's own fee option is fixed. A duplicate in the same batch is refused for every batch. Learner 360 and the Finance batch column fall back to the roster (display only). | AA-07. | aaf-b, academic.js, fc-finance.js |
+| PD-AAF-B-04 | **Add session names its batch.** Opened without one, it won't save until a batch is chosen (ft-fx FX-C restated for the empty placeholder). The batch's own teaching staff, dual-role staff included, are listed first. Conflict checks are unchanged. | AA-15. | aaf-b |
+| PD-AAF-B-05 | **Staff Allocations:** Course, Programme and Learner allocations are removed and refused, because they had no effect (D7). Dual-role Teacher + Assessor staff can be allocated as Teacher (D8). "Re-allocate learners" with its fixed names becomes guidance to the real panels (D12); ft-mrg1 MR-31 / MR-G1 and ft-setup S5a(17) are restated. The page shows who teaches, coordinates and assesses each batch. There is no invented workload target. | AA-19. | aaf-b, ac-integrity.js |
+| PD-AAF-B-06 | **Edit batch details explains** why dates are editable before the start and locked after it. The impact text is corrected. There is no running-batch extension. "Demo only:" no longer prefixes real actions. | AA-21; g2 Lows. | aaf-b, clarity.js |
+| PD-AAF-C-01 | **Short-course categories are a managed list:** add, rename, retire and restore, audited, s1Can roles only. Existing free-text values join the list unchanged. A rename updates the current labels in one audited entry; old records keep their name. | AA-08. | aaf-c |
+| PD-AAF-C-02 | **Duration is a number and a unit** (minutes, hours, days or weeks), validated on save. An old free-text value is shown as written until the course is saved again. | AA-09. | aaf-c |
+| PD-AAF-C-03 | **The Academic Admin requests a price** ("Short-course price" in the Approvals Queue). The Super Administrator or a System Administrator (canPrice) approves it, which sets the price as a new version. Publishing names the pending request. The client-confirmed "Who approves what" table (G4) is unchanged at 19 rows; this provisional type is named in a note below it. | AA-10; existing canPrice. | aaf-c, academic.js |
+| PD-AAF-C-04 | **SCORM: a chosen .zip is checked in the browser** (zip directory, imsmanifest.xml inflated and parsed as data only, 1.2 / 2004, title, SCOs). An invalid package is refused. Nothing is executed or kept. The learner player says content is not executed in this prototype and records completion without a score; the fixed 92% / 85% scores are removed. | AA-11. | aaf-c |
+| PD-AAF-C-05 | **Each module has "Add content" and "Add existing content".** "Add module" has a title field. A new module starts with no questions (g3 Low). There is a five-step bar with status, required markers and hints. A draft says "Save draft". | AA-12, AA-16. | aaf-c |
+| PD-AAF-C-06 | **Version history comes from the recorded saves** (D5); there are no invented rows. Content, module and quiz changes apply to new enrolments and don't create a version. New enrolments record e.courseV. The access period, each module's quiz countdown and its attempts are shown separately. There is no course-wide timer. | D5, AA-22. | aaf-c |
+| PD-AAF-D-01 | **A certificate is drawn from the template copied onto it at issue** (pinned at enrolment): layout, logo and the ticked fields. Certificates from before templates keep the standard design and are not rewritten. A saved template change is the next per-course template version, and the register shows it. | AA-20, D6. | aaf-d |
+| PD-AAF-D-02 | **Revoke and Retry are shown to the Super Administrator only**; the guards are unchanged. The NVQ empty state says the certificate is posted by the awarding body (ft-lp LP-K restated). New certificate numbers are unique across learners. | PD-AC-12, PD-FP, a found Medium defect. | aaf-d |
+| PD-AAF-D-03 | **A template version card and a supported-designs list.** The logo preview is held in this browser tab only and labelled as prototype. There is no whole-design upload or design library (client decision). A read-only checklist explains its lock (s4CanCk unchanged). | AA-13, AA-18. | aaf-d |
+| PD-AAF-E-01 | **"How this price is worked out"** on the bundle detail (Business Admin / Super Admin / System Admin) and in the agency buy modal. It shows courses × seats, the one discount and why, rounding, VAT, the total and the per-seat price, from the existing pricing functions only. Whole-pound rounding is labelled as the current prototype rule pending the client (M-12). | AA-14. | aaf-e |
+| PD-AAF-E-02 | **The per-agency price is named.** Below the minimum it is flagged "not checked" but not enforced (client). Finance Modes come from the payment route. Gross labels are added; no figure changes. The wording reads "Priced for N seats (buy 1 or more)" and "NVQ programme fee". | D14; g5 Lows. | aaf-e, business.js, agency.js, ch-b6.js |
+
+**Open (client):**
+
+Course builder:
+- Awarding body course code: may it be blank in Draft, and must it be present at publish?
+- Unit code: per unit or per module, and required at publish?
+- Evidence requirement: mandatory? Free text or a list?
+- Mapping grid: only the assignment's own module?
+- Question numbering: awarding-body style or manual?
+
+Batches and staff:
+- Exact labels for the Welfare / NCFE codes, and is the NCFE code required (and in what format)?
+- Does an admin add create payment terms? May the Academic Admin create learner accounts?
+- What should Staff Allocation mean, and is there a workload target?
+- Can a running batch be extended?
+
+Short courses:
+- Who owns and approves the price? Do later changes need approval?
+- Categories: who manages them, and should learners and agencies filter by them?
+- Which duration units?
+- SCORM runtime, tracking data, xAPI / cmi5 and storage.
+- Course-wide timer.
+- Should content changes be versioned? May drafts be deleted?
+
+Certificates and checklists:
+- Whole-design upload and a design library; who designs and approves?
+- May the Academic Admin / System Admin edit a published checklist?
+- Should a re-issue create a new record? Revoke roles.
+- Is the NCFE posted certificate the only NVQ certificate?
+
+Bundles:
+- Does the minimum apply to per-agency and volume rates?
+- Whole pounds or pence?
+- Revenue gross or net?
+- Volume discount per purchase or cumulative?
+- NVQ fee by delivery mode (AG-1 (a))?
+- Which screen raised AA-14?

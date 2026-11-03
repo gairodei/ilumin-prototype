@@ -1141,7 +1141,9 @@
     go('a-programmes', { id, tab: 'structure' });
     add8('ch8AddUnit', { id }, { '#u-c': 'u410', '#u-t': 'Lead care teams' });
     add8('ch8AddMod', { id, u: 0 }, { '#m-t': 'Team leadership', '#m-ab': 'A/650/4101' });
-    add8('ch8AddMod', { id, u: 0 }, { '#m-t': 'No code', '#m-ab': '' }); ok('NP module needs its awarding-body code', !!MODAL && /awarding-body code/.test(mroot().textContent)); closeModal();
+    // AA-FINAL (AA-02 / g1 Low): the module awarding-body code is optional in every programme, as in the S3 store (saving without one
+    // is covered by ft-aaf-a); the dialog is closed unsaved so the rest of this journey keeps its one module
+    ACT.ch8AddMod({ dataset: { id, u: 0 } }); ok('NP module awarding-body code is offered as optional (AA-02)', !!MODAL && /Awarding-body code \(optional\)/.test(mroot().textContent)); closeModal();
     add8('ch8AddLo', { id, u: 0, m: 0 }, { '#lo-t': 'Understand leadership styles', '#lo-y': 'Knowledge' });
     add8('ch8AddLo', { id, u: 0, m: 0 }, { '#lo-t': 'Lead a team shift', '#lo-y': '' });
     add8('ch8AddCrit', { id, u: 0, m: 0, l: 0 }, { '#c-d': 'Compare two leadership styles', '#c-e': 'Written account' });

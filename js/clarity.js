@@ -130,7 +130,12 @@ function pausedRow() {
 const _toastC = toast;
 toast = function (msg, tone) {
   let m = String(msg);
+  // AA-FINAL (g2 Low): a demo record's name ending "(demo)" (e.g. "Lena Hart (demo)") is not a prototype marker — it is kept as it is
+  // and doesn't make a real action read "Demo only:"
+  const nm = typeof ADMIN !== 'undefined' && ADMIN ? [...new Set([].concat(ADMIN.learners || [], ADMIN.staff || [], ADMIN.agencies || []).map(x => x && x.name).filter(n => n && /\(demo\)$/i.test(n)))].sort((a, b) => b.length - a.length) : [];
+  const keep = []; nm.forEach(n => { m = m.split(n).join('\u0000' + (keep.push(n) - 1) + '\u0000'); });
   if (/\(simulated\)|^Simulated:|^Demo:|\(demo\)/i.test(m) && !/^Demo only:/.test(m)) m = 'Demo only: ' + m.replace(/^Simulated:\s*|^Demo:\s*/i, '').replace(/\s*\((simulated|demo)\)/gi, '');
+  m = m.replace(/\u0000(\d+)\u0000/g, (x, i) => keep[+i]);
   return _toastC(m, tone);
 };
 

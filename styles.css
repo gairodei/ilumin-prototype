@@ -1607,3 +1607,76 @@ body.frame-mobile .e1-dur-row { grid-template-columns: minmax(0, 1fr) minmax(0, 
 .aa1-xc { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 10px; }
 .aa1-qn { margin: 0 0 6px; }
 .aa1-abq { margin-bottom: 6px; }
+/* AAF-A: NVQ curriculum and assignment clarity */
+.aafa-guide { padding: 10px 14px; margin-bottom: 12px; }
+.aafa-guide > summary { cursor: pointer; }
+.aafa-chain { margin: 10px 0 8px 1.2em; padding: 0; }
+.aafa-chain li { margin: 3px 0; font-size: .9rem; }
+.aafa-chain li.aafa-here { font-weight: 500; }
+.aafa-chain li:not(.aafa-here) { color: var(--muted); }
+.aafa-evk { margin-top: 8px; }
+.aafa-hint { display: block; }
+.aafa-gap { color: var(--amber); }
+.aafa-cov-m th { background: var(--surface-2); text-align: left; font-weight: 600; }
+.aafa-modrow th { border-bottom: 0; }
+.aafa-modh.aafa-own { font-weight: 600; }
+.aafa-scope { margin: 0 0 8px; }
+.aafa-pl { margin: 0 0 8px 1.2em; padding: 0; }
+.aafa-pq { margin: 6px 0; }
+.aafa-pc { margin: 4px 0 4px 1em; padding: 0; list-style: disc; }
+.aafa-qret { white-space: nowrap; font-size: .8rem; }
+.aafa-cov, .aafa-prev { margin-top: 12px; }
+.aafa-cov td, .aafa-prev li { overflow-wrap: anywhere; }
+
+/* AA-FINAL Workstream B — batches, staff and sessions */
+.aafb-abc { margin-top: 2px; overflow-wrap: anywhere; }
+.aafb-codes, .aafb-dates { margin-top: 4px; }
+.aafb-ab, .aafb-ab-sum { margin: 8px 0; }
+.aafb-ab .note ul, .aafb-ab-sum ul { margin: 4px 0 0; padding-left: 18px; }
+.aafb-ab-sum .kv { margin-top: 4px; }
+.aafb-mc .check, .aafb-se-b p { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.aafb-resp-g { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.aafb-resp-g p { margin: 2px 0 0; }
+.aafb-rb { white-space: nowrap; }
+/* AA-FINAL C: short-course steps, duration, categories, module content, SCORM check, limits */
+.aafc-req { color: var(--red); margin-left: 2px; }
+.aafc-steps ol { list-style: none; margin: 10px 0 6px; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.aafc-step { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface, var(--bg)); color: inherit; font: inherit; cursor: pointer; min-width: 0; }
+.aafc-step .strong { overflow-wrap: anywhere; }
+.aafc-cur .aafc-step { border-color: var(--brand); box-shadow: inset 0 -3px 0 var(--brand); }
+.aafc-guide { margin: 4px 0 8px; }
+.aafc-dur-row { display: grid; grid-template-columns: minmax(0, 7rem) minmax(0, 1fr); gap: 8px; }
+.aafc-dur-row .input, .aafc-dur-row .select { width: 100%; min-width: 0; }
+.aafc-dur { border: 0; padding: 0; margin: 0; min-width: 0; }
+.aafc-catf .linklike { margin-top: 4px; align-self: flex-start; }
+.aafc-cadd { flex-wrap: nowrap; } .aafc-cadd .input { flex: 1 1 auto; min-width: 0; }
+.aafc-madd { margin: 6px 0 10px; gap: 6px; flex-wrap: wrap; }
+.aafc-qlim { margin: 4px 0 0; }
+.aafc-pkst { display: block; margin-top: 6px; } .aafc-bad { color: var(--red); }
+.aafc-more > summary { cursor: pointer; padding: 2px 0; }
+.aafc-ql { margin: 0 0 4px; padding-left: 18px; }
+.aafc-miss { margin: 0; padding-left: 18px; }
+@media (max-width: 860px) { .aafc-steps ol { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+body.frame-mobile .aafc-steps ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* AAF-D: certificates drawn from their template; template versions; checklist help */
+.aafd-port { max-width: 440px; justify-self: center; margin: 0 auto; border-width: 4px; outline: none; padding: 32px 24px !important; }
+.aafd-port .meta { flex-direction: column; align-items: center; text-align: center; }
+.aafd-port .meta span { text-align: center !important; }
+.aafd-kind { letter-spacing: .1em; text-transform: uppercase; color: #555; }
+.aafd-logo { max-height: 48px; max-width: 160px; justify-self: center; object-fit: contain; }
+.aafd-logo-ph { justify-self: center; border: 1px dashed #999; padding: 2px 8px; color: #555; }
+.aafd-ver .tbl td { vertical-align: top; }
+.aafd-proto { display: block; margin-top: 4px; }
+.aafd-ckhelp, .aafd-cklock { margin: 6px 0 10px; }
+/* AA-FINAL E: bundle price breakdown */
+.aafe-card h3 { margin: 16px 0 6px; font-size: .95rem; }
+.aafe-tbl th[scope="row"] { width: 34%; font-weight: 600; vertical-align: top; }
+.aafe-tbl td { vertical-align: top; }
+.aafe-below { color: var(--red); font-weight: 600; }
+.aafe-ok { color: var(--green); }
+.aafe-r-below td { background: color-mix(in srgb, var(--red) 6%, transparent); }
+.aafe-d { margin-top: 8px; }
+.aafe-d > summary { cursor: pointer; margin-bottom: 6px; }
+.aafe-agp { margin-bottom: 2px; }
+.aafe-gl { white-space: nowrap; }
+@media (max-width: 640px) { .aafe-tbl th[scope="row"] { width: auto; } }

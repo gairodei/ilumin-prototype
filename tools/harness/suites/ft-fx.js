@@ -101,7 +101,8 @@
     ok('FX-C Add learner to batch: the learner selector offers only the client demo\'s learners', !leaks(lo).length && !/Bennett|Rahman|Mensah/.test(lo), lo.slice(0, 160));
     go('a-batches', { tab: 'schedule' }); ACT.addSession({ dataset: {} });
     const bo = MODAL ? [...($1('#modal-root #se-b') || { options: [] }).options].map(o => o.value) : []; closeModal();
-    ok('FX-C Add session: the batch selector offers only the client demo batch', bo.every(v => v === CD_B));
+    // AA-FINAL (AA-15): restated — opened without a batch, the selector starts with an empty "Choose a batch…" placeholder (not a batch)
+    ok('FX-C Add session: the batch selector offers only the client demo batch', bo.filter(Boolean).length > 0 && bo.filter(Boolean).every(v => v === CD_B) && bo.filter(v => !v).length <= 1);
     as('FA'); go('f-dashboard'); ok('FX-C Finance dashboard: no legacy payers, refunds or approvals', !leaks(main()).length && !/AQ-200\d|TXN-7/.test(main()));
     // DR (PD-DR-05) supersedes "empty (no payment has been made)": the three simulated payments of the demo learners, nothing else
     // PD-FD-01: five receipts (Sam two) plus Tom unconfirmed bank transfer listed as awaiting. Was: rows() === 3.

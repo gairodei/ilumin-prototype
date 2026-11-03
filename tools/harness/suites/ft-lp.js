@@ -241,7 +241,8 @@
     const t = main(), L = ADMIN.learners.find(l => l.id === W.me.id);
     ok('LP-K Dev\'s profile shows the date of birth and address he entered at sign-up; the learner record matches', /Date of birth ?2 Nov 1988/.test(t) && /Address ?4 Example Road, Leicester/.test(t) && L.dob === '2 Nov 1988' && L.address === '4 Example Road, Leicester');
     click($1('#app nav [data-go="certificates"]'));
-    ok('LP-K Dev\'s certificates: "No certificates yet — issued when you complete your programme"', /No certificates yet/.test(main()) && /issued when you complete your programme/.test(main()) && !/No certificates with this status/.test(main()));
+    // AA-FINAL (AA-20): the NVQ wording follows the posted-certificate rule (PD-FP / screens-b.js). Was: /issued when you complete your programme/
+    ok('LP-K Dev\'s certificates: "No certificates yet — posted by the awarding body, not issued in the LMS"', /No certificates yet/.test(main()) && /sent to you by post by the awarding body/.test(main()) && /isn't issued, downloaded or verified in the LMS/.test(main()) && !/No certificates with this status/.test(main()));
     pick('short'); go('certificates'); ok('LP-K Lena\'s certificates: the short-course rule; no NVQ people or recipients', /short course's certificate is issued when you complete the course/.test(main()) && recipients().every(r => /^Academic Admin — /.test(r)));
     signOutUI(); acaEnter('KA'); S.signedIn = true; go('a-learners'); ACT.addLearner(); $1('#nl-name').value = 'Nina Fresh (demo)'; $1('#nl-email').value = 'nina.lp@demo.example'; $1('#nl-mob').value = '+44 7700 900777';
     prim(); closeModal(); const N = ADMIN.learners.find(l => l.name === 'Nina Fresh (demo)'); go('a-learner', { id: N.id }); click($1('main [data-act="lnActLink"]'));

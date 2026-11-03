@@ -132,12 +132,13 @@
 
   await T('MR-31 re-allocation wizard', async () => {
     matrix('kRealloc', () => ACT.kRealloc(), ['super', 'aca']);
-    ID.aca(); ACT.kRealloc(); $a('#modal-root .kr-n').forEach(c => { c.checked = true; }); prim(); prim(); $1('#kr-r').value = 'Cover'; prim(); closeModal();
-    const a = lastAud();
-    ok('MR-31 the audit no longer claims "Learners re-allocated": it says what changed (removed from the caseload, or nothing moved)', /^(Learners removed from assessor caseload|Re-allocation recorded — nothing moved)$/.test(a.action) && a.actor === ADMIN.me.name, J([a.action, a.after, a.actor]));
+    // AA-FINAL (AA-19 / D12): restated — the fixed-legacy-name wizard is removed; Re-allocate opens guidance to the real allocation
+    // places and changes nothing, so the "what changed" audit and the confirm-step re-check have nothing left to check
+    ID.aca(); const sR = snap(), aR = ADMIN.audit.length; ACT.kRealloc(); const guide = !!MODAL && /Nothing is changed from this dialog/.test($1('#modal-root').textContent) && !$1('#modal-root .kr-n'); prim(); closeModal();
+    ok('MR-31 the audit never claims "Learners re-allocated": the dialog is guidance only, nothing changed, nothing audited', guide && snap() === sR && !ADMIN.audit.slice(0, ADMIN.audit.length - aR).some(a => /re-allocat/i.test(a.action)));
     ID.teacher(); const c0 = sec(); ACT.kRealloc(); ok('MR-31 original reproduction: a Teacher gets no re-allocation wizard (refused, logged)', !MODAL && sec() > c0); closeModal();
-    ID.aca(); ACT.kRealloc(); $a('#modal-root .kr-n').forEach(c => { c.checked = true; }); prim(); const s0 = snap(), k0 = sec(); S.portal = 'learner'; const r = prim(); S.portal = 'admin';
-    ok('MR-G1 re-check on confirm: kRealloc (next step after leaving the admin console) is refused, nothing changed, logged', r === false && !MODAL && snap() === s0 && sec() > k0); closeModal();
+    ID.aca(); ACT.kRealloc(); const s0 = snap(); S.portal = 'learner'; prim(); S.portal = 'admin';
+    ok('MR-G1 re-check on confirm: the guidance dialog changes nothing, whoever presses it', snap() === s0); closeModal();
     // Staff record → Re-allocate learners (ACT.realloc): the same caseload-only effect, so the same truthful preview, audit and message
     ID.super(); const from = ADMIN.staff.find(x => x.roles.includes('Assessor') && x.status === 'Active');
     ACT.realloc({ dataset: { id: from.id } }); const pv = (($1('#modal-root') || {}).textContent || '');

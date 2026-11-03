@@ -1598,8 +1598,10 @@
     ok('S5a (17) staff record re-allocation: the new assessor must hold the Assessor role', rr === false && /doesn't hold the Assessor role/.test(mroot().textContent)); closeModal();
     acaEnter('KA'); ACT.kAlloc(); const ks = document.querySelector('#modal-root #ka-s'); ks.innerHTML += '<option>Leila Haddad</option>'; ks.value = 'Leila Haddad'; document.querySelector('#modal-root #ka-r').value = 'x'; const na = STORE.aca.alloc.length, kr = prim();
     ok('S5a (17) Academic Admin allocation refuses someone who is neither Teacher nor Assessor', kr === false && STORE.aca.alloc.length === na); closeModal();
-    ACT.kRealloc(); document.querySelector('#modal-root .kr-n').checked = true; prim(); const kt = document.querySelector('#modal-root #kr-t'); kt.innerHTML += '<option>Tom Whitfield</option>'; kt.value = 'Tom Whitfield'; const k2 = prim();
-    ok('S5a (17) re-allocation wizard: the new assessor must hold the Assessor role', k2 === false && /step 2 of 3/.test(MODAL.title)); closeModal();
+    // AA-FINAL (AA-19 / D12): restated — the re-allocation wizard is removed (guidance only); assessors are re-allocated in the
+    // Assessors panel, whose Assessor-role check is asserted above (chAssessSave)
+    const t2 = JSON.stringify([ADMIN.batches.map(x => [x.teachers, x.assessors]), STORE.tas.removed]); ACT.kRealloc(); const k2 = !!MODAL && !document.querySelector('#modal-root #kr-t'); prim(); closeModal();
+    ok('S5a (17) re-allocation: no one can be re-allocated as assessor outside the Assessors panel (guidance only, nothing changed)', k2 && JSON.stringify([ADMIN.batches.map(x => [x.teachers, x.assessors]), STORE.tas.removed]) === t2);
     const sa = ADMIN.staff.find(s => s.id === 'ST-004'), mo = ADMIN.staff.find(s => s.id === 'ST-017');
     ok('S5a persona reconciliation: Sarah Okonkwo\'s staff record now holds Teacher and Assessor like her persona (same email, qualifications, registration)', sa.roles.includes('Teacher') && sa.roles.includes('Assessor') && sa.email === TAS_USERS.A.email && sa.reg === TAS_USERS.A.reg);
     ok('S5a Michael Osei is not reconciled: his staff record and persona have different emails (documented, unchanged)', mo.roles.join() === 'Academic Coordinator' && TAS_USERS.M.email !== mo.email);

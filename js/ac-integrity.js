@@ -167,7 +167,9 @@ ACT.kAlloc = (el, e) => {
   if (MODAL) s5WrapPrimary(() => {
     if (w0BatchAdminWhy()) return AC_BATCH_ADMIN;
     const who = mval('#ka-s'), s = ADMIN.staff.find(x => x.name === who);
-    if (mval('#ka-k') === 'Batch' && s && s.roles.includes('Assessor')) { fieldErr('#ka-s', 'Assessors are allocated by role (assignments, PD, observations) in Batches → the batch → Staff → Assessors (CH-17), where the Coordinator rule (P-33) applies.'); return true; }
+    // AA-FINAL (AA-19 / D8): only a person without the Teacher role is sent to the Assessors panel — dual-role Teacher + Assessor
+    // staff are allocated here as Teacher (CH-17 still allocates every Assessor responsibility by role in the batch panel)
+    if (mval('#ka-k') === 'Batch' && s && s.roles.includes('Assessor') && !s.roles.includes('Teacher')) { fieldErr('#ka-s', 'Assessors are allocated by role (assignments, PD, observations) in Batches → the batch → Staff → Assessors (CH-17), where the Coordinator rule (P-33) applies.'); return true; }
     return '';
   });
   return r;

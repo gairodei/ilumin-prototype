@@ -244,11 +244,15 @@ dt = function (cfg) {
   if (c && !cfg.cols.some(x => x.k === 'chNet')) { const k = cfg.cols.findIndex(x => x.k === c.k); if (k >= 0) { chVatSync(); const cols = cfg.cols.slice(); cols.splice(k, 1, ...chVatCols(c.get), { ...cfg.cols[k], l: 'Total' }); cfg = { ...cfg, cols }; } }
   return _dtCh6.call(this, cfg);
 };
+// AA-FINAL (g5 Low / AA-14): the payment route of a credited bundle — an invoice request credited it, or a card purchase did; only a seeded
+// bundle with neither falls back to its price mode as before (a customised price was arranged by invoice)
+const chPayMode = b => ADMIN.queue.some(i => i.type === 'Agency invoice (offline) purchase' && i.data && i.data.bundleId === b.id) || (STORE.agy ? STORE.agy.ledger : []).some(l => l.bundle === b.id && /^Invoice /.test(l.ref || '')) ? 'Invoice'
+  : (STORE.agy ? STORE.agy.purchases : []).some(x => x.bundle === b.id && x.method === 'Card') ? 'Gateway' : b.mode === 'Customised' ? 'Invoice' : 'Gateway';
 const _fRepCh6 = SCREENS['f-reports'];
 SCREENS['f-reports'] = p => {
   const h = _fRepCh6(p); if ((p && p.tab) !== 'agency') return h; chVatSync();
   const rows = ADMIN.agencies.map(a => { const bs = ADMIN.bundles.filter(b => b.agency === a.name), o = allQueue().filter(i => i.stage === 'awaiting' && i.data && i.data.agency === a.name); const tot = bs.reduce((s, b) => s + b.price, 0), vat = bs.reduce((s, b) => { const v = chVatOfRec(b); return s + (v && v.pct ? v.vat : 0); }, 0);
-    return `<tr><td>${esc(a.name)}</td><td class="r">${bs.length || '—'}</td><td class="r">${bs.length ? money(tot - vat, 'GBP') : '—'}</td><td class="r">${bs.length ? money(vat, 'GBP') : '—'}</td><td class="r">${bs.length ? money(tot, 'GBP') : '—'}</td><td class="small">${[...new Set(bs.map(b => b.mode === 'Customised' ? 'Invoice' : 'Gateway'))].join(', ') || '—'}</td><td class="r">${o.map(i => money(i.amount, i.cur)).join(', ') || '—'}</td></tr>`; }).join('');
+    return `<tr><td>${esc(a.name)}</td><td class="r">${bs.length || '—'}</td><td class="r">${bs.length ? money(tot - vat, 'GBP') : '—'}</td><td class="r">${bs.length ? money(vat, 'GBP') : '—'}</td><td class="r">${bs.length ? money(tot, 'GBP') : '—'}</td><td class="small">${[...new Set(bs.map(chPayMode))].join(', ') || '—'}</td><td class="r">${o.map(i => money(i.amount, i.cur)).join(', ') || '—'}</td></tr>`; }).join('');
   return h.replace(/<section class="card"><table class="tbl dense"><thead><tr><th>Agency<\/th><th class="r">Bundle purchases<\/th>[\s\S]*?<\/table><\/section>/, `<section class="card"><div class="tbl-wrap"><table class="tbl dense"><thead><tr><th>Agency</th><th class="r">Bundle purchases</th><th class="r">Net</th><th class="r">VAT</th><th class="r">Total</th><th>Modes</th><th class="r">Outstanding invoices</th></tr></thead><tbody>${rows}</tbody></table></div><p class="xs muted">${ic('info', 12)} VAT applies to agency bundle purchases only — learner payments carry no VAT.</p></section>`);
 };
 

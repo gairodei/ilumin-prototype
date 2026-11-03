@@ -86,7 +86,7 @@ ACT.cbCurEdit = el => {
     const t = mval('#ce-t'), ev = n.lvl === 'crit' ? mval('#ce-e') : null, ab = n.lvl === 'mod' && wiz ? mval('#ce-ab').toUpperCase() : null;
     if (!t) return fieldErr('#ce-t', n.lvl === 'crit' ? 'Enter the descriptor' : 'Enter a title'), false;
     if (n.lvl === 'crit' && !ev) return fieldErr('#ce-e', 'Enter the evidence requirement'), false;
-    if (ab !== null && !ab) return fieldErr('#ce-ab', 'Enter the awarding-body code'), false;
+    if (ab !== null && !ab && x.ab) return fieldErr('#ce-ab', 'A recorded awarding-body code can be corrected but not removed'), false; // AA-FINAL (AA-02 / g1 Low): optional until recorded, as in the S3 store (nodeAdd, INP.chModCode)
     if (ab && !/^[A-Z]\/\d{3}\/\d{4}$/.test(ab)) return fieldErr('#ce-ab', 'Use the format T/650/0001'), false;
     const key = n.lvl === 'crit' ? 'd' : 'title', same = t === x[key] && (ev === null || ev === (x[evK] || '')) && (ab === null || ab === (x.ab || ''));
     if (same) return fieldErr('#ce-t', 'Nothing has changed'), false;
