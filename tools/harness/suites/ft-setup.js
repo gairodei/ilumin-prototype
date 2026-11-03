@@ -1686,7 +1686,8 @@
   const rebuildA = () => { INP.adminVariant({ value: Object.keys(ADMIN_VARIANTS).find(k => k !== 'A') }); INP.adminVariant({ value: 'A' }); SA(); };
   const links = id => STORE.agy.lmails.filter(m => m.kind === 'agency' && m.agencyId === id);
   const linkOf = id => links(id).find(m => !m.used);
-  const onboard = (name, login, reg) => { ACT.newAgency(); fill({ '#oa-n': name, '#oa-l': name + ' Ltd', '#oa-r': reg, '#oa-a': '4 Mill Lane, Leeds LS1 4AB' }); prim(); fill({ '#oa-pc': 'Ana Reyes (Operations)', '#oa-pe': login, '#oa-bc': 'Accounts team' }); prim(); fill({ '#oa-li': login }); prim(); prim(); prim(); prim(); const r = prim(); if (r !== false) closeModal(); return ADMIN.agencies.find(a => a.name === name); };
+  // SIB-FINAL (PD-SIB-C-01): an abandoned wizard keeps a draft and "Onboard agency" asks first — these checks start a new onboarding
+  const onboard = (name, login, reg) => { ACT.newAgency(); if (MODAL && MODAL.title === 'Continue onboarding?') MODAL.actions.find(x => x.label === 'Start again').fn(); fill({ '#oa-n': name, '#oa-l': name + ' Ltd', '#oa-r': reg, '#oa-a': '4 Mill Lane, Leeds LS1 4AB' }); prim(); fill({ '#oa-pc': 'Ana Reyes (Operations)', '#oa-pe': login, '#oa-bc': 'Accounts team' }); prim(); fill({ '#oa-li': login }); prim(); prim(); prim(); prim(); const r = prim(); if (r !== false) closeModal(); return ADMIN.agencies.find(a => a.name === name); };
   const setPw = (m, pw = 'Agency!Pass2026') => { ACT.lmSet({ dataset: { id: m.id } }); if (S.auth !== 'agyFirst') return 'refused'; fill({ '#ag-new': pw, '#ag-conf': pw }); return SUBMIT.agyFirstSet(); };
   const kpiOf = l => { const k = [...app().querySelectorAll('main .kpi')].find(x => x.querySelector('.xs') && x.querySelector('.xs').textContent === l); return k ? +k.querySelector('.big-num').textContent : NaN; };
   const discRow = id => { const r = app().querySelector(`main tr[data-ag="${id}"]`); return r ? r.textContent : ''; };

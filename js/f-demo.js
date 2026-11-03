@@ -77,7 +77,9 @@ function fPortCtx(lid, recs) {
   return { tree: s3LearnerTree(t), prog: pr.title, ver: 'Version ' + (tv && tv.length ? rv : pr.version), note: tv && tv.length ? '' : `This learner's pinned version isn't recorded, so the programme's Version ${pr.version} curriculum is shown.` };
 }
 function fPortfolio(p) {
-  const all = allIqaRecords(), learners = [...new Map(all.map(r => [r.lid, r.learner])).entries()].sort((a, b) => a[1] > b[1] ? 1 : -1);
+  const all = allIqaRecords(), seen = [...new Map(all.map(r => [r.lid, r.learner])).entries()];
+  // SIB-FINAL (IQA-03/04): learners on an NVQ batch are listed even before any of their work is marked
+  const learners = (typeof sibqPortLearners === 'function' ? sibqPortLearners(seen) : seen).sort((a, b) => a[1] > b[1] ? 1 : -1);
   if (!learners.length) return `${pageA('Portfolios', 'Read-only. Sample evidence across the whole qualification.')}<div class="card"><div class="empty"><p>No marked work or completed observations yet.</p></div></div>`;
   const id = p.id || learners[0][0], name = learners.find(l => l[0] === id)[1], recs = all.filter(r => r.lid === id), ctx = fPortCtx(id, recs);
   const ev = c => recs.filter(r => r.crit.includes(c)), item = r => `<span class="xs">${KIND_LBL[r.kind]} <button class="linklike" data-go="q-record" data-id="${r.id}">${r.id}</button> · ${r.verified ? ic('lock', 11) + ' verified by ' + esc(r.assessor) : 'not verified'}${recAdvisory(r) ? ' · ' + ic('flag', 11) + ' advisory' : ''} <button class="linklike" data-act="qAddOne" data-id="${r.id}">Add to sample set</button></span>`;

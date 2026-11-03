@@ -403,6 +403,8 @@ function fcpEncode(roots) {
     if (v === undefined) return { $u: 1 };
     if (typeof v === 'number') return Number.isFinite(v) ? v : { $n: String(v) };
     if (v === null || typeof v !== 'object') return typeof v === 'function' ? { $u: 1 } : v;
+    // SIB-FINAL: an attached file's bytes (W0 keeps them for the browser session only) are left out; a Blob made every later save fail silently
+    if (typeof Blob !== 'undefined' && v instanceof Blob) return { $u: 1 };
     if (ids.has(v)) return { $r: ids.get(v) };
     const id = n++; ids.set(v, id);
     if (v instanceof Date) return { $i: id, $d: v.toISOString() };

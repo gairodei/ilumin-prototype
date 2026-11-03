@@ -1737,3 +1737,24 @@ body.frame-mobile .aafc-steps ol { grid-template-columns: repeat(2, minmax(0, 1f
 .sae-na { padding: 18px 8px; }
 .sae-cf { gap: 8px; align-items: center; flex-wrap: wrap; }
 @media (forced-colors: active) { .sae-seg, .sae-colbar { forced-color-adjust: none; border: 1px solid CanvasText; } }
+
+/* SIB-FINAL — workflow explanations (System Admin, IQA, Business Admin), onboarding stepper, bundle price errors */
+.sib-how h2 { margin-bottom: 6px; }
+.sib-flow { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.sib-flow li::marker { font-weight: 700; color: var(--brand); }
+.sib-list { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; }
+.sib-how .grid-2 { margin-top: 10px; }
+.sib-how .grid-2 h3 { margin-bottom: 2px; }
+details.sib-how > summary { cursor: pointer; }
+details.sib-how[open] > summary { margin-bottom: 8px; }
+.sib-q-att { display: block; margin-top: 4px; }
+.sib-q-sum .kpis { margin-bottom: 6px; }
+/* Onboarding stepper: seven steps fit the dialog; on narrow screens only the current step keeps its label */
+.sib-oa-steps .step { min-width: 0; padding: 0 2px; }
+.sib-oa-steps .step .s-l { font-size: .78rem; line-height: 1.2; }
+@media (max-width: 760px) {
+  .sib-oa-steps .step:not(.cur) .s-l { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .sib-oa-steps .step.cur { flex: 2; }
+  .sib-oa-steps { grid-auto-columns: auto; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+}
+.sib-bp-err { margin: 0; }

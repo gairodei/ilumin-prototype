@@ -1042,14 +1042,16 @@
     ok('CH-42 Academic Admin: Learner 360 → Enrolments: "Assign / change batch"', !!app().querySelector('[data-act="chMoveBatch"][data-id="' + w.me.id + '"]'));
     ACT.chMoveBatch({ dataset: { id: w.me.id } }); const opts = [...document.querySelectorAll('#ch-mv-b option')].map(o => o.value);
     ok('CH-42 only not-started batches of the same course with a place', opts.length > 0 && opts.every(c => B7(c).course === L3T && !chStarted(B7(c)) && chHasPlace(B7(c)) && c !== 'L3AC-DEC26-AUH') && !opts.includes('L3AC-JAN26'), opts.join());
-    closeModal(); role('bizA'); go('b-batchassign');
-    ok('CH-42 Business Admin: "Batch assignment" — learner, course and batch only', S.route === 'b-batchassign' && /Batch assignment/.test(main()) && ['Learner', 'Course', 'Batch', 'Status'].every(x => [...app().querySelectorAll('main thead th')].some(t => t.textContent.trim() === x)) && ![...app().querySelectorAll('main thead th')].some(t => /Payment|Fee|Progress|Grade|Amount/.test(t.textContent)) && !/£|Payments|Assignment \d|Submission/.test(app().querySelector('main table').textContent));
-    ACT.chMoveBatch({ dataset: { id: w.me.id } }); document.querySelector('#ch-mv-b').value = 'L3AC-FEB27-AUH'; press(); ok('CH-42 reason required', !!MODAL && /Enter a reason/.test(mroot().textContent));
+    // SIB-FINAL (PD-SIB-C-05) supersedes CH-42 for the Business Admin: was "Business Admin: Batch assignment — learner, course and batch only"; now the Business Admin is refused and the Academic Admin makes the move
+    closeModal(); role('bizA'); go('b-batchassign'); const aB = ADMIN.audit.length;
+    ok('CH-42 / SIB-FINAL Business Admin: no Batch assignment (refused and logged)', /isn't part of the Business Admin role/.test(main()) && !app().querySelector('.adm-side a[href="#b-batchassign"]') && (ACT.chMoveBatch({ dataset: { id: w.me.id } }), !MODAL && ADMIN.audit.length >= aB + 1 && ADMIN.audit[0].action === 'Blocked: batch change'));
+    closeModal(); acaEnter('KA'); S.signedIn = true; go('a-learner', { id: w.me.id, tab: 'enrolments' }); ACT.chMoveBatch({ dataset: { id: w.me.id } }); document.querySelector('#ch-mv-b').value = 'L3AC-FEB27-AUH'; press(); ok('CH-42 reason required', !!MODAL && /Enter a reason/.test(mroot().textContent));
     document.querySelector('#rsn').value = 'Family commitments in December.'; press();
     ok('CH-42 moved: counts, batch fields; deposit, plan and offer letter unchanged', w.signup.batch === 'L3AC-FEB27-AUH' && /Abu Dhabi Cohort 2/.test(w.nvq.batch) && au.enrolled === e0[0] - 1 && fe.enrolled === e0[1] + 1 && JSON.stringify(w.admission.deposit) === dep && JSON.stringify(w.plans.find(p => p.e === 'nvq')) === plan && JSON.stringify(w.signup.sig) === sig);
     ok('CH-42 audited; learner and both Coordinators notified', ADMIN.audit.some(a => a.action === 'Batch changed (before start)' && a.reason === 'Family commitments in December.') && w.notifs.some(n => /Your batch has changed/.test(n.title)) && STORE.coo.notifs.filter(n => /Learner batch changed/.test(n.t)).length >= 2);
-    const c = STORE.worlds.C.me.id; go('b-batchassign'); const row = [...app().querySelectorAll('main tbody tr')].find(tr => tr.textContent.includes(c));
-    ok('CH-42 batch started → action hidden', !!row && !row.querySelector('[data-act="chMoveBatch"]') && /Started/.test(row.textContent));
+    // SIB-FINAL (PD-SIB-C-05): was checked on the Business Admin's Batch assignment list; now on the Academic Admin's Learner 360
+    const c = STORE.worlds.C.me.id; go('a-learner', { id: c, tab: 'enrolments' }); const mv = app().querySelector('main .ch-move');
+    ok('CH-42 batch started → action hidden', !!mv && !mv.querySelector('[data-act="chMoveBatch"]') && /Started/.test(mv.textContent));
     const a0 = ADMIN.audit.length; ACT.chMoveBatch({ dataset: { id: c } });
     ok('CH-42 direct call after the start refused and logged', !MODAL && ADMIN.audit.length === a0 + 1 && ADMIN.audit[0].action === 'Blocked: batch change' && ADMIN.audit[0].reason === "Learners can't be moved after their batch has started.");
     learner('C'); ACT.chMoveBatch({ dataset: { id: c } }); ok('CH-42 a learner can\'t change a batch', !MODAL);
@@ -1100,7 +1102,8 @@
     go('ux-changelog'); const ux = [...app().querySelectorAll('main section.card')].find(s => /Client decisions — Batch 7c/.test(s.textContent));
     ok('UX Changelog: Batch 7c entry', !!ux && ['CH-42:', 'P-32', 'P-33:'].every(k => [...ux.querySelectorAll('li')].some(li => li.textContent.startsWith(k))));
     SA(); go('a-index'); ok('Admin index: 7c entries', !!app().querySelector('[data-t="a-learner.IA-L-31188.enrolments"]') && !!app().querySelector('[data-t="a-batches.L2DC-MAR26.staff"]'));
-    role('bizA'); go('b-index'); ok('Business index: Batch assignment', !!app().querySelector('[data-t="b-batchassign"]'));
+    // SIB-FINAL (PD-SIB-C-05): was "Business index: Batch assignment" (link present); now absent
+    role('bizA'); go('b-index'); ok('Business index: no Batch assignment (SIB-FINAL)', !app().querySelector('[data-t="b-batchassign"]'));
   });
 
   /* ================= New NVQ programme (gap fix) ================= */
