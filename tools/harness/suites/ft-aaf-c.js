@@ -106,7 +106,7 @@
       P = await choose(await zipOf([['imsmanifest.xml', '<manifest><oops'], SCRIPT], false)); ok('AA-11 a broken manifest is refused', P.status === 'bad' && /valid manifest/.test(P.why), P.why);
       P = await choose(await zipOf([['imsmanifest.xml', MAN12], SCRIPT], false));
       ok('AA-11 a SCORM 1.2 package: version, title and SCOs read from the manifest; the version select follows it', P.status === 'ok' && P.version === 'SCORM 1.2' && P.scos === 1 && P.title === 'Safe moving <b id="aafcx">test</b>' && $1('#ci-sv').disabled && $1('#ci-sv').value === 'SCORM 1.2', J(P));
-      ok('AA-11 nothing in the package ran and its title is shown as text', !window.__aafcRan && !$1('#aafcx') && /Checked: "Safe moving <b id="aafcx">test<\/b>"/.test($1('#aafc-pk').textContent));
+      ok('AA-11 nothing in the package ran and its title is shown as text', !window.__aafcRan && !$1('#aafcx') && /* AA-FOLLOWUP (PD-AAFU-03): was /Checked: "…"/ — now the name, detected version and result */ /Valid SCORM package: [^ ]+\.zip · SCORM 1\.2 detected · "Safe moving <b id="aafcx">test<\/b>"/.test($1('#aafc-pk').textContent));
       press(); const it = s1Spec(c).items[s1Spec(c).items.length - 1];
       ok('AA-11 saved with the detected version and package details (no file content kept)', it.kind === 'scorm' && it.scorm === 'SCORM 1.2' && it.pkg && it.pkg.version === 'SCORM 1.2' && it.pkg.scos === 1 && !('data' in it.pkg) && m.items.includes(it.id), J(it.pkg));
       click($1(`main [data-act="s1ItemAdd"][data-m="${m.id}"]`)); kind('scorm'); fill({ '#ci-t': 'Hoist practice' }); $1('#ci-sv').value = 'SCORM 1.2';
@@ -146,8 +146,10 @@
       ok('E2E bought: the enrolment records course version 3', !!e && e.courseV === 3 && e.status === 'Active', J(e && [e.courseV, e.status]));
       const sc = e.content.find(x => x.title === 'Interactive moving'); ok('AA-11 the enrolment keeps the package\'s detected version', sc && sc.scorm === 'SCORM 1.2' && sc.pkg && sc.pkg.version === 'SCORM 1.2');
       go('course', { id: e.id, tab: 'content' }); ACT.openItem({ dataset: { e: e.id, id: sc.id } });
-      ok('AA-11 the player says SCORM content isn\'t executed and completion is recorded manually; no fixed scenario, no "SCORM 1.2 player"', /Prototype: SCORM content is not executed; completion is recorded manually/.test(mtxt()) && !/Mrs P has slipped/.test(mtxt()) && !/SCORM 1\.2 player/.test(mtxt()) && /SCORM 1\.2/.test(mtxt()));
-      click($1('#modal-root [data-act="scormFinish"]')); ok('AA-11 completion recorded with no score', sc.state === 'Completed' && !sc.score && !!sc.manualAt && !/92%/.test(main()));
+      // AA-FOLLOWUP (PD-AAFU-04, client Option C) supersedes the manual completion — was: /Prototype: SCORM content is not executed; completion
+      // is recorded manually/, then clicking "Record completion" gave state Completed, no score — now: the demonstration notice, no completion
+      ok('AA-11 the player says SCORM is a demonstration only; no fixed scenario, no "SCORM 1.2 player"', /SCORM demonstration only\. Package execution, persistent storage, progress tracking and completion reporting are not implemented in this prototype\./.test(mtxt()) && !/Mrs P has slipped/.test(mtxt()) && !/SCORM 1\.2 player/.test(mtxt()) && /SCORM 1\.2/.test(mtxt()));
+      ok('AA-11 no completion action; a direct call records nothing, no score', !$1('#modal-root [data-act="scormFinish"]') && ACT.scormFinish({ dataset: { e: e.id, id: sc.id } }) === false && sc.state === 'Not opened' && !sc.score && !sc.manualAt && !/92%/.test(main()));
       go('course', { id: e.id, tab: 'overview' }); ok('AA-22 learner Overview: access period from enrolment, each quiz countdown, no course timer', /Time limits/.test(main()) && /45 days from your enrolment/.test(main()) && /20-minute countdown once started/.test(main()) && /no overall time limit/.test(main()));
       go('course', { id: 'bk5', tab: 'overview' }); ok('Demo 7: CD3\'s bk5 Overview shows its access period and quiz limits', /Time limits/.test(main()) && /days from your enrolment/.test(main()));
     });

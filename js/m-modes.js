@@ -241,7 +241,7 @@ const _cbRevM = SCREENS['c-batches']; SCREENS['c-batches'] = p => { const h = _c
 
 /* ---------- B. Course Details: Course code, Awarding body, Awarding body course code ---------- */
 const M_ABC = 'Awarding body course code';
-const M_ABC_HINT = 'The awarding body\'s own code for this qualification or course (for example its qualification number), as issued. Separate from the Academy\'s course code.';
+const M_ABC_HINT = 'Enter the course code provided by NCFE or the relevant awarding body.';
 // The form: the awarding body moves next to its course code; the existing reference field (pr.ref) is that code
 const _cbFormM = cbForm;
 cbForm = function () {
@@ -281,4 +281,4 @@ UXC.push(['M', 'Batch delivery-mode selection and course code labels (23 Oct 202
 const _aIdxM = SCREENS['a-index'];
 SCREENS['a-index'] = p => _aIdxM(p) + `<section class="card idx-sec"><h2>M — Batch delivery modes and course codes</h2><ul class="idx-list">${[
   chIdxLi('Level 3 batch → delivery modes accepted', { act: 'aJump', t: 'a-batches.L3AC-NOV26' }, 'M — the modes come from the fee options the batch accepts.'),
-  chIdxLi('Course Details (three code fields)', { act: 'aJump', t: 'a-programmes.NV-L3.details' }, 'M — Course code, Awarding body, Awarding body course code.')].join('')}</ul></section>`;
+  chIdxLi('Course Details (awarding body course code)', { act: 'aJump', t: 'a-programmes.NV-L3.details' }, 'M, AA-FOLLOWUP — Awarding body and Awarding body course code; no Academy course code.')].join('')}</ul></section>`;

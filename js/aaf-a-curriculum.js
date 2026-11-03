@@ -29,7 +29,8 @@
 const aafaHint = t => `<span class="hint aafa-hint">${t}</span>`;
 
 /* ---------- AA-01: awarding body course code vs internal programme ID ---------- */
-const AAFA_REF_WHY = 'Required. The awarding body\'s own code for this qualification (for example its qualification number, such as 610/0001/0), as issued. It is shown to learners as the "Awarding body ref." and in the course header. Separate from the Academy\'s own records: the internal programme ID is assigned automatically and is what batches, learners and records link to.';
+// AA-FOLLOWUP: the client's guidance first; this is the only course code entered (no Academy course code)
+const AAFA_REF_WHY = 'Required. Enter the course code provided by NCFE or the relevant awarding body. It is the only course code you enter — the Academy doesn\'t use its own course code. Learners see it as the awarding body course code, and it is shown in the course header. The internal programme ID is assigned automatically and is what batches, learners and records link to.';
 const aafaIdField = pr => `<div class="field aafa-pid"><span class="lbl">Internal programme ID</span><div class="mono cb-ro">${pr && pr.id ? esc(pr.id) : 'Assigned automatically when the draft is first saved'}</div>${aafaHint('Automatic and read-only. It never changes, so batches, learners, assignments and records stay linked even if a code or title is corrected.')}</div>`;
 const _cbFormAAFA = cbForm;
 cbForm = function (pr) {

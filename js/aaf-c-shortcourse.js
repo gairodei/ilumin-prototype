@@ -392,7 +392,7 @@ shortContent_ = function (e) { return _shContAAFC.apply(this, arguments).replace
 /* ---------- Enrolments record their course version and the package details (D5, AA-11) ---------- */
 function aafcStamp(e, row) {
   if (!e || !row) return; if (e.courseV == null) e.courseV = row.version;
-  const sp = s1Spec(row); (e.content || []).forEach(x => { if (x.kind !== 'scorm') return; const it = sp.items.find(i => i.id === x.id); if (it) { x.scorm = x.scorm || it.scorm || ''; if (it.pkg) x.pkg = { title: it.pkg.title || '', version: it.pkg.version || it.scorm || '', sample: !!it.pkg.sample }; } });
+  const sp = s1Spec(row); (e.content || []).forEach(x => { if (x.kind !== 'scorm') return; const it = sp.items.find(i => i.id === x.id); if (it) { x.scorm = x.scorm || it.scorm || ''; if (it.pkg) x.pkg = { title: it.pkg.title || '', version: it.pkg.version || it.scorm || '', sample: !!it.pkg.sample, file: it.pkg.file || it.src || '', scos: it.pkg.scos || 0 /* AA-FOLLOWUP: the learner sees the same package name and check result */ }; } });
 }
 const _enrolAAFC = s1Enrol;
 s1Enrol = function (c, row) { const r = _enrolAAFC.apply(this, arguments); aafcStamp(W && W.enrolments.find(x => x.courseId === (row && row.id)), row); return r; };

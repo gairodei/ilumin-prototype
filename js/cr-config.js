@@ -105,9 +105,7 @@ const _snapCR = cbSnap; cbSnap = function (form) { const s = _snapCR.apply(this,
 const _cbFormCR = cbForm;
 cbForm = function (pr, key) {
   let h = _cbFormCR.apply(this, arguments); const c = CB_CACHE[key];
-  h = h.replace(/<div class="field"><label for="np-code">[\s\S]*?<\/div>/, '')                 // 2. no Academy course code
-    .replace('<label for="np-t">Title</label>', '<label for="np-t">Course name</label>')
-    .replace('Separate from the Academy&#39;s course code.', 'Separate from the Academy&#39;s own records.').replace("Separate from the Academy's course code.", "Separate from the Academy's own records.")
+  h = h.replace('<label for="np-t">Title</label>', '<label for="np-t">Course name</label>') // 2. no Academy course code: removed at source (AA-FOLLOWUP)
     .replace(/<fieldset class="field full r1-np-sup"[^>]*>/, '<fieldset class="field full r1-np-sup" style="border:0;padding:0" hidden="">'); // modes come from the fee options
   // an existing course: its fee options (the Section 5 records, with their Finance state) and the modes they give
   h = h.replace(/<div class="field full r1-np-opts"><span class="lbl">Fee options<\/span><ul class="list small">[\s\S]*?<\/ul><span class="hint">[^<]*<\/span><\/div>/, () => `<div class="field full r1-np-opts cr-fo-f"><span class="lbl">Fee options</span>${crFoList(pr)}<span class="hint">Managed in Section 5 — Fees &amp; Payments. These are the same records: they are changed there and approved by Finance. Delivery modes offered: <strong class="cr-fo-m">${esc(mTxt(crModes(pr).modes))}</strong>.</span></div>`);
@@ -116,8 +114,6 @@ cbForm = function (pr, key) {
   if (h.includes('class="r1-np-list"')) { const pm = (c && c.pm) || 'opts', i = h.indexOf('<div class="field r1-np-price"'); if (i >= 0) h = h.slice(0, i) + crPmField(pm) + h.slice(i); }
   return h;
 };
-// 2. The Academy's course code isn't entered any more: a programme keeps the code it has (never cleared, never invented)
-cbCodeRead = function (pr) { return pr && pr.code ? pr.code : null; };
 const crPmOf = () => ($(`${r1Sc()} input[name="cr-pm"]:checked`) || {}).value || 'opts';
 function crPmSync() {
   const sc = r1Sc(), lv = $(`${sc} #np-l`); if (!lv || !$(`${sc} .cr-pm`)) return; const l3 = lv.value === 'Level 3', opts = !l3 && crPmOf() === 'opts';
@@ -146,12 +142,11 @@ ch8Create = function (d) {
   return pr;
 };
 
-/* ---------- Read-only Course Details: the fee options and the modes they give; the course code only as history ---------- */
+/* ---------- Read-only Course Details: the fee options and the modes they give (a former course code: cb-details, as history) ---------- */
 const crCanCfg = pr => cbAdmin() && !cbRetired(pr);
 const _viewCR = cbDetailsView;
 cbDetailsView = function (pr) {
   let h = _viewCR.apply(this, arguments);
-  h = h.replace(/<dt>Course code<\/dt><dd>[\s\S]*?<\/dd>/, () => pr.code ? `<dt>Former Academy course code</dt><dd><span class="mono">${esc(pr.code)}</span> <span class="xs muted">Kept for history — no longer entered.</span></dd>` : '');
   const fo = crFoOpts(pr).length && crMultiFee(pr) ? `<dt>Fee options</dt><dd class="cr-fo-ro">${crFoList(pr)}</dd>` : '';
   const go8 = crCanCfg(pr) && !h.includes('cb-feelink'); // the page's own "Open Fees & Payments" link (CB-F), where it has one
   return h.replace(/<dt>Delivery mode<\/dt><dd>[\s\S]*?<\/dd>/, () => `${fo}<dt>Delivery modes offered</dt><dd class="cr-dm-ro">${crModesHtml(pr)}${go8 ? ` ${crFeesGo(pr)}` : ''}</dd>`);
@@ -204,12 +199,11 @@ cb8StartCard = function (pr) {
   return h.replace(/(<p class="small cb8-nodur">[\s\S]*?)(<\/p>)/, (x, a, b) => `${a}${b}<div class="note b-amber cr-nc-dur">${ic('info')}<div class="small"><strong>${CR_NC_T}.</strong> To give it fee options by delivery mode, record its duration first, then start a financial package. <button class="btn btn-sm" data-act="crDurRec" data-p="${pr.id}">Record the course duration</button></div></div>`);
 };
 
-// Builder header and Review & Publish: no Academy course code; the modes offered instead of the old default
-const _pageCR = cbPage; cbPage = function (pr) { return _pageCR.apply(this, arguments).replace(/ · Course code <span class="mono cb-code">[^<]*<\/span>/, ''); };
+// Review & Publish: the modes offered instead of the old default (the Academy course code is removed at source — AA-FOLLOWUP)
 const _rvSumCR = cbRvSummary;
 cbRvSummary = function (pr, k) {
   const h = _rvSumCR.apply(this, arguments); if (k !== 'details') return h;
-  return h.replace(/<dt>Course code<\/dt><dd>[\s\S]*?<\/dd>/, '').replace(/<dt>Default delivery mode for new batches<\/dt><dd>[\s\S]*?<\/dd>/, () => `<dt>Delivery modes offered</dt><dd>${crModesHtml(pr)}</dd>`);
+  return h.replace(/<dt>Default delivery mode for new batches<\/dt><dd>[\s\S]*?<\/dd>/, () => `<dt>Delivery modes offered</dt><dd>${crModesHtml(pr)}</dd>`);
 };
 const _rvWhereCR = cbRvWhere; cbRvWhere = function (pr, m) { return /delivery modes this course offers|Delivery modes offered/i.test(String(m)) ? ['details', 'details'] : _rvWhereCR.apply(this, arguments); };
 const _rvChecksCR = cbRvChecks;

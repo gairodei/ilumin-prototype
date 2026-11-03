@@ -96,7 +96,7 @@ function cbRvSummary(pr, k) {
   switch (k) {
     case 'details': {
       const obs = cbObsOf(pr);
-      return cbRvDl([['Course', `${esc(pr.title)} · ${esc(pr.level)}`], ['Course code', pr.code ? `<span class="mono">${esc(pr.code)}</span>` : cbRvNone('Not recorded')], ['Qualification number', pr.ref ? `<span class="mono">${esc(pr.ref)}</span>` : cbRvNone('Not recorded')],
+      return cbRvDl([['Course', `${esc(pr.title)} · ${esc(pr.level)}`], ['Qualification number', pr.ref ? `<span class="mono">${esc(pr.ref)}</span>` : cbRvNone('Not recorded')],
         ['Duration', typeof e1DurHtml === 'function' ? e1DurHtml(pr) : esc(pr.dur || '—')], ['Default delivery mode for new batches', cbIsL3(pr) ? "From each learner's fee option — one batch can hold both" : esc(chSupportOf(pr.id))], ['Observations', cbRvYN(obs, 'Yes', 'No — not applicable')]]);
     }
     case 'curriculum': {

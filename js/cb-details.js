@@ -45,10 +45,10 @@ const cbQualFields = q => `<div class="field full cb-qual-h"><span class="lbl">Q
 function cbForm(pr, key) {
   const c = CB_CACHE[key], d = pr ? { ...pr, support: chSupportOf(pr.id) } : {};
   if (c && c.f['np-l']) d.level = c.f['np-l'];
-  // Course code (the Academy's own identifier) and the qualification number / reference (the awarding body's) are separate fields;
-  // the reference is the existing field, unchanged in content
+  // AA-FOLLOWUP: no Academy course code is entered; a code recorded earlier is shown read-only as history. The reference is the
+  // existing field, unchanged in content (the awarding body course code)
   let h = ch8DetailsFields(d)
-    .replace('<div class="field"><label for="np-l">', () => cbCodeField(pr) + '<div class="field"><label for="np-l">')
+    .replace('<div class="field"><label for="np-l">', () => cbFormerCode(pr) + '<div class="field"><label for="np-l">')
     .replace('>Awarding-body reference</label>', '>Qualification number / reference</label>')
     .replace(/(<input class="input mono" id="np-r"[^>]*>)/, '$1<span class="hint">The awarding body\'s identifier for the qualification, as issued.</span>')
     .replace('<div class="field full"><label for="np-ds">', () => `${cbQualFields(pr && pr.qual)}<div class="field full"><label for="np-ds">`);
@@ -78,35 +78,20 @@ const _npAddCB2 = ACT.r1NpAdd, _npDelCB2 = ACT.r1NpDel;
 ACT.r1NpAdd = function () { const r = _npAddCB2.apply(this, arguments), f = $('main .cb-det-form'); if (f && !MODAL) CB_CACHE[f.dataset.key] = cbSnap(f); return r; };
 ACT.r1NpDel = function () { const r = _npDelCB2.apply(this, arguments), f = $('main .cb-det-form'); if (f && !MODAL) CB_CACHE[f.dataset.key] = cbSnap(f); return r; };
 
-/* ---------- Course code: the Academy's own identifier, separate from the awarding body's qualification number ----------
-   Stored upper-case on the programme record (pr.code). 2–20 letters, digits or hyphens, starting with a letter; unique across
-   programmes (case does not matter). Required for every new course, and kept required once a programme has one; programmes from
-   before course codes have none (shown "Not recorded" — never derived from the reference) and may stay blank until one is given. */
-const CB_CODE_RE = /^[A-Z][A-Z0-9-]{1,19}$/;
-const cbCodeField = pr => `<div class="field"><label for="np-code">Course code</label><input class="input mono" id="np-code" maxlength="20" autocomplete="off" value="${esc(pr && pr.code ? pr.code : '')}" placeholder="e.g. L3DAC-6M"><span class="hint">The Academy's own identifier for this course. 2–20 letters, digits or hyphens, starting with a letter; unique.${pr && !pr.code ? ' This programme has none yet — add one, or leave it blank.' : ''}</span></div>`;
-// The code typed, checked; returns the code, null (blank, allowed only for a programme that never had one), or false (field marked)
-function cbCodeRead(pr) {
-  const v = v8('#np-code').trim().toUpperCase();
-  if (!v) return (!pr || pr.code) ? (fieldErr('#np-code', 'Enter a course code — the Academy\'s own identifier for this course'), false) : null;
-  if (!CB_CODE_RE.test(v)) return fieldErr('#np-code', 'Use 2–20 letters, digits or hyphens, starting with a letter (for example L3DAC-6M)'), false;
-  const other = (ADMIN.programmes || []).find(p => p !== pr && p.code && p.code.toUpperCase() === v);
-  if (other) return fieldErr('#np-code', `This course code is already used by ${other.title}`), false;
-  return v;
-}
-function cbSaveCode(pr, code, why) {
-  const was = pr.code || null; if (code === was || (code == null && !was)) return;
-  pr.code = code; logA('NVQ Programmes', `${pr.title} (${pr.id})`, was ? 'Course code changed' : 'Course code set', was || '—', code, why || 'Course Details');
-}
+/* ---------- Course codes (AA-FOLLOWUP, client decision: "only the awarding-body course code") ----------
+   The one course code entered is the awarding body course code (pr.ref). The internal programme ID (pr.id) is automatic.
+   No Academy course code is entered, validated or saved any more (CB2's pr.code input, already hidden by CR — PD-CR-06 — is
+   removed). A code recorded earlier stays on the record unchanged and is shown read-only as "Former Academy course code". */
+const cbFormerCode = pr => (pr && pr.code ? `<div class="field cb-former-code"><span class="lbl">Former Academy course code (historical)</span><div class="mono cb-ro">${esc(pr.code)}</div><span class="hint">Recorded before the Academy stopped using its own course codes. Kept for history only; it can't be changed and isn't used. The course code is the awarding body course code.</span></div>` : '');
 
-// The course code, qualification details and the observation answer; returns them or null (with the field marked)
+// The qualification details and the observation answer; returns them or null (with the field marked)
 function cbExtras(pr) {
-  const code = cbCodeRead(pr || null); if (code === false) return null;
   const q = {}; for (const [k, l, t] of CB_QUAL) { const v = v8('#np-q-' + k).trim();
     if (t === 'num' && v !== '' && !(/^\d{1,5}$/.test(v))) return fieldErr('#np-q-' + k, `Enter ${l.replace(/ \(.*\)/, '').toLowerCase()} as a whole number, or leave it blank`), null;
     q[k] = v === '' ? null : t === 'num' ? +v : v; }
   const o = ($('main input[name="np-obs"]:checked') || {}).value;
   if (!o) return fieldErr('#np-obs-yes', 'Choose Yes or No — does this course contain observations?'), null;
-  return { code, qual: q, obs: o === 'yes' };
+  return { qual: q, obs: o === 'yes' };
 }
 const cbQualTxt = q => (q && CB_QUAL.some(([k]) => q[k] != null) ? CB_QUAL.filter(([k]) => q[k] != null).map(([k, l]) => `${l.replace(/ \(.*\)/, '')}: ${q[k]}`).join(' · ') : '—');
 function cbSaveQual(pr, q, why) {
@@ -133,7 +118,7 @@ function cbDetailsView(pr) {
     : `Version ${pr.version} is published, so its details are fixed for the learners on it.`;
   const obsEd = cbObsEditable(pr) && !(pr.chNew && pr.status === 'Draft');
   return `${obsEd ? cbNoteUnsaved(pr.id) : ''}<section class="card cb-details"><h2>Course details</h2><p class="small muted cb-ro-why">${ic('lock', 12)} ${esc(why)}</p>
-    <dl class="kv cb-dl"><dt>Course name</dt><dd>${esc(pr.title)}</dd><dt>NVQ level</dt><dd>${esc(pr.level)}</dd><dt>Course code</dt><dd>${pr.code ? `<span class="mono">${esc(pr.code)}</span>` : '<span class="muted">Not recorded</span>'}</dd><dt>Qualification number / reference</dt><dd>${pr.ref ? `<span class="mono">${esc(pr.ref)}</span>` : '<span class="muted">Not recorded</span>'}</dd>
+    <dl class="kv cb-dl"><dt>Course name</dt><dd>${esc(pr.title)}</dd><dt>NVQ level</dt><dd>${esc(pr.level)}</dd>${pr.code ? `<dt>Former Academy course code</dt><dd><span class="mono">${esc(pr.code)}</span> <span class="xs muted">Kept for history — no longer entered.</span></dd>` : ''}<dt>Qualification number / reference</dt><dd>${pr.ref ? `<span class="mono">${esc(pr.ref)}</span>` : '<span class="muted">Not recorded</span>'}</dd>
     ${CB_QUAL.map(([k, l]) => `<dt>${l}</dt><dd>${q[k] != null ? esc(String(q[k])) : '<span class="muted">Not recorded</span>'}</dd>`).join('')}
     <dt>Duration</dt><dd>${typeof e1DurHtml === 'function' ? e1DurHtml(pr) : esc(pr.dur || '—')}</dd><dt>Description</dt><dd>${pr.desc ? esc(pr.desc) : '<span class="muted">—</span>'}</dd>
     <dt>Delivery mode</dt><dd>${l3 ? 'From each learner\'s fee option — one batch can hold both' : `Default for new batches: ${esc(chSupportOf(pr.id))}`}</dd>
@@ -171,7 +156,7 @@ ACT.cbDetCreate = el => {
   const d = ch8ReadDetails(null); if (!d) return false; // the field is marked; nothing is created
   const x = cbExtras(null); if (!x) return false;
   const pr = ch8Create(d); if (tok) CB_MADE[tok] = pr.id;
-  cbSaveCode(pr, x.code, 'Set when the course was created'); cbSaveQual(pr, x.qual, 'Set when the course was created');
+  cbSaveQual(pr, x.qual, 'Set when the course was created');
   cbObsSet(pr, x.obs, 'Version 1 (draft) — set when the course was created');
   delete CB_CACHE.new; CB_TOK = null;
   go('a-programmes', { id: pr.id, tab: 'curriculum' }); toast('Draft saved — Version 1. Next: Curriculum.'); return pr;
@@ -184,7 +169,7 @@ ACT.cbDetSave = el => {
   const x = cbExtras(pr); if (!x) return;
   const a0 = ADMIN.audit.length; ACT.ch8SaveDetails({ dataset: { id: pr.id } }); // the existing save: validation, E1 rules, audit
   if (!ADMIN.audit.slice(0, ADMIN.audit.length - a0).some(a => a.action === 'Details changed')) return; // not saved (the field is marked)
-  cbSaveCode(pr, x.code); cbSaveQual(pr, x.qual); cbObsSet(pr, x.obs);
+  cbSaveQual(pr, x.qual); cbObsSet(pr, x.obs);
   delete CB_CACHE[pr.id]; if (el.dataset.next) go('a-programmes', { id: pr.id, tab: el.dataset.next }); else render();
   toast(el.dataset.next ? 'Saved. Next: Curriculum.' : 'Course details saved.');
 };
