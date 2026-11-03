@@ -85,9 +85,10 @@
       pick('aca'); go('a-batches'); const n0 = iqbS().rows.length; wiz1(C3); tickS({}); const f = finish(), b = iqbBatch(C3);
       ok('IQBC-06 IQA is optional: a batch is created with none, the review says so, no record', !!b && !iqbNamesOn(C3).length && iqbS().rows.length === n0 && /None chosen — optional; assign later in the Staff tab/.test(f.t5));
       go('a-batches', { id: C3, tab: 'staff' }); ok('IQBC-07 its Staff tab offers the assign control as before', /No IQA assigned/.test(main()) && !!$1('main [data-act="iqbAssignDlg"]'));
-      pick('sys'); go('a-batches'); wiz1(C4); const t = mtxt(); closeModal();
-      ok('IQBC-03 a System Administrator can create batches but not allocate IQAs: the step says IQA is assigned afterwards (no choices)', step() === undefined && /assigned after the batch is created, by an Academic Admin or the Super Administrator/.test(t) && !/IQA\) — optional/.test(t), t.slice(0, 300));
-      ok('IQBC-03 (negative) the IQB handler refuses a System Administrator directly as well', iqbAssign(C3, IQA_A, 'x') === false && !iqbNamesOn(C3).length);
+      // PD-IQB-09 (client decision, IQA-S) supersedes IQBC-03. Was: "a System Administrator can create batches but not allocate IQAs:
+      // the step says IQA is assigned afterwards (no choices)" and "(negative) the IQB handler refuses a System Administrator directly".
+      pick('sys'); go('a-batches'); wiz1(C4); const t = mtxt(), st = step(), l = $a('#modal-root .iqb-nb-c').map(i => i.value); closeModal();
+      ok('IQBC-03 (restated, PD-IQB-09) a System Administrator\'s Staff step lists the IQA choices like an Academic Admin\'s', st === '2' && /Internal Quality Assurer \(IQA\) — optional, one or more/.test(t) && J(l) === J([IQA_A, IQA_B]) && !$1('#modal-root .iqb-nb-ro'), t.slice(0, 300));
     });
     await T('IQBC later staff changes', async () => {
       pick('aca'); const b = iqbBatch(C1), t0 = J(b.teachers);

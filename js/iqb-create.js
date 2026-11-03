@@ -4,8 +4,8 @@
    can be ticked (IQA stays optional — a client decision). Independence is checked against everyone ticked on that step, by
    name, so a dual-role person can't be both; it is checked again on "Create batch", so the batch and its first staff allocation
    are saved together or not at all. The allocations are the IQB records (iqbAssign: permission, independence, duplicates, audit,
-   notification); the batch's Staff tab is unchanged for later changes. A System Administrator may create batches but not
-   allocate IQAs, so for them the step says the IQA is assigned afterwards.
+   notification); the batch's Staff tab is unchanged for later changes. Whoever may set the batch's other staff may choose its
+   IQAs (PD-IQB-09): the Super Administrator, Academic Admins and System Administrators.
    ============================================================ */
 'use strict';
 
@@ -14,7 +14,7 @@ const _nbIQB = ACT.newBatch; ACT.newBatch = function () { IQB_NB = { code: '', i
 const iqbNbStaff = () => ({ coords: [...new Set([mval('#nb-ac')].concat($$('#modal-root .mc-nb-c:checked').map(i => i.value)).filter(Boolean))], teachers: $$('#modal-root .nb-t:checked').map(i => i.value), assessors: $$('#modal-root .nb-a:checked').map(i => i.value) });
 function iqbNbWhy(iqas, st, code) {
   if (!iqas.length) return '';
-  if (!iqbCan()) return 'IQAs are assigned to batches by an Academic Admin or the Super Administrator.';
+  if (!iqbCan()) return IQB_WHO;
   for (const n of iqas) {
     if (!iqbStaff().some(s => s.name === n)) return `${n} isn't an active IQA.`;
     const as = st.teachers.includes(n) ? 'a Teacher' : st.assessors.includes(n) ? 'an Assessor' : st.coords.includes(n) ? 'an Academic Coordinator' : '';
@@ -25,7 +25,7 @@ function iqbNbWhy(iqas, st, code) {
 const iqbNbDeny = (code, n, why) => { w0Log('Batches', code || 'New batch', 'Blocked: IQA at batch creation', '—', n || '—', why); fieldErr('#modal-root .iqb-nb-c', why); toast(why, 'err'); return false; };
 const iqbNbField = () => iqbCan()
   ? `<fieldset class="field full iqb-nb" style="border:0;padding:0"><legend class="lbl">Internal Quality Assurer (IQA) — optional, one or more</legend><p class="xs muted">An IQA sees every learner in this batch and samples its marked work. Someone ticked as this batch's Teacher, Assessor or Academic Coordinator can't also be its IQA. You can assign or change IQAs later in the batch's Staff tab.</p>${iqbStaff().map(s => `<label class="check"><input type="checkbox" class="iqb-nb-c" value="${esc(s.name)}" ${IQB_NB.iqas.includes(s.name) ? 'checked' : ''}>${esc(s.name)}</label>`).join('') || '<p class="small muted">No active IQA.</p>'}</fieldset>`
-  : `<p class="small muted full iqb-nb-ro">${ic('shield', 13)} Internal Quality Assurer (IQA): assigned after the batch is created, by an Academic Admin or the Super Administrator (Staff tab).</p>`;
+  : `<p class="small muted full iqb-nb-ro">${ic('shield', 13)} Internal Quality Assurer (IQA): assigned after the batch is created, by the Super Administrator, an Academic Admin or a System Administrator (Staff tab).</p>`;
 const _omIQB = openModal;
 openModal = function (m) {
   const t = (m && m.title) || '', prims = () => (m.actions || []).filter(a => a.fn && a.cls && /primary/.test(a.cls));

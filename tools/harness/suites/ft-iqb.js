@@ -77,8 +77,9 @@
       ok('IQB-01 (negative) … nor its assignment assessor', J(chAllocOf(b)) === a0 && /is the IQA allocated/.test(ADMIN.security[0].detail));
       const t0 = J(b.teachers); ACT.batchStaff({ dataset: { id: CD_B } }); const bt = $1('#bs-t'); if (bt) { bt.insertAdjacentHTML('beforeend', `<option>${IQA_B}</option>`); bt.value = IQA_B; reason('x'); } closeModal();
       ok('IQB-01 (negative) … nor its Teacher', !!bt && J(b.teachers) === t0 && /is the IQA allocated/.test(ADMIN.security[0].detail));
-      // other roles can't change allocations
-      for (const p of ['fin', 'biz', 'sys']) { pick(p); const n1 = iqbS().rows.length; ACT.iqbAssignDlg({ dataset: { b: CD_B } }); const opened = !!MODAL; closeModal(); ok(`IQB-04 (negative) ${p} can't open or call the IQA allocation control`, !opened && iqbAssign(NBC, IQA_A, 'x') === false && iqbEnd(CD_B, IQA_A, 'x') === false && iqbS().rows.length === n1 && J(iqbCodesOf(IQA_A)) === J([CD_B])); }
+      // other roles can't change allocations. PD-IQB-09 (client decision, IQA-S) supersedes the System Administrator case: was
+      // ['fin', 'biz', 'sys'] — a System Administrator now allocates IQAs like the batch's other staff (tested in ft-iqbs.js).
+      for (const p of ['fin', 'biz']) { pick(p); const n1 = iqbS().rows.length; ACT.iqbAssignDlg({ dataset: { b: CD_B } }); const opened = !!MODAL; closeModal(); ok(`IQB-04 (negative) ${p} can't open or call the IQA allocation control`, !opened && iqbAssign(NBC, IQA_A, 'x') === false && iqbEnd(CD_B, IQA_A, 'x') === false && iqbS().rows.length === n1 && J(iqbCodesOf(IQA_A)) === J([CD_B])); }
       pick('coord1'); go('c-batches', { id: CD_B }); ok('IQB-01 the Coordinator sees the batch\'s IQAs read-only (no control)', /Internal Quality Assurer \(IQA\)/.test(main()) && !$1('main [data-act="iqbAssignDlg"]') && !$1('main [data-act="iqbRemoveDlg"]'));
     });
     /* ---------- One IQA, several batches ---------- */

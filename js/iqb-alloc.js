@@ -1,7 +1,7 @@
 /* ============================================================
    IQA — batch-level IQA allocation (client confirmation, 3 Nov 2026; PD-IQB-01…). Loads after sib-c-business.js.
    Supersedes PD-SIB-B-02 ("no per-batch allocation"): an IQA is now allocated to batches, and sees only them.
-   1 Allocation  An Academic Admin (or the Super Administrator) assigns an active IQA to one or more NVQ batches from the batch's
+   1 Allocation  An Academic Admin, a System Administrator or the Super Administrator (PD-IQB-09) assigns an active IQA to one or more NVQ batches from the batch's
                  Staff tab, reassigns or removes them; a reason is required, the impact is shown first, every change is audited and
                  the IQA is notified. Records live in STORE.iqaAlloc (saved with the demo); an ended allocation is kept as history.
                  Independence: an IQA can't be allocated to a batch they teach, assess or coordinate, and nobody allocated as a
@@ -152,16 +152,16 @@ function iqbPicker(scr) {
   return `<div class="row iqb-pick"><label class="small strong" for="iqb-b">Batch</label><select class="select" style="width:auto" id="iqb-b" data-onchange="iqbPick" data-s="${scr}"><option value="all" ${cur === 'all' ? 'selected' : ''}>${iqbScope() ? 'All assigned batches' : 'All batches'} (${bs.length})</option>${bs.map(b => `<option value="${esc(b.code)}" ${cur === b.code ? 'selected' : ''}>${esc(b.code)} — ${esc(b.label || b.course)}</option>`).join('')}</select></div>`;
 }
 INP.iqbPick = el => { S.iqa.batch = el.value; if (el.dataset.s === 'q-portfolios') { S.params = {}; go('q-portfolios'); return; } render(); };
-const IQB_NONE = `<div class="note b-amber iqb-none" role="status">${ic('info')}<div class="small"><strong>You aren't assigned to any batch yet.</strong> An Academic Admin assigns IQAs to batches (Batches → a batch → Staff). Until then there are no learners, records or evidence for you to sample.</div></div>`;
+const IQB_NONE = `<div class="note b-amber iqb-none" role="status">${ic('info')}<div class="small"><strong>You aren't assigned to any batch yet.</strong> An Academic Admin, a System Administrator or the Super Administrator assigns IQAs to batches (Batches → a batch → Staff). Until then there are no learners, records or evidence for you to sample.</div></div>`;
 const IQB_SA = `<div class="note b-grey iqb-sa">${ic('shield')}<div class="small"><strong>Super Administrator oversight</strong> — every NVQ batch is shown. IQAs see only the batches they are assigned to.</div></div>`;
 function iqbBatchCard() {
   const sc = iqbScope(); if (!sc) return IQB_SA; if (!sc.length) return IQB_NONE;
   const L = sibqScope(), me = ADMIN.me.name, row = b => { const a = iqbRows(b.code).find(r => r.name === me), ls = L.filter(x => x.batch === b.code), n = ls.reduce((k, x) => k + x.recs.length, 0);
     return `<tr><td><span class="mono small strong">${esc(b.code)}</span><div class="xs muted">${esc(b.label || '')}</div></td><td class="small">${esc(b.course)}</td><td>${chip(b.status)}</td><td class="r">${ls.length}</td><td class="r">${n}</td><td class="xs muted">${a ? fd(a.at) + ' · ' + esc(a.by) : '—'}</td></tr>`; };
-  return `<section class="card iqb-mine"><h2 class="small">Your assigned batches (${sc.length})</h2><div class="tbl-wrap"><table class="tbl dense"><thead><tr><th>Batch</th><th>Programme</th><th>Status</th><th class="r">Learners</th><th class="r">Marked records</th><th>Assigned</th></tr></thead><tbody>${iqbMyBatches().map(row).join('')}</tbody></table></div><p class="xs muted">Assigned by an Academic Admin. You can't sample a batch you teach, assess or coordinate, so you are never assigned to one.</p></section>`;
+  return `<section class="card iqb-mine"><h2 class="small">Your assigned batches (${sc.length})</h2><div class="tbl-wrap"><table class="tbl dense"><thead><tr><th>Batch</th><th>Programme</th><th>Status</th><th class="r">Learners</th><th class="r">Marked records</th><th>Assigned</th></tr></thead><tbody>${iqbMyBatches().map(row).join('')}</tbody></table></div><p class="xs muted">Assigned by an Academic Admin, a System Administrator or the Super Administrator. You can't sample a batch you teach, assess or coordinate, so you are never assigned to one.</p></section>`;
 }
 const IQB_HOW = `<section class="card sib-how iqb-how"><h2>How IQA is assigned</h2><ul class="small sib-list">
-  <li><strong>By batch</strong> — an Academic Admin assigns an IQA to one or more batches in the batch's Staff tab. You see every learner in your batches, including those with nothing marked yet, and no other batch.</li>
+  <li><strong>By batch</strong> — an Academic Admin, a System Administrator or the Super Administrator assigns an IQA to one or more batches in the batch's Staff tab. You see every learner in your batches, including those with nothing marked yet, and no other batch.</li>
   <li><strong>Independence</strong> — you are never assigned to a batch you teach, assess or coordinate, and you can't record findings on work you marked; another IQA does that.</li>
   <li><strong>Changes</strong> — if you are removed from a batch you lose access to it straight away; your findings, sample sets and exports are kept in the audit history.</li></ul></section>`;
 SCREENS['q-learners'] = () => {
@@ -198,9 +198,11 @@ const _plIQB = sibqPortLearners; sibqPortLearners = function (seen) { const keep
 const _meIQB = SCREENS['a-me'];
 SCREENS['a-me'] = p => { const h = _meIQB(p); if (!isIqa() || (p && p.tab && p.tab !== 'profile')) return h; const cs = iqbCodesOf(ADMIN.me.name); return h.replace('<dt>Roles</dt>', `<dt>Assigned batches</dt><dd class="iqb-me">${cs.length ? cs.map(c => `<span class="mono small">${esc(c)}</span>`).join(', ') : '<span class="small muted">None yet</span>'}</dd><dt>Roles</dt>`); };
 
-/* ---------- Academic Admin: the IQA allocation control on the batch's Staff tab ---------- */
-const iqbCan = () => S.portal === 'admin' && (isAca() || isSA());
-const iqbCanWhy = () => iqbCan() ? '' : 'IQAs are assigned to batches by an Academic Admin or the Super Administrator.';
+/* ---------- The IQA allocation control on the batch's Staff tab ---------- */
+// The same right as the batch's other staff (PD-IQB-09): the Super Administrator, Academic Admins and System Administrators
+const IQB_WHO = 'IQAs are assigned to batches by the Super Administrator, Academic Admins and System Administrators.';
+const iqbCan = () => S.portal === 'admin' && !w0BatchAdminWhy();
+const iqbCanWhy = () => iqbCan() ? '' : IQB_WHO;
 const iqbEnt = b => `${b.label || b.code} (${b.code})`;
 function iqbImpact(b, name) {
   const recs = iqbUnscoped(() => allIqaRecords()).filter(r => iqbRecBatch(r) === b.code), ids = new Set(recs.map(r => r.id)), learners = iqbUnscoped(() => sibqScope()).filter(x => x.batch === b.code).length;
