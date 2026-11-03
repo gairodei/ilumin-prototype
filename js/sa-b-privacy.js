@@ -125,8 +125,8 @@ const sabRetTab = () => `<section class="card sab-ret"><div class="row-b"><h2>Re
   <p class="small">These periods are placeholder text from the demo data. The prototype does not apply them: nothing is archived or deleted automatically, and they have no legal sign-off. They can't be edited here. The client is to confirm a period for each category.</p>
   <div class="tbl-wrap"><table class="tbl dense"><thead><tr><th>Data category</th><th>Placeholder period</th><th>Status</th></tr></thead><tbody>${SAB_RET.map(r => `<tr><td>${r[0]}</td><td>${esc(r[1])}</td><td>${chip('Not enforced', 'amber')}</td></tr>`).join('')}</tbody></table></div></section>`;
 const sabResTab = () => `<section class="card"><h2>Data region</h2><p class="small">Intended data region — a production hosting requirement, not implemented in this prototype (the demo keeps its data in this browser): learners in the UAE are stored in the UAE; learners in the UK and every other country are stored in the UK. The country is set at registration and never changes.</p><p>Data region UK: <strong>${allLearners().filter(l => regionOf(l.country) === 'UK').length}</strong> · Data region UAE: <strong>${allLearners().filter(l => regionOf(l.country) === 'UAE').length}</strong></p></section>`;
-const sabDsrTab = () => `<section class="card"><div class="row-b"><h2>Data requests</h2><button class="btn btn-sm btn-primary" data-act="logDsr">Log request</button></div><p class="small muted">Learners ask through an Academic Admin, who logs the request from the message thread. The prototype tracks a deadline of one month from the date logged. Only System and Super Administrators act on requests. An access request creates a simulated export record — no file is generated or sent. Nothing is ever deleted.</p>${dt({ id: 'dsr', name: 'Data requests', rows: ADMIN.dsr, noExport: true, rid: d => d.id, cols: [{ k: 'id', l: 'ID', h: d => `<span class="mono">${d.id}</span>` }, { k: 'who', l: 'Learner' }, { k: 'type', l: 'Type' }, { k: 'at', l: 'Date logged', h: d => fd(d.at), v: d => d.at }, { k: 'by', l: 'Logged by', v: d => d.loggedBy || '—' }, { k: 'due', l: 'Deadline (tracked)', h: d => fd(dsrDue(d)), v: d => dsrDue(d) }, { k: 'left', l: 'Days remaining', h: d => d.status === 'Completed' ? '—' : (n => chip(n < 0 ? `${-n} days overdue` : `${n} days`, n < 0 ? 'red' : n <= 7 ? 'amber' : 'grey'))(dsrLeft(d)), s: d => dsrLeft(d), v: d => String(dsrLeft(d)) }, { k: 'status', l: 'Status', h: d => chip(d.status, d.status === 'Open' ? 'amber' : 'green'), v: d => d.status }, { k: 'decision', l: 'Outcome', h: d => `<span class="small">${esc(d.decision || '—')}</span>`, v: d => d.decision || '' }],
-  act: d => d.status !== 'Open' || !g1SaSys() ? '' : d.type === 'Access' ? (d.exported ? `<button class="btn btn-sm btn-primary" data-act="dsrDone" data-id="${d.id}">Mark completed</button>` : `<button class="btn btn-sm btn-primary" data-act="dsrExport" data-id="${d.id}">Record simulated export</button>`) : (d.archived ? `<button class="btn btn-sm btn-primary" data-act="dsrDone" data-id="${d.id}">Mark completed</button>` : `<button class="btn btn-sm btn-danger" data-act="dsrArchive" data-id="${d.id}">Archive learner</button>`) })}</section>`;
+const sabDsrTab = () => `<section class="card"><div class="row-b"><h2>Data requests</h2><button class="btn btn-sm btn-primary" data-act="logDsr">Log request</button></div><p class="small muted">Learners ask through an Academic Admin, who logs the request from the message thread. The prototype tracks a deadline of one month from the date logged. Only System and Super Administrators act on requests. An access request creates a simulated export record — no file is generated or sent. An erasure request archives the learner only when their records show nothing still active or open; otherwise it is kept as Pending review, with the reasons, and nothing is changed. Nothing is ever deleted.</p>${dt({ id: 'dsr', name: 'Data requests', rows: ADMIN.dsr, noExport: true, rid: d => d.id, cols: [{ k: 'id', l: 'ID', h: d => `<span class="mono">${d.id}</span>` }, { k: 'who', l: 'Learner' }, { k: 'type', l: 'Type' }, { k: 'at', l: 'Date logged', h: d => fd(d.at), v: d => d.at }, { k: 'by', l: 'Logged by', v: d => d.loggedBy || '—' }, { k: 'due', l: 'Deadline (tracked)', h: d => fd(dsrDue(d)), v: d => dsrDue(d) }, { k: 'left', l: 'Days remaining', h: d => d.status === 'Completed' ? '—' : (n => chip(n < 0 ? `${-n} days overdue` : `${n} days`, n < 0 ? 'red' : n <= 7 ? 'amber' : 'grey'))(dsrLeft(d)), s: d => dsrLeft(d), v: d => String(dsrLeft(d)) }, { k: 'status', l: 'Status', h: d => chip(d.status, d.status === 'Completed' ? 'green' : 'amber'), v: d => d.status }, { k: 'decision', l: 'Outcome', h: d => `<span class="small">${esc(d.decision || '—')}</span>`, v: d => d.decision || '' }],
+  act: d => !SAB_DSR_OPEN.includes(d.status) || !g1SaSys() ? '' : d.type === 'Access' ? (d.exported ? `<button class="btn btn-sm btn-primary" data-act="dsrDone" data-id="${d.id}">Mark completed</button>` : `<button class="btn btn-sm btn-primary" data-act="dsrExport" data-id="${d.id}">Record simulated export</button>`) : (d.archived ? `<button class="btn btn-sm btn-primary" data-act="dsrDone" data-id="${d.id}">Mark completed</button>` : `<button class="btn btn-sm${d.status === 'Pending review' ? '' : ' btn-danger'}" data-act="dsrArchive" data-id="${d.id}">${d.status === 'Pending review' ? 'Re-check' : 'Check and archive'}</button>`) })}</section>`;
 SCREENS['a-dataprotection'] = (p) => {
   const t = (p && p.tab) || 'archived';
   const st = subtabs([['archived', 'Archived records'], ['eligible', 'Archive eligibility'], ['dsr', 'Data requests'], ['retention', 'Retention settings'], ['residency', 'Data residency']], t, 'a-dataprotection');
@@ -175,6 +175,65 @@ ACT.decideDsr = function (el) {
   sabOnConfirm(m0, null, () => { if (d && /encrypted ZIP/.test(d.decision || '')) { d.decision = 'Simulated export record (no file generated)'; sabSave(); } });
   return r;
 };
+/* ---------- SA-SAFETY: an erasure request is not a regular archive ----------
+   An erasure request archives the learner only when the same eligibility rule as a regular archive passes (this request itself
+   aside). Otherwise nothing changes on the learner: the request is kept as "Pending review" with the reasons, until a person
+   re-checks it. No erasure approval policy, legal basis or retention period is decided here (client questions, PD-SAF-S-*).
+   An already archived learner is recorded as already archived (no change). The request and every step stay in the audit log. */
+const SAB_DSR_OPEN = ['Open', 'Pending review'];
+const sabDsrOf = el => (ADMIN.dsr || []).find(x => x.id === g1Ds(el).id);
+const sabDsrL = d => learnerById(d.lid) || allLearners().find(l => l.name === d.who);
+function sabErasureWhy(d, L) {
+  if (!L) return ['The learner record was not found, so eligibility could not be checked.'];
+  const why = sabElig(L).why.filter(w => !/^Open data request/.test(w) && !/already archived/.test(w));
+  const other = (ADMIN.dsr || []).filter(x => x !== d && x.status !== 'Completed' && (x.lid === L.id || (!x.lid && x.who === L.name)));
+  if (other.length) why.push('Another open data request: ' + other.map(x => x.id).join(', ') + '.');
+  return why;
+}
+const sabDsrStop = (d, why) => { g1StLog(SAB_MOD, d ? d.id : '—', 'Erasure step refused', d ? d.status : '—', 'No change', why); toast(why, 'err'); return false; };
+function sabDsrHold(d, why) {
+  const txt = why.join(' '), same = d.status === 'Pending review' && d.review && d.review.why.join(' ') === txt;
+  if (!same) {
+    const before = d.status; d.status = 'Pending review'; d.review = { at: now().toISOString(), by: ADMIN.me.name, why };
+    d.decision = 'Pending review — not archived: ' + txt;
+    logA(SAB_MOD, d.id, 'Erasure request held for review', before, 'Pending review', txt); sabSave();
+  }
+  render(); toast(`Not archived: ${why[0]} ${d.id} is kept as Pending review; nothing was changed.`, 'info'); return false;
+}
+ACT.dsrArchive = el => {
+  const id = g1Ds(el).id; if (g1No(SAB_MOD, id || '—', 'archive a learner for a data request', g1SaSys() ? '' : G1_WHY.dsr)) return false;
+  const d = sabDsrOf(el); if (!d) { toast('That data request is not available.', 'err'); return false; }
+  if (d.type !== 'Erasure') return sabDsrStop(d, `${d.id} is an ${d.type.toLowerCase()} request, not an erasure request.`);
+  if (!SAB_DSR_OPEN.includes(d.status) || d.archived) return sabDsrStop(d, `${d.id} has already been actioned (${d.status}).`);
+  const L = sabDsrL(d);
+  if (L && L.rec === 'Archived') return reasonDlg({ title: `${d.id}: ${esc(d.who)} is already archived`, ok: 'Record outcome', label: 'Basis (required)', body: '<p class="small">The record is already archived (read-only, retained, restorable). Nothing on it changes; the outcome is recorded on the request.</p>',
+    onOk: r => { if (g1No(SAB_MOD, d.id, 'archive a learner for a data request', g1SaSys() ? '' : G1_WHY.dsr) || d.archived) { closeModal(); return false; }
+      const before = d.status; d.status = 'Open'; d.archived = now().toISOString(); d.decision = 'Record already archived — no change; basis: ' + r;
+      logA(SAB_MOD, d.id, 'Erasure request: record already archived', before, 'Archived (no change)', r); sabSave(); render(); toast('Recorded. The learner was already archived; nothing changed.'); } });
+  const why = sabErasureWhy(d, L); if (why.length) return sabDsrHold(d, why);
+  return reasonDlg({ title: 'Archive learner — ' + esc(d.who), ok: 'Archive learner', danger: true, label: 'Basis (required)', body: `<p class="small">Their records show nothing still active or open. ${SAB_ARCH_TXT}</p>`,
+    onOk: r => {
+      if (g1No(SAB_MOD, d.id, 'archive a learner for a data request', g1SaSys() ? '' : G1_WHY.dsr) || d.archived) { closeModal(); return false; }
+      const L2 = sabDsrL(d), w2 = sabErasureWhy(d, L2); if (w2.length) { closeModal(); return sabDsrHold(d, w2); }
+      if (L2.rec === 'Archived') { closeModal(); return sabDsrStop(d, `${d.who} was archived meanwhile; re-check ${d.id}.`); }
+      const before = d.status; sabSetArch(L2); logA('Learners', L2.id, 'Archive record', 'Active', 'Archived', 'Erasure request ' + d.id + ' — basis: ' + r);
+      d.status = 'Open'; d.archived = now().toISOString(); d.decision = 'Archived — basis: ' + r;
+      logA(SAB_MOD, d.id, 'Erasure request: record archived', before, 'Archived', r); sabSave(); render(); toast('Learner archived. Nothing is permanently deleted.');
+    } });
+};
+// "Decide" an erasure request = the same guarded step (it used to record "Archived" without archiving anything)
+const _decDsrSAS = ACT.decideDsr;
+ACT.decideDsr = function (el) { const d = sabDsrOf(el); if (d && d.type === 'Erasure' && g1SaSys()) return ACT.dsrArchive(el); return _decDsrSAS.apply(this, arguments); };
+// An erasure request is completed only after its archive step is recorded (checked again on confirm)
+const _dsrDoneSAS = ACT.dsrDone;
+ACT.dsrDone = function (el) {
+  const d = sabDsrOf(el), why = () => !d || !g1SaSys() ? '' : d.status === 'Completed' ? `${d.id} is already completed.` : d.type === 'Erasure' && !d.archived ? `${d.id} can't be completed: the learner hasn't been archived for it${d.status === 'Pending review' ? ' (it is Pending review)' : ''}.` : '';
+  if (why()) return sabDsrStop(d, why());
+  const m0 = MODAL, r = _dsrDoneSAS.apply(this, arguments);
+  sabOnConfirm(m0, () => (why() ? (closeModal(), sabDsrStop(d, why()), { stop: true }) : {}));
+  return r;
+};
+
 // The learner-side request dialog (no control renders it; kept honest for direct calls)
 ACT.dataReq = () => confirmDlg({ title: 'Request a copy of your data?', ok: 'Send request', body: '<p>Your request goes to the Academy, which tracks a deadline of one month from the date it is logged. We may ask you to confirm your identity.</p><p class="small muted">Prototype: nothing is sent.</p>', onOk: () => toast('Request noted (prototype: nothing is sent).', 'info') });
 
@@ -260,3 +319,6 @@ if (typeof fcpEncode === 'function') {
     try { return _encSAB.apply(this, arguments); } finally { A.integrations = keep; }
   };
 }
+UXC.push(['SA-SAFETY', 'Erasure requests guarded like archiving (3 Nov 2026)', [
+  'An erasure request archives the learner only when their records show nothing still active or open (the same rule as Archive eligibility), checked again on confirm. Otherwise nothing changes on the learner: the request is kept as Pending review with the reasons, and can be re-checked later.',
+  'An already archived learner is recorded as already archived, with no change. An erasure request can be completed only after its archive step; completed requests refuse further steps, and every refusal is logged.']]);

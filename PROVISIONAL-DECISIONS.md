@@ -1797,3 +1797,15 @@ Code: js/sa-a-finance.js (loaded after every finance file); one-word edit in js/
 - What must "batch-wise" show beyond money and seats (expected fee value vs collected, a per-learner list inside a batch)?
 - Which 3–5 charts matter most, for which roles and periods (month / batch)? Should the legacy dashboard's fixed sample KPIs (58%, 71%, +£31,592 — disclosed by CD_DASH_NOTE) be removed?
 - Should observations get their own chart once records exist; should attendance count "Partial" as attended?
+
+## Batch SA-SAFETY: erasure requests guarded like archiving (3 Nov 2026)
+
+- **PD-SAF-S-01** An erasure request (`dsrArchive`, and `decideDsr` for an erasure) archives the learner only when the same record-based eligibility rule as a regular archive passes (SA-FINAL B), apart from the request itself. It is checked again when the dialog is confirmed. Before, the erasure route archived anyone, including actively enrolled learners, and "Decide" recorded "Archived" without archiving.
+- **PD-SAF-S-02** If the learner isn't eligible, or their record can't be found, nothing changes on the learner. The request becomes **Pending review**, keeps the reasons and is audited ("Erasure request held for review"). A person can re-check it later, and a re-check with the same reasons adds no new audit row. No erasure approval policy, legal basis, retention period or override is decided here.
+- **PD-SAF-S-03** If the learner is already archived, the outcome is recorded on the request ("already archived — no change") and nothing changes on the record.
+- **PD-SAF-S-04** An erasure request can be completed only after its archive step is recorded. A completed or already actioned request refuses every further step; each refusal is logged as "Erasure step refused". Authorisation is unchanged: Super Administrator and System Administrators act on requests (MR-G1); everyone else is refused and logged.
+
+**Open (client):**
+- Who decides an erasure request that is Pending review, and on what legal basis?
+- Can an actively enrolled learner's erasure request ever be honoured (for example by withdrawal first), and who approves it?
+- Is archiving an accepted response to erasure at all (unchanged question from SA-FINAL B)?
