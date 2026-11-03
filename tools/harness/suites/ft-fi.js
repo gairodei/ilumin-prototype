@@ -14,6 +14,8 @@
   const submit = sel => { const f = $1(sel); if (!f) throw new Error('missing form ' + sel); f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); };
   const prim = () => { const a = MODAL && MODAL.actions.find(x => x.cls && /primary|danger/.test(x.cls)); return a && a.fn ? a.fn() : undefined; };
   const press = () => { const r = prim(); if (r !== false && MODAL) closeModal(); return r; };
+  // SA-FINAL A (SA-11): Raise refund is learner-first (payer → payment → amount and reason → confirm). Returns false when refused (dialog kept open)
+  const lfRefund = (p, why, amt, ref) => { p = p || allTx().find(t => !t.refund && refundable(t) > 0 && !fiObsFeeTx(t)).payer; ACT.finRaise({ dataset: { p } }); const rs = [...document.querySelectorAll('#modal-root input[name="saa-rf-t"]')], r = ref ? rs.find(x => document.querySelector('#modal-root label[for="' + x.id + '"]').textContent === ref) : rs.find(x => !x.disabled); if (!r || r.disabled) return 'none'; r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); if (amt != null) document.querySelector('#saa-rf-a').value = amt; document.querySelector('#saa-rf-d').value = why; MODAL.actions.find(x => x.cls === 'btn-primary').fn(); if (!/^Confirm refund/.test(MODAL.title)) return false; const out = MODAL.actions.find(x => x.cls === 'btn-primary').fn(); closeModal(); return out; };
   const reason = (r = 'FI test') => { const t = $1('#rsn'); if (t) t.value = r; return press(); };
   const P = x => Math.round(x * 100);
   const FA = (av = 'FA') => { closeModal(); setAdminIdentity(av); S.portal = 'admin'; S.signedIn = true; S.ui = {}; };
@@ -70,8 +72,9 @@
     ok('FI CR-8: a System Admin is refused in the handler (no dialog, security event logged)', !MODAL && sec() === s0 + 1 && STORE.worlds.A.tx.length === a0);
     SA(); ACT.offlinePay({ dataset: { l: STORE.worlds.CD1.me.id } }); const opts = $a('#modal-root #op-t option').map(o => o.value);
     // PD-FD-01: the demo learners now include Sam (CD4) and Tom (CD5). Was: 10 options, CD1/CD2 only.
-    ok('FI CR-8: the Super Administrator gets Finance\'s dialog — the demo learners\' own items only, Amira\'s preselected', MODAL && MODAL.title === 'Record offline payment' && opts.length === 21 && opts.every(k => /^CD[1245]\|/.test(k)) && /^CD1\|/.test($1('#op-t').value), J(opts));
-    const w = STORE.worlds.CD1, n0 = w.tx.length; $1('#op-a').value = '-999'; INP.opPrev(); $1('#rsn').value = 'negative'; const r = prim();
+    // SA-FINAL A (SA-06): from Amira's page the dialog is bound to Amira — her items only, none preselected. Was: 21 options (every demo learner), Amira's first preselected
+    ok('FI CR-8: the Super Administrator gets Finance\'s dialog — Amira\'s own items only, nothing preselected', MODAL && MODAL.title === 'Record offline payment' && opts[0] === '' && opts.length > 1 && opts.slice(1).every(k => /^CD1\|/.test(k)) && $1('#op-t').value === '', J(opts));
+    $1('#op-t').value = 'CD1|nvq|2'; const w = STORE.worlds.CD1, n0 = w.tx.length; $1('#op-a').value = '-999'; INP.opPrev(); $1('#rsn').value = 'negative'; const r = prim();
     ok('FI CR-8: −£999 is refused and the dialog stays open; nothing is written', r === false && !!MODAL && w.tx.length === n0 && /pounds and pence, above £0.00/.test(mtxt()));
     closeModal();
     FA(); ['abc', '0', '-50', '12.345', 'Infinity'].forEach(v => { const t = tgt('CD1|nvq|2'); ok('FI CR-8: amount "' + v + '" refused', recordPayment(t, +v, 'BACS-FI0' + v.length, 'Bank transfer', 'x') === false && pl(w).rows[1].paid === 0); });
@@ -179,8 +182,9 @@
     ok('CR-2 OLD: the rule before FI-1 ignored an Info Requested refund (£300.00 still refundable)', i1.status === 'Info Requested' && P(_rfFI(t)) === 30000);
     ok('FI CR-2: the refundable remainder is £0.00 while that refund is open', P(refundable(t)) === 0);
     ok('FI: a refund of a payment that is not in the ledger (made-up reference or payer) is refused', (() => { const q = ADMIN.queue.length; raiseRefund({ ref: 'TXN-NOPE', payer: 'Nobody', amount: 999, cur: 'GBP' }); const a1 = !MODAL; closeModal(); raiseRefund({ ...t, payer: 'Dev Patel (demo)' }); const a2 = !MODAL; closeModal(); raiseRefund({ ...t, amount: 3000 }); const a3 = !MODAL; closeModal(); return a1 && a2 && a3 && ADMIN.queue.length === q; })());
-    const q0 = ADMIN.queue.length; raiseRefund(t); $1('#rr-a').value = '300'; $1('#rr-t').value = 'second'; const r = prim();
-    ok('FI CR-2: a second £300 refund of the same payment is refused at submit', r === false && ADMIN.queue.length === q0 && /exceeds the refundable remainder \(£0.00\)/.test(mtxt())); closeModal();
+    // SA-FINAL A (PD-SAF-A-03): nothing left → refused before the form opens. Was: the form opened and Submit was refused ("exceeds the refundable remainder (£0.00)")
+    const q0 = ADMIN.queue.length; raiseRefund(t);
+    ok('FI CR-2: a second £300 refund of the same payment is refused', !MODAL && ADMIN.queue.length === q0 && /Nothing is left to refund/.test(ADMIN.audit[0].reason)); closeModal();
     // A request made before the cap (a stale or direct one) is caught when it is approved
     const extra = newRefund(t, 300, 'Other', 'stale direct', 'Retain access'); ADMIN.queue.unshift(extra); const w = STORE.worlds.CD1, n0 = rfdRows(w);
     FA('FB'); applyDecision(i1, 'approve', 'ok'); const n1 = rfdRows(w); const r2 = applyDecision(extra, 'approve', 'ok');
@@ -210,12 +214,13 @@
     _arFI(); const k = $a('#rr-t option').findIndex(o => o.value.startsWith(t.ref + '|')); $1('#rr-t').selectedIndex = Math.max(0, k); $1('#rr-a').value = '450'; $1('#rr-c').value = 'Retain access'; reason('OLD'); const old = ADMIN.queue[0];
     ok('CR-3 OLD: the admin console\'s own dialog accepted £450.00 against Lena\'s £45.00 payment, with no link to her record (the audit\'s failure; FI-1\'s approval check now stops the money)', old.amount === 450 && !(old.data || {}).v && !old.processed && !w.tx.some(x => x.amount < 0), old.status);
     ADMIN.queue.splice(ADMIN.queue.indexOf(old), 1); // undo the OLD demonstration
-    SA(); const n0 = rfdRows(w), q0 = ADMIN.queue.length; ACT.raiseRefund(); const opt = $a('#rr-t option').findIndex(o => o.textContent.startsWith(t.ref + ' · ' + t.payer)); $1('#rr-t').selectedIndex = opt; $1('#rr-a').value = '450'; $1('#rr-c').value = 'Retain access'; $1('#rsn').value = 'over'; const r = prim();
-    ok('FI CR-3: £450.00 against £45.00 is refused (the same remainder as Finance\'s refund)', opt >= 0 && r === false && ADMIN.queue.length === q0 && /exceeds the refundable remainder \(£45.00\)/.test(mtxt())); closeModal();
-    ACT.raiseRefund(); $1('#rr-t').selectedIndex = $a('#rr-t option').findIndex(o => o.textContent.startsWith(t.ref + ' · ' + t.payer)); $1('#rr-a').value = '20.50'; $1('#rr-c').value = 'Retain access'; reason('Goodwill');
+    // SA-FINAL A (SA-11): the admin console's Raise refund is the learner-first flow. Was: its own picker (#rr-t), amount, consequence and #rsn
+    SA(); const n0 = rfdRows(w), q0 = ADMIN.queue.length; ACT.raiseRefund(); const opt = /choose the payer/.test(MODAL.title) ? 1 : -1; closeModal(); const r = lfRefund(t.payer, 'over', '450', t.ref);
+    ok('FI CR-3: £450.00 against £45.00 is refused (the same remainder as Finance\'s refund)', opt >= 0 && r === false && ADMIN.queue.length === q0 && /exceeds what is left to refund \(£45.00\)/.test(mtxt())); closeModal();
+    lfRefund(t.payer, 'Goodwill', '20.50', t.ref);
     const i = ADMIN.queue[0];
     ok('FI CR-3: £20.50 is processed immediately (D8) through the same refund — linked to Lena, a −£20.50 ledger row', i.type === 'Refund' && i.status === 'Approved' && !!i.processed && i.data.v === 'CD3' && rfdRows(w) === n0 + 1 && P(w.tx[0].amount) === -2050);
-    ok('FI CR-3: the remainder is £24.50 and the admin dialog offers no more than that', P(refundable(t)) === 2450 && (() => { ACT.raiseRefund(); const o = $a('#rr-t option').find(x => x.textContent.startsWith(t.ref + ' · ' + t.payer)); closeModal(); return !!o && /refundable £24.50/.test(o.textContent); })());
+    ok('FI CR-3: the remainder is £24.50 and the admin dialog offers no more than that', P(refundable(t)) === 2450 && (() => { ACT.finRaise({ dataset: { p: t.payer } }); const r = $a('#modal-root input[name="saa-rf-t"]').find(x => $1('#modal-root label[for="' + x.id + '"]').textContent === t.ref), tr = r && r.closest('tr'); closeModal(); return !!tr && !r.disabled && /£24\.50/.test(tr.textContent); })());
   });
   await T('CR-9 roles on refunds and payments (client demo)', async () => {
     const t = allTx().find(x => x.v === 'CD2' && P(x.amount) === 43333 && !x.refund);

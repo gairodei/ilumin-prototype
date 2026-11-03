@@ -36,7 +36,7 @@
   });
   await T('079 Coordinator sees email only', () => { S.coo.v = 'A'; cooEnter(); S.signedIn = true; go('c-learner', { id: 'IA-L-18022' }); const L = learnerById('IA-L-18022'); ok('email shown, mobile not', main().includes(L.email) && !main().includes(L.mobile)); });
   await T('094 overpayment → refund for the surplus', async () => {
-    setAdminIdentity('FA'); S.portal = 'admin'; S.signedIn = true; go('f-ledger'); ACT.finOffline({ dataset: {} }); await wait(50);
+    setAdminIdentity('FA'); S.portal = 'admin'; S.signedIn = true; go('f-ledger'); /* SA-FINAL A (SA-06): a list launch now asks for the payer first; the first item, as before. Was: ACT.finOffline({ dataset: {} }) */ ACT.finOffline({ dataset: { k: payTargets()[0].key } }); await wait(50);
     const t = payTargets().find(x => x.key === $('#op-t').value); $('#op-a').value = String(t.due + 40); INP.opPrev(); // CH-02: no currency select (GBP only)
     ok('no "Record as credit"; surplus button shown', !/Record as credit/.test(document.getElementById('modal-root').textContent) && !!document.querySelector('#modal-root [data-act="opSurplus"]'));
     $('#rsn').value = 'Paid by bank transfer'; const q0 = ADMIN.queue.length, ref = $('#op-r').value; ACT.opSurplus(); await wait(50); const it = ADMIN.queue[0]; /* FI-1 (PD-FI-06): the surplus refund is raised with the payment, not a pre-filled form that could be cancelled. Was: ok('refund pre-filled with the surplus', MODAL && /Raise refund/.test(MODAL.title) && +$('#rr-a').value === 40) */ ok('refund raised with the surplus', ADMIN.queue.length === q0 + 1 && it.type === 'Refund' && it.amount === 40 && it.status === 'Pending' && (it.data || {}).tx === ref, it && it.type + ' ' + it.amount + ' ' + it.status); closeModal();

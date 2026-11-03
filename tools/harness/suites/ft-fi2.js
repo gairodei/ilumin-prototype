@@ -205,7 +205,7 @@
     learner('CD2'); go('payments'); const row = $a('main table tbody tr').find(tr => tr.textContent.includes(t.ref) && !/Refund against/.test(tr.textContent));
     ok('FI2 L-4 Dev\'s transaction history: "Partially refunded — received £433.33, refunded £100.00, net £333.33" (it read "Succeeded")', !!row && /Partially refunded/.test(row.textContent) && row.textContent.includes(`received ${G(P(t.amount))}, refunded ${G(back)}, net ${G(P(t.amount) - back)}`), row && row.textContent.replace(/\s+/g, ' '));
     FA(); go('f-ledger'); const lr = allTx().find(x => x.ref === t.ref && x.v === 'CD2');
-    ok('FI2 L-4 Finance ledger: "Partially refunded"; Raise refund still offers it with the remainder', lr.status === 'Partially refunded' && (() => { ACT.finRaise(); const o = $a('#rf-tx option').some(x => x.value.startsWith(t.ref + '|')); closeModal(); return o; })() && P(refundable(lr)) === P(t.amount) - back);
+    ok('FI2 L-4 Finance ledger: "Partially refunded"; Raise refund still offers it with the remainder', lr.status === 'Partially refunded' && (() => { /* SA-FINAL A (SA-11): learner-first history. Was: the #rf-tx option of the 40-item picker */ ACT.finRaise({ dataset: { p: lr.payer } }); const r = $a('#modal-root input[name="saa-rf-t"]').find(x => $1('#modal-root label[for="' + x.id + '"]').textContent === t.ref); closeModal(); return !!r && !r.disabled; })() && P(refundable(lr)) === P(t.amount) - back);
   });
   await T('FI2 L-3 every receipt of a part-paid instalment is kept', async () => {
     const r = pl(A).rows[3], n0 = A.tx.length;

@@ -293,7 +293,7 @@ const fcLedRows = () => {
   const aw = fcAw().map(x => ({ at: x.at, ref: x.ref, payer: x.name || (x.w ? VNAME(x.w.v) : '—'), payerType: 'Learner', course: (x.fee ? 'Observation fee — ' : '') + (x.course || x.title || '') + (x.fee ? '' : x.opt === 'deposit' ? ' — deposit' : x.n ? ' — instalment ' + x.n : ''), amount: x.amount, cur: 'GBP', mode: 'Bank transfer', source: 'Learner\'s transfer notice', status: 'Awaiting confirmation', receipt: '—', gref: '—', aw: true, fc: { ctype: x.ctype, cid: x.cid, clabel: x.clabel, bk: x.bk } }));
   return tx.concat(aw);
 };
-const fcLedFoot = rows => { const p = x => fpP(x.amount), got = rows.filter(t => !t.refund && ['Paid', 'Refunded', 'Partially refunded'].includes(t.status)).reduce((s, t) => s + p(t), 0), back = rows.filter(t => t.refund).reduce((s, t) => s + p(t), 0), pend = rows.filter(t => t.status === 'Pending' || t.status === 'Awaiting confirmation').reduce((s, t) => s + p(t), 0);
+let fcLedFoot = rows => { /* SA-FINAL A: let, so sa-a-finance.js can count refunds by the reports' rule (#22) */ const p = x => fpP(x.amount), got = rows.filter(t => !t.refund && ['Paid', 'Refunded', 'Partially refunded'].includes(t.status)).reduce((s, t) => s + p(t), 0), back = rows.filter(t => t.refund).reduce((s, t) => s + p(t), 0), pend = rows.filter(t => t.status === 'Pending' || t.status === 'Awaiting confirmation').reduce((s, t) => s + p(t), 0);
   return `<span class="fc-led-foot" data-received="${got}" data-refunded="${back}" data-pending="${pend}"><strong>Filtered:</strong> received ${fiG(got)} · refunded ${back ? '−' : ''}${fiG(back)} · <strong>net ${fiG(got - back)}</strong> · pending or awaiting confirmation ${fiG(pend)} <span class="xs muted">(not counted)</span> · failed payments are not counted.</span>`; };
 const _dtFC3 = dt;
 dt = function (cfg) {
@@ -392,7 +392,9 @@ function fcpFp() {
 }
 const fcpJ = JSON.stringify;
 const FCP_SESSION = ['drafts', 'arHyd', 'arRe', 'arFrom', 'arState']; // a learner's unsent drafts and AR's once-per-session restore markers
-const FCP_DROP = /^(pw|pw2|password|passcode|cvc|cvv|cardNumber|otp|secret)$/i;
+// SA-FINAL B (SA-10): also any key/secret/password/credential-like name (apiKey, accessToken, clientSecret, webhookSecret…); the bare
+// "token" of a workplace permission link (workplace.js) is a demo link token, not a credential, and stays saved
+const FCP_DROP = /^(pw|pw2|password|passcode|cvc|cvv|cardNumber|otp|secret)$|secret|passw|apikey|api_key|privatekey|credential|accesstoken|refreshtoken|authtoken|bearer/i;
 function fcpLS() { try { const s = window.localStorage; if (!s) return null; s.setItem('__fcp_probe', '1'); s.removeItem('__fcp_probe'); return s; } catch (e) { return null; } }
 // Encoder: a graph (shared and circular references kept), undefined kept, functions and secret-looking keys dropped
 function fcpEncode(roots) {

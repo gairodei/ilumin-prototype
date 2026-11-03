@@ -5,6 +5,8 @@
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const prim = () => { const a = MODAL && MODAL.actions.find(x => x.cls && /primary|danger/.test(x.cls)); if (a && a.fn) { const r = a.fn(); if (r !== false && MODAL && MODAL.actions.includes(a)) closeModal(); return r; } };
   const rsn = (v = 'Scenario test') => { const e = $('#rsn'); if (e) e.value = v; };
+  // SA-FINAL A (SA-11): Raise refund is learner-first (payer → payment → amount and reason → confirm). Returns false when refused (dialog kept open)
+  const lfRefund = (p, why, amt, ref) => { p = p || allTx().find(t => !t.refund && refundable(t) > 0 && !fiObsFeeTx(t)).payer; ACT.finRaise({ dataset: { p } }); const rs = [...document.querySelectorAll('#modal-root input[name="saa-rf-t"]')], r = ref ? rs.find(x => document.querySelector('#modal-root label[for="' + x.id + '"]').textContent === ref) : rs.find(x => !x.disabled); if (!r || r.disabled) return 'none'; r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); if (amt != null) document.querySelector('#saa-rf-a').value = amt; document.querySelector('#saa-rf-d').value = why; MODAL.actions.find(x => x.cls === 'btn-primary').fn(); if (!/^Confirm refund/.test(MODAL.title)) return false; const out = MODAL.actions.find(x => x.cls === 'btn-primary').fn(); closeModal(); return out; };
   // open step k (1-based) of scenario n exactly as the page button does
   const step = (n, k) => { const st = SC_LIST().find(x => x[0] === String(n))[3][k - 1]; ACT.scOpen(); if (st.act) { ACT[st.act](); return st; } ACT.scStep({ dataset: { r: st.r, t: st.t } }); const want = (st.t || '').split('.')[0]; ok(`#${n}.${k} opens ${st.r || '—'} → ${st.t || '—'}`, !want || (S.route === want && !/Page not found|couldn't find this|don't have permission/i.test(main())), S.route); return st; };
   const S_ = async (name, f) => { try { await f(); } catch (e) { R.push('FAIL ' + name + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
@@ -67,10 +69,10 @@
   });
 
   await S_('#6 Refund', async () => {
-    step(6, 1); const q0 = ADMIN.queue.length; ACT.finRaise(); prim(); await wait(50); $('#rr-t').value = 'Duplicate payment on the same day'; prim(); const i = ADMIN.queue[0];
+    step(6, 1); const q0 = ADMIN.queue.length; /* SA-FINAL A (SA-11): learner-first. Was: ACT.finRaise(); prim(); await wait(50); $('#rr-t').value = '…'; prim(); */ lfRefund(null, 'Duplicate payment on the same day'); const i = ADMIN.queue[0];
     ok('#6.1 Finance A raised a refund', ADMIN.queue.length > q0 && i.type === 'Refund' && i.status === 'Pending', i.id + ' ' + i.raisedBy + ' → ' + i.first);
     step(6, 2); go('a-queue', { id: i.id }); ACT.qDo({ dataset: { id: i.id, a: 'approve' } }); rsn(); prim(); ok('#6.2 Finance B approved', i.status === 'Approved' || i.status === 'Paid/Processed', i.status + ' by ' + ADMIN.me.name);
-    step(6, 3); ACT.raiseRefund(); rsn('Goodwill'); prim(); const j = ADMIN.queue[0]; ok('#6.3 Super Admin refund processed immediately', j.type === 'Refund' && j.status === 'Approved' && !!j.processed, j.id + ' ' + j.status);
+    step(6, 3); /* SA-FINAL A: was ACT.raiseRefund(); rsn('Goodwill'); prim(); */ lfRefund(null, 'Goodwill'); const j = ADMIN.queue[0]; ok('#6.3 Super Admin refund processed immediately', j.type === 'Refund' && j.status === 'Approved' && !!j.processed, j.id + ' ' + j.status);
   });
 
   await S_('#7 Observation', async () => {

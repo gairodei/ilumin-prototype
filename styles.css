@@ -1680,3 +1680,60 @@ body.frame-mobile .aafc-steps ol { grid-template-columns: repeat(2, minmax(0, 1f
 .aafe-agp { margin-bottom: 2px; }
 .aafe-gl { white-space: nowrap; }
 @media (max-width: 640px) { .aafe-tbl th[scope="row"] { width: auto; } }
+
+/* ---------- SA-FINAL A (finance) ---------- */
+.saa-list { list-style: none; margin: 0; padding: 0; max-height: 46vh; overflow: auto; border: 1px solid var(--line, #ddd); border-radius: 8px; }
+.saa-list li + li { border-top: 1px solid var(--line, #ddd); }
+.saa-pick { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; width: 100%; padding: 10px 12px; background: none; border: 0; text-align: left; cursor: pointer; color: inherit; font: inherit; }
+.saa-pick:hover, .saa-pick:focus-visible { background: var(--surface-2, rgba(0,0,0,.04)); }
+.saa-hist tr.saa-off { opacity: .75; }
+.saa-why, .saa-unk { color: var(--muted, #666); font-weight: 400; }
+.saa-lbar { gap: 6px; flex-wrap: wrap; }
+.saa-tot { margin-bottom: 8px; }
+/* ---------- SA-FINAL B (privacy, integrations) ---------- */
+.sab-defs, .sab-why { margin: 4px 0 0; padding-left: 18px; }
+.sab-defs li, .sab-why li { margin: 2px 0; }
+.sab-h { font-size: 1rem; margin: 16px 0 6px; }
+.sab-srv { color: var(--muted, #5b6472); }
+.sab-arch { margin-left: 4px; }
+/* ---------- SA-FINAL C (assessment) ---------- */
+.sac-ev { margin-top: 10px; }
+.sac-ev h3 { margin: 0; font-size: 15px; }
+.sac-crit { margin: 4px 0 8px; padding-left: 18px; display: grid; gap: 4px; }
+.sac-cl { margin: 8px 0 2px; }
+.sac-ovnote, .sac-pre, .sac-manual { margin: 8px 0; }
+.sac-src .tbl-wrap, .sac-pvline { margin: 8px 0; }
+.sac-demo { margin-top: 6px; }
+/* ---------- SA-FINAL D (attendance, referrals) ---------- */
+.sad-steps { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 4px; }
+.sad-ref-how .sad-def { margin-top: 8px; }
+.sad-att-modes, .sad-leg { margin: 8px 0; }
+/* ---------- SA-FINAL E (reports, charts) ---------- */
+/* Charts: plain HTML bars. Categorical slots in fixed order (validated: adjacent CVD ΔE ≥ 9.2); aqua is below 3:1, so every chart has a legend and a table view */
+.sae-chart, .sae-dash { --sae-1: #2a78d6; --sae-2: #eb6834; --sae-3: #1baf7a; --sae-0: #c9ccd2; --sae-track: #eceef1; }
+.sae-chart { margin: 0; display: grid; gap: 10px; align-content: start; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; }
+.sae-chart figcaption { display: grid; gap: 2px; }
+.sae-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 14px; align-items: start; }
+.sae-kpis { margin-bottom: 4px; }
+.sae-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--muted); }
+.sae-legend span { display: inline-flex; gap: 6px; align-items: center; }
+.sae-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.sae-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.sae-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 10px; align-items: center; }
+.sae-lbl { grid-column: 1 / -1; min-width: 0; overflow-wrap: anywhere; }
+.sae-track { display: flex; gap: 2px; height: 12px; min-width: 0; border-radius: 4px; overflow: hidden; }
+.sae-track.sae-cap { background: var(--sae-track); }
+.sae-seg { display: block; height: 100%; min-width: 2px; }
+.sae-seg:last-child { border-radius: 0 4px 4px 0; }
+.sae-val { white-space: nowrap; color: var(--fg); }
+.sae-none { grid-column: 1 / -1; }
+.sae-cols { display: flex; gap: 6px; align-items: end; height: 150px; overflow-x: auto; padding-bottom: 2px; border-bottom: 1px solid var(--line); }
+.sae-col { flex: 1 0 28px; max-width: 64px; height: 100%; display: grid; grid-template-rows: auto 1fr auto; justify-items: center; align-items: end; gap: 3px; }
+.sae-colbar { width: min(24px, 100%); background: var(--sae-1); border-radius: 4px 4px 0 0; align-self: end; min-height: 2px; }
+.sae-coll { white-space: nowrap; }
+.sae-tbl summary { cursor: pointer; color: var(--brand-strong); }
+.sae-tbl[open] summary { margin-bottom: 6px; }
+.sae-tot td { border-top: 2px solid var(--line-2); }
+.sae-na { padding: 18px 8px; }
+.sae-cf { gap: 8px; align-items: center; flex-wrap: wrap; }
+@media (forced-colors: active) { .sae-seg, .sae-colbar { forced-color-adjust: none; border: 1px solid CanvasText; } }

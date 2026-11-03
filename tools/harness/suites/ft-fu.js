@@ -7,6 +7,8 @@
   const html = () => document.getElementById('app').innerHTML;
   const prim = () => { const a = MODAL && MODAL.actions.find(x => x.cls && /primary|danger/.test(x.cls)); if (a && a.fn) { const r = a.fn(); if (r !== false && MODAL && MODAL.actions.includes(a)) closeModal(); return r; } };
   const rsn = (v = 'Test') => { const e = $('#rsn'); if (e) e.value = v; };
+  // SA-FINAL A (SA-11): Raise refund is learner-first (payer → payment → amount and reason → confirm). Returns false when refused (dialog kept open)
+  const lfRefund = (p, why, amt, ref) => { p = p || allTx().find(t => !t.refund && refundable(t) > 0 && !fiObsFeeTx(t)).payer; ACT.finRaise({ dataset: { p } }); const rs = [...document.querySelectorAll('#modal-root input[name="saa-rf-t"]')], r = ref ? rs.find(x => document.querySelector('#modal-root label[for="' + x.id + '"]').textContent === ref) : rs.find(x => !x.disabled); if (!r || r.disabled) return 'none'; r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); if (amt != null) document.querySelector('#saa-rf-a').value = amt; document.querySelector('#saa-rf-d').value = why; MODAL.actions.find(x => x.cls === 'btn-primary').fn(); if (!/^Confirm refund/.test(MODAL.title)) return false; const out = MODAL.actions.find(x => x.cls === 'btn-primary').fn(); closeModal(); return out; };
   const SA = () => { setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; S.ui = {}; };
   const learner = v => { S.variant = v; ACT.switchRole({ dataset: { r: 'learner' } }); };
 
@@ -58,7 +60,7 @@
     SA(); go('a-notifsettings'); ok('event in the catalogue', /Changed after your edit/.test(main()));
   });
   await T('F10 Super Admin routing', () => {
-    SA(); const f0 = STORE.fin.notifs.length; go('a-finance', { tab: 'refunds' }); ACT.raiseRefund(); rsn('Goodwill'); prim();
+    SA(); const f0 = STORE.fin.notifs.length; go('a-finance', { tab: 'refunds' }); /* SA-FINAL A (SA-11): learner-first. Was: ACT.raiseRefund(); rsn('Goodwill'); prim(); */ lfRefund(null, 'Goodwill');
     ok('refund → all Finance Admins, F10 wording', STORE.fin.notifs.length > f0 && /^Super Administrator .+ processed refund AQ-/.test(STORE.fin.notifs[0].t) && /reason: Goodwill/.test(STORE.fin.notifs[0].b), STORE.fin.notifs[0].t);
     const s0 = STORE.sys.notifs.length, t0 = STORE.tas.notifs.length, c0 = STORE.coo.notifs.length; go('a-learner', { id: 'IA-L-18022' }); ACT.raiseDC({ dataset: { id: 'IA-L-18022' } }); const pv = $('#dc-p'); if (pv) pv.value = 'Corrected'; const rr = $('#dc-r') || $('#rsn'); if (rr) rr.value = 'Typo'; prim();
     ok('data correction → System Admins + Assessor + Coordinator', STORE.sys.notifs.length > s0 && STORE.tas.notifs.length > t0 && STORE.coo.notifs.length > c0, [STORE.sys.notifs.length - s0, STORE.tas.notifs.length - t0, STORE.coo.notifs.length - c0].join('/'));
