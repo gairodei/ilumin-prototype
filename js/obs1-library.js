@@ -159,7 +159,7 @@ function ol1Gate(el, what) {
 }
 const ol1Still = () => { if (ol1CanEdit()) return true; ol1Deny('—', 'save observation criteria library', OL1_WHY); closeModal(); render(); return false; };
 const ol1EvBoxes = (x, idp) => `<fieldset class="field n5-fs ol1-evfs"><legend class="lbl">Evidence fields</legend><div class="n5-evs">${N5_EV.map(([k, l]) => `<label class="check"><input type="checkbox" class="ol1-ev${idp ? ' ' + idp + '-ev' : ''}" value="${k}" ${(x.ev || []).includes(k) ? 'checked' : ''}>${l}</label>`).join('')}</div><span class="hint">Tick every type of evidence the assessor may record for this criterion — one or more.</span></fieldset>
-  <fieldset class="field n5-fs ol1-rqfs"><legend class="lbl">Required evidence (optional)</legend><div class="n5-evs">${N5_EV.map(([k, l]) => `<label class="check"><input type="checkbox" class="ol1-rq${idp ? ' ' + idp + '-rq' : ''}" value="${k}" ${(x.req || []).includes(k) ? 'checked' : ''}>${l}</label>`).join('')}</div><span class="hint">Only where the course needs it: a required field must have evidence before the criterion can be signed off as Met. Supplying evidence never sets the outcome.</span></fieldset>`;
+  <fieldset class="field n5-fs ol1-rqfs"><legend class="lbl">Required evidence (optional)</legend><div class="n5-evs">${N5_EV.map(([k, l]) => `<label class="check"><input type="checkbox" class="ol1-rq${idp ? ' ' + idp + '-rq' : ''}" value="${k}" ${(x.req || []).includes(k) ? 'checked' : ''}>${l}</label>`).join('')}</div><span class="hint">A required field must have evidence before the criterion can be signed off as Met.</span></fieldset>`;
 const ol1Ticks = (root, cls) => [...root.querySelectorAll('.' + cls + ':checked')].map(x => x.value);
 
 ACT.ol1CatNew = () => {
@@ -330,7 +330,7 @@ ACT.ol1Sel = el => {
   const k = el.dataset.k;
   if (!k) {
     const cats = OL1().cats.filter(c => !c.retired && ol1Cur(c));
-    openModal({ title: `Add from library — ${ol1LocTxt(loc)} Observation Criteria`, size: 'lg', body: `<div class="field"><label for="ol1-sq">Search categories and criteria</label><input class="input" type="search" id="ol1-sq" data-oninput="ol1Find" placeholder="Code, name or criterion…"></div>
+    openModal({ title: `Add from library — ${ol1LocTxt(loc)} observation`, size: 'lg', body: `<div class="field"><label for="ol1-sq">Search categories and criteria</label><input class="input" type="search" id="ol1-sq" data-oninput="ol1Find" placeholder="Code, name or criterion…"></div>
       ${cats.length ? `<fieldset class="field n5-fs"><legend class="lbl">Published categories</legend>${cats.map(c => { const v = ol1Cur(c), on = sels.some(s => s.cat === c.id); return `<label class="check ol1-pick" data-ol1s="${esc([c.code, v.name, v.desc].concat(v.crit.map(x => x.code + ' ' + x.title)).join(' '))}"><input type="radio" name="ol1-cat" value="${c.id}"><span><span class="code">${esc(c.code)}</span> ${esc(v.name)} <span class="xs muted">Version ${v.v} · ${plural(v.crit.filter(x => x.status === 'Active').length, 'criterion', 'criteria')}${on ? ' · already selected (edit it)' : ''}</span></span></label>`; }).join('')}</fieldset>` : '<p class="small muted">No published categories yet. Create one with "Create new category".</p>'}`,
       actions: [{ label: 'Cancel' }, { label: 'Next — choose criteria', cls: 'btn-primary', fn: () => { const r = $('#modal-root input[name="ol1-cat"]:checked'); if (!r) { fieldErr('#ol1-sq', 'Choose a category'); return false; } ACT.ol1Sel({ dataset: { p: pr.id, loc, k: r.value } }); } }] });
     return;
@@ -375,7 +375,7 @@ const ol1Row = i => `<div class="card flat ol1-row" data-i="${i}"><span class="e
 ACT.ol1Row = () => { const box = $('#modal-root .ol1-rows'); if (!box) return; box.insertAdjacentHTML('beforeend', ol1Row(box.querySelectorAll('.ol1-row').length)); };
 ACT.ol1CbNew = el => {
   const g = ol1CbGate(el, 'create an observation criteria category'); if (!g) return; const { pr, d } = g, loc = el.dataset.loc;
-  openModal({ title: `Create new category — ${ol1LocTxt(loc)} Observation Criteria`, size: 'lg', body: `<p class="small muted">Saved to the shared Observation Criteria Library, published as Version 1 and selected for this course version (draft). Your other course settings are kept.</p>
+  openModal({ title: `Create category — ${ol1LocTxt(loc)} observation`, size: 'lg', body: `<p class="small muted">Saved to the shared library and selected for this course.</p>
     <div class="form-grid"><div class="field"><label for="ol1-code">Category code</label><input class="input mono" id="ol1-code" maxlength="8" placeholder="e.g. ABS"></div><div class="field"><label for="ol1-name">Category name</label><input class="input" id="ol1-name"></div></div>
     <div class="field"><label for="ol1-desc">Description</label><textarea class="textarea" id="ol1-desc"></textarea></div><div class="ol1-rows">${[0, 1].map(ol1Row).join('')}</div><button class="btn btn-sm" data-act="ol1Row">${ic('plus', 14)}Add another criterion</button>`,
     actions: [{ label: 'Cancel' }, { label: 'Save to library and select', cls: 'btn-primary', fn: () => {

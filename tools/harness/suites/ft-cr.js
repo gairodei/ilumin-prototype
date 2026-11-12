@@ -2,6 +2,9 @@
 // no Academy course code; no unit code to type; assignment deadlines per batch; awarding body batch code. Scenarios A–L of the
 // request. Every check acts through the screen or handler, then checks the record or the consuming screen, with negative cases.
 (async function () {
+  // FB1 (PD-FB1-03): this suite's deposit configuration, chosen explicitly where its fixture prepares a package for Finance — each new fee
+  // option "Allow Deposit: Yes" with the Academy default, through the Step 5 handler (an administrator's action; role checks apply).
+  const fb1Dep = p => { if (p && cb8Managed(p)) cb8Work(p).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: p.id, o: o.id, k: 'allow' }, checked: true })); };
   // DM-P (PD-DM-16): a new batch needs a course whose published version has Finance-approved fee options with a delivery mode. Where a check
   // only needs a batch of a seeded course, Finance adds them first through its fee-option card (r1AddOpt): Self-Paced and Fully Assisted at its fee
   const dmpElig = (pid = 'NV-L2', modes = M_MODES) => { const fee = crNcFee(s3Pr(pid)) || 2400; modes.forEach(m => { if (!crApprOpts(pid).some(o => o.mode === m)) r1AddOpt(pid, { label: m, fee, mode: m }, 'Fixture (DM-P)', 'Added'); }); };
@@ -32,7 +35,7 @@
   let n0 = 0;
   const make = (o = {}) => {
     go('a-programmes'); ACT.chProgNew(); const n = ++n0, lv = o.level || 'Level 3';
-    fill({ '#np-t': o.title || `CR ${lv} course ${n}`, '#np-l': lv, '#np-r': 'QN 610/' + (7100 + n) + '/1', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
+    fill({ '#np-t': o.title || `CR ${lv} course ${n}`, '#np-l': lv, '#np-r': 'QN 610/' + (7100 + n) + '/1', '#cbc3-dd-n': '12', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
     if (lv !== 'Level 3') { fill({ '#np-p': String(o.price || 900) }); const r = document.querySelector('main #cr-pm-price'); if (r) { r.checked = true; INP.crPm(r); } } // DM-P (PD-DM-18): one programme price is chosen explicitly
     document.querySelector('#np-obs-no').checked = true;
     (lv === 'Level 3' ? (o.rows || [{ l: 'Fully Assisted — standard', f: 2400, m: 'Fully Assisted' }, { l: 'Self-Paced — standard', f: 1800, m: 'Self-Paced' }]) : []).forEach((x, k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = x.l; r.querySelector('.r1-np-f').value = String(x.f); r.querySelector('.r1-np-m').value = x.m; });
@@ -50,7 +53,7 @@
     list.forEach(x => { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); fill({ '#c8-l': x.l, '#c8-f': String(x.f) }); const s = qm('#c8-m'); if (s) s.value = x.m; press(); });
     cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.pay.length).forEach(o => ACT.cb8PayAdd({ dataset: { p: pr.id, o: o.id, k: '1' } }));
     cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.mode && !o.legacy).forEach(o => { ACT.cb8OptRetire && ACT.cb8OptRetire({ dataset: { p: pr.id, o: o.id } }); if (MODAL) press(); });
-    ACT.cb8Submit({ dataset: { p: pr.id } }); if (MODAL) press();
+    fb1Dep(pr); ACT.cb8Submit({ dataset: { p: pr.id } }); if (MODAL) press();
     const wf = cb8Wf(pr), qid = wf && wf.qid; if (!qid) return false;
     if (o.pending) { ACA(); return qid; } // DM (PD-DM-03): submitted, left with Finance — a mode configured but not approved
     approveQ(qid); return true;
@@ -212,7 +215,7 @@
     // DM (PD-DM-01) supersedes "a Level 3 row in a mode the course doesn't offer is refused": there is no second setting to disagree with —
     // a course with a single Fully Assisted row offers Fully Assisted only
     go('a-programmes'); ACT.chProgNew(); const n = document.querySelectorAll('main .r1-np-row');
-    fill({ '#np-t': 'CR Level 3 mismatch', '#np-l': 'Level 3', '#np-r': 'QN 610/7999/1', '#np-d': '6', '#np-du': 'months' }); document.querySelector('#np-obs-no').checked = true;
+    fill({ '#np-t': 'CR Level 3 mismatch', '#np-l': 'Level 3', '#np-r': 'QN 610/7999/1', '#cbc3-dd-n': '12', '#np-d': '6', '#np-du': 'months' }); document.querySelector('#np-obs-no').checked = true;
     const row = document.querySelector('main .r1-np-row'); row.querySelector('.r1-np-l').value = 'FA'; row.querySelector('.r1-np-f').value = '2400'; row.querySelector('.r1-np-m').value = 'Fully Assisted';
     const p0 = ADMIN.programmes.length, pm = ACT.cbDetCreate(); closeModal();
     ok('CR-B (DM) one Fully Assisted row: the course is created offering Fully Assisted only', ADMIN.programmes.length === p0 + 1 && !!pm && J(crModes(pm).modes) === J(['Fully Assisted']));
@@ -267,7 +270,7 @@
   await T('CR-E', async () => {
     fresh(); ACA(); go('a-programmes'); ACT.chProgNew();
     const lab = id => (q(`label[for="${id}"]`) || {}).textContent;
-    ok('CR-E the form has no Course code; Course name, Awarding body and Awarding body course code remain', !q('#np-code') && lab('np-t') === 'Course name' && lab('np-q-body') === 'Awarding body' && lab('np-r') === 'Awarding body course code');
+    ok('CR-E the form has no Course code; Course name, Awarding body and Awarding body course code remain', !q('#np-code') && lab('np-t') === 'Course Name' && lab('np-q-body') === 'Awarding Body' && lab('np-r') === 'Awarding Body Course Code'); // CBR-2 (PD-CBR2-01): the approved labels
     const pr = make({ level: 'Level 4', modes: ['Fully Assisted'], title: 'CR Level 4 no course code' });
     ok('CR-E a course is created without an Academy course code (stable ID used)', !!pr && !pr.code && /^NV-/.test(pr.id));
     go('a-programmes', { id: pr.id, tab: 'review' });

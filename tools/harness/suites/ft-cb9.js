@@ -3,6 +3,9 @@
 // catch-up; rows and the frozen pin come from the chosen schedule; later Finance changes never rewrite them; batch-date changes and moves
 // before the start revise unpaid dates only (audited, told once); the observation fee is priced from the pin by location (£0 = nothing).
 (async function () {
+  // FB1 (PD-FB1-03): this suite's deposit configuration, chosen explicitly where its fixture prepares a package for Finance — each new fee
+  // option "Allow Deposit: Yes" with the Academy default, through the Step 5 handler (an administrator's action; role checks apply).
+  const fb1Dep = p => { if (p && cb8Managed(p)) cb8Work(p).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: p.id, o: o.id, k: 'allow' }, checked: true })); };
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
   // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
@@ -27,7 +30,7 @@
   // A Level 3 programme made in the builder, its package approved by the Super Administrator (D8), published, with a batch
   const prog = (o = {}) => {
     SA(); go('a-programmes'); ACT.chProgNew(); const n = ++codeN;
-    fill({ '#np-t': 'CB9 Level 3 course ' + n, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (4400 + n) + '/9', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
+    fill({ '#np-t': 'CB9 Level 3 course ' + n, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (4400 + n) + '/9', '#cbc3-dd-n': '6' /* FB2 (PD-FB2-01): the Course Duration is the payment duration — was 12 here with a separate 6-month payment duration */, '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
     (document.querySelector('#np-code') || {}).value = 'CB9C' + n; document.querySelector('#np-obs-' + (o.obs ? 'yes' : 'no')).checked = true;
     const rows = [{ l: 'Fully Assisted — standard', f: 2400, m: 'Fully Assisted' }, { l: 'Self-Paced — standard', f: 1800, m: 'Self-Paced' }];
     rows.forEach((x, k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = x.l; r.querySelector('.r1-np-f').value = String(x.f); r.querySelector('.r1-np-m').value = x.m; });
@@ -43,7 +46,7 @@
     const [a, b] = cb8Work(pr).opts, payTo = (oid, ks) => { const x = cb8Work(pr).opts.find(y => y.id === oid); x.pay.map(y => y.k).forEach(k => ACT.cb8PayDel({ dataset: { p: id, o: oid, k: String(k) } })); ks.forEach(k => ACT.cb8PayAdd({ dataset: { p: id, o: oid, k: String(k) } })); };
     if (o.obs) [a, b].forEach(x => { ACT.cb8Opt({ dataset: { p: id, o: x.id } }); document.querySelector('#modal-root #c8-wp').value = '70'; document.querySelector('#modal-root #c8-off').value = '0'; press(); });
     payTo(a.id, [1, 4, 6]); payTo(b.id, [1, 3]);
-    ACT.cb8SaApprove({ dataset: { p: id } }); reason('Terms');
+    fb1Dep(cbPr(id)); ACT.cb8SaApprove({ dataset: { p: id } }); reason('Terms');
     ACT.ch8Publish({ dataset: { id } }); reason('Ready'); closeModal();
     if (pr.status !== 'Active') R.push('FAIL CB9 (setup) publish — ' + J(ch8Check(pr).block));
     go('a-batches'); ACT.newBatch(); fill({ '#nb-c': 'CB9B' + n }); const co = document.querySelector('#nb-co'); co.value = pr.title; INP.n2NbCourse(co); document.querySelector('#nb-m').value = 'Online'; prim(); fill({ '#nb-ac': 'Dr Helen Carter' }); prim(); prim(); prim(); prim(); closeModal();
@@ -105,12 +108,13 @@
   /* ================= D. Late enrolment ================= */
   await T('CB9-D late enrolment', async () => {
     // (sign-up doesn't progress into a batch that has already started, so the batch starts while the learner is at step 4: 25 Aug 2026)
-    fresh(); const P = prog(), { w } = signUp('A', P, P.a); P.bt.start = D(-40, '09:00'); chSetBatch(w, P.bt); choose(6); const t = q('.cb9-sched').textContent;
-    ok('CB9-D the batch started 25 Aug 2026; payments due before today (4 Oct) are due today and collected now (catch-up); the rest keep their dates', /Catch-up|catch-up/.test(t) && /was scheduled 25 Aug 2026/.test(t) && /was scheduled 25 Sep 2026/.test(t) && /payments already due are due today/.test(main()) && /provisional rule/.test(main()));
-    ok('CB9-D the button charges payment 1 and the catch-up together (2 × £400.00 = £800.00)', /Pay £800\.00 by card/.test(main()));
-    const { g, pl } = payCard(w);
-    ok('CB9-D rows: 1 and 2 due today (catch-up), Paid; 3–6 on 25 Oct, 25 Nov, 25 Dec 2026, 25 Jan 2027, Pending', g.amount === 800 && J(pl.rows.map(r => [ymd(r.due), r.status, !!r.catchUp])) === J([['2026-10-04', 'Paid', true], ['2026-10-04', 'Paid', true], ['2026-10-25', 'Pending', false], ['2026-11-25', 'Pending', false], ['2026-12-25', 'Pending', false], ['2027-01-25', 'Pending', false]]) && ymd(pl.rows[0].sched) === '2026-08-25', J(pl.rows.map(r => ymd(r.due))));
-    ok('CB9-D the pin keeps the anchor (batch start), the enrolment date and each row\'s scheduled date', w.signup.pin.anchor === '2026-08-25' && w.signup.pin.enrolledOn === '2026-10-04' && w.signup.pin.rows[1].sched === '2026-09-25' && w.signup.pin.rows[1].catchUp);
+    // PD-L3C-02 supersedes PD-CB-61's automatic catch-up for self sign-up: the batch started before payment, so payment is refused and
+    // nothing is charged. Was: the schedule showed catch-up rows ("was scheduled 25 Aug / 25 Sep 2026", provisional rule), "Pay £800.00
+    // by card" charged payment 1 and the catch-up together, rows 1–2 Paid (catch-up) and 3–6 Pending, and the pin kept anchor 2026-08-25.
+    fresh(); const P = prog(), { w } = signUp('A', P, P.a); P.bt.start = D(-40, '09:00'); chSetBatch(w, P.bt); go('admission');
+    ok('CB9-D the batch started 25 Aug 2026 before payment: the step says so; no schedule and no Pay button', /started on 25 Aug 2026, before you paid/.test(main()) && !q('.cb9-sched') && !q('[data-act="suPay"]'));
+    const r = ACT.suPay();
+    ok('CB9-D a direct payment is refused: nothing charged, no plan, sign-up not complete', r === false && !w.signup.done && !w.plans.some(p => p.e === 'nvq') && !w.signup.pin);
   });
 
   /* ================= E. Historical freezing ================= */
@@ -127,18 +131,22 @@
 
   /* ================= F. Batch date changed / learner moved before the start ================= */
   await T('CB9-F batch-date revisions', async () => {
-    fresh(); const P = prog(), { w } = signUp('A', P, P.a); payCard(w, 4); const pl = w.plans.find(p => p.e === 'nvq'), n0 = w.notifs.length, a0 = ADMIN.audit.length;
-    ACA(); ACT.s4bBatchEdit({ dataset: { id: P.bt.code } }); fill({ '#bd-s': '2026-11-27', '#bd-e': '2027-06-30', '#bd-r': 'Room availability' }); prim();
-    ok('CB9-F the impact preview says unpaid payment dates will move (amounts unchanged)', /unpaid payment dates move with it/.test(document.querySelector('#modal-root').textContent)); prim(); closeModal(); render(); render();
-    ok('CB9-F the start moved to 27 Nov 2026: unpaid dates follow (11 Jan, 25 Feb, 11 Apr 2027); paid payment 1 keeps 13 Nov 2026; amounts unchanged', J(pl.rows.map(r => [ymd(r.due), r.amount, r.status])) === J([['2026-11-13', 600, 'Paid'], ['2027-01-11', 600, 'Pending'], ['2027-02-25', 600, 'Pending'], ['2027-04-11', 600, 'Pending']]), J(pl.rows.map(r => ymd(r.due))));
-    ok('CB9-F a revision is recorded (append-only), the original pin is unchanged', pl.revs.length === 1 && pl.revs[0].from === '2026-11-13' && pl.revs[0].anchor === '2026-11-27' && Object.isFrozen(pl.revs[0]) && w.signup.pin.rows[1].due === '2026-12-28');
-    ok('CB9-F the learner is told once (re-renders add nothing); Finance\'s audit and one notification', w.notifs.filter(x => x.title === 'Your payment dates changed').length === 1 && ADMIN.audit.slice(0, ADMIN.audit.length - a0).filter(x => x.action === 'Payment dates revised (batch start changed)').length === 1 && STORE.fin.notifs.filter(x => String(x.key || '').startsWith('cb9-rev-' + w.me.id)).length === 1);
-    FA(); setUi('fpL', 'A'); go('f-plans'); ok('CB9-F Finance → Learner schedules: the agreed schedule and "Revision 1: batch start 13 Nov 2026 → 27 Nov 2026"', /Agreed payment schedule — fixed at sign-up/.test(main()) && /Revision 1: batch start 13 Nov 2026 → 27 Nov 2026/.test(main()));
-    // moved to another batch before it starts
+    // PD-L3C2-01/02/05 supersede PD-CB-10 (unpaid dates followed a new batch start): a change that would move signed payment dates is
+    // refused, and a pinned schedule is never recalculated. Was: the edit to 27 Nov 2026 moved unpaid dates to 11 Jan, 25 Feb, 11 Apr 2027
+    // (revision 1, the learner told once, Finance audit and notice, "Revision 1: batch start 13 Nov 2026 → 27 Nov 2026" on Learner
+    // schedules), and the move to CB9MV (13 Dec 2026) recorded revision 2 with unpaid dates from the new start.
+    fresh(); const P = prog(), { w } = signUp('A', P, P.a); payCard(w, 4); const pl = w.plans.find(p => p.e === 'nvq'), rows0 = J(pl.rows), a0 = ADMIN.audit.length, s0 = P.bt.start;
+    ACA(); ACT.s4bBatchEdit({ dataset: { id: P.bt.code } }); fill({ '#bd-s': '2026-11-27', '#bd-e': '2027-06-30', '#bd-r': 'Room availability' }); const r1 = prim();
+    ok('CB9-F changing the batch start is refused: signed payment terms depend on it (new contractual acceptance required)', r1 === false && /Signed payment terms of 1 learner depend on this start date/.test(document.querySelector('#modal-root').textContent) && P.bt.start === s0); closeModal(); render(); render();
+    ok('CB9-F the schedule is unchanged: no revision, no "payment dates changed" notice, the refusal is audited', J(pl.rows) === rows0 && !(pl.revs || []).length && !w.notifs.some(x => x.title === 'Your payment dates changed') && ADMIN.audit.slice(0, ADMIN.audit.length - a0).some(x => x.action === 'Blocked: change batch start date (signed terms would change)'));
     SA(); go('a-batches'); ACT.newBatch(); fill({ '#nb-c': 'CB9MV' }); const co = document.querySelector('#nb-co'); co.value = P.pr.title; INP.n2NbCourse(co); document.querySelector('#nb-m').value = 'Online'; prim(); fill({ '#nb-ac': 'Dr Helen Carter' }); prim(); prim(); prim(); prim(); closeModal();
     const nb = ADMIN.batches.find(x => x.code === 'CB9MV'); nb.start = D(70, '09:00'); nb.end = D(260, '17:00');
-    ACT.chMoveBatch({ dataset: { id: w.me.id } }); if (MODAL) { document.querySelector('#modal-root #ch-mv-b').value = 'CB9MV'; reason('Moved'); } render();
-    ok('CB9-F moved to a batch starting 13 Dec 2026: a second revision; unpaid dates from the new start; paid untouched', pl.revs.length === 2 && pl.revs[1].anchor === '2026-12-13' && ymd(pl.rows[0].due) === '2026-11-13' && ymd(pl.rows[1].due) === '2027-01-27', J(pl.rows.map(r => ymd(r.due))));
+    ACT.chMoveBatch({ dataset: { id: w.me.id } }); const offered = !!MODAL && !!document.querySelector('#modal-root #ch-mv-b option[value="CB9MV"]'); closeModal();
+    const r2 = chDoMove(w.me.id, P.bt, nb, 'direct'); render();
+    ok('CB9-F a batch starting 13 Dec 2026 isn\'t offered, and a direct move is refused; batch and schedule unchanged', !offered && r2 === false && w.signup.batch === P.bt.code && J(pl.rows) === rows0);
+    P.bt.start = D(60, '09:00'); render(); render();
+    ok('CB9-F a start that differs anyway (direct data change) never rewrites the schedule; Finance is told once', J(pl.rows) === rows0 && ADMIN.audit.filter(x => x.action === 'Batch start differs from the signed payment schedule — dates kept' && x.entity.includes(w.me.id)).length === 1);
+    P.bt.start = s0;
   });
 
   /* ================= G. Observation fee from the pin ================= */

@@ -232,8 +232,9 @@ ACT.kOffer = el => {
   if (!w1Accepts(b, x.opt)) return w1Deny(b, 'offer a waitlist place', `${b.code} no longer accepts ${w1OptName(x.opt)} — ${x.name}'s fee option isn't replaced. Move them to a batch that accepts it.`);
   reasonDlg({ title: 'Offer waitlist place — ' + esc(x.name), ok: 'Offer place', body: `<p class="small">${esc(x.name)} joins ${esc(b.code)} with their fee option: <strong>${esc(w1OptName(x.opt))}</strong> (${esc(w1ModeOfOpt(x.opt, b) || '—')}).</p>`, onOk: r => {
     const w = w1AdminWhy(b); if (w) return w1Deny(b, 'offer a waitlist place', w); if (b.enrolled >= b.cap || !w1WaitOf(b, x.id)) { toast('This place is no longer available.', 'err'); return false; }
+    if (!seatTake(b, { lid: x.lid, kind: seatKindOf(x.lid), origin: 'Waitlist offer' })) { toast('This place is no longer available.', 'err'); return false; } // P1: the seat ledger
     b.w1wait = b.w1wait.filter(y => y !== x); (b.w1waitHist = b.w1waitHist || []).push({ ...x, out: 'Offered', outAt: now().toISOString(), outBy: ADMIN.me.name });
-    b.wait = Math.max(0, b.wait - 1); b.enrolled++; b.roster.push([x.name, x.lid, x.agency]); b.r2 = b.r2 || {}; b.r2[x.lid] = { opt: x.opt, by: ADMIN.me.name, at: now().toISOString(), src: 'Waitlist offer' }; touch(b.code);
+    b.wait = Math.max(0, b.wait - 1); b.roster.push([x.name, x.lid, x.agency]); b.r2 = b.r2 || {}; b.r2[x.lid] = { opt: x.opt, by: ADMIN.me.name, at: now().toISOString(), src: 'Waitlist offer' }; touch(b.code);
     logA('Batches', `${b.label} (${b.code})`, 'Learner added (waitlist offer)', 'Waitlist', `${x.name} → ${w1OptName(x.opt)}`, r); render(); toast(`${x.name} offered a place, on ${w1OptName(x.opt)}.`);
   } });
 };

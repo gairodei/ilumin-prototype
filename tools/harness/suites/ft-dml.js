@@ -4,6 +4,9 @@
 // upgraded through Course Builder (a compliant Version 2: Section 4, Section 5, Finance, Review & Publish) and then takes a batch with
 // both modes. Publication gates, version pinning, held (unpublished) options, direct calls and roles are checked. Real handlers only.
 (async function () {
+  // FB1 (PD-FB1-03): this suite's deposit configuration, chosen explicitly where its fixture prepares a package for Finance — each new fee
+  // option "Allow Deposit: Yes" with the Academy default, through the Step 5 handler (an administrator's action; role checks apply).
+  const fb1Dep = p => { if (p && cb8Managed(p)) cb8Work(p).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: p.id, o: o.id, k: 'allow' }, checked: true })); };
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   const J = JSON.stringify, L2 = 'Level 2 Diploma in Care (England)', T3 = 'Level 3 Diploma in Adult Care (England)', PID = 'NV-L2';
   const q = s => document.querySelector('main ' + s), qm = s => document.querySelector('#modal-root ' + s), qma = s => [...document.querySelectorAll('#modal-root ' + s)];
@@ -52,7 +55,7 @@
     ACT.cb8Opt({ dataset: { p: PID, o: '' } }); fill({ '#c8-l': 'Self-Paced', '#c8-f': '1200', '#c8-wp': '100', '#c8-off': '100' }); qm('#c8-m').value = 'Self-Paced'; press();
     cb8Work(pr()).opts.filter(o => o.status === 'Active' && !o.pay.length).forEach(o => ACT.cb8PayAdd({ dataset: { p: PID, o: o.id, k: '6' } }));
     if (stop === 'modes') return;
-    go('a-programmes', { id: PID, tab: 'payments' }); ACT.cb8Submit({ dataset: { p: PID } }); if (MODAL) press(); const qid = cb8Wf(pr()).qid;
+    go('a-programmes', { id: PID, tab: 'payments' }); fb1Dep(pr()); ACT.cb8Submit({ dataset: { p: PID } }); if (MODAL) press(); const qid = cb8Wf(pr()).qid;
     if (stop === 'pending') return qid;
     FA(); go('a-queue', { id: qid }); ACT.e1Decide({ dataset: { id: qid, a: 'approve' } }); if (MODAL) reason('Checked against the price list');
     if (stop === 'held') return qid;

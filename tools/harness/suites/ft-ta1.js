@@ -5,8 +5,15 @@
 // Phase 1 (after a real reload): allocations and published feedback come back; Reset restores the demo. Then the legacy fixture:
 // every identity's batches from the allocations, counts agree with Discontinued learners present, a batch move.
 (async function () {
+  // P3 (PD-P3-02): the learner chooses their batch on sign-up step 1. Fixtures that relied on the automatic (CH-42) assignment now pick, on
+  // the page, the earliest eligible batch (the one CH-42 assigned); a batch the fixture already set, and that is still eligible, is kept
+  const p3Pick = () => { const w = W; if (!w || !p3Open(w) || chStepKey(w) !== 'details' || ui('suBatch', null) || (w.signup.batch && !p3Why(w, chBatch(w.signup.batch), { region: w.signup.l3cPin !== w.signup.batch }))) return; const r = S.route === 'admission' && document.querySelector('main input[name="su-batch"]'); if (r) { r.checked = true; INP.suBatch(r); } else { const b = p3Eligible(w)[0]; if (b) setUi('suBatch', b.code); } };
   const SS = window.sessionStorage, PH = +(SS.getItem('ft-ta1.phase') || 0);
   const R = JSON.parse(SS.getItem('ft-ta1.R') || '[]'); const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // P6 (PD-P6-02): a batch change is a transfer request carried out after approval — in these fixtures a Super Administrator override (audited)
+  const p6AsSA = f => { const av = ADMIN.av, po = S.portal, si = S.signedIn; setAdminIdentity('A'); S.portal = 'admin'; try { return f(); } finally { if (av && av !== 'A') setAdminIdentity(av); S.portal = po; S.signedIn = si; } };
+  const p6Ok = (why = 'Approved (test)') => p6AsSA(() => { const q = (SEATS().xfer || { reqs: [] }).reqs.find(x => x.state === 'Pending Academic Approval'); return q ? p6Decide(q.id, 'override', why) : { ok: false, why: 'no pending request' }; });
+  const p6Xfer = (lid, to, why = 'Transfer (test)') => p6AsSA(() => { const q = p6Request(lid, typeof to === 'string' ? to : to.code, why); return q.ok ? p6Decide(q.id, 'override', why) : q; });
   const J = JSON.stringify, $1 = s => document.querySelector(s), $a = s => [...document.querySelectorAll(s)];
   const T = async (n, f) => { try { closeModal(); await f(); } catch (e) { R.push('FAIL ' + n + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
   const click = el => { if (!el) throw new Error('missing control'); el.click(); };
@@ -57,9 +64,9 @@
       const before = ['T', 'S', 'O'].map(v => ids(v).includes(zid));
       go('browse'); const c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === CD_T); ACT.applyNvq({ dataset: { id: c.id } });
       const o = r1Opts(cdPr().id).find(x => x.status === 'Active' && x.mode === 'Self-Paced'); $1(`#modal-root input[name="r1-opt"][value="${o.id}"]`).checked = true; press();
-      go('admission'); $1('#su-dob').value = '1992-03-04'; $1('#su-ad').value = '9 Test Road, Luton'; click($1('main [data-act="suNext"]'));
+      go('admission'); $1('#su-dob').value = '1992-03-04'; $1('#su-ad').value = '9 Test Road, Luton'; click((p3Pick(), $1('main [data-act="suNext"]')));
       fxFast(ff => { z.docs.filter(d => d.mand).forEach(d => ACT.sampleUpload({ dataset: { id: d.id } })); ff(3000); });
-      click($1('main [data-act="suNext"]')); setUi('suSig', chFullName(z)); setUi('suDecl', true); render(); click($1('main #su-sign'));
+      click((p3Pick(), $1('main [data-act="suNext"]'))); setUi('suSig', chFullName(z)); setUi('suDecl', true); render(); click($1('main #su-sign'));
       const r = $1('main input[name="cb9-pay"][value="deposit"]'); if (r) { r.checked = true; INP.cb9Pay(r); } const m = $1('main input[name="su-m"][value="card"]'); if (m) { m.checked = true; INP.suMethod(m); }
       fxFast(ff => { click($1('main [data-act="suPay"]')); if (MODAL && /Pay now/.test(MODAL.title || '')) { prim(); ff(3000); closeModal(); } });
       ok('TA1-B before enrolment the new learner is in nobody\'s list', before.every(x => !x));
@@ -262,7 +269,9 @@
       const from = ADMIN.batches.find(b => b.code === 'L2DC-MAR26'), to = ADMIN.batches.find(b => b.code === 'L2DC-JAN27'), e = (from.coh || []).find(x => x.lid && !x.v), lid = e && e.lid;
       ok('TA1-H a synthetic learner of L2DC-MAR26 is in Tom Whitfield\'s list (its Teacher)', !!lid && ids('W').includes(lid));
       to.teachers = ['Marcus Bell']; // test-only target staff (discarded by the next fixture load)
-      chDoMove(lid, from, to, 'TA-1 test');
+      // P6 (PD-P6-04): L2DC-MAR26 has started, so a transfer out of it is refused; this check is about staff lists following the batch record, so the
+      // cohort entry is moved directly (test-only, discarded by the next fixture load). Was: chDoMove(lid, from, to, 'TA-1 test')
+      from.coh = from.coh.filter(z => z !== e); (to.coh = to.coh || []).push(e);
       ok('TA1-H after the move: Marcus (new batch Teacher) sees the learner; Tom (old batch only) does not', ids('T').includes(lid) && !ids('W').includes(lid));
       TCH('W'); const x0 = sec(); go('t-students', { id: lid }); ok('TA1-H Tom is refused on the moved learner (logged)', /don't have access/.test(main()) && sec() === x0 + 1);
       // Direct publication on the legacy data too: Sarah, Leicester Cohort 7's assignment assessor, publishes a live submission

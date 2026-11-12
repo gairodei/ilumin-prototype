@@ -13,7 +13,7 @@ const AGY_VARIANTS = {
 S.agy = { v: 'A', as: null, imp: null, buy: null, q: '', visSeen: null };
 const AG = () => ADMIN.agencies.find(a => a.id === (S.agy.id || AGY_VARIANTS[S.agy.v].id));
 const AGN = () => AG().name;
-const agNow = () => new Date(now().getTime() + ((STORE.agy && STORE.agy.offset) || 0) * DAY);
+const agNow = () => Clock.scenario('agency'); // P2: the agency demo date (STORE.agy.offset days on the one clock)
 const agDays = iso => Math.ceil((new Date(iso) - agNow()) / DAY);
 const receiveOnly = () => AG().perms === 'Receive-only';
 const AGY_TZ = () => AG().region === 'UAE' ? 'Asia/Dubai' : 'Europe/London';

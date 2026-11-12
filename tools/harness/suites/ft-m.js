@@ -5,6 +5,12 @@
 (async function () {
   const dmpPrice = () => { const r = document.querySelector('main #cr-pm-price'); if (r && !r.checked) { r.checked = true; INP.crPm(r); } }; // DM-P (PD-DM-18): "One programme price" is now an explicit choice (fee options by delivery mode are the default)
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // P6 (PD-P6-02): a batch change is a transfer request carried out after approval — in these fixtures a Super Administrator override (audited)
+  // P6 correction (PD-P6-05): a transfer needs an explicitly configured Academy time zone on both batches — test setup configures one where missing
+  const p6TzAll = () => ADMIN.batches.forEach(b => { if (!tzOk(b.tz)) b.tz = typeof chBatchCountry === 'function' && chBatchCountry(b) === 'United Arab Emirates' ? 'Asia/Dubai' : 'Europe/London'; });
+  const p6AsSA = f => { const av = ADMIN.av, po = S.portal, si = S.signedIn; setAdminIdentity('A'); S.portal = 'admin'; try { return f(); } finally { if (av && av !== 'A') setAdminIdentity(av); S.portal = po; S.signedIn = si; } };
+  const p6Ok = (why = 'Approved (test)') => p6AsSA(() => { p6TzAll(); const q = (SEATS().xfer || { reqs: [] }).reqs.find(x => x.state === 'Pending Academic Approval'); return q ? p6Decide(q.id, 'override', why) : { ok: false, why: 'no pending request' }; });
+  const p6Xfer = (lid, to, why = 'Transfer (test)') => p6AsSA(() => { p6TzAll(); const q = p6Request(lid, typeof to === 'string' ? to : to.code, why); return q.ok ? p6Decide(q.id, 'override', why) : q; });
   // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
   // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
   const crT = f => (...a) => { const l3 = (document.querySelector('main #np-l') || {}).value === 'Level 3', rows = [...document.querySelectorAll('main .r1-np-m')].map(x => x.value).filter(Boolean); document.querySelectorAll('main .cr-dm-c').forEach(x => { const sup = (document.querySelector('main input[name="np-s"]:checked') || {}).value === 'Self-paced' ? 'Self-Paced' : 'Fully Assisted'; x.checked = l3 || x.value === sup; }); return f(...a); };
@@ -35,7 +41,7 @@
   let cN = 0;
   const course = rows => {
     SA(); go('a-programmes'); ACT.chProgNew(); const n = ++cN;
-    fill({ '#np-t': 'M Level 3 course ' + n, '#np-l': 'Level 3', '#np-r': 'QN 610/90' + (10 + n) + '/1', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
+    fill({ '#np-t': 'M Level 3 course ' + n, '#np-l': 'Level 3', '#np-r': 'QN 610/90' + (10 + n) + '/1', '#cbc3-dd-n': '12', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
     (document.querySelector('#np-code') || {}).value = 'MC' + n; document.querySelector('#np-obs-no').checked = true;
     rows.forEach((x, k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = x.l; r.querySelector('.r1-np-f').value = String(x.f); r.querySelector('.r1-np-m').value = x.m; });
     const pr = crT(ACT.cbDetCreate)(); closeModal(); pr.status = 'Active';
@@ -55,7 +61,7 @@
   const opts3 = () => { SA(); const add = (label, fee, mode) => { r1AddOpt('NV-L3', { label, fee, mode }, 'M', 'Added'); return r1Opts('NV-L3').find(o => o.label === label).id; }; return { sp: add('Self-Paced — M', 1800, 'Self-Paced'), fa: add('Fully Assisted — M', 2600, 'Fully Assisted'), std: 'L3-FO-STD' }; };
   const apply3 = (v, optId) => { learner(v); go('browse'); const c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === T3); ACT.applyNvq({ dataset: { id: c.id } }); const r = optId && document.querySelector(`input[name="r1-opt"][value="${optId}"]`); if (r) r.checked = true; if (prim() !== false) closeModal(); return W; };
   const finish = (w, b) => { chSetBatch(w, b); ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); chSetBatch(w, b); setUi('suOpt', 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal(); return w; };
-  const freeL = (skip = []) => { const busy = new Set(ADMIN.batches.filter(x => ['Open', 'In Progress', 'Planned'].includes(x.status)).flatMap(x => batchRoster(x).map(r => r[1]))); return ADMIN.learners.find(l => l.acct === 'Active' && l.rec === 'Active' && !busy.has(l.id) && !skip.includes(l.id) && !n4World(l.id)); };
+  const freeL = (skip = []) => { const busy = new Set(ADMIN.batches.filter(x => ['Open', 'In Progress', 'Planned'].includes(x.status)).flatMap(x => batchRoster(x).map(r => r[1]))); return ADMIN.learners.find(l => l.acct === 'Active' && l.rec === 'Active' && !busy.has(l.id) && !skip.includes(l.id) && !n4World(l.id) && !SEATS().recs.some(r => r.lid === l.id && seatIsActive(r) && (x => !!x && ['Open', 'In Progress', 'Planned'].includes(x.status))(chBatch(r.batch)))); }; // P6 (PD-P6-08): a free learner holds no place in a live batch (seat ledger)
   const addL = (code, lid, opt) => { ACT.addToBatch({ dataset: { id: code } }); if (!MODAL) return 'refused'; fill({ '#ab-l': lid }); if (opt !== undefined) { const s = qm('#r2-ab-o'); if (opt && ![...s.options].some(x => x.value === opt)) s.insertAdjacentHTML('beforeend', `<option value="${opt}">injected</option>`); s.value = opt; } const r = prim(); const msg = mroot().textContent; if (r !== false) closeModal(); return r === false ? msg : 'added'; };
   const sessAdd = (code, o) => { ACT.addSession({ dataset: { b: code } }); if (!MODAL) return null; fill({ '#se-n': o.t, '#se-d': o.at, '#se-m': '60' }); qm('#se-t').value = 'Marcus Bell'; if (o.aud) qma('.r2-g').forEach(x => { x.checked = o.aud.includes(x.value); }); let r = prim(), n = 0; while (r === false && MODAL && n++ < 3 && !/Tick at least one/.test(mroot().textContent)) r = prim(); if (MODAL) closeModal(); return s4bAllSess().filter(s => s.title === o.t).pop(); };
   // Change (batch detail) and Edit batch details: set the ticks, then save with a reason
@@ -181,11 +187,13 @@
     fresh(); const c = course([{ l: 'Fully Assisted — standard', f: 2400, m: 'Fully Assisted' }, { l: 'Self-Paced — standard', f: 1800, m: 'Self-Paced' }]), [fa, sp] = c.ids; ACA();
     const b = nb('M-CAN', c.title).b, spB = nb('M-CAN-SP', c.title, { modes: ['Self-Paced'] }).b, faB = nb('M-CAN-FA', c.title, { modes: ['Fully Assisted'] }).b, l = freeL(); addL('M-CAN', l.id, fa);
     ACT.cancelBatch({ dataset: { id: 'M-CAN' } }); const vals = qma(`#cbd-${l.id} option`).map(x => x.value);
-    ok('M-I the Fully Assisted learner is offered the Fully Assisted batch, not the Self-Paced one', vals.includes('M-CAN-FA') && !vals.includes('M-CAN-SP') && vals.includes('refund') && /only batches that accept their fee option/.test(mroot().textContent));
+    // P6 (PD-P6-07): cancellation offers no move any more (a move needs an approved transfer first). Was: the Fully Assisted batch offered, not the Self-Paced one
+    ok('M-I cancellation offers no batch to move to — only the refund outcome', !vals.includes('M-CAN-FA') && !vals.includes('M-CAN-SP') && vals.includes('refund') && /approved transfer request/.test(mroot().textContent));
     const s = qm(`#cbd-${l.id}`); s.insertAdjacentHTML('beforeend', '<option value="M-CAN-SP">forged</option>'); s.value = 'M-CAN-SP'; fill({ '#cb-r': 'Course change' });
     ok('M-I (negative) a forged choice of the Self-Paced batch is refused; nothing cancelled', prim() === false && b.status !== 'Cancelled' && !batchRoster(spB).some(r => r[1] === l.id)); closeModal();
-    ACT.cancelBatch({ dataset: { id: 'M-CAN' } }); qm(`#cbd-${l.id}`).value = 'M-CAN-FA'; fill({ '#cb-r': 'Course change' }); press();
-    ok('M-I cancelled: the learner joins the Fully Assisted batch with their recorded option', b.status === 'Cancelled' && batchRoster(faB).some(r => r[1] === l.id) && faB.r2 && faB.r2[l.id] && faB.r2[l.id].opt === fa);
+    // P6: the move to the Fully Assisted batch is a transfer request (fee option kept); the batch is then cancelled with nobody left to move. Was: moved by the cancel dialog
+    const tr = p6Xfer(l.id, faB, 'Course change'); ACT.cancelBatch({ dataset: { id: 'M-CAN' } }); fill({ '#cb-r': 'Course change' }); press();
+    ok('M-I transferred first (approved request): the learner joins the Fully Assisted batch with their recorded option; then the batch is cancelled', tr.ok && b.status === 'Cancelled' && batchRoster(faB).some(r => r[1] === l.id) && faB.r2 && faB.r2[l.id] && faB.r2[l.id].opt === fa, JSON.stringify([tr, b.status]));
   });
 
   /* ================= J. Levels 2, 4 and 5 and the legacy standard fee ================= */
@@ -212,9 +220,9 @@
     fresh(); SA(); go('a-programmes'); ACT.chProgNew();
     const lab = id => (document.querySelector(`main label[for="${id}"]`) || {}).textContent, order = [...document.querySelectorAll('main .cb-det-form label[for]')].map(l => l.getAttribute('for'));
     // CR (PD-CR-06, supersedes PD-M-09's Course code field): no Academy course code; Course name, Awarding body, Awarding body course code
-    ok('M-K the form: Course name, Awarding body, Awarding body course code — no Academy course code', !lab('np-code') && lab('np-t') === 'Course name' && lab('np-q-body') === 'Awarding body' && lab('np-r') === 'Awarding body course code' && order.indexOf('np-q-body') === order.indexOf('np-r') - 1);
+    ok('M-K the form: Course name, Awarding body, Awarding body course code — no Academy course code', !lab('np-code') && lab('np-t') === 'Course Name' && lab('np-q-body') === 'Awarding Body' && lab('np-r') === 'Awarding Body Course Code' && order.indexOf('np-q-body') < order.indexOf('np-r')); // CBR-2 (PD-CBR2-01): the approved labels and two-column order (Awarding Body beside the name, the code beside the level)
     ok('M-K the awarding body course code is the existing reference field (no new field)', !!document.querySelector('main #np-r') && document.querySelectorAll('main input[id^="np-"][id*="ab"]').length === 0 && /* AA-FOLLOWUP (PD-AAFU-01): was /Separate from the Academy/ — now the client's guidance */ /Enter the course code provided by NCFE or the relevant awarding body\./.test(document.querySelector('main #np-r').closest('.field').textContent));
-    fill({ '#np-t': 'M codes course', '#np-l': 'Level 4', '#np-r': 'QN 610/4242/7', '#np-d': '12', '#np-du': 'months', '#np-p': '2400', '#np-q-body': 'NCFE CACHE' }); INP.r1NpLevel(document.querySelector('#np-l')); dmpPrice();
+    fill({ '#np-t': 'M codes course', '#np-l': 'Level 4', '#np-r': 'QN 610/4242/7', '#cbc3-dd-n': '12', '#np-d': '12', '#np-du': 'months', '#np-p': '2400', '#np-q-body': 'NCFE CACHE' }); INP.r1NpLevel(document.querySelector('#np-l')); dmpPrice();
     (document.querySelector('#np-code') || {}).value = 'm-codes1'; document.querySelector('#np-obs-no').checked = true;
     const pr = crT(ACT.cbDetCreate)(); closeModal();
     ok('M-K saved independently: pr.qual.body and pr.ref; no course code (CR)', !!pr && !pr.code && pr.qual.body === 'NCFE CACHE' && pr.ref === 'QN 610/4242/7');
@@ -230,7 +238,7 @@
   await T('M-K historical programmes, versions and learner records are unchanged', async () => {
     fresh(); SA(); const keep = () => J({ p: ADMIN.programmes.filter(p => !p.chNew), w: Object.values(STORE.worlds).map(w => w.nvq && { ab: w.nvq.ab, v: w.nvq.version, t: w.nvq.title }), tr: STORE.s3 && STORE.s3.trees }), k0 = keep();
     go('a-programmes', { id: 'NV-L3', tab: 'details' }); const dl = document.querySelector('main .cb-dl').textContent;
-    ok('M-K seeded Level 3 Diploma (read-only): the rows in order; no course code or awarding body made up', /Awarding body\s*Not recorded\s*Awarding body course code\s*QN 603\/2851\/9/.test(dl) && !/Course code\s*Not recorded/.test(dl)); // CR (PD-CR-06): no course code row
+    ok('M-K seeded Level 3 Diploma (read-only): the rows in order; no course code or awarding body made up', /Awarding Body\s*Not recorded[\s\S]*Awarding Body Course Code\s*QN 603\/2851\/9/.test(dl) /* CBR-2 (PD-CBR2-01): the approved order */ && !/Course code\s*Not recorded/.test(dl)); // CR (PD-CR-06): no course code row
     ['NV-L2', 'NV-L4', 'NV-L5', 'NV-L3D', 'NV-L3O'].forEach(id => go('a-programmes', { id, tab: 'details' }));
     ok('M-K programmes, programme versions and learner records unchanged by the new labels', keep() === k0 && s3Pr('NV-L3').ref === 'QN 603/2851/9' && s3Pr('NV-L3').code === undefined);
   });

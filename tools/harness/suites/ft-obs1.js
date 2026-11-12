@@ -86,10 +86,10 @@
     /* ---------- 3–6. Course builder ---------- */
     await T('OBS1-B course builder (published Version 1)', async () => {
       ACA(); go('a-programmes', { id: pr.id, tab: 'wpcrit' });
-      ok('OBS1-B the Observations section has the tabs Observation configuration, Workplace Observation Criteria, Academy Observation Criteria, Observation events', J(tabs()) === J(['Observation settings', 'Workplace Observation Criteria', 'Academy Observation Criteria', 'Observation events']) /* CBX (PD-CBX-03): renamed */, J(tabs()));
-      ok('OBS1-B (3) Workplace tab: ABS-01, ABS-02, ABS-03 from the library (published, frozen) with their evidence fields; not ABS-04', codes(V1.ol1snap.wp) === 'ABS-01,ABS-02,ABS-03' && $a('main .ol1-prev tr[data-code]').map(r => r.dataset.code).join() === 'ABS-01,ABS-02,ABS-03' && /Photos · required|Photos/.test(main()) && !$1('main [data-act="ol1Sel"]'));
+      ok('OBS1-B the Observations section has the tabs Observation configuration, Workplace Observation Criteria, Academy Observation Criteria, Observation events', !$1('main .cb-panels') && !!$1('main .cbr-col[data-loc="wp"]') && !!$1('main .cbr-col[data-loc="off"]') && !!$1('main #cbr-events')); // CBR (PD-CBR-07): one page — both locations, then the events
+      ok('OBS1-B (3) Workplace tab: ABS-01, ABS-02, ABS-03 from the library (published, frozen) with their evidence fields; not ABS-04', codes(V1.ol1snap.wp) === 'ABS-01,ABS-02,ABS-03' && $a('main .cbr-col[data-loc="wp"] .cbr-critl li .code').map(r => r.textContent).join() === 'ABS-01,ABS-02,ABS-03' /* CBR: the Workplace column */ && /Photos · required|Photos/.test(main()) && !$1('main [data-act="ol1Sel"]'));
       go('a-programmes', { id: pr.id, tab: 'offcrit' });
-      ok('OBS1-B (4, 5) Academy tab: A (same as Workplace) — ABS-01…03 inherited and ABS-04 Academy only, clearly labelled', V1.ol1snap.mode === 'same' && codes(V1.ol1snap.off) === 'ABS-01,ABS-02,ABS-03,ABS-04' && $a('main .ol1-prev tr[data-from="inherited"]').length === 3 && $a('main .ol1-prev tr[data-from="office"]').length === 1 && /Inherited from Workplace/.test(main()) && /Academy only/.test(main()));
+      ok('OBS1-B (4, 5) Academy tab: A (same as Workplace) — ABS-01…03 inherited and ABS-04 Academy only, clearly labelled', V1.ol1snap.mode === 'same' && codes(V1.ol1snap.off) === 'ABS-01,ABS-02,ABS-03,ABS-04' && ($1('main .cbr-col[data-loc="off"]').textContent.match(/from Workplace/g) || []).length === 3 && ($1('main .cbr-col[data-loc="off"]').textContent.match(/Academy only/g) || []).length === 1 /* CBR: the Academy column, labelled */);
       ok('OBS1-B the library definitions are shared: ABS-01 at both locations is the same criterion ID (no duplicate entry)', V1.ol1snap.wp[0].id === V1.ol1snap.off[0].id && cat('ABS').vers[0].crit.length === 4);
     });
     let d2;
@@ -106,7 +106,7 @@
       ok('OBS1-C (4) the Academy tab inherits Workplace (TST joins it) plus the Academy-only ABS-04', codes(off0.items) === 'ABS-01,ABS-02,ABS-03,TST-01,TST-02,ABS-04' && off0.items.filter(i => i.from === 'inherited').length === 5);
       ACT.ol1Excl({ dataset: { p: pr.id, c: wp[1].id, a: 'excl' } }); const off1 = ol1Resolve(d2, 'off');
       ok('OBS1-C an inherited criterion can be excluded explicitly (ABS-02 excluded at the Academy office only)', !off1.items.some(i => i.code === 'ABS-02') && codes(off1.excluded) === 'ABS-02' && codes(ol1Resolve(d2, 'wp').items).includes('ABS-02'));
-      go('a-programmes', { id: pr.id, tab: 'offcrit' }); ok('OBS1-C the Academy preview shows the excluded criterion with "Include again"', /Excluded/.test(main()) && !!$1('main [data-act="ol1Excl"][data-a="incl"]'));
+      go('a-programmes', { id: pr.id, tab: 'offcrit' }); ok('OBS1-C the Academy preview shows the excluded criterion with "Include again"', /Excluded/.test(main()) && !!$1('main input[data-onchange="cbr2Inh"]:not(:checked)') /* CBR-2: ticking it includes it again */);
       // (B5) create a category inside the course builder
       ACT.ol1CbNew({ dataset: { p: pr.id, loc: 'off' } }); fill({ '#ol1-code': 'TST', '#ol1-name': 'Again' }); const r1 = prim();
       ok('OBS1-C creating a category in the builder: a duplicate code is refused', r1 === false && OL1().cats.filter(c => c.code === 'TST').length === 1);

@@ -161,8 +161,9 @@
     ok('CF-H one competency legend on her course card (with the counts), not a second generic one', $a('main .five-legend').length === 1 && !$a('main .legend-line').length && /Not Started · 3/.test($1('main .enrol-card .five-legend').textContent));
     const end0 = W.nvq.end; W.nvq.end = D(30); go('dashboard');
     ok('CF-H (temporary data) a programme ending within 84 days: no invented "Behind schedule" (no projection is recorded)', !/Behind schedule/.test(main()) && /Nothing overdue/.test(bd().textContent)); W.nvq.end = end0;
-    const a = W.assignments[0], d0 = a.due; a.due = D(-1); go('dashboard');
-    ok('CF-H a genuine reason still applies: an overdue assignment → "Needs attention" and listed in Action needed', /Needs attention/.test(bd().textContent) && /overdue/.test(main())); a.due = d0;
+    // PD-L3C-10: for a Self-Paced learner a past batch date alone isn't overdue; a closed assignment is. Was: a.due = D(-1) only
+    const a = W.assignments[0], d0 = a.due; a.due = D(-1); a.closed = true; go('dashboard');
+    ok('CF-H a genuine reason still applies: an overdue assignment → "Needs attention" and listed in Action needed', /Needs attention/.test(bd().textContent) && /overdue/.test(main())); a.due = d0; a.closed = false;
     ACT.resetDemo(); signOutUI();
   });
 

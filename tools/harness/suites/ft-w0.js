@@ -3,6 +3,9 @@
 // with the learner's pinned terms, and assignment attachments kept with their submission round. Every action is called directly
 // (not only through visible buttons) and every allowed case has its negative.
 (async function () {
+  // FB1 (PD-FB1-03): this suite's deposit configuration, chosen explicitly where its fixture prepares a package for Finance — each new fee
+  // option "Allow Deposit: Yes" with the Academy default, through the Step 5 handler (an administrator's action; role checks apply).
+  const fb1Dep = p => { if (p && cb8Managed(p)) cb8Work(p).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: p.id, o: o.id, k: 'allow' }, checked: true })); };
   // DM-P (PD-DM-16): a new batch needs a course whose published version has Finance-approved fee options with a delivery mode. Where a check
   // isn't about that, Finance adds them first through its fee-option card (r1AddOpt): Self-Paced and Fully Assisted at the course's fee
   const dmpElig = (pid = 'NV-L2', modes = M_MODES) => { const fee = crNcFee(s3Pr(pid)) || 2400; modes.forEach(m => { if (!crApprOpts(pid).some(o => o.mode === m)) r1AddOpt(pid, { label: m, fee, mode: m }, 'Fixture (DM-P)', 'Added'); }); };
@@ -109,9 +112,9 @@
     fresh(); SA(); const v0 = s4Plans('NV-L2').length; ACT.s4PlanEdit({ dataset: { p: 'NV-L2' } }); fill({ '#pp-n': '4' }); reason('D8 save');
     ok('W0-A Super Admin plan save applies immediately as a new version (D8, G5.2)', s4Plans('NV-L2').length === v0 + 1 && s4PlanCur('NV-L2').inst === 4);
     FA(); ACT.s4PlanEdit({ dataset: { p: 'NV-L2' } }); fill({ '#pp-n': '5' }); reason('Finance save'); ok('W0-A Finance Admin plan save: a new version (G5.2)', s4Plans('NV-L2').length === v0 + 2 && s4PlanCur('NV-L2').inst === 5);
-    ACA(); const pr = (() => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': 'Level 4 Certificate in W0 Terms', '#np-l': 'Level 4', '#np-r': 'QN 610/7000/4', '#np-d': '12', '#np-du': 'months', '#np-p': '2400' }), dmpPrice(); create(); return (STORE.chNewProgs || []).slice(-1)[0]; })();
+    ACA(); const pr = (() => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': 'Level 4 Certificate in W0 Terms', '#np-l': 'Level 4', '#np-r': 'QN 610/7000/4', '#cbc3-dd-n': '12', '#np-d': '12', '#np-du': 'months', '#np-p': '2400' }), dmpPrice(); create(); return (STORE.chNewProgs || []).slice(-1)[0]; })();
     // CB8 (PD-CB-52) supersedes the E1 proposal form (e1Submit): the creator submits the financial package from Section 5 (cb8Submit); the decision rules are unchanged
-    go('a-programmes', { id: pr.id, tab: 'fees' }); ACT.cb8Submit({ dataset: { p: pr.id } }); press(); const qid = e1T(pr.id).qid;
+    go('a-programmes', { id: pr.id, tab: 'fees' }); fb1Dep(pr); ACT.cb8Submit({ dataset: { p: pr.id } }); press(); const qid = e1T(pr.id).qid;
     ok('W0-A CR-E1-01: the creator\'s terms go to Finance (Pending)', !!qid && e1T(pr.id).status === 'Pending');
     FA(); ACT.switchRole({ dataset: { r: 'coord' } }); S.signedIn = true; ACT.e1Decide({ dataset: { id: qid, a: 'approve' } }); if (MODAL) reason('From the wrong portal');
     ok('W0-A (negative) a Finance decision attempted from the Coordinator portal is refused (terms stay Pending)', e1T(pr.id).status === 'Pending'); closeModal();
@@ -215,7 +218,7 @@
 
   /* ================= 4. Checkout reconciles with the learner's pinned terms ================= */
   const npRow = (k, o) => { const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = o.l; r.querySelector('.r1-np-f').value = String(o.f); r.querySelector('.r1-np-m').value = o.m; };
-  const newL3 = (title, rows) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (7100 + title.length) + '/3', '#np-d': '12', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l')); rows.forEach((o, k) => { if (k) ACT.r1NpAdd(); npRow(k, o); }); create(); return (STORE.chNewProgs || []).slice(-1)[0]; };
+  const newL3 = (title, rows) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (7100 + title.length) + '/3', '#cbc3-dd-n': '12', '#np-d': '12', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l')); rows.forEach((o, k) => { if (k) ACT.r1NpAdd(); npRow(k, o); }); create(); return (STORE.chNewProgs || []).slice(-1)[0]; };
   const add8 = (act, ds, o) => { ACT[act]({ dataset: ds }); fill(o); return prim(); };
   const obsDecide = id => { ACT.n5Settings({ dataset: { p: id } }); const r = document.querySelector('#modal-root input[name="n5-req"][value="no"]'); if (r && MODAL) { r.checked = true; prim(); } closeModal(); };
   const pubNew = pr => { const id = pr.id; go('a-programmes', { id, tab: 'structure' }); add8('ch8AddUnit', { id }, { '#u-c': 'U370', '#u-t': 'Practice' }); add8('ch8AddMod', { id, u: 0 }, { '#m-t': 'Core', '#m-ab': 'C/650/3701' }); add8('ch8AddLo', { id, u: 0, m: 0 }, { '#lo-t': 'Understand practice', '#lo-y': 'Knowledge' }); add8('ch8AddCrit', { id, u: 0, m: 0, l: 0 }, { '#c-d': 'Describe practice', '#c-e': 'Written account' });
@@ -230,8 +233,13 @@
     ok(`W0-D ${n}`, w.signup.done && pl.total === t.fee && pence(rows) + Math.round(dep * 100) === Math.round(t.fee * 100) && JSON.stringify(rows) === JSON.stringify(want.rows) && (!g || g.amount === want.charged) && w.signup.pay.amount === want.charged, JSON.stringify({ fee: t.fee, inst: t.inst, rows, dep, charged: g && g.amount })); };
   await T('W0-D wizard Level 3 programme (Super Admin terms): rows from the pinned option, method and count', async () => {
     fresh(); SA(); const pr = newL3('Level 3 Certificate in W0 Checkout', [{ l: 'Self-Paced', f: 600, m: 'Self-Paced' }, { l: 'Fully Assisted', f: 1000, m: 'Fully Assisted' }]); const [sp, fa] = r1Opts(pr.id).map(o => o.id);
-    pubNew(pr); FA(); planEdit(pr.id, 'both', 3); SA(); go('a-batches'); const b = mkBatch('W0CO-MAR27', pr.title);
-    ok('W0-D the programme\'s reference price is the lowest option (£600); the plan is Both / 3', pr.price === 600 && s4PlanCur(pr.id).meth === 'both' && s4PlanCur(pr.id).inst === 3);
+    // FB1: a course made in the builder is a financial package — Finance's plan editor (planEdit) is for programmes from before packages and
+    // refuses it. The same terms, Both / 3, are configured in the package: each fee option pays in full or in 3 payments, Allow Deposit Yes with
+    // the Academy default; the Super Administrator approves them (D8). Was: SA terms approved at creation, then Finance's planEdit('both', 3).
+    cb8Work(pr).opts.filter(o => o.status === 'Active').forEach(o => { o.pay.map(x => x.k).forEach(k => ACT.cb8PayDel({ dataset: { p: pr.id, o: o.id, k: String(k) } })); [1, 3].forEach(k => ACT.cb8PayAdd({ dataset: { p: pr.id, o: o.id, k: String(k) } })); });
+    fb1Dep(pr); ACT.cb8SaApprove({ dataset: { p: pr.id } }); reason('Terms Both / 3');
+    pubNew(pr); SA(); go('a-batches'); const b = mkBatch('W0CO-MAR27', pr.title);
+    ok('W0-D the programme\'s reference price is the lowest option (£600); the plan is Both / 3 (from the approved package)', pr.price === 600 && s4PlanCur(pr.id).meth === 'both' && s4PlanCur(pr.id).inst === 3);
     let w = start('A', pr, fa); toPay(w, b); recon('£1,000 option, instalments: 3 rows £333.33 + £333.33 + £333.34 (not the £600 reference fee); first charged', w, pay(w, 'instalment'), { rows: e1Sched(1000, 3), charged: 333.33 });
     w = start('F', pr, fa); toPay(w, b); recon('£1,000 option, pay in full: one row of £1,000 charged at once', w, pay(w, 'full'), { rows: [1000], charged: 1000 });
     w = start('E', pr, sp); toPay(w, b); recon('£600 option, default deposit: £300 now, one £300 balance row', w, pay(w, 'deposit'), { rows: [300], charged: 300 });
@@ -241,14 +249,14 @@
     // CB8 (PD-CB-48, PD-CB-52) supersedes Finance's plan editor (planEdit) and fee-option card (r1OptEdit) for a programme made in the builder: its terms
     // change through its financial package (here the Super Administrator's own, approved at once — D8). The rule tested is unchanged: pinned terms survive.
     const pkg = (pr, oid, ks, fee) => { const o = cb8Work(pr).opts.find(x => x.id === oid); o.pay.map(x => x.k).forEach(k => ACT.cb8PayDel({ dataset: { p: pr.id, o: oid, k: String(k) } })); ks.forEach(k => ACT.cb8PayAdd({ dataset: { p: pr.id, o: oid, k: String(k) } })); if (fee) { ACT.cb8Opt({ dataset: { p: pr.id, o: oid } }); fill({ '#c8-f': String(fee) }); press(); } };
-    const saOk = pr => { SA(); ACT.cb8SaApprove({ dataset: { p: pr.id } }); reason('Terms'); };
+    const saOk = pr => { SA(); fb1Dep(pr); ACT.cb8SaApprove({ dataset: { p: pr.id } }); reason('Terms'); };
     SA(); pkg(pr, fa, [1, 3]); saOk(pr); pubNew(pr); SA(); go('a-batches'); let b = mkBatch('W0PN-MAR27', pr.title);
     let w = start('A', pr, fa); toPay(w, b); SA(); pkg(pr, fa, [4], 1200); saOk(pr); learner('A');
     recon('pinned before Finance changed the plan (4) and the option fee (£1,200): still 3 × the pinned £1,000', w, pay(w, 'instalment'), { rows: e1Sched(1000, 3), charged: 333.33 });
     fresh(); ACA(); pr = newL3('Level 3 Certificate in W0 Approved', [{ l: 'Self-Paced', f: 800, m: 'Self-Paced' }, { l: 'Fully Assisted', f: 1250, m: 'Fully Assisted' }]); [, fa] = r1Opts(pr.id).map(o => o.id);
     // CB8 (PD-CB-50, PD-CB-52) supersedes "How can learners pay? Both · 4 instalments" on the E1 form: the Fully Assisted option offers pay in full and
     // 4 payments in its package; the custom deposit uses the same fields; the creator submits the package and Finance approves it
-    pkg(pr, fa, [1, 4]); go('a-programmes', { id: pr.id, tab: 'fees' }); const d = document.querySelector('main input[name="e1-wdm"][value="own"]'); d.checked = true; INP.e1DepMode(d); fill({ '#e1-d': '250' });
+    pkg(pr, fa, [1, 4]); go('a-programmes', { id: pr.id, tab: 'fees' }); cb8Work(pr).opts.filter(o => o.status === 'Active').forEach(o => { INP.cbr2Dep({ dataset: { p: pr.id, o: o.id, k: 'allow' }, checked: true }); INP.cbr2Dep({ dataset: { p: pr.id, o: o.id, k: 'own' } }); INP.cbr2Dep({ dataset: { p: pr.id, o: o.id, k: 'amount' }, value: String('250'), id: 'fb1-dep' }); }); /* FB1: the deposit is set on each fee option (no programme editor in Step 5) */
     ACT.cb8Submit({ dataset: { p: pr.id } }); press(); FA(); ACT.e1Decide({ dataset: { id: e1T(pr.id).qid, a: 'approve' } }); reason('Approved');
     ACA(); pubNew(pr); SA(); go('a-batches'); b = mkBatch('W0AP-MAR27', pr.title);
     w = start('A', pr, fa); toPay(w, b); recon('Finance-approved Both / 4: £1,250 option by instalments, 4 × £312.50', w, pay(w, 'instalment'), { rows: e1Sched(1250, 4), charged: 312.5 });

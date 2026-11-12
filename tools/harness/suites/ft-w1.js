@@ -4,6 +4,12 @@
 // through the screen or handler, then checks the consuming screen or record, and includes the negative case.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // P6 (PD-P6-02): a batch change is a transfer request carried out after approval — in these fixtures a Super Administrator override (audited)
+  // P6 correction (PD-P6-05): a transfer needs an explicitly configured Academy time zone on both batches — test setup configures one where missing
+  const p6TzAll = () => ADMIN.batches.forEach(b => { if (!tzOk(b.tz)) b.tz = typeof chBatchCountry === 'function' && chBatchCountry(b) === 'United Arab Emirates' ? 'Asia/Dubai' : 'Europe/London'; });
+  const p6AsSA = f => { const av = ADMIN.av, po = S.portal, si = S.signedIn; setAdminIdentity('A'); S.portal = 'admin'; try { return f(); } finally { if (av && av !== 'A') setAdminIdentity(av); S.portal = po; S.signedIn = si; } };
+  const p6Ok = (why = 'Approved (test)') => p6AsSA(() => { p6TzAll(); const q = (SEATS().xfer || { reqs: [] }).reqs.find(x => x.state === 'Pending Academic Approval'); return q ? p6Decide(q.id, 'override', why) : { ok: false, why: 'no pending request' }; });
+  const p6Xfer = (lid, to, why = 'Transfer (test)') => p6AsSA(() => { p6TzAll(); const q = p6Request(lid, typeof to === 'string' ? to : to.code, why); return q.ok ? p6Decide(q.id, 'override', why) : q; });
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const app = () => document.getElementById('app');
   const mroot = () => document.getElementById('modal-root');
@@ -39,7 +45,7 @@
   const w1Legacy = (code, dm) => { const a = ADMIN.batches.find(b => b.code === 'L3AC-NOV26'), b = { ...JSON.parse(JSON.stringify(a)), code, label: code, start: D(60, '09:00'), end: D(420, '17:00'), enrolled: 0, roster: [], wait: [], status: 'Planned', mode: 'Online', dmode: dm, dmodeSrc: 'set', coord: 'Dr Helen Carter', w1opts: ['L3-FO-STD'] }; ['r2', 'crModes', 'crBase', 'abCode', 'abcHist', 'dmodeHist', 'w1wait', 'coh', 'alloc', 'mElig', 'coords', 'mcA', 'mcH', 'coordHistory'].forEach(k => delete b[k]); ADMIN.batches.push(b); syncTasBatches(); return b; };
   const apply3 = (v, optId) => { learner(v); go('browse'); const c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === T3); ACT.applyNvq({ dataset: { id: c.id } }); const r = optId && document.querySelector(`input[name="r1-opt"][value="${optId}"]`); if (r) r.checked = true; if (prim() !== false) closeModal(); return W; };
   const finish = (w, b) => { chSetBatch(w, b); ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); chSetBatch(w, b); setUi('suOpt', 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal(); return w; };
-  const freeL = (skip = []) => { const busy = new Set(ADMIN.batches.filter(x => ['Open', 'In Progress', 'Planned'].includes(x.status)).flatMap(x => batchRoster(x).map(r => r[1]))); return ADMIN.learners.find(l => l.acct === 'Active' && l.rec === 'Active' && !busy.has(l.id) && !skip.includes(l.id) && !n4World(l.id)); };
+  const freeL = (skip = []) => { const busy = new Set(ADMIN.batches.filter(x => ['Open', 'In Progress', 'Planned'].includes(x.status)).flatMap(x => batchRoster(x).map(r => r[1]))); return ADMIN.learners.find(l => l.acct === 'Active' && l.rec === 'Active' && !busy.has(l.id) && !skip.includes(l.id) && !n4World(l.id) && !SEATS().recs.some(r => r.lid === l.id && seatIsActive(r) && (x => !!x && ['Open', 'In Progress', 'Planned'].includes(x.status))(chBatch(r.batch)))); }; // P6 (PD-P6-08): a free learner holds no place in a live batch (seat ledger) — offering a place to one who does would move them without a transfer
   const addL = (code, lid, opt) => { ACT.addToBatch({ dataset: { id: code } }); if (!MODAL) return 'refused'; fill({ '#ab-l': lid }); if (opt !== undefined) fill({ '#r2-ab-o': opt }); const r = prim(); const msg = mroot().textContent; if (r !== false) closeModal(); return r === false ? msg : 'added'; };
   const sessAdd = (code, o) => { ACT.addSession({ dataset: { b: code } }); if (!MODAL) return null; fill({ '#se-n': o.t, '#se-d': o.at, '#se-m': '60' }); document.querySelector('#se-t').value = 'Marcus Bell'; if (o.aud) document.querySelectorAll('.r2-g').forEach(x => { x.checked = o.aud.includes(x.value); }); let r = prim(), n = 0; while (r === false && MODAL && n++ < 3 && !/Tick at least one/.test(mroot().textContent)) r = prim(); if (MODAL) closeModal(); return s4bAllSess().filter(s => s.title === o.t).pop(); };
   const rowOf = code => [...app().querySelectorAll('main tr')].find(r => r.textContent.includes(code));
@@ -122,17 +128,21 @@
     b.w1opts.push(o.sp); const spLater = nb('W1-WL2', T3, { opts: [o.fa], start: day(390), end: day(800) }).b; SA();
     ACT.kNextIntake({ dataset: { id: 'W1-WL', n: e2.name, w1: e2.id } }); ok('W1-C (negative) next intake: a later batch that doesn\'t accept the option is skipped; the learner stays', !MODAL && b.w1wait.length === 1 && !(spLater.w1wait || []).length);
     const nx = nb('W1-WL3', T3, { opts: [o.sp], start: day(395), end: day(800) }).b; SA(); ACT.kNextIntake({ dataset: { id: 'W1-WL', n: e2.name, w1: e2.id } }); reason('Next intake');
-    ok('W1-C moved to the next intake that accepts it, keeping the fee option', !b.w1wait.length && nx.w1wait.length === 1 && nx.w1wait[0].opt === o.sp && nx.w1wait[0].lid === l2.id && nx.wait === 1);
+    // P3 (PD-P3-07): a later intake that accepts the option exists, but moving a waitlisted learner to another batch is refused until the
+    // waitlist policy under learner batch choice is decided (U-10). Was: moved to W1-WL3 keeping the fee option (nx.w1wait[0], nx.wait === 1)
+    ok('W1-C → P3 the move to the next intake is refused; the learner stays on this waitlist with their fee option', b.w1wait.length === 1 && b.w1wait[0].opt === o.sp && b.w1wait[0].lid === l2.id && !(nx.w1wait || []).length && !nx.wait);
   });
 
   /* ================= 4. Transfers keep the agreed fee, mode and payments ================= */
   await T('W1-D transfers: only to a batch that accepts the fee option; nothing is replaced', async () => {
     fresh(); const o = opts(), a = nb('W1-TA', T3, { start: day(50) }).b, fa = nb('W1-TFA', T3, { opts: [o.fa], start: day(55) }).b, sp = nb('W1-TSP', T3, { opts: [o.sp], start: day(58) }).b;
-    const d = finish(apply3('A', o.sp), a), snap = JSON.stringify([d.signup.plan, d.plans, d.nvq.feeOpt, d.nvq.dmode]); SA();
-    ACT.chMoveBatch({ dataset: { id: d.me.id } }); const opts2 = [...document.querySelectorAll('#ch-mv-b option')].map(x => x.value);
+    // P6 (PD-P6-06): a transfer waits while a payment is awaiting Finance, so Finance records the sign-up's bank transfer first
+    const d = finish(apply3('A', o.sp), a); SA(); const tg = payTargets().find(t => (t.chb && t.chb.ref === d.signup.pay.ref) || (t.v && STORE.worlds[t.v] === d && !t.dep)); if (tg) recordPayment(tg, fpPl(d).rows[0].amount, d.signup.pay.ref, 'Bank transfer', 'W1-D: received');
+    const snap = JSON.stringify([d.signup.plan, d.plans, d.nvq.feeOpt, d.nvq.dmode]);
+    p6TzAll(); ACT.chMoveBatch({ dataset: { id: d.me.id } }); const opts2 = [...document.querySelectorAll('#ch-mv-b option')].map(x => x.value);
     ok('W1-D the transfer list offers only batches that accept the learner\'s fee option', opts2.includes('W1-TSP') && !opts2.includes('W1-TFA') && /fee option \(£1,800\.00 — Self-Paced — W1, Self-Paced\)/.test(mroot().textContent));
-    fill({ '#ch-mv-b': 'W1-TSP' }); reason('Later start');
-    ok('W1-D moved: same fee option, delivery mode, fee and payment rows (nothing recalculated)', d.signup.batch === 'W1-TSP' && JSON.stringify([d.signup.plan, d.plans, d.nvq.feeOpt, d.nvq.dmode]) === snap && r2ModeOfW(d) === 'Self-Paced' && sp.enrolled === 1 && a.enrolled === 0);
+    fill({ '#ch-mv-b': 'W1-TSP' }); reason('Later start'); p6Ok('Later start'); // P6 (PD-P6-02): request, then approval
+    ok('W1-D moved: same fee option, delivery mode, fee and payment rows (nothing recalculated) ', d.signup.batch === 'W1-TSP' && JSON.stringify([d.signup.plan, d.plans, d.nvq.feeOpt, d.nvq.dmode]) === snap && r2ModeOfW(d) === 'Self-Paced' && sp.enrolled === 1 && a.enrolled === 0);
     ok('W1-D (negative) a direct move to a batch that doesn\'t accept the option is refused; nothing moves', chDoMove(d.me.id, sp, fa, 'Forced') === false && d.signup.batch === 'W1-TSP' && fa.enrolled === 0 && /isn't replaced/.test(ADMIN.audit[0].reason));
     FA(); const a0 = ADMIN.audit.length; ACT.chMoveBatch({ dataset: { id: d.me.id } }); ok('W1-D (negative) Finance can\'t change a learner\'s batch (refused, logged)', !MODAL && blocked(a0));
   });

@@ -2,6 +2,9 @@
 // Batch 1: CH-01 country fixed, CH-02 GBP only, CH-03 data region, CH-05 VAT invoices, CH-31 contact details,
 // the placeholder register (4 topics), CH-24 unchanged, and the CH records. … Batch 6: CH-06 VAT on agency bundles. Batch 7a: CH-32 – CH-36. Batch 7b: CH-37 – CH-41, CH-43. Batch 7c: CH-42, P-32, P-33. Gap fix: new NVQ programme.
 (async function () {
+  // P3 (PD-P3-02): the learner chooses their batch on sign-up step 1. Fixtures that relied on the automatic (CH-42) assignment now pick, on
+  // the page, the earliest eligible batch (the one CH-42 assigned); a batch the fixture already set, and that is still eligible, is kept
+  const p3Pick = () => { const w = W; if (!w || !p3Open(w) || chStepKey(w) !== 'details' || ui('suBatch', null) || (w.signup.batch && !p3Why(w, chBatch(w.signup.batch), { region: w.signup.l3cPin !== w.signup.batch }))) return; const r = S.route === 'admission' && document.querySelector('main input[name="su-batch"]'); if (r) { r.checked = true; INP.suBatch(r); } else { const b = p3Eligible(w)[0]; if (b) setUi('suBatch', b.code); } };
   // DM-P (PD-DM-15): publishing a programme or version needs fee options by delivery mode, approved by Finance. Where a check isn't about
   // fees, this fixture takes the authorized Section 5 path first: the duration of a pre-builder course, a financial package, fee options by
   // delivery mode, a mode for each option (the Standard programme fee replaced by an option at the same fee), the Super Administrator's own approval (D8)
@@ -27,6 +30,12 @@
   };
   const dmpPrice = () => { const r = document.querySelector('main #cr-pm-price'); if (r && !r.checked) { r.checked = true; INP.crPm(r); } }; // DM-P (PD-DM-18): "One programme price" is now an explicit choice (fee options by delivery mode are the default)
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // P6 (PD-P6-02): a batch change is a transfer request carried out after approval — in these fixtures a Super Administrator override (audited)
+  // P6 correction (PD-P6-05): a transfer needs an explicitly configured Academy time zone on both batches — test setup configures one where missing
+  const p6TzAll = () => ADMIN.batches.forEach(b => { if (!tzOk(b.tz)) b.tz = typeof chBatchCountry === 'function' && chBatchCountry(b) === 'United Arab Emirates' ? 'Asia/Dubai' : 'Europe/London'; });
+  const p6AsSA = f => { const av = ADMIN.av, po = S.portal, si = S.signedIn; setAdminIdentity('A'); S.portal = 'admin'; try { return f(); } finally { if (av && av !== 'A') setAdminIdentity(av); S.portal = po; S.signedIn = si; } };
+  const p6Ok = (why = 'Approved (test)') => p6AsSA(() => { p6TzAll(); const q = (SEATS().xfer || { reqs: [] }).reqs.find(x => x.state === 'Pending Academic Approval'); return q ? p6Decide(q.id, 'override', why) : { ok: false, why: 'no pending request' }; });
+  const p6Xfer = (lid, to, why = 'Transfer (test)') => p6AsSA(() => { p6TzAll(); const q = p6Request(lid, typeof to === 'string' ? to : to.code, why); return q.ok ? p6Decide(q.id, 'override', why) : q; });
   // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
   // before); other levels: the mode of their old default (Support type) — and no longer for a course code; publishing asks for each chosen batch's deadline.
   const crT = f => (...a) => { const l3 = (document.querySelector('main #np-l') || {}).value === 'Level 3', rows = [...document.querySelectorAll('main .r1-np-m')].map(x => x.value).filter(Boolean); document.querySelectorAll('main .cr-dm-c').forEach(x => { const sup = (document.querySelector('main input[name="np-s"]:checked') || {}).value === 'Self-paced' ? 'Self-Paced' : 'Fully Assisted'; x.checked = l3 || x.value === sup; }); return f(...a); };
@@ -275,10 +284,12 @@
     ACT.sampleUpload({ dataset: { id: 'd6' } }); await wait(2000);
     ok('CH-07 every mandatory document uploaded → Continue enabled', !btnAct('suNext').disabled && /6 of 6 mandatory documents uploaded/.test(main()));
     ACT.suBack(); ok('CH-07 Back to step 1', stepCur() === 'Personal details');
-    ok('CH-42 no intake choice: the nearest batch is assigned (online or UAE, not Leicester)', !app().querySelector('input[name="su-batch"]') && /Your batch: Abu Dhabi Cohort 1, starts/.test(main()) && !/Leicester/.test(app().querySelector('.ch-batch').textContent));
-    ok('CH-42 "Need a different start date? Contact the Academy." with the contact details', /Need a different start date\? Contact the Academy/.test(main()) && /020 3983 0282/.test(main()) && /a deposit can hold your seat/.test(main()));
-    ACT.suNext(); ok('CH-07 step 1 saved → step 2', stepCur() === 'Documents' && W.signup.batch === 'L3AC-DEC26-AUH');
-    ACT.suNext(); ok('CH-07 → step 3 Offer letter', stepCur() === 'Offer letter');
+    // P3 (PD-P3-02, supersedes CH-42's automatic assignment): the learner chooses among the eligible batches (online or her country). Was: no
+    // choice — 'Your batch: Abu Dhabi Cohort 1' assigned; and 'a deposit can hold your seat'
+    ok('CH-42 → P3 step 1 offers the batches she can choose (online or UAE, not Leicester); her recorded batch is the one selected', !!app().querySelector('main input[name="su-batch"][value="L3AC-DEC26-AUH"]:checked') && /Choose your batch/.test(main()) && !/Leicester/.test(app().querySelector('.ch-batch .ch-intakes').textContent));
+    ok('CH-42 "Need a different start date? Contact the Academy." with the contact details', /Need a different start date\? Contact the Academy/.test(main()) && /020 3983 0282/.test(main()) && /Deposit available under the current provisional rule/.test(main()));
+    (p3Pick(), ACT.suNext()); ok('CH-07 step 1 saved → step 2', stepCur() === 'Documents' && W.signup.batch === 'L3AC-DEC26-AUH');
+    (p3Pick(), ACT.suNext()); ok('CH-07 → step 3 Offer letter', stepCur() === 'Offer letter');
   });
 
   /* ---------- CH-08 / CH-09 offer letter, signature, declaration ---------- */
@@ -340,7 +351,11 @@
     go('payments'); ok('CH-11 Payments shows the awaiting status', /Awaiting confirmation by Finance/.test(main()));
     ok('CH-11 bank sign-up recorded for Finance (Batch 3)', (STORE.chBank || []).some(x => x.lid === 'IA-L-31188' && x.status === 'Awaiting confirmation'));
     fresh(); ACT.chStep({ dataset: { s: '4' } }); ACT.chIntakeFills(); go('admission');
-    ok('CH-42 batch fills before payment → next nearest assigned, learner told (was: choose another)', W.signup.batch === 'L3AC-FEB27-AUH' && /Your batch has changed/.test(main()) && /Abu Dhabi Cohort 2/.test(main()) && !!app().querySelector('[data-act="suPay"]') && W.notifs.some(n => /Your batch has changed/.test(n.title)));
+    // P3 (PD-P3-05, supersedes CH-42's automatic reassignment): she isn't moved; the payment step says the batch is full and she chooses
+    // another. Was: W.signup.batch === 'L3AC-FEB27-AUH', 'Your batch has changed', a Pay button and a notice
+    ok('CH-42 → P3 batch fills before payment → not reassigned; she chooses another batch (Abu Dhabi Cohort 2 offered, none chosen)', W.signup.batch === 'L3AC-DEC26-AUH' && /is now full/.test(main()) && !!app().querySelector('main input[name="p3-re"][value="L3AC-FEB27-AUH"]') && !app().querySelector('main input[name="p3-re"]:checked') && !app().querySelector('[data-act="suPay"]') && !W.notifs.some(n => /Your batch has changed/.test(n.title)));
+    { const r = app().querySelector('main input[name="p3-re"][value="L3AC-FEB27-AUH"]'); r.checked = true; INP.p3Pick(r); ACT.p3Rechoose({ dataset: {} }); prim(); closeModal(); go('admission'); }
+    ok('CH-42 → P3 she chooses Abu Dhabi Cohort 2 and can pay there', W.signup.batch === 'L3AC-FEB27-AUH' && !!app().querySelector('[data-act="suPay"]'));
     ok('CH-42 documents and signature kept', stepCur() === 'Payment' && !!W.signup.sig && !chMandMissing(W).length);
   });
 
@@ -358,7 +373,7 @@
     fresh(); SA(); go('a-programmes', { id: 'NV-L3', tab: 'letter' });
     // CB1 (PD-CB-01) supersedes: was an "Offer letter" tab next to "Hierarchy builder"; now the old "letter" link opens Documents &
     // Contract → Offer letter, with Curriculum (the hierarchy builder) one of the seven sections
-    ok('CH-08 "Offer letter" panel of Offer Letter & Documents (CB3 name), next to the other sections', !!app().querySelector('.cb-sec.cur[data-tab="documents"]') && !!app().querySelector('.cb-panels .tab[data-tab="letter"][aria-selected="true"]') && !!app().querySelector('.cb-sec[data-tab="curriculum"]'));
+    ok('CH-08 "Offer letter" panel of Offer Letter & Documents (CB3 name), next to the other sections', !!app().querySelector('.cb-sec.cur[data-tab="documents"]') && !!app().querySelector('.cb-body[data-panel="letter"]') /* CBR (PD-CBR-01): no panel tabs */ && !!app().querySelector('.cb-sec[data-tab="curriculum"]'));
     ok('CH-08 tab: merge fields, current version, template', /\{\{full_name\}\}/.test(main()) && /\{\{student_id\}\}/.test(main()) && /Version 1/.test(main()) && !!app().querySelector('main .ch-letter'));
     ok('CH-08 a letter for every NVQ course (retired one excepted)', ['NV-L2', 'NV-L3', 'NV-L4', 'NV-L5'].every(id => chLetters(id).length === 1) && !chLetters('NV-L3O').length);
     btnAct('chLetterPrev').click(); await wait(60); ok('CH-08 preview filled with a sample learner', !!MODAL && /Aisha Rahman/.test(mroot().textContent) && /IA-L-18022/.test(mroot().textContent)); closeModal();
@@ -955,7 +970,7 @@
     SA(); go('a-programmes', { id: 'NV-L3D', tab: 'support' });
     // CB1 (PD-CB-01) supersedes the "Support type" tab: was /Support type/ in the tab bar; now the same control is the Fees & Payments
     // section's "Observation fee rate" panel (its Save button still says "Save support type"); the P-31 tag and the saved value are unchanged
-    ok('CH-38 programme → Fees & Payments → Observation fee rate (old "support" link), tagged Pending client (P-31), NV-L3D Self-paced', !!app().querySelector('.cb-sec.cur[data-tab="payments"]') && !!app().querySelector('.cb-panels .tab[data-tab="support"][aria-selected="true"]') && /Save support type/.test(main()) && [...app().querySelectorAll('.tbd')].some(x => /P-31/.test(x.textContent)) && document.querySelector('input[name="ch-sup"][value="Self-paced"]').checked);
+    ok('CH-38 programme → Fees & Payments → Observation fee rate (old "support" link), tagged Pending client (P-31), NV-L3D Self-paced', !!app().querySelector('.cb-sec.cur[data-tab="payments"]') && !!app().querySelector('.cb-body[data-panel="support"]') /* CBR (PD-CBR-01) */ && /Save support type/.test(main()) && [...app().querySelectorAll('.tbd')].some(x => /P-31/.test(x.textContent)) && document.querySelector('input[name="ch-sup"][value="Self-paced"]').checked);
     ok('CH-38 default Fully assisted; world C\'s programme stays Fully assisted', chSupportOf('NV-L3') === 'Fully assisted' && chSupportOfCourse(STORE.worlds.C.nvq.title) === 'Fully assisted' && chFeeAmt(chSupportOf('NV-L3D')) === 100);
     learner('D'); go('payments'); const fd_ = STORE.chFees.find(x => x.lid === STORE.worlds.D.me.id);
     ok('CH-38 sponsored learner pays the fee: fee card with Pay now', !!fd_ && /Your course fees are covered by/.test(main()) && !!app().querySelector('.ch-feecard [data-act="chFeePay"]') && /Non-refundable/.test(main()));
@@ -1030,9 +1045,12 @@
     ok('CH-42 other country: online only; none with a place → none (Contact the Academy)', chNearest(L3T, 'India') === null);
     B7('L3AC-OCT26-ONL').enrolled--; ok('CH-42 an online batch with a place is nearest for everyone', chNearest(L3T, 'India').code === 'L3AC-OCT26-ONL' && chNearest(L3T, 'United Arab Emirates').code === 'L3AC-OCT26-ONL'); B7('L3AC-OCT26-ONL').enrolled++;
     ok('CH-42 "started": In Progress / Completed, or start date passed', chStarted(B7('L3AC-JAN26')) && chStarted({ status: 'Open', start: D(0, '00:00') }) && !chStarted(B7('L3AC-DEC26-AUH')));
-    learner('B'); W.me.country = 'India'; go('admission'); ACT.suBack();
-    ok('CH-42 no batch with a place → "Contact the Academy" with the contact details', /No batch has a place right now/.test(main()) && /020 3983 0282/.test(main()));
-    ACT.suNext(); ok('CH-42 can\'t continue without a batch', stepCur() === 'Personal details');
+    // P3 (PD-P3-01): a batch already recorded on the application isn't re-judged on country, so the India case starts with no batch recorded
+    learner('B'); W.me.country = 'India'; W.signup.batch = null; go('admission'); ACT.suBack();
+    // PD-L3C-08 → P3 (PD-P3-03): the details step says no batch can take her and lists each batch with its reason. Was: /No batch of this
+    // programme that hasn't started can take you \(.*(full|in another country)/ (and before that /No batch has a place right now/)
+    ok('CH-42 no batch with a place → "Contact the Academy" with the contact details', /No batch of .* can take you at the moment/.test(main()) && /— (Full|Runs in )/.test(main()) && /020 3983 0282/.test(main()) && !app().querySelector('main input[name="su-batch"]'));
+    (p3Pick(), ACT.suNext()); ok('CH-42 can\'t continue without a batch', stepCur() === 'Personal details');
     fresh(); ACT.chScInstalment(); ok('CH-42 the nearest batch starts in under 28 days → instalments only', W.signup.batch === 'L3AC-OCT26-ONL' && !$('input[name="su-opt"][value="deposit"]'));
   });
 
@@ -1045,8 +1063,8 @@
     // SIB-FINAL (PD-SIB-C-05) supersedes CH-42 for the Business Admin: was "Business Admin: Batch assignment — learner, course and batch only"; now the Business Admin is refused and the Academic Admin makes the move
     closeModal(); role('bizA'); go('b-batchassign'); const aB = ADMIN.audit.length;
     ok('CH-42 / SIB-FINAL Business Admin: no Batch assignment (refused and logged)', /isn't part of the Business Admin role/.test(main()) && !app().querySelector('.adm-side a[href="#b-batchassign"]') && (ACT.chMoveBatch({ dataset: { id: w.me.id } }), !MODAL && ADMIN.audit.length >= aB + 1 && ADMIN.audit[0].action === 'Blocked: batch change'));
-    closeModal(); acaEnter('KA'); S.signedIn = true; go('a-learner', { id: w.me.id, tab: 'enrolments' }); ACT.chMoveBatch({ dataset: { id: w.me.id } }); document.querySelector('#ch-mv-b').value = 'L3AC-FEB27-AUH'; press(); ok('CH-42 reason required', !!MODAL && /Enter a reason/.test(mroot().textContent));
-    document.querySelector('#rsn').value = 'Family commitments in December.'; press();
+    closeModal(); acaEnter('KA'); S.signedIn = true; go('a-learner', { id: w.me.id, tab: 'enrolments' }); p6TzAll(); ACT.chMoveBatch({ dataset: { id: w.me.id } }); document.querySelector('#ch-mv-b').value = 'L3AC-FEB27-AUH'; press(); ok('CH-42 reason required', !!MODAL && /Enter a reason/.test(mroot().textContent));
+    document.querySelector('#rsn').value = 'Family commitments in December.'; press(); p6Ok('Family commitments in December.'); // P6 (PD-P6-02): the dialog submits a request; approval carries it out
     ok('CH-42 moved: counts, batch fields; deposit, plan and offer letter unchanged', w.signup.batch === 'L3AC-FEB27-AUH' && /Abu Dhabi Cohort 2/.test(w.nvq.batch) && au.enrolled === e0[0] - 1 && fe.enrolled === e0[1] + 1 && JSON.stringify(w.admission.deposit) === dep && JSON.stringify(w.plans.find(p => p.e === 'nvq')) === plan && JSON.stringify(w.signup.sig) === sig);
     ok('CH-42 audited; learner and both Coordinators notified', ADMIN.audit.some(a => a.action === 'Batch changed (before start)' && a.reason === 'Family commitments in December.') && w.notifs.some(n => /Your batch has changed/.test(n.title)) && STORE.coo.notifs.filter(n => /Learner batch changed/.test(n.t)).length >= 2);
     // SIB-FINAL (PD-SIB-C-05): was checked on the Business Admin's Batch assignment list; now on the Academic Admin's Learner 360
@@ -1071,8 +1089,9 @@
     tas('A'); ok('P-32 3: no marking for the released learner', !tasSubs(true).some(s => s.L.lid === w.me.id));
     ok('P-32 5: learner, Coordinator and Finance notified', w.notifs.some(n => /Your seat was released/.test(n.title)) && STORE.coo.notifs.some(n => n.t === 'Seat released' && n.to === au.coord) && STORE.fin.notifs.some(n => /Seat released — deposit kept/.test(n.t)));
     learner('B'); S.edge = 'seatReleased'; setVariant('B'); ACT.chSignAgain(); S.edge = 'none';
-    ok('P-32 4: sign up again — normal flow, step 1 with the nearest batch and instalments only', S.route === 'admission' && stepCur() === 'Personal details' && /Your batch:/.test(main()) && /instalments only/.test(main()));
-    ACT.suNext(); ok('P-32 4: documents and signed offer letter reused — straight to Payment', stepCur() === 'Payment' && !!W.signup.sig);
+    // P3 (PD-P3-02): step 1 lists the batches she can choose (was /Your batch:/ — the nearest assigned); instalments only, as before
+    ok('P-32 4: sign up again — normal flow, step 1 with the batches she can choose and instalments only', S.route === 'admission' && stepCur() === 'Personal details' && /Choose your batch/.test(main()) && /instalments only/.test(main()));
+    (p3Pick(), ACT.suNext()); ok('P-32 4: documents and signed offer letter reused — straight to Payment', stepCur() === 'Payment' && !!W.signup.sig);
     ok('P-32 4: no deposit option for that course', !$('input[name="su-opt"][value="deposit"]') && /Instalments only/.test(main()));
     const b2 = B7(W.signup.batch), e2 = b2.enrolled; setUi('suMethod', 'bank'); ACT.suPay();
     ok('P-32 4: signed up again with instalments; seat taken; banner gone', W.signup.done && W.signup.pay.opt === 'instalment' && b2.enrolled === e2 + 1 && !W.admission.deposit.released && W.admission.deposit.kept && !document.querySelector('[data-act="chSignAgain"]'));
@@ -1125,19 +1144,19 @@
     ok('NP details (Course Details page, not a dialog): title, level, reference, duration, description, price (GBP), Support type with the P-31 tag, the observation question', !MODAL && S.params.id === 'new' && ['#np-t', '#np-l', '#np-r', '#np-d', '#np-ds', '#np-p', '#np-obs-yes', '#np-obs-no'].every(s => document.querySelector(s)) && document.querySelectorAll('input[name="np-s"]').length === 2 && /Pending client: Fully assisted vs self-paced/.test(main()));
     ok('NP required fields', crT(ACT.cbDetCreate)() === false && /Enter a title/.test(main()));
     ACT.chProgNew(); fill8({ '#np-t': 'Level 3 Diploma in Adult Care (England)', '#np-r': 'QN 1', '#np-p': '2000' }), dmpPrice(); ok('NP title must be unique', create8() === false && /already exists/.test(main()) && !(STORE.chNewProgs || []).some(p => !p.seed)); ACT.chProgNew();
-    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600', '#np-ds': 'For team leaders.' }); dmpPrice(); document.querySelector('input[name="np-s"][value="Self-paced"]').checked = true; create8();
+    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#cbc3-dd-n': '12', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600', '#np-ds': 'For team leaders.' }); dmpPrice(); document.querySelector('input[name="np-s"][value="Self-paced"]').checked = true; create8();
     const pr = np();
     ok('NP created as Draft, Version 1, with details and Support type', !!pr && pr.status === 'Draft' && pr.version === 1 && pr.price === 2600 && pr.level === 'Level 4' && chSupportOf(pr.id) === 'Self-paced' && S.route === 'a-programmes' && S.params && true);
     ok('NP audited', ADMIN.audit.some(a => a.module === 'NVQ Programmes' && a.action === 'Programme created (Draft, Version 1)' && a.entity.includes(pr.id)));
     // CB1 (PD-CB-01) supersedes: was the seven-step wizard bar with Observations third; now the seven builder sections, Observations fourth
-    go('a-programmes', { id: pr.id, tab: 'details' }); ok('NP course builder: eight sections (Observations is section 4), Course Details current, Draft chip', app().querySelectorAll('.cb-nav .cb-sec').length === 8 && app().querySelectorAll('.cb-nav .cb-sec')[3].textContent.includes('Observations') && !!app().querySelector('.cb-sec.cur[data-tab="details"]') && /Draft/.test(main()) && /Version 1/.test(main()));
+    go('a-programmes', { id: pr.id, tab: 'details' }); ok('NP course builder: seven steps (Observations is step 4, hidden when the course has none — CBR PD-CBR-02), Course Details current, Draft chip', ((app().querySelectorAll('.cb-nav .cb-sec').length === 7 && app().querySelectorAll('.cb-nav .cb-sec')[3].textContent.includes('Observations')) || (app().querySelectorAll('.cb-nav .cb-sec').length === 6 && cbObsNo(pr))) && !!app().querySelector('.cb-sec.cur[data-tab="details"]') && /Draft/.test(main()) && /Version 1/.test(main()));
     document.querySelector('#np-p').value = '2700'; ACT.ch8SaveDetails({ dataset: { id: pr.id } }); ok('NP details editable while Draft, audited', pr.price === 2700 && ADMIN.audit[0].action === 'Details changed');
     go('a-programmes'); ok('NP listed on NVQ Programmes as Draft', /Level 4 Certificate in Care Leadership/.test(main()));
   });
 
   await T('New NVQ programme: structure, letter, documents, plan, review, publish', async () => {
     fresh(); acaEnter('KA'); S.signedIn = true; go('a-programmes'); ACT.chProgNew();
-    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600' }), dmpPrice(); create8('yes' /* CB4 (PD-CB-30): an Observation Learning Outcome is chosen below — only offered when the course has observations */); const pr = np(), id = pr.id;
+    fill8({ '#np-t': 'Level 4 Certificate in Care Leadership', '#np-l': 'Level 4', '#np-r': 'QN 610/9999/1', '#cbc3-dd-n': '12', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600' }), dmpPrice(); create8('yes' /* CB4 (PD-CB-30): an Observation Learning Outcome is chosen below — only offered when the course has observations */); const pr = np(), id = pr.id;
     go('a-programmes', { id, tab: 'review' }); const pub0 = app().querySelector('[data-act="cbPublish"]'); /* CB11 (PD-CB-77): was ch8Publish */
     ok('NP review: blocking items listed; Publish disabled with a reason', /Add at least one unit/.test(main()) && /No offer letter uploaded/.test(main()) && pub0.disabled && !!pub0.title);
     ACT.ch8Publish({ dataset: { id } }); ok('NP publish refused while items are missing (logged)', /Can't publish/.test(MODAL.title) && pr.status === 'Draft' && ADMIN.audit[0].action === 'Blocked: publish (items missing)'); closeModal();
@@ -1173,7 +1192,7 @@
     SA(); ACT.ch8SavePlan({ dataset: { id } }); ok('NP …and refused for the Super Admin too on a package programme (logged)', /^Blocked: save the payment plan/.test(ADMIN.audit[0].action)); acaEnter('KA'); S.signedIn = true;
     // (the observation answer is recorded first: a package is checked against it — observation fees apply only where observations are permitted, PD-CB-51)
     SA(); obsDecide(id); const o8 = cb8Work(pr).opts[0]; ACT.cb8PayDel({ dataset: { p: id, o: o8.id, k: '6' } }); ACT.cb8PayAdd({ dataset: { p: id, o: o8.id, k: '8' } });
-    go('a-programmes', { id, tab: 'fees' }); const r8 = app().querySelector('main input[name="e1-wdm"][value="own"]'); r8.checked = true; INP.e1DepMode(r8); app().querySelector('main #e1-d').value = '400'; ACT.cb8SaApprove({ dataset: { p: id } }); document.querySelector('#rsn').value = 'Own terms'; press();
+    go('a-programmes', { id, tab: 'fees' }); cb8Work(pr).opts.filter(o => o.status === 'Active').forEach(o => { INP.cbr2Dep({ dataset: { p: id, o: o.id, k: 'allow' }, checked: true }); INP.cbr2Dep({ dataset: { p: id, o: o.id, k: 'own' } }); INP.cbr2Dep({ dataset: { p: id, o: o.id, k: 'amount' }, value: String('400'), id: 'fb1-dep' }); }); /* FB1: the deposit is set on each fee option (no programme editor in Step 5) */ ACT.cb8SaApprove({ dataset: { p: id } }); document.querySelector('#rsn').value = 'Own terms'; press();
     ok('NP Super Admin sets the terms in GBP (D8: approved at once), audited', pr.plan.deposit === 400 && pr.plan.inst === 8 && ADMIN.audit.some(a => a.action === 'Financial package approved'));
     FA(); go('f-plans'); ok('NP Finance → Payment Plans: "View package" for a package programme (not Edit plan)', !!app().querySelector('.ch8-plans [data-act="cb8ViewPkg"][data-p="' + id + '"]') && !app().querySelector('.ch8-plans [data-go="a-programmes"]') && !app().querySelector('.ch8-plans [data-act="s4PlanEdit"][data-p="' + id + '"]'));
     acaEnter('KA'); S.signedIn = true; obsDecide(id); dmpComply(id); go('a-programmes', { id, tab: 'review' }); const pub = app().querySelector('[data-act="cbPublish"]'); /* CB11 (PD-CB-77): was ch8Publish */
@@ -1194,9 +1213,10 @@
     learner('A'); go('browse'); ok('NP Browse Courses lists the published programme', !!app().querySelector('[data-act="applyNvq"][data-id="k-NV-N2"]'));
     ACT.applyNvq({ dataset: { id: 'k-NV-N2' } }); prim(); const w = W;
     ok('NP sign-up started on the new programme', S.route === 'admission' && w.signup && w.signup.prog === 'NV-N2' && w.nvq.title === pr.title && stepCur() === 'Personal details');
-    ok('NP step 1: nearest batch of the new programme', /Your batch: Online Cohort 1 \(Preparing to Work\)/.test(main()));
-    ACT.suNext(); ok('NP step 2: the programme\'s document checklist', stepCur() === 'Documents' && w.docs.map(d => d.name).join('|') === ch8Docs('NV-N2').join('|') && w.docs.every(d => d.mand));
-    w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext();
+    // P3 (PD-P3-02): offered as a choice, not assigned. Was: /Your batch: Online Cohort 1 \(Preparing to Work\)/
+    ok('NP step 1: the new programme\'s batch is offered to choose', !!app().querySelector('main input[name="su-batch"][value="L2PW-DEC26-ONL"]') && /Online Cohort 1 \(Preparing to Work\)/.test(main()));
+    (p3Pick(), ACT.suNext()); ok('NP step 2: the programme\'s document checklist', stepCur() === 'Documents' && w.docs.map(d => d.name).join('|') === ch8Docs('NV-N2').join('|') && w.docs.every(d => d.mand));
+    w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); (p3Pick(), ACT.suNext());
     ok('NP step 3: the programme\'s offer letter', stepCur() === 'Offer letter' && main().includes(pr.title) && chLetterFor(w).file === 'NV-N2 offer letter v1.docx');
     setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign();
     ok('NP step 4: the programme\'s payment plan (deposit £150 or 3 instalments of £300)', stepCur() === 'Payment' && main().includes('Deposit (holds your seat) — ' + money(150, 'GBP')) && main().includes('3 monthly payments of ' + money(300, 'GBP')));

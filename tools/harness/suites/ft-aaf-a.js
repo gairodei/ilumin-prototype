@@ -29,14 +29,14 @@
       pick('aca'); go('a-programmes', { id: 'NV-N1', tab: 'details' });
       ok('AAFA-01 published course details show the internal programme ID separately from the awarding body course code', /Internal programme ID\s*NV-N1/.test(main()) && /Awarding body course code\s*QN 610\/0001\/0/.test(main()));
       go('a-programmes', { id: 'new', tab: 'details' });
-      ok('AAFA-01 the new-course form explains the required awarding body course code and shows the ID as automatic', /Assigned automatically when the draft is first saved/.test(main()) && !!$1('main .aafa-refwhy') && /^Required\./.test($1('main .aafa-refwhy').textContent) && !$1('main #np-code'));
+      ok('AAFA-01 the new-course form explains the required awarding body course code; no ID input (assigned automatically, shown in the header once saved — CBR-2)', !$1('main .cbr2-grid input[id*="pid"]') && !!$1('main .aafa-refwhy') && /^Required\./.test($1('main .aafa-refwhy').textContent) && !$1('main #np-code'));
       const n0 = ADMIN.programmes.length; fill({ '#np-t': 'AAF-A no code course' }); crT(ACT.cbDetCreate)();
       ok('AAFA-01 the awarding body course code is still required (no accepted decision makes it optional)', ADMIN.programmes.length === n0 && /Enter the awarding body course code/.test(main()));
     });
 
     await T('AAFA-02 published version is immutable', async () => {
       pick('aca'); go('a-programmes', { id: 'NV-N1', tab: 'curriculum' });
-      ok('AAFA-02 published NV-N1: no edit controls; guide shown', !$1('main [data-act="cbCurEdit"]') && !$1('main [data-act="ch8AddMod"]') && !!$1('main .aafa-guide'));
+      ok('AAFA-02 published NV-N1: no edit controls; guide shown', !$1('main [data-act="cbCurEdit"]') && !$1('main [data-act="ch8AddMod"]') && !$1('main .aafa-guide') /* CBR-2 (PD-CBR2-03): the "How the curriculum and assignments fit together" guide is not part of the approved Curriculum layout */);
       const t0 = J(pubTree()), a0 = aud(); ACT.ch8AddMod({ dataset: { id: 'NV-N1', u: 0 } });
       ok('AAFA-02 a direct Add module on the published version is refused; the curriculum is unchanged', !MODAL && J(pubTree()) === t0, J(since(a0).map(x => x.action))); closeModal();
     });
@@ -71,8 +71,8 @@
       ok('AAFA-02 Review & Publish: a warning in Section 2, not a blocker', c.warn.some(w => /no awarding-body code recorded/.test(w.msg) && w.sec === 'curriculum') && !c.block.some(b => /awarding-body/.test(b.msg)));
       ACT.ch8AddCrit({ dataset: { id: 'NV-N1', u: 0, m: 0, l: 0 } }); ok('AAFA-03 Add criterion: evidence requirement hint', /What the learner must produce or show/.test(mtext()));
       fill({ '#c-d': 'AAF-A descriptor', '#c-e': '' }); ok('AAFA-03 Add criterion without an evidence requirement is still refused', prim() === false); closeModal();
-      ok('AAFA-03 the guide separates evidence requirement / evidence to include / permitted evidence types', /Three kinds of evidence setting/.test(($1('main .aafa-guide') || {}).textContent || '') && /Permitted evidence types/.test(($1('main .aafa-guide') || {}).textContent || ''));
-      ok('AAFA-04 the guide: Unit → Module → Learning Outcome → Criterion → Assignment question → Assessment', $a('main .aafa-chain li').length === 6 && $a('main .aafa-chain li.aafa-here').length === 4);
+      ok('AAFA-03 the evidence settings are explained where they are entered (criterion and question dialogs, above); the separate guide is not shown', !$1('main .aafa-guide')); // CBR-2 (PD-CBR2-03): the guide is not part of the approved Curriculum layout
+      ok('AAFA-04 the Unit → Module → Learning Outcome → Criterion hierarchy is the tree itself (CBR-2 PD-CBR2-03: no separate chain guide)', !$1('main .aafa-chain') && !!$1('main .cb-cur-tree'));
     });
 
     await T('AAFA-04 coverage and mapping preview', async () => {
@@ -81,12 +81,12 @@
       let cv = cov();
       ok('AAFA-04 Section 3 criteria coverage: questions per criterion, observation criteria marked', /Assignment 1 · Q1/.test(cv['001 1.1']) && /Assignment 2 · Q1/.test(cv['001 1.2']) && /Assignment 3 · Q1 \(draft\)/.test(cv['001 1.2']) && /Assessed by observation/.test(cv['001 2.1']), J(cv));
       ACT.cbAsgOpen({ dataset: { p: 'NV-N1', id: 'a10', t: 'mapping' } });
-      const body = () => ($1('main .cb-asg-body') || {}).textContent.replace(/\s+/g, ' ');
-      ok('AAFA-04 published a10 mapping: grid grouped by module and labelled with the unit scope', /whole unit U001/.test(body()) && /Module 1 \(this assignment\)/.test(($1('main .aafa-modrow') || {}).textContent || ''));
+      const body = () => ($1(`main details.cbr2-a[data-id="${ui('cbAsg.NV-N1', '')}"] .cbr2-adet`) || {}).textContent.replace(/\s+/g, ' '); // CBR-2: the learner preview sits in the details of the assessment last opened
+      ok('AAFA-04 published a10 mapping: grid grouped by module and labelled with the unit scope', /all of the unit's criteria/.test(($1('main details.cbr2-a[data-id="a10"]') || {}).textContent || '') && /U001/.test(($1('main details.cbr2-a[data-id="a10"] .cbr2-map .cbr-lo') || {}).textContent || '') /* CBR-2 (PD-CBR2-04): scope stated once; Map Criteria grouped by module and Learning Outcome */ /* CBR (PD-CBR-05): the mapping states the unit scope and groups by module and Learning Outcome */);
       ok('AAFA-04 learner preview: Q1 with 001 1.1 and its evidence requirement; 001 1.2 listed as not covered by this assignment', /Q1\. .*001 1\.1 Explain person-centred values\s*Evidence requirement: Written account/.test(body()) && /not covered by this assignment: 001 1\.2/.test(body()));
       ok('AAFA-04 published a10 grid stays locked to changes (no new configuration)', J(s2Def('a10').qs.map(q => q.crit)) === J([['001 1.1']]));
       // Multi-criterion (AA-1 D2) on draft a12: map Q1 to 001 1.1 as well
-      ACT.cbAsgOpen({ dataset: { p: 'NV-N1', id: 'a12', t: 'mapping' } }); const cb = $1('main .cb-asg-body input[data-q="q1"][data-c="001 1.1"]'); cb.checked = true; INP.mapChange(cb);
+      ACT.cbAsgOpen({ dataset: { p: 'NV-N1', id: 'a12', t: 'mapping' } }); const cb = $1('main details.cbr2-a[data-id="a12"] input[data-q="q1"][data-c="001 1.1"]'); /* CBR-2: Map Criteria in place */ cb.checked = true; INP.mapChange(cb);
       ok('AAFA-04 a question mapped to two criteria: the preview lists both; nothing else changes', J(s2Def('a12').qs[0].crit) === J(['001 1.2', '001 1.1']) && /001 1\.2 Describe how to agree a care plan/.test(body()) && /001 1\.1 Explain person-centred values/.test(body()) && /not covered by this assignment: none/.test(body()));
       ok('AAFA-17 the mapping audit names the question number', /^Q1 \(q1\): 001 1\.1$/.test(ADMIN.audit[0].after), J(ADMIN.audit[0]));
       ACT.cbAsgOpen({ dataset: { p: 'NV-N1', id: '', t: 'details' } }); cv = cov();
@@ -103,8 +103,8 @@
       ACT.s2QAdd({ dataset: { id: 'a12' } }); fill({ '#aq-t': 'AAF-A third question' }); press();
       ACT.s2QRetire({ dataset: { id: 'a12', q: 'q2' } });
       ok('AAFA-17 Question retired: audit "Retired (was Q2)", the stable id kept, the number recorded', ADMIN.audit[0].action === 'Question retired' && ADMIN.audit[0].after === 'Retired (was Q2)' && /^Q2 \(q2\)/.test(ADMIN.audit[0].before) && d.qs.find(q => q.id === 'q2').retiredN === 'Q2');
-      render(); const rows = () => $a('main .cb-asg-body ol.list > li').map(li => li.querySelector('.q-n').textContent);
-      ok('AAFA-17 the list shows Q1, "Retired (was Q2)", Q2', J(rows()) === J(['Q1', 'Retired (was Q2)', 'Q2']), J(rows()));
+      render(); const rows = () => $a('main details.cbr2-a[open] .cbr2-q').map(x => x.classList.contains('cbr2-qret') ? x.querySelector('.aafa-qret').textContent : x.querySelector('.cbr2-qh strong').textContent.replace('Question ', 'Q')); // CBR-2: current questions, then retired ones
+      ok('AAFA-17 the list shows Q1, "Retired (was Q2)", Q2', J(rows()) === J(['Q1', 'Q2', 'Retired (was Q2)']) /* CBR-2 (PD-CBR2-04): retired questions listed after the current ones */, J(rows()));
       ACT.s2QMove({ dataset: { id: 'a12', q: 'q3', d: '-1' } });
       ok('AAFA-17 Questions reordered: audit before/after in Q numbers with ids', ADMIN.audit[0].before === 'Q1 (q1), Q2 (q3)' && ADMIN.audit[0].after === 'Q1 (q3), Q2 (q1)', J(ADMIN.audit[0]));
       ACT.s2QRetire({ dataset: { id: 'a12', q: 'q2' } });
@@ -116,7 +116,7 @@
 
     await T('AAFA fresh NVQ draft', async () => {
       pick('aca'); go('a-programmes', { id: 'new', tab: 'details' });
-      fill({ '#np-t': 'AAF-A fresh course', '#np-l': 'Level 3', '#np-r': 'QN 610/9901/1', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel($1('#np-l'));
+      fill({ '#np-t': 'AAF-A fresh course', '#np-l': 'Level 3', '#np-r': 'QN 610/9901/1', '#cbc3-dd-n': '6' /* FB2 (PD-FB2-01): the Course Duration is the payment duration — was 12 here with a separate 6-month payment duration */, '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel($1('#np-l'));
       const o = $1('#np-obs-no'); if (o) o.checked = true;
       [{ l: 'Fully Assisted — standard', f: 2400, m: 'Fully Assisted' }].forEach((x, k) => { const r = $a('main .r1-np-row')[k]; if (!r) return; r.querySelector('.r1-np-l').value = x.l; r.querySelector('.r1-np-f').value = String(x.f); r.querySelector('.r1-np-m').value = x.m; });
       const pr = crT(ACT.cbDetCreate)(); closeModal(); const p = pr && pr.id ? pr : ADMIN.programmes.find(x => x.title === 'AAF-A fresh course');
@@ -130,7 +130,7 @@
       const t = ch8Tree(id);
       ok('AAFA fresh draft: unit (automatic reference), module without awarding-body code, LO and criterion saved', t.length === 1 && /^U\d{3}$/.test(t[0].code) && t[0].mods[0].ab === '' && t[0].mods[0].los[0].crit[0].ev === 'A written account', J(t));
       go('a-programmes', { id, tab: 'curriculum' });
-      ok('AAFA fresh draft: guide and "Not recorded" shown; Review warns, does not block on it', !!$1('main .aafa-guide') && !!$1('main .aafa-nr') && cbRvChecks(p).warn.some(w => /awarding-body code/.test(w.msg)) && !cbRvChecks(p).block.some(b => /awarding-body/.test(b.msg)));
+      ok('AAFA fresh draft: guide and "Not recorded" shown; Review warns, does not block on it', !!$1('main .aafa-nr') /* CBR-2 (PD-CBR2-03): the "How the curriculum and assignments fit together" guide is not part of the approved Curriculum layout */ && cbRvChecks(p).warn.some(w => /awarding-body code/.test(w.msg)) && !cbRvChecks(p).block.some(b => /awarding-body/.test(b.msg)));
       go('a-programmes', { id, tab: 'assessments' }); ok('AAFA fresh draft: Section 3 coverage lists the criterion as not covered yet', /Not covered by an assignment question yet/.test(($1('main .aafa-cov') || {}).textContent || ''));
     });
     ok('AAFA no script errors', !errs.length, J(errs));
@@ -143,7 +143,7 @@
       ok('AAFA-R after a real refresh: the retired question keeps "was Q2", the ids and audit come back', FCP.st === 'saved' && !!d && d.qs.find(q => q.id === 'q2').retiredN === 'Q2' && ADMIN.audit.some(a => a.after === 'Retired (was Q2)'));
       ok('AAFA-R the draft version\'s module without a code and the fresh draft come back', ch8Tree('NV-N1')[0].mods.length === 2 && ch8Tree('NV-N1')[0].mods[1].ab === '' && !!fid && !!ADMIN.programmes.find(p => p.id === fid));
       pick('aca'); go('a-programmes', { id: 'NV-N1', tab: 'assessments' }); ACT.cbAsgOpen({ dataset: { p: 'NV-N1', id: 'a12', t: 'questions' } });
-      ok('AAFA-R the list still shows "Retired (was Q2)"', $a('main .cb-asg-body ol.list > li .q-n').some(x => x.textContent === 'Retired (was Q2)'));
+      ok('AAFA-R the list still shows "Retired (was Q2)"', $a('main .aafa-qret').some(x => x.textContent === 'Retired (was Q2)') /* CBR-2 */);
     });
     await T('AAFA-S Reset demo', async () => {
       const fid = SS.getItem('ft-aaf-a.fresh') || ''; signOutUI(); ACT.resetDemo();
@@ -152,7 +152,7 @@
     await T('AAFA-L legacy', async () => {
       fxLoadLegacy(); signOutUI(); S.portal = 'admin'; acaEnter('KA'); S.signedIn = true; S.ui = {};
       go('a-programmes', { id: 'NV-L3D', tab: 'curriculum' });
-      ok('AAFA-L seeded draft: guide shown; Edit unit says "Internal unit reference (automatic)"', !!$1('main .aafa-guide') && (ACT.cbCurEdit({ dataset: { p: 'NV-L3D', path: '0', codes: (cbTree(cbPr('NV-L3D')) || [])[0].code } }), /Internal unit reference \(automatic\)/.test(mtext())));
+      ok('AAFA-L seeded draft: Edit unit says "Internal unit reference (automatic)"', !$1('main .aafa-guide') /* CBR-2 (PD-CBR2-03): the "How the curriculum and assignments fit together" guide is not part of the approved Curriculum layout */ && (ACT.cbCurEdit({ dataset: { p: 'NV-L3D', path: '0', codes: (cbTree(cbPr('NV-L3D')) || [])[0].code } }), /Internal unit reference \(automatic\)/.test(mtext())));
       closeModal();
       const u = (cbTree(cbPr('NV-L3D')) || [])[0]; ACT.nodeAdd({ dataset: { p: 'NV-L3D', lvl: 'mod', u: u.code } });
       ok('AAFA-L seeded Add module: awarding-body code optional, explained (same rule as new programmes)', /Awarding-body code \(optional\)/.test(mtext())); closeModal();
@@ -161,7 +161,7 @@
       go('a-programmes', { id: 'NV-L3', tab: 'assessments' });
       ok('AAFA-L Level 3 Section 3: criteria coverage rendered', !!$1('main .aafa-cov') && $a('main .aafa-cov tr[data-c]').length > 0);
       const d = cbAsgOf(cbPr('NV-L3'))[0]; ACT.cbAsgOpen({ dataset: { p: 'NV-L3', id: d.id, t: 'mapping' } });
-      ok('AAFA-L Level 3 assignment mapping: unit scope note and learner preview', /whole unit/.test(main()) && !!$1('main .aafa-prev'), d.id);
+      ok('AAFA-L Level 3 assignment mapping: unit scope note and learner preview', /all of the unit's criteria/.test(main()) && !!$1('main .aafa-prev') /* CBR (PD-CBR-05) */, d.id);
     });
   }
 

@@ -67,7 +67,7 @@ cb8Derive = function (pr) {
   const wf = CB8().wf[pr.id], h = wf && wf.held && wf.held.pkg; if (!h) return _deriveFP.apply(this, arguments);
   const cur = cb8Cur(pr.id), inF = id => !!(cur && cur.opts.some(o => o.id === id));
   return { pid: pr.id, derived: true, dep: { mode: h.dep.mode, amount: h.dep.amount }, partial: h.partial,
-    opts: h.opts.map(o => ({ id: o.id, label: o.label, mode: o.mode, fee: o.fee, legacy: !!o.legacy, status: o.status, inForce: inF(o.id), obsWp: o.keptWp != null ? o.keptWp : o.obsWp, obsOff: o.keptOff != null ? o.keptOff : o.obsOff, pay: o.pay.map(x => ({ id: x.id, k: x.k })) })) };
+    opts: h.opts.map(o => ({ id: o.id, label: o.label, mode: o.mode, fee: o.fee, legacy: !!o.legacy, status: o.status, inForce: inF(o.id), obsWp: o.keptWp != null ? o.keptWp : o.obsWp, obsOff: o.keptOff != null ? o.keptOff : o.obsOff, pay: o.pay.map(x => ({ id: x.id, k: x.k })), ...(o.dep ? { dep: cb8DepCopy(o.dep) } : {}) })) };
 };
 // Publishing the version puts its held package in force (a new plan version for new learners; earlier learners keep theirs)
 function cbFpPutInForce(pr) {

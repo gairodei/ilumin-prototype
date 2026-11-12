@@ -44,7 +44,7 @@
     let kD;
     await T('AA1-D2a mapping', async () => {
       pick('aca'); go('a-programmes', { id: 'NV-N1', tab: 'assessments' });
-      click($1('main [data-act="cbAsgOpen"][data-id="a10"]')); click($1('main [data-act="cbAsgOpen"][data-id="a10"][data-t="mapping"]'));
+      click($1('main details.cbr2-a[data-id="a10"] > summary')); // CBR-2 (PD-CBR2-04): the assessment opens in place with Map Criteria
       const cb = $1('main input[data-onchange="mapChange"][data-c="001 1.2"]'); cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); if (MODAL) reason();
       ok('AA1-D2a the definition keeps both criteria for Q1', J(s2Def('a10').qs[0].crit) === J(['001 1.1', '001 1.2']), J(s2Def('a10').qs[0].crit));
       const okCopy = v => { const a = STORE.worlds[v].assignments.find(x => x.id === 'a10'); return a.qs[0].crit === '001 1.1' && J(a.qs[0].crits) === J(['001 1.1', '001 1.2']) && J(a.crit.map(c => c[0])) === J(['001 1.1', '001 1.2']); };

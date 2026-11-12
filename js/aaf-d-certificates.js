@@ -217,7 +217,7 @@ s4ChecklistCard = function (pr, opts) {
   let h = _s4CardD.apply(this, arguments); if (!pr) return h;
   if (s4CanCk(pr)) {
     h = h.replace(/(<button class="icon-btn" data-act="s4CkMove"[^>]*?aria-label="([^"]*)")/g, '$1 title="$2"');
-    const help = `<p class="small aafd-ckhelp">${ic('info', 13)} To change an item use <strong>Edit</strong> (name, mandatory, formats, size, expiry, region, guidance); <strong>Retire</strong> stops asking new applicants (nothing is deleted — <strong>Restore</strong> brings it back); ↑ ↓ change the order. Each change asks for a reason and creates a new checklist version.</p>`;
+    const help = `<p class="small aafd-ckhelp">${ic('info', 13)} To change an item use <strong>Edit</strong>; <strong>Retire</strong> stops asking new applicants (<strong>Restore</strong> brings it back); ↑ ↓ change the order. Each change asks for a reason and creates a new checklist version.</p>`;
     return h.replace(/(<section class="card s4-ck"><div class="row-b">[^]*?<\/div>)/, '$1' + help);
   }
   const pub = pr.chNew && pr.status !== 'Draft';

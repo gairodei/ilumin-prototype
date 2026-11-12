@@ -3,6 +3,9 @@
 // sign-up, no repricing of existing learners, and the Finance review of a new programme's payment terms. Each check does the action
 // through the screen or handler, then checks the consuming screen or record, and includes the negative case.
 (async function () {
+  // P3 (PD-P3-02): the learner chooses their batch on sign-up step 1. Fixtures that relied on the automatic (CH-42) assignment now pick, on
+  // the page, the earliest eligible batch (the one CH-42 assigned); a batch the fixture already set, and that is still eligible, is kept
+  const p3Pick = () => { const w = W; if (!w || !p3Open(w) || chStepKey(w) !== 'details' || ui('suBatch', null) || (w.signup.batch && !p3Why(w, chBatch(w.signup.batch), { region: w.signup.l3cPin !== w.signup.batch }))) return; const r = S.route === 'admission' && document.querySelector('main input[name="su-batch"]'); if (r) { r.checked = true; INP.suBatch(r); } else { const b = p3Eligible(w)[0]; if (b) setUi('suBatch', b.code); } };
   // DM-P (PD-DM-15): publishing a programme or version needs fee options by delivery mode, approved by Finance. Where a check isn't about
   // fees, this fixture takes the authorized Section 5 path first: the duration of a pre-builder course, a financial package, fee options by
   // delivery mode, a mode for each option (the Standard programme fee replaced by an option at the same fee), the Super Administrator's own approval (D8)
@@ -62,33 +65,35 @@
   const create = (obs = 'no') => { const r = document.querySelector('#np-obs-' + obs); if (r) r.checked = true; const c = document.querySelector('#np-code'); if (c && !c.value) c.value = 'TC' + (++codeN); const pr = crT(ACT.cbDetCreate)(); if (pr && pr.id) delete pr.cb8; return pr; };
   const meth = (px, m) => { const r = document.querySelector(`input[name="${px}-meth"][value="${m}"]`); r.checked = true; INP.e1Meth(r); };
   // A new programme through the wizard dialog (Level 2/4/5: one price); returns the programme or null
-  const newProg = (title, o = {}) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': o.level || 'Level 4', '#np-r': 'QN 610/' + (2000 + title.length) + '/1', '#np-d': String(o.n ?? 12), '#np-du': o.unit || 'months', '#np-p': String(o.price || 2400) }), dmpPrice(); const n0 = (STORE.chNewProgs || []).length; create(); return (STORE.chNewProgs || []).length > n0 ? last() : null; };
+  const newProg = (title, o = {}) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': o.level || 'Level 4', '#np-r': 'QN 610/' + (2000 + title.length) + '/1', '#cbc3-dd-n': String(o.n ?? 12), '#cbc3-dd-u': o.unit || 'months' /* FB2 (PD-FB2-01): the Course Duration is the programme duration (was a separate #np-d) */, '#np-p': String(o.price || 2400) }), dmpPrice(); const n0 = (STORE.chNewProgs || []).length; create(); return (STORE.chNewProgs || []).length > n0 ? last() : null; };
   const add8 = (act, ds, o) => { ACT[act]({ dataset: ds }); fill(o); return prim(); };
   // The other publishing requirements (structure with a typed Learning Outcome, an offer letter)
   const ready = pr => { const id = pr.id; obsDecide(id); go('a-programmes', { id, tab: 'structure' }); add8('ch8AddUnit', { id }, { '#u-c': 'U480', '#u-t': 'Practice' }); add8('ch8AddMod', { id, u: 0 }, { '#m-t': 'Core', '#m-ab': 'C/650/4801' }); add8('ch8AddLo', { id, u: 0, m: 0 }, { '#lo-t': 'Understand practice', '#lo-y': 'Knowledge' }); add8('ch8AddCrit', { id, u: 0, m: 0, l: 0 }, { '#c-d': 'Describe practice', '#c-e': 'Written account' }); ACT.chLetterUp({ dataset: { id } }); ACT.chLetterSample(); document.querySelector('#rsn').value = 'First version'; press(); };
   const finNotifs = () => STORE.fin.notifs.filter(n => String(n.key || '').startsWith('e1-sub-'));
   const acaNotifs = () => (STORE.aca ? STORE.aca.notifs : []).filter(n => /^Payment terms/.test(n.t));
   // Learner A (Daniel Okafor, no NVQ) signs up to a programme and reaches the payment step
-  const toPay = (pid, optId) => { learner('A'); go('browse'); const pr = s3Pr(pid), c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === pr.title); ACT.applyNvq({ dataset: { id: c.id } }); if (optId) { const r = document.querySelector(`input[name="r1-opt"][value="${optId}"]`); if (r) r.checked = true; } prim(); const w = W; ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); return w; };
+  const toPay = (pid, optId) => { learner('A'); go('browse'); const pr = s3Pr(pid), c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === pr.title); ACT.applyNvq({ dataset: { id: c.id } }); if (optId) { const r = document.querySelector(`input[name="r1-opt"][value="${optId}"]`); if (r) r.checked = true; } prim(); const w = W; (p3Pick(), ACT.suNext()); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); (p3Pick(), ACT.suNext()); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); return w; };
   // Finance's plan editor (Finance → Payment Plans): method, instalments
   const planEdit = (pid, m, n, r = 'E1 plan') => { ACT.s4PlanEdit({ dataset: { p: pid } }); const x = document.querySelector(`input[name="pp-meth"][value="${m}"]`); x.checked = true; INP.e1Meth(x); if (n) fill({ '#pp-n': String(n) }); return reason(r); };
 
   /* ================= A. Structured duration ================= */
   await T('E1-A duration: number and unit in the wizard; days, weeks, months and years', async () => {
+    // FB2 (PD-FB2-01) supersedes E1's duration field on the new-course page (Days | Weeks | Months | Years, #np-d, default 12 months): a new
+    // course has one duration, the Course Duration — a whole number and Weeks | Months — and it is stored as the structured programme duration
     fresh(); SA(); go('a-programmes'); ACT.chProgNew();
-    const n = document.querySelector('main #np-d'), u = document.querySelector('main #np-du');
-    ok('E1-A wizard: Duration is a whole-number field and a unit (Days, Weeks, Months, Years); new programmes start at 12 months', n && n.type === 'number' && u && u.tagName === 'SELECT' && [...u.options].map(o => o.textContent).join('|') === 'Days|Weeks|Months|Years' && n.value === '12' && u.value === 'months');
+    const n = document.querySelector('main #cbc3-dd-n'), u = document.querySelector('main #cbc3-dd-u');
+    ok('E1-A new course (FB2): Course Duration is a whole-number field and a unit (weeks, months); the E1 duration field isn\'t shown', n && n.type === 'number' && u && u.tagName === 'SELECT' && [...u.options].map(o => o.textContent).join('|') === 'weeks|months' && !document.querySelector('main #np-d').getClientRects().length);
     closeModal();
-    [[90, 'days', '90 days'], [1, 'weeks', '1 week'], [18, 'months', '18 months'], [2, 'years', '2 years']].forEach(([k, unit, txt], j) => {
+    [[1, 'weeks', '1 week'], [18, 'months', '18 months'], [24, 'months', '24 months']].forEach(([k, unit, txt], j) => {
       const pr = newProg('Level 4 Duration test ' + j, { n: k, unit });
       ok(`E1-A ${txt}: stored as number + unit and shown "${txt}"`, !!pr && pr.durV && pr.durV.n === k && pr.durV.unit === unit && pr.dur === txt);
     });
-    const pr = last(); go('a-programmes', { id: pr.id, tab: 'review' }); ok('E1-A review shows the formatted duration', /* CB11 (PD-CB-73): was "2 years · <price>" in the CH-8 review line */ /Duration\s*2 years/.test(document.querySelector('main .cb-rv-sec[data-sec="details"]').textContent));
+    const pr = last(); go('a-programmes', { id: pr.id, tab: 'review' }); ok('E1-A review shows the formatted duration', /Payment dates spread across\s*24 months/.test(document.querySelector('main .cb-rv-sec[data-sec="payments"]').textContent)); // FB2: named after the Course Duration (CBC3/CBC4: "Payment Schedule Duration 2 years")
   });
   await T('E1-A duration (negative): zero, fractions, blanks and out-of-range values are refused', async () => {
     fresh(); SA(); const n0 = (STORE.chNewProgs || []).length;
-    [['0', 'Enter the duration as a whole number'], ['1.5', 'whole number'], ['1000', 'from 1 to 999'], ['', 'Enter the duration']].forEach(([v, msg]) => {
-      go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': 'Level 4 Bad duration', '#np-l': 'Level 4', '#np-r': 'QN 610/1/1', '#np-p': '2400' }), dmpPrice(); document.querySelector('#np-d').value = v;
+    [['0', 'whole number from 1 to 60'], ['1.5', 'whole number'], ['61', 'from 1 to 60'], ['', 'Enter the Course Duration']].forEach(([v, msg]) => { // FB2: the Course Duration's limits (E1's were 1–999 on #np-d)
+      go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': 'Level 4 Bad duration', '#np-l': 'Level 4', '#np-r': 'QN 610/1/1', '#np-p': '2400' }), dmpPrice(); document.querySelector('#cbc3-dd-n').value = v;
       const r = create(); ok(`E1-A duration "${v || '(blank)'}" refused with a message`, r === false && main().includes(msg));
     });
     ok('E1-A nothing created by refused durations', (STORE.chNewProgs || []).length === n0);
@@ -101,7 +106,7 @@
     ok('E1-A ambiguous legacy value: kept exactly as written, not reinterpreted', n1.durV === null && n1.dur === '12–18 months');
     ACA(); go('a-programmes', { id: 'NV-N1', tab: 'details' });
     ok('E1-A details: the number is empty, the old text is shown with "isn\'t converted automatically"', document.querySelector('#np-d').value === '' && /Previously entered as "12–18 months"/.test(main()) && /isn't converted automatically/.test(main()));
-    go('a-programmes', { id: 'NV-N1', tab: 'review' }); ok('E1-A review: a warning to choose a number and unit (not blocking); the text is marked "Check duration"', /Duration "12–18 months" was entered as free text/.test(main()) && /Check duration/.test(main()) && !ch8Check(n1).block.some(b => /Duration/.test(b)));
+    go('a-programmes', { id: 'NV-N1', tab: 'review' }); ok('E1-A review: a warning to choose a number and unit (not blocking); the text is marked "Check duration"', /Duration "12–18 months" was entered as free text/.test(main()) && /Check duration/.test(main()) && !ch8Check(n1).block.some(b => /Duration/.test(b) && !/^Display Duration/.test(b))); // CBC4: the (separate) Display Duration rule blocks a new programme
     go('a-programmes', { id: 'NV-N1', tab: 'details' }); ACT.ch8SaveDetails({ dataset: { id: 'NV-N1' } }); ok('E1-A (negative) saving details needs a number', /Enter the duration/.test(main()) && n1.dur === '12–18 months');
     fill({ '#np-d': '18', '#np-du': 'months' }); ACT.ch8SaveDetails({ dataset: { id: 'NV-N1' } });
     const a = ADMIN.audit.find(x => x.action === 'Details changed' && x.entity.includes('NV-N1'));
@@ -109,12 +114,12 @@
   });
   await T('E1-A edit, detail and catalogue use the same duration', async () => {
     fresh(); SA(); const pr = newProg('Level 4 Duration edit', { n: 12 }); go('a-programmes', { id: pr.id, tab: 'details' });
-    ok('E1-A edit form: the same controls, pre-filled', document.querySelector('#np-d').value === '12' && document.querySelector('#np-du').value === 'months');
-    fill({ '#np-d': '2', '#np-du': 'years' }); ACT.ch8SaveDetails({ dataset: { id: pr.id } });
-    ok('E1-A edited to 2 years; audited', pr.dur === '2 years' && pr.durV.unit === 'years' && ADMIN.audit[0].action === 'Details changed' && /2 years/.test(ADMIN.audit[0].after));
+    ok('E1-A edit form: the same controls, pre-filled', document.querySelector('#cbc3-dd-n').value === '12' && document.querySelector('#cbc3-dd-u').value === 'months'); // FB2: the Course Duration (was #np-d / #np-du)
+    { const u = document.querySelector('#cbc3-dd-u'), i = document.querySelector('#cbc3-dd-n'); u.value = 'months'; i.value = '24'; i.dispatchEvent(new Event('change', { bubbles: true })); }
+    ok('E1-A edited to 24 months; audited', pr.dur === '24 months' && pr.durV.unit === 'months' && ADMIN.audit.some(a => a.action === 'Payment schedule duration changed' && /24 months/.test(a.after)));
     ready(pr); dmpComply(pr.id); ACT.ch8Publish({ dataset: { id: pr.id } }); reason('Ready');
-    go('a-programmes', { id: pr.id, tab: 'details' }); ok('E1-A published detail page shows "2 years"', pr.status === 'Active' && main().includes('Duration2 years'));
-    ok('E1-A Browse catalogue entry carries "2 years"', CATALOGUE.find(c => c.title === pr.title).dur === '2 years');
+    go('a-programmes', { id: pr.id, tab: 'details' }); ok('E1-A published detail page shows "2 years"', pr.status === 'Active' && (go('a-programmes', { id: pr.id, tab: 'payments' }), /Course Duration\s*24 months/.test(main()))); // FB2: Fees & Payment Plans shows the Course Duration read-only (CBC3: the Payment Schedule Duration)
+    ok('E1-A Browse catalogue entry carries "24 months"', CATALOGUE.find(c => c.title === pr.title).dur === '24 months');
   });
 
   /* ================= B. Payment methods ================= */
@@ -178,7 +183,7 @@
   /* ================= Level 3: fee options share the programme plan ================= */
   await T('E1-B Level 3: every fee option uses the programme\'s method; a fee that doesn\'t split is named', async () => {
     fresh(); SA(); go('a-programmes'); ACT.chProgNew();
-    fill({ '#np-t': 'Level 3 Certificate in E1 Care', '#np-l': 'Level 3', '#np-r': 'QN 610/3131/3', '#np-d': '12', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
+    fill({ '#np-t': 'Level 3 Certificate in E1 Care', '#np-l': 'Level 3', '#np-r': 'QN 610/3131/3', '#cbc3-dd-n': '12', '#np-d': '12', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
     const row = (k, l, f, m) => { const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = l; r.querySelector('.r1-np-f').value = f; r.querySelector('.r1-np-m').value = m; };
     row(0, 'Self-Paced', '2400', 'Self-Paced'); ACT.r1NpAdd(); row(1, 'Fully Assisted', '2700', 'Fully Assisted'); create(); const pr = last();
     ok('E1-L3 programme created with two options; the Super Admin\'s terms are approved at once (D8)', r1Opts(pr.id).length === 2 && e1T(pr.id).status === 'Approved' && !ADMIN.queue.some(i => i.type === 'Programme payment terms'));
@@ -387,12 +392,12 @@
   });
 
   /* ================= E1 clarification (20 Oct 2026): administrators configure the methods; learners use only those ================= */
-  const l3Wizard = (title, rows) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (4000 + title.length) + '/3', '#np-d': '12', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l')); rows.forEach(([l, f, m], k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = l; r.querySelector('.r1-np-f').value = f; r.querySelector('.r1-np-m').value = m; }); };
+  const l3Wizard = (title, rows) => { go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (4000 + title.length) + '/3', '#cbc3-dd-n': '12', '#np-d': '12', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l')); rows.forEach(([l, f, m], k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = l; r.querySelector('.r1-np-f').value = f; r.querySelector('.r1-np-m').value = m; }); };
   const payOpts = () => [...document.querySelectorAll('main input[name="su-opt"]')].map(x => x.value).sort().join();
   await T('E1-CL Step 1: concise fee guidance; no instalment assumption before the Payment Plan step', async () => {
     fresh(); ACA(); go('a-programmes'); ACT.chProgNew(); INP.r1NpLevel(Object.assign(document.querySelector('#np-l'), { value: 'Level 3' }));
     const t = document.querySelector('main .r1-np-opts').textContent;
-    ok('E1-CL Step 1 Level 3 fee options: "Add the available fees and delivery modes … configured in the Payment Plan step."', /Add the available fees and delivery modes for this programme\. Payment methods and instalments are configured in the Payment Plan step\./.test(t));
+    ok('E1-CL Step 1 Level 3 fee options: concise guidance naming the current step (FB1: "… set in Fees & Payment Plans after the course is saved."; was "the Payment Plan step")', /Add the fees and delivery modes learners choose from\. Instalment options and deposits are set in Fees & Payment Plans after the course is saved\./.test(t) && !/Payment Plan step/.test(t));
     ok('E1-CL Step 1 no longer states six (or any) instalments or the split rule', !/instalments \(|split evenly|unless changed|\b6\b/.test(t)); closeModal();
     l3Wizard('Level 3 Certificate in Pay Config', [['Self-Paced', '500', 'Self-Paced']]); const n0 = (STORE.chNewProgs || []).length; create();
     const pr = last(); closeModal();
@@ -469,7 +474,7 @@
     ok('E1-R £1,500: "Instalments 1–6: £250.00 each", Total £1,500.00', /Instalments 1–6: £250\.00 each/.test(sum()) && /Total £1,500\.00/.test(sum()));
     ok('E1-R (negative) no divisibility error for ordinary fees', !/divide|doesn't divide|equal instalments|Needs configuration/.test(main()));
     ok('E1-R deposit: "Alternative to instalments: £300.00 deposit, followed by the £700.00 balance during the configured seat-hold period (28 days)."', sum().includes('Alternative to instalments: £300.00 deposit, followed by the £700.00 balance during the configured seat-hold period (28 days).') && sum().includes('followed by the £500.00 balance') && sum().includes('followed by the £1,200.00 balance'));
-    ok('E1-R eligibility stated separately: batch at least 28 days away; the rounding rule stated', /the deposit route is offered only when the learner's batch starts at least 28 days away/.test(note()) && /final instalment is adjusted so they total the fee exactly/.test(note()));
+    ok('E1-R eligibility stated separately: batch at least 28 days away; the rounding rule stated', /offered only when the batch starts at least 28 days away/.test(note()) /* CBC3: shortened, rule unchanged */ && /final instalment is adjusted so they total the fee exactly/.test(note()));
     S4().cfg.hold = 21; render();
     ok('E1-R the configured hold is shown (21 days), eligibility stays at 28 days', sum().includes('during the configured seat-hold period (21 days)') && !sum().includes('(28 days)') && /Seat hold: 21 days/.test(note()) && /at least 28 days away/.test(note()));
     S4().cfg.hold = 28;

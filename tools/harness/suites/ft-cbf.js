@@ -2,6 +2,9 @@
 // the approval before publication; Finance approves the draft's exact package (held, no deadlock); publication only after approval;
 // direct and confirm-time refusals; unchanged versions, legacy programmes, roles, D8; learners' records byte-identical; Fees UI.
 (async function () {
+  // FB1 (PD-FB1-03): this suite's deposit configuration, chosen explicitly where its fixture prepares a package for Finance — each new fee
+  // option "Allow Deposit: Yes" with the Academy default, through the Step 5 handler (an administrator's action; role checks apply).
+  const fb1Dep = p => { if (p && cb8Managed(p)) cb8Work(p).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: p.id, o: o.id, k: 'allow' }, checked: true })); };
   // DM-P (PD-DM-15): publishing a programme or version needs fee options by delivery mode, approved by Finance. Where a check isn't about
   // fees, this fixture takes the authorized Section 5 path first: the duration of a pre-builder course, a financial package, fee options by
   // delivery mode, a mode for each option (the Standard programme fee replaced by an option at the same fee), the Super Administrator's own approval (D8)
@@ -22,6 +25,7 @@
     });
     if (!cb8Work(pr).opts.some(o => o.status === 'Active' && !o.legacy && M_MODES.includes(o.mode))) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String((s4PlanCur(pr.id) || {}).fee || 2400); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); closeModal(); } // no option at all (a Level 3 package starts from the options in force): one at the plan's fee
     cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.pay.length).forEach(o => ACT.cb8PayAdd({ dataset: { p: pr.id, o: o.id, k: '1' } }));
+    fb1Dep(pr); // FB1: the fixture's fee options answer Allow Deposit (Yes) before the Super Administrator's own approval
     if (!(cb8Wf(pr) && cb8Wf(pr).status === 'Approved')) { ACT.cb8SaApprove({ dataset: { p: pr.id } }); rs(); }
     closeModal(); if (aca) { acaEnter(av); S.signedIn = true; } else setAdminIdentity(av); S.portal = po; return true;
   };
@@ -55,7 +59,7 @@
   let codeN = 0;
   const make = (o = {}) => {
     go('a-programmes'); ACT.chProgNew(); const n = ++codeN;
-    fill({ '#np-t': o.title || 'CB11 Level 3 course ' + n, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (5500 + n) + '/1', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
+    fill({ '#np-t': o.title || 'CB11 Level 3 course ' + n, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (5500 + n) + '/1', '#cbc3-dd-n': '12', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
     (document.querySelector('#np-code') || {}).value = 'CB11C' + n; document.querySelector('#np-obs-' + (o.obs ? 'yes' : 'no')).checked = true;
     [{ l: 'Fully Assisted — standard', f: 2400, m: 'Fully Assisted' }, { l: 'Self-Paced — standard', f: 1800, m: 'Self-Paced' }].forEach((x, k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = x.l; r.querySelector('.r1-np-f').value = String(x.f); r.querySelector('.r1-np-m').value = x.m; });
     const pr = crT(ACT.cbDetCreate)(); closeModal(); return pr;
@@ -100,7 +104,7 @@
     go('a-programmes', { id, tab: 'docs' }); ACT.s4CkAdd({ dataset: { p: id } }); fill({ '#ck-n': 'Care Certificate (if held)', '#ck-f': 'PDF' }); document.querySelector('#ck-m').value = '0'; reason('Optional prior learning');
   };
   const submitAndApprove = pr => {
-    go('a-programmes', { id: pr.id, tab: 'fees' }); ACT.cb8Submit({ dataset: { p: pr.id } }); if (MODAL) press();
+    go('a-programmes', { id: pr.id, tab: 'fees' }); fb1Dep(pr); ACT.cb8Submit({ dataset: { p: pr.id } }); if (MODAL) press();
     const qid = cb8Wf(pr).qid; FA(); go('a-queue', { id: qid }); ACT.e1Decide({ dataset: { id: qid, a: 'approve' } }); if (MODAL) reason('Checked against the price list'); return qid;
   };
   const batch = (pr, code) => {
@@ -126,7 +130,7 @@
   };
   const snap = w => J({ s: w.signup, p: w.plans });
   const newVersion = pr => { ACA(); ACT.s3WizVersion({ dataset: { id: pr.id } }); reason('2028 changes'); };
-  const answer = (pr, yes) => { go('a-programmes', { id: pr.id, tab: 'details' }); document.querySelector('main #np-obs-' + (yes ? 'yes' : 'no')).checked = true; ACT.cbObsSave({ dataset: { id: pr.id } }); };
+  const answer = (pr, yes) => { go('a-programmes', { id: pr.id, tab: 'details' }); const b = document.querySelector(yes ? 'main #cbr2-obs-yes' : 'main #cbr2-obs-no'); b.checked = true; INP.cbr2Obs(b); }; // CBC1 (CBR-01): the explicit Yes / No — CBR-2 (PD-CBR2-02): the checkbox (same N5a field, same confirmation) — was the Yes / No radios with Save observation answer
   const settings = (pr, wp, off) => { ACT.n5Settings({ dataset: { p: pr.id } }); if (!MODAL) return false; radio('n5-req', 'yes'); if (wp) radio('n5-wp', wp); if (off) radio('n5-off', off); press(); return true; };
   const gate = pr => blockers(pr).filter(x => x.sec === 'payments');
   const wf = pr => cb8Wf(pr), planV = pr => (s4PlanCur(pr.id) || {}).v;
@@ -141,8 +145,8 @@
     ok('CBF-A Review & Publish blocks Version 2 with a payment-terms blocker linked to Fees & Payments; Publish disabled', g.length === 1 && /not approved for Version 2/.test(g[0].msg) && g[0].tab === 'fees' && q('[data-act="cbPublish"]').disabled && qa('.cb-rv-fix').some(b => b.dataset.tab === 'fees'), J(g));
     ['cbPublish', 's3WizPublish'].forEach(n => { const r = tryPublish(pr, n); ok(`CBF-A (negative) direct ${n} without valid approval: refused and logged; nothing published`, r.refused && r.logged && pr.version === 1); });
     go('a-programmes', { id: pr.id, tab: 'fees' });
-    ok('CBF-A Fees & Payments works on the draft: observation fees "Not applicable — no observations"; the package is checked against Version 2', /observations: no/.test(q('.cb8-basis').textContent) && /Not applicable — no observations/.test(q('.cb8-opt').textContent));
-    ACT.cb8Submit({ dataset: { p: pr.id } }); if (MODAL) press(); const qid = wf(pr).qid;
+    ok('CBF-A Fees & Payments works on the draft: observation fees "Not applicable — no observations"; the package is checked against Version 2', cb8Basis(pr).req === false /* CBR-2: the basis line isn't shown; the package uses the draft's answer */ && /Not applicable — no observations/.test(q('.cb8-opt').textContent));
+    fb1Dep(pr); ACT.cb8Submit({ dataset: { p: pr.id } }); if (MODAL) press(); const qid = wf(pr).qid;
     ok('CBF-A the creator submits the revised package against the draft configuration (frozen basis: observations no)', wf(pr).status === 'Pending' && wf(pr).sub.basis.req === false);
     rv(pr.id); ok('CBF-A while Finance reviews: blocked "waiting for Finance review"', /waiting for Finance review/.test(gate(pr).map(x => x.msg).join()));
     const a1 = ADMIN.audit.length; answer(pr, true); ok('CBF-A (negative) while Finance reviews, the draft\'s observation answer is locked (refused, logged)', cbObsOf(pr) === false && blocked(a1));
@@ -182,7 +186,7 @@
     ok('CBF-C a draft version with the same answer and locations keeps the approval (nothing unrelated invalidates)', wf(pr).status === 'Approved' && !gate(pr).length);
     settings(pr, 'Permitted', 'Not available');
     ok('CBF-C making the Academy office unavailable in the draft withdraws the approval before publication', wf(pr).status === 'Draft' && pr.version === 1);
-    go('a-programmes', { id: pr.id, tab: 'fees' }); ok('CBF-C the office fee is "not applicable — location not permitted" for the draft (the stored value kept)', /location not permitted/.test(q('.cb8-opt').textContent));
+    go('a-programmes', { id: pr.id, tab: 'fees' }); ok('CBF-C the office fee is "not applicable — location not permitted" for the draft (the stored value kept)', /location not required/.test(q('.cb8-opt').textContent) /* CBR-2: the Observations step's wording */);
     submitAndApprove(pr); ok('CBF-C Finance approves the revised package (held)', wf(pr).status === 'Approved' && wf(pr).held.pkg.basis.off === false && planV(pr) === v0);
     ACA(); settings(pr, 'Permitted', 'Available');
     ok('CBF-C changing the draft again after approval makes the approval invalid before publication (held package dropped)', wf(pr).status === 'Draft' && !wf(pr).held);
@@ -204,11 +208,11 @@
     FA(); const a0 = ADMIN.audit.length; ACT.cb8Submit({ dataset: { p: pr.id } }); ok('CBF-D (negative) Finance can\'t submit the creator\'s package (refused, logged)', wf(pr).status === 'Draft' && blocked(a0));
     learner('A'); const r3 = tryPublish(pr, 's3WizPublish'); ok('CBF-D (negative) the learner portal can\'t publish', r3.refused && pr.version === 2);
     // Super Administrator D8: own package approved at once, held for the draft version, then published
-    SA(); go('a-programmes', { id: pr.id, tab: 'fees' }); ACT.cb8SaApprove({ dataset: { p: pr.id } }); if (MODAL) reason('D8');
+    SA(); go('a-programmes', { id: pr.id, tab: 'fees' }); fb1Dep(pr); ACT.cb8SaApprove({ dataset: { p: pr.id } }); if (MODAL) reason('D8');
     ok('CBF-D Super Administrator (D8) approves their own revised package: held for Version 3, plan in force unchanged', wf(pr).status === 'Approved' && wf(pr).held && wf(pr).held.v === 3 && planV(pr) === v0);
     ACT.cbPublish({ dataset: { id: pr.id } }); reason('Version 3'); ok('CBF-D …and Version 3 publishes with that package in force', pr.version === 3 && planV(pr) === v0 + 1 && cb8Cur(pr.id).basis.req === false);
     // legacy: seeded NV-L3 (no financial package) keeps its existing rules
-    SA(); ACT.newProgVersion({ dataset: { id: 'NV-L3' } }); reason('Legacy'); go('a-programmes', { id: 'NV-L3', tab: 'details' }); document.querySelector('main #np-obs-no').checked = true; ACT.cbObsSave({ dataset: { id: 'NV-L3' } });
+    SA(); ACT.newProgVersion({ dataset: { id: 'NV-L3' } }); reason('Legacy'); go('a-programmes', { id: 'NV-L3', tab: 'details' }); { const b = document.querySelector('main #cbr2-obs-no'); b.checked = true; INP.cbr2Obs(b); } // CBC1: the explicit No — CBR-2 (PD-CBR2-02): the checkbox
     // DM-P (PD-DM-15) supersedes "legacy NV-L3: no financial-package gate … publishes as before": a new version of any programme needs fee
     // options by delivery mode approved by Finance (the Standard programme fee has no mode); its plan versions in force before are kept
     const L3 = cbPr('NV-L3'); ok('CBF-D legacy NV-L3: a new version now needs fee options by delivery mode (gate)', !cb8Managed(L3) && /Fee option/.test(cbFinGate(L3)));

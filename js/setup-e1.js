@@ -189,7 +189,7 @@ function e1Summary(pr, t, snap) {
     return `<tr><td>${esc(f.label)}</td>${l3 ? `<td class="small">${esc(f.mode)}</td>` : ''}<td class="r num">${f.fee > 0 ? money(f.fee, 'GBP') : '—'}</td><td class="small"><strong>${esc(E1_METH_SUM[s.meth])}</strong>${f.fee > 0 ? `<div>${esc(e1PayHow(f.fee, p))}</div>` : ''}${why ? `<div class="xs" style="color:var(--red)">${esc(why)}</div>` : ''}</td><td class="small">${inst}</td><td class="small e1-dep">${esc(depTxt)}</td></tr>`;
   }).join('');
   return `<div class="tbl-wrap e1-sum"><table class="tbl dense"><thead><tr><th>${l3 ? 'Fee option' : 'Applies to'}</th>${l3 ? '<th>Delivery mode</th>' : ''}<th class="r">Total fee</th><th>Payment methods</th><th>Instalment schedule</th><th>Deposit (alternative route)</th></tr></thead><tbody>${rows}</tbody></table></div>
-    <p class="xs muted e1-sum-note">${many ? esc(E1_ROUND_TXT) + ' ' : ''}${s.depOff ? 'Deposit: not offered for this programme — learners pay in full or by instalments, whenever their batch starts.' : `Deposit eligibility (an optional route): the deposit route is offered only when the learner's batch starts at least ${CH_HOLD_DAYS} days away (CH-10). Seat hold: ${hold} days (configured by Finance); the balance ${part ? 'can be paid in one go or in parts' : 'is paid in one go'} during the hold.`}${l3 ? ' Every fee option uses these terms.' : ''}</p>`;
+    <p class="xs muted e1-sum-note">${many ? esc(E1_ROUND_TXT) + ' ' : ''}${s.depOff ? 'Deposit: not offered for this programme — learners pay in full or by instalments, whenever their batch starts.' : `Deposit: offered only when the batch starts at least ${CH_HOLD_DAYS} days away. Seat hold: ${hold} days; the balance ${part ? 'can be paid in one go or in parts' : 'is paid in one go'} during the hold.`}${l3 ? ' Every fee option uses these terms.' : ''}</p>`;
 }
 
 /* ---------- C. Finance review of a new programme's payment terms ---------- */
@@ -198,7 +198,7 @@ QTYPES.push(E1_T); FIN_TYPES.push(E1_T); QLBL[E1_T] = 'Programme payment terms';
 const e1Store = () => (STORE.e1 = STORE.e1 || { terms: {} });
 const e1T = pid => e1Store().terms[pid] || null;  // no record: terms in force before E1 (or a programme not made with the wizard)
 const E1_ST = {
-  legacy: ['In force', 'green', 'These terms were set before Finance review was introduced and stay in force.'],
+  legacy: ['In force', 'green', 'Set before Finance review; still in force.'],
   Draft: ['Draft — not yet submitted', 'grey', 'Not yet sent to Finance. The programme can\'t be published until Finance approves its payment terms.'],
   Pending: ['Waiting for Finance review', 'amber', 'Finance is reviewing these terms. They can\'t be changed until Finance decides.'],
   Changes: ['Changes requested', 'red', 'Finance asked for changes. Update the terms and submit them again.'],
@@ -259,7 +259,7 @@ function e1PlanStep(pr) {
   const qlink = q ? ` <a href="#a-queue.${q.id}" data-act="goTok" data-t="a-queue.${q.id}" class="mono">${q.id}</a>` : T && T.qid ? ` <span class="mono">${T.qid}</span>` : ''; // creators don't see Finance's queue
   const ret = T && T.status === 'Changes' && T.changes ? `<div class="small e1-ask"><strong>Finance's request:</strong> ${esc(T.changes.reason)} <span class="xs muted">— ${esc(T.changes.by)}, ${fdt(T.changes.at)}</span></div>` : '';
   const appr = T && T.status === 'Approved' && T.approved ? `<div class="small">Approved by ${esc(T.approved.by)} on ${fd(T.approved.at)}${T.approved.qid ? ` (${T.approved.qid})` : T.approved.how ? ` — ${esc(T.approved.how)}` : ''}.</div>` : '';
-  const head = `<div class="row-b"><h2>Payment plan</h2>${draft || T ? e1Chip(pr) : ''}</div><p class="small muted">All amounts in GBP. Each programme chooses whether it offers a deposit. A deposit, when offered, is available only when the learner's batch starts in ${CH_HOLD_DAYS} days or more; otherwise the learner pays in full or the first instalment.</p>
+  const head = `<div class="row-b"><h2>Payment plan</h2>${draft || T ? e1Chip(pr) : ''}</div><p class="small muted">All amounts in GBP. A deposit, when offered, is available only when the learner's batch starts in ${CH_HOLD_DAYS} days or more.</p>
     ${draft || T ? `<div class="note b-${{ green: 'green', grey: 'grey', amber: 'amber', red: 'red' }[st[1]]} e1-state" role="status">${ic(key === 'Pending' ? 'clock' : key === 'Changes' ? 'alert' : 'info')}<div class="small"><strong>${st[0]}${key === 'Pending' || key === 'Changes' ? qlink : ''}.</strong> ${st[2]}${ret}${appr}</div></div>` : ''}`;
   let body;
   if (fo && key === 'Pending') body = `<h3>Proposed terms</h3><p class="small">${esc(e1TermsTxt(shown))}</p>${q && e1Overdue(q) ? `<p class="small e1-overdue">${chip('Overdue', 'amber')} Waiting ${Math.max(0, -daysTo(q.raised))} days — it stays with Finance (no escalation).</p>` : ''}${q && e1CanDecide(q) ? `<div class="row"><button class="btn btn-primary" data-act="e1Decide" data-id="${q.id}" data-a="approve">Approve payment terms</button><button class="btn" data-act="e1Decide" data-id="${q.id}" data-a="return">Request changes</button></div>` : ''}${q ? `<div class="row"><button class="btn btn-ghost" data-act="goTok" data-t="a-queue.${q.id}">Open in Approvals Queue</button></div>` : ''}<p class="xs muted">${ic('lock', 12)} A Finance Admin approves these terms or requests changes. The plan can't be edited while they are waiting.</p>`;
@@ -365,7 +365,7 @@ const _checkE1 = ch8Check;
 ch8Check = function (pr) {
   const r = _checkE1.apply(this, arguments); if (!pr) return r; const T = e1T(pr.id);
   if (pr.status === 'Draft' && T && E1_BLOCK[T.status]) r.block.push(`Payment terms ${E1_BLOCK[T.status]}${T.qid && T.status !== 'Draft' ? ` (${T.qid})` : ''}`);
-  if (pr.status === 'Draft' && e1DurOdd(pr)) r.warn.push(`Duration "${pr.dur}" was entered as free text — choose a number and unit in Details`);
+  if (pr.status === 'Draft' && e1DurOdd(pr)) r.warn.push(`Payment Schedule Duration "${pr.dur}" was entered as free text — choose a number and unit in Fees & Payment Plans`);
   return r;
 };
 // Detail and review pages: the structured duration, the plan step's real state, and the terms in the review

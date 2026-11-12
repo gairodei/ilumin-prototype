@@ -4,8 +4,17 @@
 // and bank transfer, admission pending / approved / rejected, an agency application without option and batch, transfer, staff
 // visibility, unauthorized access. Phase 1: a real refresh, Reset demo, then the legacy fixture.
 (async function () {
+  // P3 (PD-P3-02): the learner chooses their batch on sign-up step 1. Fixtures that relied on the automatic (CH-42) assignment now pick, on
+  // the page, the earliest eligible batch (the one CH-42 assigned); a batch the fixture already set, and that is still eligible, is kept
+  const p3Pick = () => { const w = W; if (!w || !p3Open(w) || chStepKey(w) !== 'details' || ui('suBatch', null) || (w.signup.batch && !p3Why(w, chBatch(w.signup.batch), { region: w.signup.l3cPin !== w.signup.batch }))) return; const r = S.route === 'admission' && document.querySelector('main input[name="su-batch"]'); if (r) { r.checked = true; INP.suBatch(r); } else { const b = p3Eligible(w)[0]; if (b) setUi('suBatch', b.code); } };
   const SS = window.sessionStorage, PH = +(SS.getItem('ft-nb1.phase') || 0);
   const R = JSON.parse(SS.getItem('ft-nb1.R') || '[]'); const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // P6 (PD-P6-02): a batch change is a transfer request carried out after approval — in these fixtures a Super Administrator override (audited)
+  // P6 correction (PD-P6-05): a transfer needs an explicitly configured Academy time zone on both batches — test setup configures one where missing
+  const p6TzAll = () => ADMIN.batches.forEach(b => { if (!tzOk(b.tz)) b.tz = typeof chBatchCountry === 'function' && chBatchCountry(b) === 'United Arab Emirates' ? 'Asia/Dubai' : 'Europe/London'; });
+  const p6AsSA = f => { const av = ADMIN.av, po = S.portal, si = S.signedIn; setAdminIdentity('A'); S.portal = 'admin'; try { return f(); } finally { if (av && av !== 'A') setAdminIdentity(av); S.portal = po; S.signedIn = si; } };
+  const p6Ok = (why = 'Approved (test)') => p6AsSA(() => { p6TzAll(); const q = (SEATS().xfer || { reqs: [] }).reqs.find(x => x.state === 'Pending Academic Approval'); return q ? p6Decide(q.id, 'override', why) : { ok: false, why: 'no pending request' }; });
+  const p6Xfer = (lid, to, why = 'Transfer (test)') => p6AsSA(() => { p6TzAll(); const q = p6Request(lid, typeof to === 'string' ? to : to.code, why); return q.ok ? p6Decide(q.id, 'override', why) : q; });
   const J = JSON.stringify, $1 = s => document.querySelector(s), $a = s => [...document.querySelectorAll(s)];
   const T = async (n, f) => { try { closeModal(); await f(); } catch (e) { R.push('FAIL ' + n + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
   const main = () => ($1('main') || document.body).textContent.replace(/\s+/g, ' ');
@@ -25,8 +34,8 @@
   let lastToast = ''; const _t = toast; toast = function (m) { lastToast = String(m); return _t.apply(this, arguments); };
   const openApply = () => { go('browse'); lastToast = ''; ACT.applyNvq({ dataset: { id: nvqCat().id } }); return MODAL ? MODAL.title : ''; };
   const apply = mode => { const t = openApply(); if (!/^Sign up for/.test(t)) return t; const o = opt(mode), r = o && $1(`#modal-root input[name="r1-opt"][value="${o.id}"]`); if (r) r.checked = true; const out = prim(); if (out !== false) closeModal(); return out === false ? 'refused' : 'started'; };
-  const details = () => { go('admission'); $1('#su-dob').value = '1992-02-02'; $1('#su-ad').value = '5 Test Road, London'; ACT.suNext(); };
-  const toPay = ff => { const w = W; w.docs.filter(d => d.mand).forEach(d => ACT.sampleUpload({ dataset: { id: d.id } })); ff(3000); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); };
+  const details = () => { go('admission'); $1('#su-dob').value = '1992-02-02'; $1('#su-ad').value = '5 Test Road, London'; (p3Pick(), ACT.suNext()); };
+  const toPay = ff => { const w = W; w.docs.filter(d => d.mand).forEach(d => ACT.sampleUpload({ dataset: { id: d.id } })); ff(3000); (p3Pick(), ACT.suNext()); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); };
   const pay = (ff, method = 'card') => { setUi('suOpt', 'instalment'); setUi('suMethod', method); go('admission'); ACT.suPay(); if (MODAL) prim(); ff(3000); closeModal(); };
   const signup = (mode, method) => fxFast(ff => { apply(mode); details(); toPay(ff); pay(ff, method); });
   const shortOf = () => W.enrolments.find(e => e.kind === 'short');
@@ -89,11 +98,15 @@
     await T('NB1 unready batch at payment', async () => {
       reset(); as('short'); const e0 = B().enrolled; apply('Self-Paced'); fxFast(ff => { details(); toPay(ff); });
       const b = B(), keep = [b.coords.slice(), b.coord]; b.coords = []; b.coord = ''; go('admission');
-      ok('NB1-05 the batch loses its Coordinator before payment: the payment step says it can\'t take learners, nothing to pay', !!$1('main .nb-unready') && !$1('main [data-act="suPay"]'));
-      const a0 = aud('Blocked: pay for the sign-up (batch not taking learners)'); ACT.suPay();
-      ok('NB1-05 a direct payment call is refused and logged: no charge, no seat, no plan', !W.signup.done && !MODAL && B().enrolled === e0 && !(W.plans || []).some(p => p.e === 'nvq') && aud('Blocked: pay for the sign-up (batch not taking learners)') === a0 + 1);
+      // P3 (PD-P3-05, supersedes NB-1's automatic reassignment): the chosen batch is checked again; the learner chooses another, nothing is
+      // assigned. Was: the '.nb-unready' card; the refusal logged as 'Blocked: pay for the sign-up (batch not taking learners)'; reassigned to NB1-LATER
+      ok('NB1-05 the batch loses its Coordinator before payment: the payment step says it can\'t take learners, nothing to pay', /can't take you now: No Academic Coordinator yet/.test(main()) && !$1('main [data-act="suPay"]'));
+      const a0 = aud('Blocked: pay for the sign-up (chosen batch unavailable)'); ACT.suPay();
+      ok('NB1-05 a direct payment call is refused and logged: no charge, no seat, no plan', !W.signup.done && !MODAL && B().enrolled === e0 && !(W.plans || []).some(p => p.e === 'nvq') && aud('Blocked: pay for the sign-up (chosen batch unavailable)') === a0 + 1);
       const c = later('NB1-LATER', 90, { coords: keep[0], coord: keep[1] }); go('admission');
-      ok('NB1-05 with another eligible batch, the learner is reassigned and told why', W.signup.batch === 'NB1-LATER' && /can't take new learners at the moment/.test(main()) && !/filled before you paid/.test(main()));
+      ok('NB1-05 → P3 with another eligible batch, the learner is not reassigned; it is offered, none chosen', W.signup.batch === B().code && !!$1('main input[name="p3-re"][value="NB1-LATER"]') && !$1('main input[name="p3-re"]:checked'));
+      { const r = $1('main input[name="p3-re"][value="NB1-LATER"]'); r.checked = true; INP.p3Pick(r); ACT.p3Rechoose({ dataset: {} }); prim(); closeModal(); go('admission'); }
+      ok('NB1-05 → P3 she chooses NB1-LATER; payment opens there', W.signup.batch === 'NB1-LATER' && !!$1('main [data-act="suPay"]'));
       fxFast(ff => pay(ff)); ok('NB1-05 payment then takes a seat on the new batch only', W.signup.done && c.enrolled === 1 && B().enrolled === e0);
     });
 
@@ -101,8 +114,11 @@
       reset(); later('NB1-EARLY-NOCOORD', -40, { coords: [], coord: '' }); const c2 = later('NB1-MAR27', 90); as('short');
       openApply(); ok('NB1-07 the dialog says Start sign-up creates the application and names the earliest batch', /Pressing Start sign-up creates your application/.test(mtxt()) && /Earliest batch for this option: DEMO-L3-JAN27/.test(mtxt())); closeModal();
       apply('Self-Paced'); go('admission');
-      ok('NB1-04 an earlier batch without a Coordinator is skipped; the earliest staffed batch is assigned (no choice — CH-42)', (details(), W.signup.batch === 'DEMO-L3-JAN27') && !$a('main input[name="su-batch"]').length);
-      ACT.suBack && ACT.suBack(); go('admission'); ok('NB1-07 step 1 shows the batch start and end dates and why it was assigned', new RegExp(`starts ${fd(B().start)}, ends ${fd(B().end)}`).test(main()) && /earliest batch with a place that takes your fee option/.test(main()) && /Your delivery mode: Self-Paced/.test(main()));
+      // P3 (PD-P3-02): the batches are offered to choose. Was: assigned (no choice — CH-42), no su-batch input; step 1 showed the assigned batch's
+      // start and end dates and "the earliest batch with a place that takes your fee option"
+      const nb4 = $a('main input[name="su-batch"]').map(x => x.value);
+      ok('NB1-04 → P3 an earlier batch without a Coordinator can\'t be chosen (reason given); the staffed batches are offered and she chooses', !nb4.includes('NB1-EARLY-NOCOORD') && nb4[0] === 'DEMO-L3-JAN27' && nb4.includes('NB1-MAR27') && /NB1-EARLY-NOCOORD — No Academic Coordinator yet/.test(main()) && (details(), W.signup.batch === 'DEMO-L3-JAN27'), JSON.stringify(nb4));
+      ACT.suBack && ACT.suBack(); go('admission'); ok('NB1-07 → P3 step 1 shows each batch\'s start date, the learner\'s delivery mode, and that the Academy doesn\'t choose for her', main().includes('Starts ' + fd(B().start)) && /The Academy doesn't choose one for you/.test(main()) && /Your delivery mode: Self-Paced/.test(main()));
       ok('NB1-07 a later staffed batch exists but isn\'t chosen', c2.enrolled === 0);
     });
 
@@ -150,10 +166,11 @@
     });
 
     await T('NB1 transfer, staff visibility and access', async () => {
-      reset(); const c = later('NB1-MOVE', 90, { coords: ['Michael Osei'], coord: 'Michael Osei', teachers: [], assessors: [] });
+      // PD-L3C2-03: a move may not change signed payment dates, so the target batch starts on the same day. Was: later('NB1-MOVE', 90, …)
+      reset(); const c = later('NB1-MOVE', 0, { coords: ['Michael Osei'], coord: 'Michael Osei', teachers: [], assessors: [] });
       as('short'); signup('Self-Paced'); const lid = W.me.id, e0 = B().enrolled;
       as('coord1'); go('c-learners'); ok('NB1-13 the batch Coordinator sees the new learner', /Lena/.test(main()));
-      acaEnter('KA'); S.signedIn = true; ACT.chMoveBatch({ dataset: { id: lid } }); const s = $1('#ch-mv-b'); if (s) s.value = c.code; reason('NB1 move');
+      acaEnter('KA'); S.signedIn = true; p6TzAll(); ACT.chMoveBatch({ dataset: { id: lid } }); const s = $1('#ch-mv-b'); if (s) s.value = c.code; reason('NB1 move'); p6Ok('NB1 move'); // P6 (PD-P6-02)
       ok('NB1-12 transfer: seat counts move once (CH-42 admin change unchanged)', B().enrolled === e0 - 1 && c.enrolled === 1);
       as('coord1'); go('c-learners'); ok('NB1-13 the old batch\'s Coordinator no longer sees her', !/Lena/.test(main()));
       reset(); as('short'); ok('NB1-14 a learner without an NVQ application still can\'t open the NVQ areas (unchanged)', lk('assignments') === 'This area is for NVQ/RQF learners' && lk('progress') === 'This area is for NVQ/RQF learners' && lk('admission') === 'This area is for NVQ/RQF learners');

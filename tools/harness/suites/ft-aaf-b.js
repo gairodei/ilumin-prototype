@@ -134,7 +134,9 @@
       $1('#bd-e').value = '2027-12-10'; $1('#bd-r').value = 'Longer programme'; prim();
       ok('AAFB-21 end date only: the impact says payment dates don\'t change because the start is unchanged', /payment dates don't change \(the start date is unchanged\)/.test($1('#bd-i').textContent) && !/payment plans don't change/.test($1('#bd-i').textContent)); closeModal();
       ACT.s4bBatchEdit({ dataset: { id: CB } }); $1('#bd-s').value = '2026-12-17'; $1('#bd-r').value = 'Later start'; prim(); const imp = $1('#bd-i').textContent;
-      ok('AAFB-21 D-Low: a start-date change no longer says payment plans don\'t change — unpaid payment dates move', /Unpaid payment dates move with the new start date/.test(imp) && !/payment plans don't change/.test(imp) && /unpaid payment dates move with it/.test(imp), imp.slice(0, 300)); closeModal();
+      // PD-L3C2-03/05: the demo batch's learners have signed dated schedules, so the start-date change is refused and nothing claims dates move.
+      // Was: the preview said "Unpaid payment dates move with the new start date" and "unpaid payment dates move with it".
+      ok('AAFB-21 D-Low: a start-date change is refused while signed schedules depend on it; nothing says payment plans don\'t change or that dates move', /Signed payment terms of \d learners? depend on this start date/.test(mtxt()) && !/payment plans don't change/.test(imp) && !/payment dates move/.test(mtxt()), mtxt().slice(0, 300)); closeModal();
       ok('AAFB-21 nothing was saved by previewing', b.start.slice(0, 10) === '2026-12-03');
     });
 

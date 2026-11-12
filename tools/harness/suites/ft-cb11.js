@@ -6,6 +6,9 @@
 // new package, letter version and programme version. Also: a course with Observations = No, seeded drafts, published, suspended,
 // retired, role checks and the section links.
 (async function () {
+  // FB1 (PD-FB1-03): this suite's deposit configuration, chosen explicitly where its fixture prepares a package for Finance — each new fee
+  // option "Allow Deposit: Yes" with the Academy default, through the Step 5 handler (an administrator's action; role checks apply).
+  const fb1Dep = p => { if (p && cb8Managed(p)) cb8Work(p).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: p.id, o: o.id, k: 'allow' }, checked: true })); };
   // DM-P (PD-DM-15): publishing a programme or version needs fee options by delivery mode, approved by Finance. Where a check isn't about
   // fees, this fixture takes the authorized Section 5 path first: the duration of a pre-builder course, a financial package, fee options by
   // delivery mode, a mode for each option (the Standard programme fee replaced by an option at the same fee), the Super Administrator's own approval (D8)
@@ -26,6 +29,7 @@
     });
     if (!cb8Work(pr).opts.some(o => o.status === 'Active' && !o.legacy && M_MODES.includes(o.mode))) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String((s4PlanCur(pr.id) || {}).fee || 2400); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); closeModal(); } // no option at all (a Level 3 package starts from the options in force): one at the plan's fee
     cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.pay.length).forEach(o => ACT.cb8PayAdd({ dataset: { p: pr.id, o: o.id, k: '1' } }));
+    fb1Dep(pr); // FB1: the fixture's fee options answer Allow Deposit (Yes) before the Super Administrator's own approval
     if (!(cb8Wf(pr) && cb8Wf(pr).status === 'Approved')) { ACT.cb8SaApprove({ dataset: { p: pr.id } }); rs(); }
     closeModal(); if (aca) { acaEnter(av); S.signedIn = true; } else setAdminIdentity(av); S.portal = po; return true;
   };
@@ -59,7 +63,7 @@
   let codeN = 0;
   const make = (o = {}) => {
     go('a-programmes'); ACT.chProgNew(); const n = ++codeN;
-    fill({ '#np-t': o.title || 'CB11 Level 3 course ' + n, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (5500 + n) + '/1', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
+    fill({ '#np-t': o.title || 'CB11 Level 3 course ' + n, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (5500 + n) + '/1', '#cbc3-dd-n': '6' /* FB2 (PD-FB2-01): the Course Duration is the payment duration — was 12 here with a separate 6-month payment duration */, '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
     (document.querySelector('#np-code') || {}).value = 'CB11C' + n; document.querySelector('#np-obs-' + (o.obs ? 'yes' : 'no')).checked = true;
     [{ l: 'Fully Assisted — standard', f: 2400, m: 'Fully Assisted' }, { l: 'Self-Paced — standard', f: 1800, m: 'Self-Paced' }].forEach((x, k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = x.l; r.querySelector('.r1-np-f').value = String(x.f); r.querySelector('.r1-np-m').value = x.m; });
     const pr = crT(ACT.cbDetCreate)(); closeModal(); return pr;
@@ -94,7 +98,7 @@
     const id = pr.id, [a, b] = cb8Work(pr).opts;
     if (obs) [[a, '70', '0'], [b, '100', '45.50']].forEach(([x, wp, off]) => { ACT.cb8Opt({ dataset: { p: id, o: x.id } }); document.querySelector('#modal-root #c8-wp').value = wp; document.querySelector('#modal-root #c8-off').value = off; press(); });
     const payTo = (oid, ks) => { const x = cb8Work(pr).opts.find(y => y.id === oid); x.pay.map(y => y.k).forEach(k => ACT.cb8PayDel({ dataset: { p: id, o: oid, k: String(k) } })); ks.forEach(k => ACT.cb8PayAdd({ dataset: { p: id, o: oid, k: String(k) } })); };
-    payTo(a.id, [1, 4, 6]); payTo(b.id, [1, 3]); return { a: a.id, b: b.id };
+    payTo(a.id, [1, 4, 6]); payTo(b.id, [1, 3]); fb1Dep(pr); /* FB1: both fee options Allow Deposit — Yes, the Academy default */ return { a: a.id, b: b.id };
   };
   // Section 6: offer letter Version 1 and 2 (with {{payment_terms}}), one more checklist item (a new checklist version)
   const documents = pr => {
@@ -104,7 +108,7 @@
     go('a-programmes', { id, tab: 'docs' }); ACT.s4CkAdd({ dataset: { p: id } }); fill({ '#ck-n': 'Care Certificate (if held)', '#ck-f': 'PDF' }); document.querySelector('#ck-m').value = '0'; reason('Optional prior learning');
   };
   const submitAndApprove = pr => {
-    go('a-programmes', { id: pr.id, tab: 'fees' }); ACT.cb8Submit({ dataset: { p: pr.id } }); if (MODAL) press();
+    go('a-programmes', { id: pr.id, tab: 'fees' }); fb1Dep(pr); ACT.cb8Submit({ dataset: { p: pr.id } }); if (MODAL) press();
     const qid = cb8Wf(pr).qid; FA(); go('a-queue', { id: qid }); ACT.e1Decide({ dataset: { id: qid, a: 'approve' } }); if (MODAL) reason('Checked against the price list'); return qid;
   };
   const batch = (pr, code) => {
@@ -126,12 +130,12 @@
     fresh(); ACA(); const pr = make({ obs: true }); P = { pr };
     ok('CB11-A Section 1: the Draft is created with Observations = Yes, course code and Level 3', !!pr && pr.status === 'Draft' && cbObsOf(pr) === true && !pr.code /* CR (PD-CR-06): no course code (was 'CB11C' + n) */ && pr.level === 'Level 3');
     rv(pr.id);
-    ok('CB11-A Review & Publish is one panel with a summary of all seven sections and an Open link for each (CBX: + Resources & Delivery)', qa('.cb-rv-sec').length === 7 && J(qa('.cb-rv-sec').map(x => x.dataset.sec)) === J(['details', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'delivery']) && qa('.cb-rv-sec [data-go="a-programmes"]').length === 7);
+    ok('CB11-A Review & Publish summarises the six configuration steps with an Open link for each (CBR PD-CBR-01: no Resources & Delivery)', qa('.cb-rv-sec').length === 6 && J(qa('.cb-rv-sec').map(x => x.dataset.sec)) === J(['details', 'curriculum', 'assessments', 'observations', 'payments', 'documents']) && qa('.cb-rv-sec .cb-rv-st [data-go="a-programmes"]').length === 6); // CBR-2: one Edit per step (the per-item Fix links are extra)
     ok('CB11-A the empty course is blocked, with blockers grouped under the sections that fix them (curriculum, observations, payments, documents)', /items? to fix before this programme can be published/.test(q('.cb-rv-state').textContent) && ['curriculum', 'documents', 'payments'].every(s => secs(pr).includes(s)), secs(pr));
-    ok('CB11-A each blocker has "Fix in Section N — name" going to that section\'s panel', qa('.cb-rv-todo .cb-rv-it').filter(li => /Blocking/.test(li.textContent)).every(li => { const b = li.querySelector('.cb-rv-fix'); return b && new RegExp('Fix in Section ' + cbRvN(li.dataset.sec)).test(b.textContent) && CB_ROUTE[b.dataset.tab][0] === li.dataset.sec; }));
+    ok('CB11-A each blocker has "Fix in Section N — name" going to that section\'s panel', qa('.cbr2-rvi .cb-rv-it') /* CBR-2 (PD-CBR2-07): under each step — was '.cb-rv-todo .cb-rv-it' */.filter(li => /Blocking/.test(li.textContent)).every(li => { const b = li.querySelector('.cb-rv-fix'); return b && b.textContent.trim() === 'Fix in ' + cbRvName(li.dataset.sec) /* CBC3: the step's name — was "Fix in Section N — name" */ && CB_ROUTE[b.dataset.tab][0] === li.dataset.sec; }));
     ok('CB11-A Publish is disabled while anything blocks; the nav badges the sections to fix and "N blocking" on Review', q('[data-act="cbPublish"]').disabled && /blocking/.test(q('.cb-sec[data-tab="review"]').textContent) && !!q('.cb-sec[data-tab="documents"] .cb-badge.bad'));
     const lnk = qa('.cb-rv-fix').find(b => b.dataset.tab === 'letter'); lnk.click();
-    ok('CB11-A clicking "Fix in Section 6" opens Offer Letter & Documents → Offer letter', !!q('.cb-sec.cur[data-tab="documents"]') && q('.cb-panels .tab[aria-selected="true"]').textContent === 'Offer letter');
+    ok('CB11-A clicking "Fix in Section 6" opens Offer Letter & Documents → Offer letter', !!q('.cb-sec.cur[data-tab="documents"]') && q('.cb-body').dataset.panel === 'letter'); // CBR: the letter area of Offer Letters
     const a0 = ADMIN.audit.length; ACT.cbPublish({ dataset: { id: pr.id } });
     ok('CB11-A (negative) Publish called directly while blocked: refused by the existing action (logged), stays Draft', pr.status === 'Draft' && blocked(a0, /publish/)); closeModal();
 
@@ -142,16 +146,16 @@
     rv(pr.id);
     ok('CB11-A only the Finance approval is left, under Fees & Payments ("not yet sent to Finance")', secs(pr) === 'payments' && blockers(pr).length === 1 && /not yet sent to Finance/.test(blockers(pr)[0].msg), J(blockers(pr).map(x => x.msg)));
     const sum = k => q(`.cb-rv-sec[data-sec="${k}"]`).textContent;
-    ok('CB11-A summary — details: course, code, qualification number, 6 months, Observations Yes', /Awarding body course code/.test(sum('details')) /* CR (PD-CR-06): was /CB11C/ */ && /QN 610\//.test(sum('details')) && /6 months/.test(sum('details')) && /Yes/.test(sum('details')));
+    ok('CB11-A summary — details: course, code, qualification number, 6 months, Observations Yes', /Awarding body course code/.test(sum('details')) /* CR (PD-CR-06): was /CB11C/ */ && /QN 610\//.test(sum('details')) && /Course Duration\s*6 months/.test(sum('details')) && /Payment dates spread across\s*6 months/.test(sum('payments')) && /Yes/.test(sum('details'))); // FB2 (PD-FB2-03): one duration — the Course Duration in details, named under fees (CBC3/CBC4: Display Duration 12 months in details, Payment Schedule Duration 6 months under fees)
     ok('CB11-A summary — curriculum: 1 unit · 1 module · 2 Learning Outcomes · 3 criteria; Knowledge 1 · Observation 1', /1 unit · 1 module · 2 Learning Outcomes · 3 criteria/.test(sum('curriculum')) && /Knowledge 1 · Observation 1/.test(sum('curriculum')), sum('curriculum'));
     ok('CB11-A summary — assessments: 1 assignment, 1 published, with References; knowledge criteria covered 1 of 1', /1 assignment — 1 published, 0 draft · 1 with References/.test(sum('assessments')) && /1 of 1/.test(sum('assessments')), sum('assessments'));
     ok('CB11-A summary — observations: workplace and Academy office, two required observation events named, NVQ criteria covered 2 of 2, 1 Academy criterion', /Workplace · Academy office/.test(sum('observations')) && /2 observation events — Observation 1 — moving and handling · Observation 2 — communication/.test(sum('observations')) && /2 of 2/.test(sum('observations')), sum('observations'));
-    ok('CB11-A summary — fees: both options with mode, fee, workplace and office fees (£0 shown) and payment choices; deposit', /Fully Assisted — standard · Fully Assisted · £2,400\.00 · observation fee workplace £70\.00, Academy office £0\.00 · Pay in full, 4 payments, 6 payments/.test(sum('payments')) && /Self-Paced — standard · Self-Paced · £1,800\.00 · observation fee workplace £100\.00, Academy office £45\.50 · Pay in full, 3 payments/.test(sum('payments')) && /Academy default deposit/.test(sum('payments')), sum('payments'));
+    ok('CB11-A summary — fees: both options with mode, fee, workplace and office fees (£0 shown) and payment choices; deposit', /Fully Assisted — standard · Fully Assisted · £2,400\.00 · observation fee workplace £70\.00, Academy office £0\.00 · Pay in full, 4 payments, 6 payments/.test(sum('payments')) && /Self-Paced — standard · Self-Paced · £1,800\.00 · observation fee workplace £100\.00, Academy office £45\.50 · Pay in full, 3 payments/.test(sum('payments')) && /Deposit\s*Fully Assisted — standard: Academy default deposit \(£300\.00\) · Self-Paced — standard: Academy default deposit \(£300\.00\)/.test(sum('payments')) /* FB1 (PD-FB1-03): each option's own answer, chosen explicitly in this suite's fees step (Yes — the Academy default) — was the inherited "Academy default deposit" */, sum('payments'));
     ok('CB11-A summary — documents: letter Version 2, checklist version 2 with one more (optional) document', /Version 2/.test(sum('documents')) && /Checklist version 2 · 7 documents \(6 mandatory\)/.test(sum('documents')), sum('documents'));
     ok('CB11-A observations: two events → state "Complete"; Section 5 "1 to fix"', /Complete/.test(q('.cb-rv-sec[data-sec="observations"] .cb-rv-st').textContent) && /1 to fix/.test(q('.cb-rv-sec[data-sec="payments"] .cb-rv-st').textContent));
 
     // Finance: submitted by the Academic Admin, approved by a Finance Admin; terms locked while pending
-    go('a-programmes', { id: pr.id, tab: 'fees' }); ACT.cb8Submit({ dataset: { p: pr.id } }); if (MODAL) press(); const qid = cb8Wf(pr).qid;
+    go('a-programmes', { id: pr.id, tab: 'fees' }); fb1Dep(pr); ACT.cb8Submit({ dataset: { p: pr.id } }); if (MODAL) press(); const qid = cb8Wf(pr).qid;
     rv(pr.id); ok('CB11-A waiting for Finance: blocker "Payment terms waiting for Finance review (AQ-…)" and the summary says so', /waiting for Finance review/.test(blockers(pr).map(x => x.msg).join()) && /Waiting for Finance review/.test(q('.cb-rv-sec[data-sec="payments"]').textContent));
     const a1 = ADMIN.audit.length; ACT.cb8PayAdd({ dataset: { p: pr.id, o: P.a, k: '2' } }); ok('CB11-A (negative) the terms are locked while Finance reviews (refused, logged)', blocked(a1) && J(cb8Work(pr).opts[0].pay.map(x => x.k)) === '[1,4,6]');
     FA(); go('a-queue', { id: qid }); ACT.e1Decide({ dataset: { id: qid, a: 'approve' } }); if (MODAL) reason('Checked against the price list');
@@ -194,9 +198,9 @@
     ACA(); go('a-programmes', { id: pr.id, tab: 'letter' }); ACT.chLetterUp({ dataset: { id: pr.id } }); ACT.chLetterSample(); reason('Version 3');
     ACT.s3WizVersion({ dataset: { id: pr.id } }); reason('2028 changes'); go('a-programmes', { id: pr.id, tab: 'structure' });
     add8('ch8AddUnit', { id: pr.id }, { '#u-c': 'U9' + codeN, '#u-t': 'Reflective practice' }); add8('ch8AddMod', { id: pr.id, u: 1 }, { '#m-t': 'Reflection', '#m-ab': 'R/651/9' + codeN }); add8('ch8AddLo', { id: pr.id, u: 1, m: 0 }, { '#lo-t': 'Reflect on practice', '#lo-y': 'Knowledge' });
-    rv(pr.id); ok('CB11-C a draft version is reviewed as "Version 2 (draft)" with "Publish version 2"', /Version 2 \(draft\)/.test(q('.cb-rv h2').textContent) && /Publish version 2/.test(q('[data-act="cbPublish"]').textContent));
+    rv(pr.id); ok('CB11-C a draft version is reviewed as "Version 2 (draft)" with "Publish version 2"', /Publishing Version 2/.test(q('.cb-rv-pub h3').textContent) /* CBR-2 (PD-CBR2-07): the list has no own title — was the h2 "Review & publish — Version 2 (draft)" */ && /Publish version 2/.test(q('[data-act="cbPublish"]').textContent));
     ok('CB11-C (negative) the new version must record the observation answer again (N5a): one blocker, fixed in Section 1 — Course Details', blockers(pr).length === 1 && blockers(pr)[0].sec === 'details' && q('[data-act="cbPublish"]').disabled, J(blockers(pr).map(x => x.msg)));
-    go('a-programmes', { id: pr.id, tab: 'details' }); document.querySelector('main #np-obs-yes').checked = true; ACT.cbObsSave({ dataset: { id: pr.id } });
+    go('a-programmes', { id: pr.id, tab: 'details' }); { const b = document.querySelector('main #cbr2-obs-yes'); b.checked = true; INP.cbr2Obs(b); } // CBC1 (CBR-01): the explicit Yes — CBR-2 (PD-CBR2-02): the checkbox — was the Yes radio and Save observation answer
     rv(pr.id); ok('CB11-C answered Yes for Version 2: nothing blocks', !blockers(pr).length, J(blockers(pr).map(x => x.msg)));
     ACT.cbPublish({ dataset: { id: pr.id } }); reason('Version 2'); ok('CB11-C Version 2 published from Review & Publish', pr.version === 2 && !pr.nextDraft, J(blockers(pr).map(x => x.msg)) + ' ' + (MODAL ? MODAL.title : '') + ' ' + ADMIN.audit[0].action);
     ok('CB11-C learners keep their signup (letter Version 2 signed copy, programme version, pinned terms) and their payment rows exactly', J({ s: P.wA.signup, p: P.wA.plans }) === snapA && J({ s: P.wF.signup, p: P.wF.plans }) === snapF);
@@ -207,7 +211,7 @@
   await T('CB11-D Observations = No', async () => {
     fresh(); ACA(); const pr = make({ obs: false }); structure(pr, false); author(pr, 'CB11 No-obs assignment'); fees(pr, false); documents(pr);
     rv(pr.id);
-    ok('CB11-D Observations section: "Not applicable" in the summary; no observation blockers', /Not applicable/.test(q('.cb-rv-sec[data-sec="observations"]').textContent) && !blockers(pr).some(x => x.sec === 'observations'));
+    ok('CB11-D Observations section: left out of the list (not required); no observation blockers', !q('.cb-rv-sec[data-sec="observations"]') && !blockers(pr).some(x => x.sec === 'observations')); // CBR-2 (PD-CBR2-07): was a "Not applicable" summary
     ok('CB11-D fees: no observation fee is listed for either option', !/observation fee/.test(q('.cb-rv-sec[data-sec="payments"]').textContent));
     submitAndApprove(pr); ACA(); rv(pr.id);
     ok('CB11-D after Finance approval: ready, and publishes from Review & Publish', !blockers(pr).length && (ACT.cbPublish({ dataset: { id: pr.id } }), reason('Go'), pr.status === 'Active'));
@@ -225,7 +229,7 @@
     SA(); ok('CB11-E once Finance sets a plan in force, only the fee options by delivery mode remain (DM-P, PD-DM-15)', !!s4PlanCur('NV-L3D') && blockers(L3D).length > 0 && blockers(L3D).every(x => /Fee option/.test(x.msg)), J(blockers(L3D).map(x => x.msg))); dmpComply('NV-L3D');
     SA(); ok('CB11-E …with them approved, the seeded Draft publishes', !!s4PlanCur('NV-L3D') && !blockers(L3D).length && (ACT.cbPublish({ dataset: { id: 'NV-L3D' } }), reason('Ready'), L3D.status === 'Active'), J(blockers(L3D).map(x => x.msg)));
     rv('NV-L3'); ok('CB11-E published seeded NV-L3: nothing to publish; "Create new version" (newProgVersion)', /Version \d is published/.test(q('.cb-rv-state').textContent) && !!q('[data-act="newProgVersion"]') && !q('[data-act="cbPublish"]'));
-    rv('NV-L3O'); ok('CB11-E retired NV-L3O: a read-only summary, no publish or new-version button', /Retired — a read-only historical record/.test(q('.cb-rv-state').textContent) && !q('[data-act="cbPublish"]') && !q('[data-act="newProgVersion"]') && qa('.cb-rv-sec').length === 7);
+    rv('NV-L3O'); ok('CB11-E retired NV-L3O: a read-only summary, no publish or new-version button', /Retired — a read-only historical record/.test(q('.cb-rv-state').textContent) && !q('[data-act="cbPublish"]') && !q('[data-act="newProgVersion"]') && qa('.cb-rv-sec').length === 6); // CBR: six configuration steps
     const a1 = ADMIN.audit.length; ACT.cbPublish({ dataset: { id: 'NV-L3O' } }); ok('CB11-E (negative) cbPublish on a retired programme: refused, logged', cbPr('NV-L3O').status === 'Retired' && blocked(a1, /retired/));
     rv('NV-L4'); ok('CB11-E suspended NV-L4: summary shown, "(programme Suspended)", status unchanged', /programme Suspended/.test(q('.cb-rv-state').textContent) && cbPr('NV-L4').status === 'Suspended');
     BA(); go('a-programmes', { id: 'NV-N1', tab: 'review' }); const a2 = ADMIN.audit.length; ACT.cbPublish({ dataset: { id: 'NV-N1' } });

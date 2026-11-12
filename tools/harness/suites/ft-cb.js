@@ -46,11 +46,11 @@
   const LEARNER = () => { S.variant = 'A'; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; };
   const open = (id, tab) => go('a-programmes', tab ? { id, tab } : { id });
   const cur = () => (q('.cb-sec.cur') || {}).dataset ? q('.cb-sec.cur').dataset.tab : null;
-  const pan = () => { const p = q('.cb-panels .tab[aria-selected="true"]'); return p ? p.dataset.tab : null; };
+  const pan = () => { const b = q('.cb-body'); return b ? b.dataset.panel || null : null; }; // CBR (PD-CBR-01): no panel tabs — the route's area within the step
   const oldNav = () => qa('.subtabs, ol.ch8-steps, .ch-nav').length;
   const blocked = (a0, re) => ADMIN.audit.slice(0, ADMIN.audit.length - a0).some(x => /^Blocked/.test(x.action) && (!re || re.test(x.action)));
   const state = () => JSON.stringify({ p: ADMIN.programmes.map(p => [p.id, p.status, p.version, !!p.nextDraft, p.title]), t: STORE.chProgTree, d: STORE.s3 && STORE.s3.drafts, l: STORE.chLetters, s: chSupports(), r1: STORE.r1, ck: STORE.s4 && STORE.s4.lists, n5: STORE.n5 && STORE.n5.draft });
-  const SECS = ['details', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'delivery', 'review']; // CBX (PD-CBX-01): Section 7 Resources & Delivery
+  const SECS = ['details', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'review']; // CBR (PD-CBR-01) supersedes CBX's eight sections: seven steps, Resources & Delivery folded into Curriculum
   const WRITE = CB_WRITE.concat(CB_HIDE_RO);
 
   await T('CB1-A create-programme entry point', async () => {
@@ -61,9 +61,9 @@
     SYS(); go('a-programmes'); q('[data-act="chProgNew"]').click();
     ok('CB1-A "New NVQ programme" opens Section 1 — Course Details of an unsaved course (no dialog, no "Step 1 of 6")', !MODAL && S.params.id === 'new' && cur() === 'details' && !/Step 1 of/.test(main()));
     const set = (s, v) => { const e = document.querySelector(s); e.value = v; e.dispatchEvent(new Event('change', { bubbles: true })); };
-    set('#np-l', 'Level 4'); set('#np-t', 'Level 4 CB1 programme'); set('#np-r', 'QN 610/7777/1'); set('#np-d', '12'); set('#np-du', 'months'); set('#np-p', '2400'); dmpPrice(); /* DM (PD-DM-01): no modes-offered field — was q('.cr-dm-c').click() */ q('#np-obs-no').click(); // CR (PD-CR-06, PD-CR-01): no course code; the modes offered are required
+    set('#np-l', 'Level 4'); set('#np-t', 'Level 4 CB1 programme'); set('#np-r', 'QN 610/7777/1'); set('#np-d', '12'); set('#cbc3-dd-n', '12'); set('#np-du', 'months'); set('#np-p', '2400'); dmpPrice(); /* DM (PD-DM-01): no modes-offered field — was q('.cr-dm-c').click() */ q('#np-obs-no').click(); // CR (PD-CR-06, PD-CR-01): no course code; the modes offered are required
     q('[data-act="cbDetCreate"]').click(); const pr = (STORE.chNewProgs || []).slice(-1)[0];
-    ok('CB1-A "Save and continue" opens the new programme in the course builder (Curriculum, as before), eight sections (CBX), Draft, Version 1', !!pr && pr.title === 'Level 4 CB1 programme' && S.params.id === pr.id && cur() === 'curriculum' && qa('.cb-nav .cb-sec').length === 8 && /Draft/.test(q('.page-h').textContent) && /Version 1/.test(q('.page-h').textContent));
+    ok('CB1-A "Save and continue" opens the new programme in the course builder (Curriculum, as before), seven steps (CBR; Observations hidden — the course has none), Draft, Version 1', !!pr && pr.title === 'Level 4 CB1 programme' && S.params.id === pr.id && cur() === 'curriculum' && qa('.cb-nav .cb-sec').length === 6 && /Draft/.test(q('.page-h').textContent) && /Version 1/.test(q('.page-h').textContent));
     ok('CB1-A header: title, level, reference, status, version and "Version history"', q('.page-h h1').textContent === pr.title && /Level 4/.test(q('.page-h').textContent) && /QN 610\/7777\/1/.test(q('.page-h').textContent) && !!q('.page-h [data-tab="versions"]'));
     ok('CB1-A no old step bar or tab bar anywhere', oldNav() === 0);
     q('.cb-sec[data-tab="details"]').click(); ok('CB1-A Course Details: the details form, editable while Draft (CB2: "Save details" / "Save and continue")', cur() === 'details' && !!q('#np-t') && !!q('[data-act="cbDetSave"]'));
@@ -78,28 +78,29 @@
     ['NV-L2', 'NV-L3', 'NV-L4', 'NV-L5'].forEach(id => {
       const pr = s3Pr(id); open(id);
       // CB4 (PD-CB-26) supersedes "Hierarchy" (the S3 card title): one curriculum editor for every programme, titled "Curriculum structure"
-      ok(`CB1-B ${id} (${pr.status}): the list link opens the course builder on Curriculum (the curriculum hierarchy)`, cur() === 'curriculum' && pan() === 'structure' && /Curriculum structure/.test(main()) && !!q('.cb-cur-tree'));
-      const seen = SECS.map(k => { q(`.cb-sec[data-tab="${k}"]`).click(); return cur() === k && q('.cb-sec.cur').getAttribute('aria-current') === 'page' && main().trim().length > 200 && !/undefined|We can't find that page/.test(main()) && oldNav() === 0; });
+      ok(`CB1-B ${id} (${pr.status}): the list link opens the course builder on Curriculum (the curriculum hierarchy)`, cur() === 'curriculum' && pan() === 'structure' && !!q('#cbr-resources') && !!q('.cb-cur-tree')); // CBR-2 (PD-CBR2-03): Programme Resources then the tree — was the "Curriculum structure" heading
+      const seen = SECS.map(k => { q(`.cb-sec[data-tab="${k}"]`).click(); return cur() === k && q('.cb-sec.cur').getAttribute('aria-current') === 'step' /* CBR: a step bar */ && main().trim().length > 200 && !/undefined|We can't find that page/.test(main()) && oldNav() === 0; });
       ok(`CB1-B ${id}: each of the seven sections opens by clicking, current and marked, with content, no old navigation`, seen.every(Boolean), seen.join());
     });
     // CB2 (PD-CB-15) supersedes "says editing arrives in CB2": seeded programmes' details stay read-only and say why
-    open('NV-L3', 'details'); ok('CB1-B published seeded Course Details: read-only (no inputs) with the reason; nothing promised for CB2', !qa('.cb-body input, .cb-body select, .cb-body textarea').length && /existed before the course builder are read-only/.test(q('.cb-body').textContent) && !/planned for CB2/.test(main()) && /QN 603\/2851\/9/.test(main()));
+    open('NV-L3', 'details'); ok('CB1-B published seeded Course Details: read-only (no inputs) with the reason; nothing promised for CB2', !qa('.cb-body input:not([disabled]), .cb-body select:not([disabled]), .cb-body textarea:not([disabled])').length /* CBR-2: the observation checkbox is shown disabled */ && /set up before the course builder/.test(q('.cb-body').textContent) /* CBC3: shortened — was "existed before the course builder are read-only" */ && !/planned for CB2/.test(main()) && /QN 603\/2851\/9/.test(main()));
     // CB5 (PD-CB-34) supersedes the read-only list ("authoring arrives in CB5", "Open" → Assignments & Criteria Mapping): assignments are
     // authored in Section 3; "Open" opens the assignment in place
-    open('NV-L3', 'assessments'); ok('CB1-B Assessments: the programme\'s assignments listed with New assignment; not marked read-only for the Super Admin; nothing promised for CB5', qa('.cb-assess tbody tr').length >= 5 && !!q('.cb-assess [data-act="cbAsgNew"]') && !/planned for CB5/.test(main()) && !/Read-only/.test(q('.cb-sec[data-tab="assessments"]').textContent)); // CBX: sections carry a state badge now; the point is "not read-only"
-    q('.cb-assess [data-act="cbAsgOpen"][data-id]').click(); ok('CB1-B …"Open" opens that assignment in Section 3 (Details, Questions, Criteria mapping)', S.route === 'a-programmes' && !!q('.cb-asg-ed') && qa('.cb-asg-tabs .tab').length === 3 && !/We can't find that page/.test(main()));
+    open('NV-L3', 'assessments'); ok('CB1-B Assessments: the programme\'s assignments listed with New assignment; not marked read-only for the Super Admin; nothing promised for CB5', qa('.cbr-asgs details.cbr2-a').length >= 5 /* CBR-2 (PD-CBR2-04): each assessment in place — was '.cbr-ai' rows */ && !!q('.cbr-asgs [data-act="cbrAsgNew"]') /* CBR (PD-CBR-05): listed by scope, Add Assessment */ && !/planned for CB5/.test(main()) && !/Read-only/.test(q('.cb-sec[data-tab="assessments"]').textContent)); // CBX: sections carry a state badge now; the point is "not read-only"
+    // CBR-2 (PD-CBR2-04) supersedes "Open" with three tabs: the assessment opens in place with its questions, answer keys, mapping and documents
+    const a1 = q('.cbr-asgs details.cbr2-a'); a1.open = true; ok('CB1-B …an assessment opens in place in Section 3 (questions, answer keys, criteria mapping, documents), no tabs', S.route === 'a-programmes' && !!a1.querySelector('.cbr2-q') && !!a1.querySelector('.cbr2-map') && !!a1.querySelector('.cbr2-docs') && !q('.cb-asg-tabs') && !/We can't find that page/.test(main()));
   });
 
   await T('CB1-C existing drafts', async () => {
     fresh(); SA(); open('NV-L3D', 'observations');
-    ok('CB1-C seeded Draft (NV-L3D): Draft chip; Observations editable (Edit settings); the version bar says Draft and links to Review & Publish', /Draft/.test(q('.page-h').textContent) && !!q('.cb-body [data-act="n5Settings"]') && !!q('.cb-ver [data-tab="review"]') /* CB12 (PD-CB-79): was the version area's own "Publish programme" (kPubProg); publishing is in Section 7 */);
+    ok('CB1-C seeded Draft (NV-L3D): Draft chip; Observations asks for the Course Details answer first (CBR PD-CBR-07: locations are switched on the step once it is answered); the version bar says Draft and links to Review & Publish', /Draft/.test(q('.page-h').textContent) && !!q('.cb-body [data-go][data-tab="details"]') && /Does this course contain observations/.test(q('.cb-body').textContent) && !!q('.cb-ver [data-tab="review"]') /* CB12 (PD-CB-79): was the version area's own "Publish programme" (kPubProg); publishing is in Section 7 */);
     ok('CB1-C …the observation blocker is shown on the section that fixes it (Course Details — the Yes/No answer) and on Review', /* CB11 (PD-CB-73): was the Observations section badge */ !!q('.cb-sec[data-tab="details"] .cb-badge.bad') && !!q('.cb-sec[data-tab="review"] .cb-badge.bad'));
-    q('.cb-sec[data-tab="review"]').click(); ok('CB1-C …Review & Publish lists the observation check under Before publishing with a link to fix it', /* CB11 (PD-CB-73): was "Observation checks for Version 1" and "planned for CB11" */ /Before publishing/.test(main()) && /Blocking/.test(q('.cb-body').textContent) && /choose whether observation is required/i.test(q('.cb-rv-todo').textContent) && !!q('.cb-rv-fix') && !/planned for CB11/.test(main()));
+    q('.cb-sec[data-tab="review"]').click(); ok('CB1-C …Review & Publish lists the observation check under Before publishing with a link to fix it', /* CB11 (PD-CB-73): was "Observation checks for Version 1" and "planned for CB11" */ /* CBR-2 (PD-CBR2-07): under the Observations step — was the Before publishing group */ /Blocking/.test(q('.cb-body').textContent) && /choose whether observation is required/i.test(q('.cbr2-rv').textContent) && !!q('.cb-rv-fix') && !/planned for CB11/.test(main()));
     SYS(); open('NV-N1');
     ok('CB1-C new-programme Draft (NV-N1): opens on Course Details (as before) with its form', cur() === 'details' && !!q('#np-t'));
     const has = (sec, panel, acts) => { open('NV-N1', panel || sec); return acts.every(a => !!q(`.cb-body [data-act="${a}"]`)); };
     ok('CB1-C …Curriculum keeps Add unit / module / Learning Outcome / criterion', has('curriculum', 'structure', ['ch8AddUnit', 'ch8AddMod', 'ch8AddLo', 'ch8AddCrit']));
-    ok('CB1-C …Observations keeps Edit settings', has('observations', 'obs', ['n5Settings']));
+    ok('CB1-C …Observations: the locations are switched on the step (CBR PD-CBR-07 supersedes Edit settings), or it asks for the Course Details answer first', has('observations', 'obs', []) && (!!q('.cb-body [data-act="cbrObsLoc"]') || !!q('.cb-body [data-tab="details"]')));
     ok('CB1-C …Fees & Payments: its existing Payment plan step (NV-N1 predates E1 terms: read-only, set by Finance or the Super Admin, as before)', has('payments', 'plan', []) && !!q('.e1-plan .e1-sumbox') && /Set by Finance or the Super Admin/.test(q('.e1-plan').textContent));
     // CB3 (PD-CB-22) supersedes "ch8SaveDocs": the Required enrolment documents list (s4CkAdd) is the one checklist editor
     ok('CB1-C …Offer Letter & Documents: Upload offer letter, and the document checklist', has('documents', 'letter', ['chLetterUp']) && has('documents', 'docs', ['s4CkAdd']));
@@ -109,23 +110,23 @@
   await T('CB1-D published programme', async () => {
     fresh(); SA(); open('NV-L3', 'curriculum');
     ok('CB1-D published (NV-L3): Active, Version 2, "Create new version" in the version area', /Active/.test(q('.page-h').textContent) && /Version 2/.test(q('.page-h').textContent) && !!q('.cb-ver [data-act="newProgVersion"]'));
-    open('NV-L3', 'observations'); ok('CB1-D Observations read-only for the published version (no edit controls)', !!q('.n5-head') && !q('[data-act="n5Settings"], [data-act="n5IaEdit"], [data-act="n5NvqEv"]'));
-    open('NV-L3', 'payments'); ok('CB1-D Fees & Payments: Fee options first, then Payment plan, then Observation fee rate', qa('.cb-panels .tab').map(t => t.dataset.tab).join() === 'fees,plan,support' && pan() === 'fees' && !!q('.r1-opts [data-act="r1OptAdd"]'));
-    q('.cb-panels [data-tab="plan"]').click(); ok('CB1-D Payment plan: the plan in force read-only (version and payment summary), owned by Finance', !!q('.cb-plan .e1-sum') && /Version \d+ in force/.test(q('.cb-plan').textContent) && /Finance → Payment Plans/.test(q('.cb-plan').textContent) && !/planned for CB/.test(q('.cb-plan').textContent) /* CB12 (PD-CB-81): was "planned for CB8" — the placeholder is removed */ && !qa('.cb-plan input').length);
-    q('.cb-panels [data-tab="support"]').click(); ok('CB1-D Observation fee rate: the existing control (Fully assisted selected)', document.querySelector('input[name="ch-sup"][value="Fully assisted"]').checked && !!q('[data-act="chSupSave"]'));
+    open('NV-L3', 'observations'); ok('CB1-D Observations read-only for the published version (no edit controls)', !!q('.cbr-obs') /* CBR: the observation page */ && !q('[data-act="n5Settings"], [data-act="n5IaEdit"], [data-act="n5NvqEv"], [data-act="cbrObsLoc"]:not([disabled]), [data-act="ol1Sel"]'));
+    open('NV-L3', 'payments'); { const t = q('.cb-body').innerHTML, at = k => t.indexOf(k); ok('CB1-D Fees & Payments: Fee options first, then Payment plan, then Observation fee rate (one page, CBR PD-CBR-01)', !q('.cb-panels') && at('r1-opts') >= 0 && at('r1-opts') < at('cb-plan') && at('cb-plan') < at('name="ch-sup"') && pan() === 'fees' && !!q('.r1-opts [data-act="r1OptAdd"]')); }
+    ok('CB1-D Payment plan: the plan in force read-only (version and payment summary), owned by Finance', !!q('.cb-plan .e1-sum') && /Version \d+ in force/.test(q('.cb-plan').textContent) && /Finance → Payment Plans/.test(q('.cb-plan').textContent) && !/planned for CB/.test(q('.cb-plan').textContent) /* CB12 (PD-CB-81): was "planned for CB8" — the placeholder is removed */ && !qa('.cb-plan input').length);
+    ok('CB1-D Observation fee rate: the existing control (Fully assisted selected)', document.querySelector('input[name="ch-sup"][value="Fully assisted"]').checked && !!q('[data-act="chSupSave"]'));
     open('NV-L3', 'documents'); ok('CB1-D Offer Letter & Documents: offer letter current version and Upload new version', pan() === 'letter' && /Current version/.test(main()) && !!q('[data-act="chLetterUp"]'));
-    q('.cb-panels [data-tab="docs"]').click(); ok('CB1-D …Enrolment documents: the programme\'s versioned checklist with Add item', !!q('.s4-ck') && !!q('[data-act="s4CkAdd"]'));
+    open('NV-L3', 'docs'); ok('CB1-D …Enrolment documents: the programme\'s versioned checklist with Add item', !!q('.s4-ck') && !!q('[data-act="s4CkAdd"]'));
     // CB3 (PD-CB-20) supersedes the CB1 "no separate learner contract yet" card: the client confirmed the course contract IS the offer letter
-    q('.cb-panels [data-tab="letter"]').click(); ok('CB1-D …the offer letter is stated as the course contract; no separate contract card', !q('.cb-contract') && /This offer letter is the course contract/.test(q('.cb-contract-note').textContent) && !/Learner contract/.test(main()));
+    open('NV-L3', 'letter'); ok('CB1-D …the offer letter is stated as the course contract; no separate contract card', !q('.cb-contract') && /This offer letter is the course contract/.test(q('.cb-contract-note').textContent) && !/Learner contract/.test(main()));
     open('NV-L3', 'review'); ok('CB1-D Review & Publish: says Version 2 is published and how to change it', /Version 2 is published/.test(q('.cb-body').textContent));
     q('.page-h [data-tab="versions"]').click(); ok('CB1-D Version history: the versions with the current one, and a way back', /Version 2 \(current\)/.test(main()) && !q('.cb-nav') && !!q('.cb-sh [data-tab="curriculum"]'));
     q('.cb-sh [data-tab="curriculum"]').click(); ok('CB1-D …"Back to the course builder" returns to Curriculum', cur() === 'curriculum');
-    SA(); const pr = (() => { go('a-programmes'); ACT.chProgNew(); const f = (s, v) => { document.querySelector(s).value = v; }; f('#np-t', 'Level 3 CB1 options'); f('#np-l', 'Level 3'); INP.r1NpLevel(document.querySelector('#np-l')); f('#np-r', 'QN 603/7777/3'); f('#np-d', '6'); f('#np-du', 'months'); const r = document.querySelector('main .r1-np-row'); r.querySelector('.r1-np-l').value = 'Self-Paced'; r.querySelector('.r1-np-f').value = '1800'; r.querySelector('.r1-np-m').value = 'Self-Paced'; document.querySelector('#np-obs-yes').checked = true; (document.querySelector('#np-code') || {}).value = 'CB1-L3'; crT(ACT.cbDetCreate)(); return (STORE.chNewProgs || []).slice(-1)[0]; })(); // CB2 (PD-CB-14): the Course Details page, not the dialog
+    SA(); const pr = (() => { go('a-programmes'); ACT.chProgNew(); const f = (s, v) => { document.querySelector(s).value = v; }; f('#np-t', 'Level 3 CB1 options'); f('#np-l', 'Level 3'); INP.r1NpLevel(document.querySelector('#np-l')); f('#np-r', 'QN 603/7777/3'); f('#np-d', '6'); f('#cbc3-dd-n', '12'); f('#np-du', 'months'); const r = document.querySelector('main .r1-np-row'); r.querySelector('.r1-np-l').value = 'Self-Paced'; r.querySelector('.r1-np-f').value = '1800'; r.querySelector('.r1-np-m').value = 'Self-Paced'; document.querySelector('#np-obs-yes').checked = true; (document.querySelector('#np-code') || {}).value = 'CB1-L3'; crT(ACT.cbDetCreate)(); return (STORE.chNewProgs || []).slice(-1)[0]; })(); // CB2 (PD-CB-14): the Course Details page, not the dialog
     // CB8 (PD-CB-48) supersedes the panels "plan, fees, support" and the R1 options card for a new programme: "Fees & payment options"
     // (one card per fee option, with its observation fees and payment options), "Financial versions", and the legacy rate
-    open(pr.id, 'payments'); ok('CB1-D new Level 3 programme: Fees & Payments shows its fee options and its financial history (with the observation fee rate, CBX PD-CBX-04)', qa('.cb-panels .tab').map(t => t.dataset.tab).join() === 'fees,payhist');
-    q('.cb-panels [data-tab="fees"]').click(); ok('CB1-D …its fee option is a card with its ID', !!q('.cb8-opt') && main().includes(pr.id + '-FO-001'));
-    q('.cb-panels [data-tab="payhist"]').click(); document.querySelector('input[name="ch-sup"][value="Self-paced"]').checked = true; ACT.chSupSave({ dataset: { id: pr.id } }); reason('CB1 rate');
+    open(pr.id, 'payments'); ok('CB1-D new Level 3 programme: Fees & Payments shows its fee options and, folded, its financial history (with the observation fee rate) — CBR PD-CBR-01', !!q('.cb8-sec') && !!q('#cbr-fhist') && !q('.cb-panels'));
+    ok('CB1-D …its fee option is a card with its ID', !!q('.cb8-opt') && main().includes(pr.id + '-FO-001'));
+    document.querySelector('input[name="ch-sup"][value="Self-paced"]').checked = true; ACT.chSupSave({ dataset: { id: pr.id } }); reason('CB1 rate');
     ok('CB1-D …the observation fee rate it was silently given can now be seen and changed (audited), in the same store CH-38 reads', chSupportOf(pr.id) === 'Self-paced' && chFeeAmt(chSupportOf(pr.id)) === 100 && ADMIN.audit[0].action === 'Support type changed');
   });
 
@@ -150,16 +151,16 @@
 
   await T('CB1-F navigation between sections and panels', async () => {
     fresh(); SA(); open('NV-L3', 'details');
-    const walk = []; for (let i = 0; i < 7; i++) { q('.cb-foot .btn-primary').click(); walk.push(cur()); } // CBX: eight sections
-    ok('CB1-F the "next" button walks the eight sections in order', walk.join() === SECS.slice(1).join(), walk.join());
-    ok('CB1-F …no "next" on the last section; "previous" goes back', !q('.cb-foot .btn-primary') && (q('.cb-foot .btn').click(), cur() === 'delivery'));
-    open('NV-L3', 'curriculum'); q('.cb-panels [data-tab="types"]').click(); ok('CB1-F a panel switches within its section', cur() === 'curriculum' && pan() === 'types' && /Assessment types/.test(q('.cb-body').textContent));
+    const walk = []; for (let i = 0; i < 6; i++) { q('.cb-foot .btn-primary').click(); walk.push(cur()); } // CBR: seven steps
+    ok('CB1-F the "next" button walks the seven steps in order', walk.join() === SECS.slice(1).join(), walk.join());
+    ok('CB1-F …no "next" on the last section; "previous" goes back', !q('.cb-foot .btn-primary') && (q('.cb-foot .btn').click(), cur() === 'documents'));
+    open('NV-L3', 'types'); ok('CB1-F an area opens within its step (CBR PD-CBR-01: assessment types are in Assessments, opened)', cur() === 'assessments' && pan() === 'types' && !!q('#cbr-types .cbr2-tbox') /* CBR-2 (PD-CBR2-04): Manage Types open in place — was a fold */ && /Assessment types/i.test(q('.cb-body').textContent));
     ok('CB1-F the address follows the section or panel (old links stay meaningful)', location.hash === '#a-programmes.NV-L3.types');
   });
 
   await T('CB1-G old links and deep links', async () => {
     fresh(); SA();
-    const seeded = [['tree', 'curriculum', 'structure'], ['types', 'curriculum', 'types'], ['versions', null, 'versions'], ['library', 'observations', 'obs'] /* CBX (PD-CBX-03): the legacy list is linked from Observation settings */, ['obs', 'observations', 'obs'], ['letter', 'documents', 'letter'], ['support', 'payments', 'support'], ['fees', 'payments', 'fees']];
+    const seeded = [['tree', 'curriculum', 'structure'], ['types', 'assessments', 'types'] /* CBR (PD-CBR-01): assessment types moved to Assessments */, ['versions', null, 'versions'], ['library', 'observations', 'obs'] /* CBX (PD-CBX-03): the legacy list is linked from Observation settings */, ['obs', 'observations', 'obs'], ['letter', 'documents', 'letter'], ['support', 'payments', 'support'], ['fees', 'payments', 'fees']];
     seeded.forEach(([t, s, p]) => { open('NV-L3', t); ok(`CB1-G seeded #a-programmes.NV-L3.${t} → ${s || 'Version history'}${p ? ' / ' + p : ''}`, (s ? cur() === s : !q('.cb-nav') && /Version history/.test(main())) && (pan() === p || (!q('.cb-panels') && p === 'versions')), cur() + '/' + pan()); });
     SYS(); const wiz = [['details', 'details'], ['structure', 'curriculum'], ['obs', 'observations'], ['letter', 'documents'], ['docs', 'documents'], ['plan', 'payments'], ['review', 'review']];
     wiz.forEach(([t, s]) => { open('NV-N1', t); ok(`CB1-G new-programme step #a-programmes.NV-N1.${t} → ${s}`, cur() === s); });
@@ -226,7 +227,7 @@
     fresh(); SA(); open('NV-L3', 'support'); const was = chSupportOf('NV-L3'), box = q('input[name="ch-sup"][value="Self-paced"]');
     box.checked = true; box.dispatchEvent(new Event('change', { bubbles: true }));
     q('.cb-sec[data-tab="curriculum"]').click();
-    ok('CB1-L leaving a section with an unsaved change asks first, and stays on the section', !!MODAL && MODAL.title === 'Leave without saving?' && /Fees & Payments/.test(document.querySelector('#modal-root').textContent) && cur() === 'payments');
+    ok('CB1-L leaving a section with an unsaved change asks first, and stays on the section', !!MODAL && MODAL.title === 'Leave without saving?' && /Fees & Payment Plans/.test(document.querySelector('#modal-root').textContent) /* CBR: step name */ && cur() === 'payments');
     closeModal(); ok('CB1-L "Stay and save" keeps the chosen rate', q('input[name="ch-sup"][value="Self-paced"]').checked);
     q('.cb-sec[data-tab="curriculum"]').click(); prim(); ok('CB1-L "Leave without saving" goes to the section and saves nothing', cur() === 'curriculum' && chSupportOf('NV-L3') === was);
     open('NV-L3', 'support'); const b2 = q('input[name="ch-sup"][value="Self-paced"]'); b2.checked = true; b2.dispatchEvent(new Event('change', { bubbles: true })); ACT.chSupSave({ dataset: { id: 'NV-L3' } }); reason('CB1-L');

@@ -2,6 +2,9 @@
 // exact amounts and dated previews, the deposit, Finance submission / approval / locking / version history, invalidation, the old
 // editors refused for package programmes, Finance's views, the offer-letter wording, role checks and historical isolation.
 (async function () {
+  // FB1 (PD-FB1-03): this suite's deposit configuration, chosen explicitly where its fixture prepares a package for Finance — each new fee
+  // option "Allow Deposit: Yes" with the Academy default, through the Step 5 handler (an administrator's action; role checks apply).
+  const fb1Dep = p => { if (p && cb8Managed(p)) cb8Work(p).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: p.id, o: o.id, k: 'allow' }, checked: true })); };
   const dmpPrice = () => { const r = document.querySelector('main #cr-pm-price'); if (r && !r.checked) { r.checked = true; INP.crPm(r); } }; // DM-P (PD-DM-18): "One programme price" is now an explicit choice (fee options by delivery mode are the default)
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
@@ -29,7 +32,7 @@
   // A new programme from Section 1 (Level 3: fee-option rows; other levels: one price); obs 'yes' / 'no'
   const make = (o = {}) => {
     go('a-programmes'); ACT.chProgNew(); const l3 = (o.level || 'Level 3') === 'Level 3';
-    fill({ '#np-t': o.title || 'CB8 course ' + (++codeN), '#np-l': o.level || 'Level 3', '#np-r': 'QN 610/' + (3000 + codeN) + '/8', '#np-d': String(o.n || 6), '#np-du': o.unit || 'months' });
+    fill({ '#np-t': o.title || 'CB8 course ' + (++codeN), '#np-l': o.level || 'Level 3', '#np-r': 'QN 610/' + (3000 + codeN) + '/8', '#cbc3-dd-n': String(o.n || 6), '#cbc3-dd-u': o.unit || 'months' /* FB2 (PD-FB2-01): the Course Duration is the payment duration — was 12 with a separate payment duration */, '#np-d': String(o.n || 6), '#np-du': o.unit || 'months' });
     (document.querySelector('#np-code') || {}).value = 'CBE' + codeN; document.querySelector('#np-obs-' + (o.obs || 'no')).checked = true; INP.r1NpLevel(document.querySelector('#np-l'));
     if (l3) (o.opts || [{ l: 'Fully Assisted — standard', f: 2400, m: 'Fully Assisted' }]).forEach((x, k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = x.l; r.querySelector('.r1-np-f').value = String(x.f); r.querySelector('.r1-np-m').value = x.m; });
     else fill({ '#np-p': String(o.price || 1800) }), dmpPrice();
@@ -38,7 +41,10 @@
   const W8 = pr => cb8Work(pr), opt = (pr, i = 0) => cb8Work(pr).opts.filter(x => x.status === 'Active')[i];
   const fees = (pr, o = '', v = {}) => { ACT.cb8Opt({ dataset: { p: pr.id, o } }); if (!MODAL) return 'no dialog'; Object.entries(v).forEach(([k, x]) => { const e = document.querySelector('#modal-root ' + k); if (e) { e.value = x; } }); return press(); };
   const payAdd = (pr, oid, k) => { go('a-programmes', { id: pr.id, tab: 'fees' }); const i = document.getElementById('cb8-k-' + oid); if (i) i.value = String(k); ACT.cb8PayAdd({ dataset: { p: pr.id, o: oid } }); };
-  const dep = (pr, dm, amt) => { go('a-programmes', { id: pr.id, tab: 'fees' }); const r = document.querySelector(`main input[name="e1-wdm"][value="${dm}"]`); r.checked = true; INP.e1DepMode(r); if (amt != null) document.querySelector('main #e1-d').value = String(amt); ACT.cb8Dep({ dataset: { p: pr.id } }); };
+  // FB1 (PD-FB1-01): the deposit is chosen on each fee option with the real controls — Allow Deposit No, or Yes with the Academy default or a custom amount
+  const depOpt = (pr, o, dm, amt) => { go('a-programmes', { id: pr.id, tab: 'fees' }); const c = () => document.querySelector(`main .cbr2-opt[data-o="${o.id}"]`), clk = s => { const x = c().querySelector(s); if (x && !x.checked) x.click(); };
+    if (dm === 'none') clk('.fb1-yn input[data-k="no"]'); else { clk('.fb1-yn input[data-k="allow"]'); clk(`.cbr2-depf input[data-k="${dm === 'own' ? 'own' : 'default'}"]`); if (dm === 'own' && amt != null) { const a = c().querySelector('.cbr2-depf input[data-k="amount"]'); a.value = String(amt); a.dispatchEvent(new Event('change', { bubbles: true })); } } };
+  const dep = (pr, dm, amt) => cb8Work(pr).opts.filter(o => o.status === 'Active').forEach(o => depOpt(pr, o, dm, amt));
   const submit = pr => { go('a-programmes', { id: pr.id, tab: 'fees' }); ACT.cb8Submit({ dataset: { p: pr.id } }); return MODAL ? press() : 'no dialog'; };
   const decide = (qid, a, r = 'Checked') => { ACT.e1Decide({ dataset: { id: qid, a } }); if (!MODAL) return 'no dialog'; return reason(r); };
   const wf = pr => cb8Wf(pr), qOf = pr => ADMIN.queue.find(x => x.id === wf(pr).qid); // the queue itself (an Academic Admin's queue view doesn't list Finance items)
@@ -50,23 +56,24 @@
     [1, 4, 7].forEach(k => payAdd(pr, a.id, k)); [1, 3].forEach(k => payAdd(pr, b.id, k));
     // the creation default (6 monthly, from the plan) is removed so each option offers exactly what is configured here
     [a, b].forEach(o => { if (opt(pr, o === a ? 0 : 1).pay.some(x => x.k === 6)) ACT.cb8PayDel({ dataset: { p: pr.id, o: o.id, k: '6' } }); });
+    fb1Dep(pr); // FB1: a complete package — each new fee option's Allow Deposit answered (Yes, the Academy default)
     return pr;
   };
 
   /* ================= A. Section 5 for a new programme ================= */
   await T('CB8-A layout', async () => {
     fresh(); ACA(); const pr = make({ opts: [{ l: 'Fully Assisted — standard', f: 2400, m: 'Fully Assisted' }] }); go('a-programmes', { id: pr.id, tab: 'payments' });
-    ok('CB8-A a programme made in the builder is a package programme; Section 5 panels: Fees & payment options, Financial history (with the legacy observation fee rate, CBX PD-CBX-04)', cb8Managed(pr) && qa('.cb-panels .tab').map(t => t.textContent).join('|') === 'Fees & payment options|Financial history', qa('.cb-panels .tab').map(t => t.textContent).join('|'));
-    ok('CB8-A one card per fee option (no wide table), with tuition fee, both observation fees and payment options', qa('.cb8-opt').length === 1 && !q('.cb8-opts table') && /Tuition fee/.test(q('.cb8-opt').textContent) && /Workplace observation fee/.test(q('.cb8-opt').textContent) && /Academy-office observation fee/.test(q('.cb8-opt').textContent) && /Payment options/.test(q('.cb8-opt').textContent));
+    ok('CB8-A a programme made in the builder is a package programme; Section 5 panels: Fees & payment options, Financial history (with the legacy observation fee rate, CBX PD-CBX-04)', cb8Managed(pr) && !q('.cb-panels') && !!q('.cb8-sec') && /Financial versions and history/.test(q('#cbr-fhist > summary').textContent)); // CBR (PD-CBR-01): one page; the history folded
+    ok('CB8-A one card per fee option (no wide table), with tuition fee, both observation fees and payment options', qa('.cb8-opt').length === 1 && !q('.cb8-opts table') && /Tuition Fee/.test(q('.cb8-opt').textContent) && /Workplace Observation Fee/.test(q('.cb8-opt').textContent) && /Academy Observation Fee/.test(q('.cb8-opt').textContent) && /Payment Instalment Options/.test(q('.cb8-opt').textContent)); // CBR-2 (PD-CBR2-06): the approved labels
     ok('CB8-A no observations: both observation fees "Not applicable — no observations"', (q('.cb8-opt .cb8-fees').textContent.match(/Not applicable — no observations/g) || []).length === 2);
-    ok('CB8-A status "Draft — not yet sent to Finance"; Add fee option, Add payment option, Deposit and "Submit to Finance for review" offered', /Draft — not yet sent to Finance/.test(q('.cb8-state').textContent) && !!q('[data-act="cb8Opt"][data-o=""]') && !!q('[data-act="cb8PayAdd"]') && !!q('input[name="e1-wdm"]') && !!q('[data-act="cb8Submit"]'));
-    ok('CB8-A the old route "plan" opens Fees & payment options; "fees" too', (go('a-programmes', { id: pr.id, tab: 'plan' }), q('.cb-panels .tab[aria-selected="true"]').textContent === 'Fees & payment options') && (go('a-programmes', { id: pr.id, tab: 'fees' }), !!q('.cb8-sec')));
+    ok('CB8-A status "Draft — not yet sent to Finance"; Add fee option, Add payment option, Deposit and "Submit to Finance for review" offered', /Draft — not yet sent to Finance/.test(q('.cb8-state').textContent) && !!q('[data-act="cb8Opt"][data-o=""]') && !!q('[data-act="cb8PayAdd"]') && !!q('.fb1-yn input[data-k="allow"]') /* FB1: Allow Deposit per fee option (was the programme editor e1-wdm) */ && !!q('[data-act="cb8Submit"]'));
+    ok('CB8-A the old route "plan" opens Fees & payment options; "fees" too', (go('a-programmes', { id: pr.id, tab: 'plan' }), q('.cb-body').dataset.sec !== 'x' && (q('.cb') || { dataset: {} }).dataset.sec === 'payments' && !!q('.cb8-sec')) /* CBR: the Fees step */ && (go('a-programmes', { id: pr.id, tab: 'fees' }), !!q('.cb8-sec')));
     ok('CB8-A the creation defaults are carried in: the option\'s fee and the plan\'s 6 monthly payments, Academy default deposit', opt(pr).fee === 2400 && J(opt(pr).pay.map(x => x.k)) === '[6]' && W8(pr).dep.mode === 'default');
-    ok('CB8-A Course Details: fees are "managed in Section 5"', (go('a-programmes', { id: pr.id, tab: 'details' }), /managed in Section 5 — Fees/.test(main())));
+    ok('CB8-A Course Details: fees are "managed in Section 5"', (go('a-programmes', { id: pr.id, tab: 'details' }), /managed in Fees &(amp;)? Payment Plans/.test(main()) /* CBC3: the step's name — was "Section [45] — Fees" */)); // CBR (PD-CBR-02): Section 4 when the course has no observations
     fresh(); SA(); go('a-programmes', { id: 'NV-N2', tab: 'payments' });
     ok('CB8-A a programme from before packages (NV-N2) keeps its panels and plan step, with "Start a new financial package"', !cb8Managed(s3Pr('NV-N2')) && !!q('.e1-plan') && !!q('[data-act="cb8Start"]'));
     go('a-programmes', { id: 'NV-L3', tab: 'plan' });
-    ok('CB8-A seeded Level 3 (no structured duration): read-only plan as before and why a package can\'t start', !!q('.cb-plan') && !q('[data-act="cb8Start"]') && /needs a structured course duration/.test(main()));
+    ok('CB8-A seeded Level 3 (no structured duration): read-only plan as before and why a package can\'t start', !!q('.cb-plan') && !q('[data-act="cb8Start"]') && /needs a recorded Payment Schedule Duration/.test(main()) /* CBC3: was "needs a structured course duration" */);
   });
 
   /* ================= B. Fee options ================= */
@@ -90,12 +97,12 @@
   /* ================= C. Observation fees ================= */
   await T('CB8-C observation fees', async () => {
     fresh(); SA(); const pr = make({ obs: 'yes' }); settings(pr.id, 'yes', 'Permitted', 'Available'); ACA(); const o = opt(pr);
-    go('a-programmes', { id: pr.id, tab: 'fees' }); ok('CB8-C observations yes, both locations permitted: both fees "Not set" and a blocker each', (q('.cb8-opt .cb8-fees').textContent.match(/Not set/g) || []).length === 2 && /set the workplace observation fee/.test(q('.cb8-submit').textContent) && /set the Academy-office observation fee/.test(q('.cb8-submit').textContent));
+    go('a-programmes', { id: pr.id, tab: 'fees' }); ok('CB8-C observations yes, both locations permitted: both fees "Not set" and a blocker each', qa('.cb8-opt .cb8-fees input[data-f^="obs"]:not([disabled])').filter(x => x.value === '').length === 2 /* CBR-2: both fields enabled and empty — was "Not set" twice */ && /set the workplace observation fee/.test(q('.cb8-submit').textContent) && /set the Academy-office observation fee/.test(q('.cb8-submit').textContent));
     fees(pr, o.id, { '#c8-wp': '70', '#c8-off': '0' });
-    ok('CB8-C £0 is a genuine value: the office fee £0.00 "no charge", the workplace £70', opt(pr).obsWp === 70 && opt(pr).obsOff === 0 && (go('a-programmes', { id: pr.id, tab: 'fees' }), /£0\.00 no charge/.test(q('.cb8-fees').textContent)));
+    ok('CB8-C £0 is a genuine value: the office fee £0.00 "no charge", the workplace £70', opt(pr).obsWp === 70 && opt(pr).obsOff === 0 && (go('a-programmes', { id: pr.id, tab: 'fees' }), q('.cb8-fees input[data-f="obsOff"]').value === '0' /* CBR-2: the field shows 0 — was "£0.00 no charge" */));
     [['', 'blank (must enter 0 for no charge)'], ['-1', 'negative'], ['10.005', 'fractional pence'], ['abc', 'text']].forEach(([v, w]) => { const r = fees(pr, o.id, { '#c8-wp': v }); ok(`CB8-C (negative) workplace fee ${w}: refused`, r === false && opt(pr).obsWp === 70); closeModal(); });
     SA(); settings(pr.id, null, null, 'Not available'); ACA(); go('a-programmes', { id: pr.id, tab: 'fees' });
-    ok('CB8-C office no longer permitted: "Not applicable — location not permitted" with the kept £0.00; the stored value is not discarded', /location not permitted/.test(q('.cb8-fees').textContent) && /kept: £0\.00/.test(q('.cb8-fees').textContent) && opt(pr).obsOff === 0);
+    ok('CB8-C office no longer permitted: "Not applicable — location not permitted" with the kept £0.00; the stored value is not discarded', /location not required/.test(q('.cb8-fees').textContent) /* CBR-2: the step's wording (Observation Required) */ && /kept: £0\.00/.test(q('.cb8-fees').textContent) && opt(pr).obsOff === 0);
     ACT.cb8Opt({ dataset: { p: pr.id, o: o.id } }); ok('CB8-C the dialog shows the office field disabled ("not applicable")', document.querySelector('#modal-root #c8-off').disabled && /Not applicable/.test(document.querySelector('#modal-root').textContent)); closeModal();
     SA(); settings(pr.id, 'no'); ACA(); go('a-programmes', { id: pr.id, tab: 'fees' });
     ok('CB8-C course has no observations: both fees "Not applicable — no observations"; no observation blocker; values kept', (q('.cb8-fees').textContent.match(/no observations/g) || []).length === 2 && !/set the [a-zA-Z-]+ observation fee/.test(q('.cb8-submit').textContent) && opt(pr).obsWp === 70);
@@ -123,12 +130,15 @@
 
   /* ================= E. Deposit ================= */
   await T('CB8-E deposit', async () => {
-    fresh(); const pr = build(); dep(pr, 'none'); ok('CB8-E "Deposit not available"', W8(pr).dep.mode === 'none' && ADMIN.audit.slice(0, 3).some(x => x.action === 'Deposit setting changed'));
-    dep(pr, 'own', 1800); ok('CB8-E (negative) a custom deposit equal to an option\'s fee is refused when saved, naming the option (E2 rule); still "not available"', /Self-Paced — standard: The deposit \(£1,800\.00\) must be below the fee/.test(main()) && W8(pr).dep.mode === 'none');
-    dep(pr, 'own', 250); ok('CB8-E custom £250 below every fee: no deposit blocker', W8(pr).dep.amount === 250 && !cb8Issues(pr, W8(pr)).some(x => /deposit/.test(x.msg)));
-    const d0 = J(W8(pr).dep); go('a-programmes', { id: pr.id, tab: 'fees' }); const r = document.querySelector('main input[name="e1-wdm"][value="own"]'); r.checked = true; document.querySelector('main #e1-d').value = '12.345'; ACT.cb8Dep({ dataset: { p: pr.id } });
-    ok('CB8-E (negative) custom 12.345: refused (whole pence), unchanged', J(W8(pr).dep) === d0);
-    dep(pr, 'default'); ok('CB8-E Academy default (£300) — shown with its amount', /£300\.00 — Academy default/.test(main()));
+    // FB1 (PD-FB1-01): the deposit is set on each fee option in Step 5 (the programme editor is gone); the E2 rules are checked per option
+    const deps = p => W8(p).opts.filter(o => o.status === 'Active').map(o => o.dep);
+    fresh(); const pr = build(); dep(pr, 'none'); ok('CB8-E "Deposit not available" (No on each option)', deps(pr).every(d => d && d.mode === 'none') && ADMIN.audit.slice(0, 3).some(x => x.action === 'Fee option deposit changed'));
+    const sp = W8(pr).opts.find(o => o.label === 'Self-Paced — standard'); depOpt(pr, sp, 'own', String(sp.fee));
+    ok('CB8-E (negative) a custom deposit equal to the option\'s fee is refused, with the reason on screen (E2 rule); still "not available"', new RegExp(`The deposit must be below the fee \\(${money(sp.fee, 'GBP').replace(/[.]/g, '\\.')}\\)`).test(main()) && W8(pr).opts.find(o => o.id === sp.id).dep.amount == null);
+    dep(pr, 'own', 250); ok('CB8-E custom £250 below every fee: no deposit blocker', deps(pr).every(d => d.amount === 250) && !cb8Issues(pr, W8(pr)).some(x => /deposit/i.test(x.msg)));
+    const d0 = J(deps(pr)); depOpt(pr, sp, 'own', '12.345');
+    ok('CB8-E (negative) custom 12.345: refused (whole pence), unchanged', J(deps(pr)) === d0 && /Enter a deposit above £0, in whole pence/.test(main()));
+    dep(pr, 'default'); ok('CB8-E Academy default (£300) — shown with its amount', /Academy default \(£300\.00\)/.test(main()) && deps(pr).every(d => d.mode === 'default'));
   });
 
   /* ================= F. Submit and lock ================= */
@@ -136,7 +146,8 @@
     fresh(); ACA(); const p0 = make({ obs: 'yes' }); settings(p0.id, 'yes', 'Permitted', 'Available'); const n0 = ADMIN.queue.length;
     go('a-programmes', { id: p0.id, tab: 'fees' }); ACT.cb8Submit({ dataset: { p: p0.id } });
     ok('CB8-F (negative) an incomplete package can\'t be submitted: no dialog, no queue item; the blockers are listed', !MODAL && ADMIN.queue.length === n0 && wf(p0).status === 'Draft');
-    fresh(); const pr = build(), f0 = STORE.fin.notifs.length, q0 = ADMIN.queue.length, a0 = ADMIN.audit.length;
+    fresh(); const pr = build(); // FB1: build() answers each new option's Allow Deposit (a complete package)
+    const f0 = STORE.fin.notifs.length, q0 = ADMIN.queue.length, a0 = ADMIN.audit.length;
     ok('CB8-F (setup) the complete package has no blockers', cb8Issues(pr, W8(pr)).length === 0, J(cb8Issues(pr, W8(pr))));
     submit(pr); const i = qOf(pr);
     ok('CB8-F submit: one "Programme payment terms" queue item, Pending, routed to a Finance Admin; status "Waiting for Finance review"', ADMIN.queue.length === q0 + 1 && i.type === 'Programme payment terms' && i.status === 'Pending' && i.data.cb8 && wf(pr).status === 'Pending' && ADMIN.staff.some(s => s.name === i.first && s.roles.includes('Finance Admin')));
@@ -150,8 +161,8 @@
     SA(); const a2 = ADMIN.audit.length; ACT.n5Settings({ dataset: { p: pr.id } });
     ok('CB8-F (negative) observation settings locked while Finance reviews (logged)', !MODAL && blocked(a2, /observation settings/));
     ok('CB8-F (negative) "Does this course contain observations?" can\'t change while Finance reviews', cbObsSet(pr, false) === false && cbObsOf(pr) === true);
-    go('a-programmes', { id: pr.id, tab: 'details' }); document.querySelector('#np-d').value = '9'; const d0 = J(pr.durV); ACT.cbDetSave({ dataset: { id: pr.id } });
-    ok('CB8-F (negative) the duration can\'t change while Finance reviews (logged)', J(pr.durV) === d0 && blocked(a2, /change the duration/));
+    const d0 = J(pr.durV); go('a-programmes', { id: pr.id, tab: 'details' }); const pdc = q('#cbc3-dd-n:not([disabled])'); INP.cbcDisp({ dataset: { p: pr.id } }); // FB2 (PD-FB2-04): the Course Duration (Course Details; CBC3 had the Payment Schedule Duration in Fees & Payment Plans)
+    ok('CB8-F (negative) the duration can\'t change while Finance reviews (logged)', !pdc && J(pr.durV) === d0 && blocked(a2, /change the (payment schedule |course )?duration/));
   });
 
   /* ================= G. Finance decision ================= */
@@ -174,7 +185,7 @@
     ok('CB8-G the creator is told once; the publish block for payment terms is lifted', STORE.aca.notifs.length === n1 + 1 && !ch8Check(pr).block.some(b => /Payment terms/.test(b)));
     ACT.e1Decide({ dataset: { id: i2.id, a: 'approve' } }); ok('CB8-G (negative) a decided item can\'t be decided twice', !MODAL || reason('again') === false); closeModal();
     // self-approval: a Finance Admin who is also a System Admin submits — they can't approve their own submission
-    fresh(); SA(); const p2 = make({ level: 'Level 4', price: 2000 }); SD(); payAdd(p2, opt(p2).id, 3); submit(p2); const i3 = qOf(p2);
+    fresh(); SA(); const p2 = make({ level: 'Level 4', price: 2000 }); SD(); payAdd(p2, opt(p2).id, 3); fb1Dep(p2); submit(p2); const i3 = qOf(p2);
     ok('CB8-G (setup) a System Admin who is also a Finance Admin submits as a creator', !!i3 && i3.raisedBy === ADMIN.me.name);
     S.sysCtx = 'Finance Admin'; render(); ACT.e1Decide({ dataset: { id: i3.id, a: 'approve' } }); if (MODAL) reason('Mine');
     ok('CB8-G (negative) no self-approval: in their Finance Admin role they can\'t decide the package they submitted', wf(p2).status === 'Pending' && !cb8Cur(p2.id)); closeModal(); S.sysCtx = 'System Administrator';
@@ -187,10 +198,10 @@
     let pr = approved(); const v = s4PlanCur(pr.id).v, a0 = ADMIN.audit.length;
     payAdd(pr, opt(pr).id, 2); ok('CB8-H adding a payment option sends the terms back to Draft (logged); the approved version stays in force for learners', wf(pr).status === 'Draft' && since(a0).some(x => x.action === 'Payment terms need Finance approval again') && s4PlanCur(pr.id).v === v && !s4PlanCur(pr.id).pkg.opts[0].pay.some(x => x.k === 2));
     [['a fee', p => fees(p, opt(p).id, { '#c8-f': '2500' })], ['an observation fee', p => fees(p, opt(p).id, { '#c8-wp': '75' })], ['the deposit', p => dep(p, 'none')], ['a new fee option', p => fees(p, '', { '#c8-l': 'Extra', '#c8-m': 'Self-Paced', '#c8-f': '900', '#c8-wp': '50', '#c8-off': '0' })], ['removing a payment option', p => ACT.cb8PayDel({ dataset: { p: p.id, o: opt(p).id, k: '4' } })], ['retiring an option', p => { ACT.cb8OptRetire({ dataset: { p: p.id, o: opt(p, 1).id } }); reason('Retire'); }]].forEach(([w, f]) => { pr = approved(); f(pr); ok(`CB8-H changing ${w} withdraws approval`, wf(pr).status === 'Draft'); });
-    pr = approved(); SA(); go('a-programmes', { id: pr.id, tab: 'details' }); document.querySelector('#np-d').value = '9'; ACT.cbDetSave({ dataset: { id: pr.id } });
+    pr = approved(); SA(); go('a-programmes', { id: pr.id, tab: 'details' }); { const i = document.querySelector('main #cbc3-dd-n'); i.value = '9'; i.dispatchEvent(new Event('change', { bubbles: true })); } // FB2 (PD-FB2-04): the Course Duration in Course Details (CBC3: the Payment Schedule Duration in Fees & Payment Plans)
     ok('CB8-H changing the duration withdraws approval (logged with before → after)', J(pr.durV) === J({ n: 9, unit: 'months' }) && wf(pr).status === 'Draft' && /6 months[^→]*→ Level 3 · 9 months/.test(ADMIN.audit.find(x => x.action === 'Payment terms need Finance approval again').reason));
     pr = approved(); SA(); settings(pr.id, null, null, 'Not available'); ok('CB8-H changing an observation location withdraws approval', wf(pr).status === 'Draft');
-    pr = approved(); SA(); go('a-programmes', { id: pr.id, tab: 'details' }); document.querySelector('#np-obs-no').checked = true; ACT.cbDetSave({ dataset: { id: pr.id } }); ok('CB8-H changing "Does this course contain observations?" withdraws approval', cbObsOf(pr) === false && wf(pr).status === 'Draft');
+    pr = approved(); SA(); go('a-programmes', { id: pr.id, tab: 'details' }); document.querySelector('#np-obs-no').checked = true; ACT.cbDetSave({ dataset: { id: pr.id } }); if (MODAL && /Turn observations off/.test(MODAL.title)) prim(); /* CBR (PD-CBR-02): confirmed first */ ok('CB8-H changing "Does this course contain observations?" withdraws approval', cbObsOf(pr) === false && wf(pr).status === 'Draft');
     pr = approved(); SA(); go('a-programmes', { id: pr.id, tab: 'details' }); document.querySelector('#np-ds').value = 'New description'; (document.querySelector('#np-code') || {}).value = 'CBE-NEW' + codeN; ACT.cbDetSave({ dataset: { id: pr.id } });
     ok('CB8-H (negative) title, description and code don\'t withdraw approval', !pr.code /* CR (PD-CR-06): no course code is entered */ && wf(pr).status === 'Approved');
     go('a-programmes', { id: pr.id, tab: 'structure' }); ACT.ch8AddUnit({ dataset: { id: pr.id } }); fill({ '#u-c': 'U900', '#u-t': 'Extra unit' }); prim(); closeModal();
@@ -208,7 +219,7 @@
 
   /* ================= J. Super Administrator (D8) ================= */
   await T('CB8-J Super Administrator', async () => {
-    fresh(); SA(); const pr = make({ level: 'Level 5', price: 3000 }), q0 = ADMIN.queue.length; payAdd(pr, opt(pr).id, 1);
+    fresh(); SA(); const pr = make({ level: 'Level 5', price: 3000 }), q0 = ADMIN.queue.length; payAdd(pr, opt(pr).id, 1); fb1Dep(pr); // FB1: the option answers Allow Deposit before the D8 approval
     go('a-programmes', { id: pr.id, tab: 'fees' }); ok('CB8-J the Super Administrator sees "Approve and put in force" (D8), not "Submit"', !!q('[data-act="cb8SaApprove"]') && !q('[data-act="cb8Submit"]'));
     ACT.cb8SaApprove({ dataset: { p: pr.id } }); reason('My own terms');
     ok('CB8-J approved at once: a plan version with the package, "Super Admin — no approval required", no queue item', !!cb8Cur(pr.id) && cb8Cur(pr.id).approved.how === SA_TAG && ADMIN.queue.length === q0 && wf(pr).status === 'Approved');
@@ -276,7 +287,7 @@
   await T('CB8-P published programme', async () => {
     fresh(); SA(); go('a-programmes', { id: 'NV-N2', tab: 'plan' }); ACT.cb8Start({ dataset: { p: 'NV-N2' } }); const pr = s3Pr('NV-N2');
     ok('CB8-P starting a package on a published programme: a draft copy of the terms in force (£900, 3 payments, own deposit £150); learners keep plan v1', cb8Managed(pr) && opt(pr).fee === 900 && J(opt(pr).pay.map(x => x.k)) === '[3]' && W8(pr).dep.mode === 'own' && W8(pr).dep.amount === 150 && !cb8Cur('NV-N2') && s4PlanCur('NV-N2').v === 1);
-    go('a-programmes', { id: 'NV-N2', tab: 'fees' }); ok('CB8-P its observation answer isn\'t recorded: a blocker says where to answer it', /Answer "Does this course contain observations\?"/.test(q('.cb8-submit').textContent));
+    go('a-programmes', { id: 'NV-N2', tab: 'fees' }); ok('CB8-P its observation answer isn\'t recorded: a blocker says where to answer it', /Answer "Observation required for this course" in Course Details/.test(q('.cb8-submit').textContent) /* CBC3: the current question and step — was "Does this course contain observations?" */);
     ACA(); ACT.cb8Opt({ dataset: { p: 'NV-N2', o: opt(pr).id } }); ok('CB8-P (negative) only the Super Administrator changes the fee of an option in force (field read-only for others)', document.querySelector('#modal-root #c8-f').readOnly); closeModal();
   });
 

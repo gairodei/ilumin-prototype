@@ -1,6 +1,9 @@
 // N5a — programme-specific observation configuration (architecture approved 20 Oct 2026). Each check acts through the handler or
 // the screen, then reads the stored configuration, the audit or the consuming screen, and includes the negative case.
 (async function () {
+  // FB1 (PD-FB1-03): this suite's deposit configuration, chosen explicitly where its fixture prepares a package for Finance — each new fee
+  // option "Allow Deposit: Yes" with the Academy default, through the Step 5 handler (an administrator's action; role checks apply).
+  const fb1Dep = p => { if (p && cb8Managed(p)) cb8Work(p).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: p.id, o: o.id, k: 'allow' }, checked: true })); };
   // DM-P (PD-DM-15): publishing a programme or version needs fee options by delivery mode, approved by Finance. Where a check isn't about
   // fees, this fixture takes the authorized Section 5 path first: the duration of a pre-builder course, a financial package, fee options by
   // delivery mode, a mode for each option (the Standard programme fee replaced by an option at the same fee), the Super Administrator's own approval (D8)
@@ -21,6 +24,7 @@
     });
     if (!cb8Work(pr).opts.some(o => o.status === 'Active' && !o.legacy && M_MODES.includes(o.mode))) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String((s4PlanCur(pr.id) || {}).fee || 2400); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); closeModal(); } // no option at all (a Level 3 package starts from the options in force): one at the plan's fee
     cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.pay.length).forEach(o => ACT.cb8PayAdd({ dataset: { p: pr.id, o: o.id, k: '1' } }));
+    fb1Dep(pr); // FB1: the fixture's fee options answer Allow Deposit (Yes) before the Super Administrator's own approval
     if (!(cb8Wf(pr) && cb8Wf(pr).status === 'Approved')) { ACT.cb8SaApprove({ dataset: { p: pr.id } }); rs(); }
     closeModal(); if (aca) { acaEnter(av); S.signedIn = true; } else setAdminIdentity(av); S.portal = po; return true;
   };
@@ -68,8 +72,8 @@
     ok('N5a-M6 published configurations are frozen (deep)', Object.isFrozen(L3) && Object.isFrozen(L3.ia) && Object.isFrozen(L3.ia[0]) && Object.isFrozen(L3.ia[0].ev.types) && Object.isFrozen(L3.snap[0]));
     ok('N5a-M7 the shared library is unchanged (15 criteria, IA-1 still attached to Level 2 and 3, on forms, v1)', lib.length === 15 && lib.find(c => c.code === 'IA-1').progs.join() === 'NV-L2,NV-L3' && lib.find(c => c.code === 'IA-1').form === true && lib.find(c => c.code === 'IA-1').version === 1);
     go('a-programmes', { id: 'NV-L3', tab: 'obs' });
-    ok('N5a-M8 earlier versions: "No observation configuration recorded" (Level 3 Version 1)', /Version 1No observation configuration recorded \(published before N5\)/.test(document.querySelector('main .n5-vers').textContent));
-    ok('N5a-M8 the tab lists the shared-library attachments that weren\'t copied', !!document.querySelector('main .n5-mig') && /IA-7/.test(document.querySelector('main .n5-mig').textContent));
+    ok('N5a-M8 earlier versions: "No observation configuration recorded" (Level 3 Version 1)', /Version 1No observation configuration recorded \(published before it was kept\)/.test(document.querySelector('main .n5-vers').textContent) /* CBC3: no "N5" */);
+    ok('N5a-M8 the tab lists the shared-library attachments that weren\'t copied', !document.querySelector('main .n5-mig') && /Not copied to programmes[\s\S]*IA-7/.test(SCREENS['k-ocl']({})) /* CBC3: moved to the Observation Criteria Library page (was in the step's history) */);
     ok('N5a-M9 the API returns a version\'s configuration (null when none was recorded)', n5ConfigFor('NV-L3', 2) === L3 && n5ConfigFor('NV-L3', 1) === null);
   });
 
@@ -80,20 +84,20 @@
     // or step 3 of the wizard bar; now the Observations section (4 of 7) with "Observation configuration" and, for seeded programmes,
     // "Shared library (legacy)" panels. What each shows, and who can change it, is unchanged.
     ['NV-L2', 'NV-L3', 'NV-L4', 'NV-L5'].forEach(id => { go('a-programmes', { id, tab: 'obs' }); const pans = [...document.querySelectorAll('main .cb-panels .tab')].map(t => t.textContent);
-      ok(`N5a-B1 ${id}: the Observations section (old "obs" link) with its configuration panel selected and the legacy library panel next to it, read-only for the published version`, !!document.querySelector('main .cb-sec.cur[data-tab="observations"]') && pans.join() === 'Observation settings,Observation events' /* CB6 (PD-CB-40): the Observation events panel joins the section; CBX (PD-CBX-03): settings renamed, the legacy list is a link */ && !!document.querySelector('main .cbx-legacy [data-go="k-obslib"]') && document.querySelector('main .cb-panels [data-tab="obs"]').getAttribute('aria-selected') === 'true' && !document.querySelector('main [data-act="n5Settings"], main [data-act="n5IaEdit"], main [data-act="n5NvqEv"]') && !!document.querySelector('main [data-act="newProgVersion"]')); });
+      ok(`N5a-B1 ${id}: the Observations section (old "obs" link) with its configuration panel selected and the legacy library panel next to it, read-only for the published version`, !!document.querySelector('main .cb-sec.cur[data-tab="observations"]') && !pans.length && document.querySelector('main .cb-body').dataset.panel === 'obs' /* CBR (PD-CBR-07): one page — locations, criteria, events; no panel tabs */ && !!document.querySelector('main .cbx-legacy [data-go="k-obslib"]') && !document.querySelector('main [data-act="cbrObsLoc"]:not([disabled])') && !document.querySelector('main [data-act="n5Settings"], main [data-act="n5IaEdit"], main [data-act="n5NvqEv"]') && !!document.querySelector('main [data-act="newProgVersion"]')); });
     go('a-programmes', { id: 'NV-L3', tab: 'obs' });
     ok('N5a-B2 Level 3: Fee options kept (Fees & Payments section); Observations shows its own NVQ criteria and IA-1–IA-4', !!document.querySelector('main .cb-sec[data-tab="payments"]') && ['301 2.1', '306 3.1'].every(c => !!document.querySelector(`main .n5-nvq tr[data-code="${c}"]`)) && ['IA-1', 'IA-4'].every(c => !!document.querySelector(`main .n5-ia tr[data-code="${c}"]`)) && !document.querySelector('main .n5-nvq tr[data-code="301 1.1"]'));
-    go('a-programmes', { id: 'NV-L3', tab: 'fees' }); ok('N5a-B2 …the old "fees" link opens the Level 3 fee options', !!document.querySelector('main .cb-panels [data-tab="fees"][aria-selected="true"]') && !!document.querySelector('main .r1-opts'));
+    go('a-programmes', { id: 'NV-L3', tab: 'fees' }); ok('N5a-B2 …the old "fees" link opens the Level 3 fee options', !!document.querySelector('main .cb-body[data-panel="fees"]') && !!document.querySelector('main .r1-opts') /* CBR: no panel tabs */);
     go('a-programmes', { id: 'NV-L5', tab: 'obs' });
-    ok('N5a-B2 Level 5: its own NVQ criteria (501 2.1…), no Level 3 codes, no Academy criteria', !!document.querySelector('main .n5-nvq tr[data-code="501 2.1"]') && !document.querySelector('main .n5-nvq tr[data-code="301 2.1"]') && /No Academy criteria in this version/.test(document.querySelector('main .n5-ia').textContent));
-    go('a-programmes', { id: 'NV-L3', tab: 'tree' }); /* CB4 (PD-CB-26) supersedes "Hierarchy": the one curriculum editor is titled "Curriculum structure" */ ok('N5a-B3 other sections unchanged: the hierarchy still renders (Curriculum) with Observations as another section', /Curriculum structure/.test(main()) && !!document.querySelector('main .cb-sec.cur[data-tab="curriculum"]') && !!document.querySelector('main .cb-sec[data-tab="observations"]:not(.cur)'));
+    ok('N5a-B2 Level 5: its own NVQ criteria (501 2.1…), no Level 3 codes, no Academy criteria', !!document.querySelector('main .n5-nvq tr[data-code="501 2.1"]') && !document.querySelector('main .n5-nvq tr[data-code="301 2.1"]') && !document.querySelector('main .n5-ia')); // CBR: an empty programme Academy criteria card isn't shown
+    go('a-programmes', { id: 'NV-L3', tab: 'tree' }); /* CB4 (PD-CB-26) supersedes "Hierarchy": the one curriculum editor is titled "Curriculum structure" */ ok('N5a-B3 other sections unchanged: the hierarchy still renders (Curriculum) with Observations as another section', !!document.querySelector('main #cbr-resources') /* CBR-2 (PD-CBR2-03): was the Curriculum structure heading */ && !!document.querySelector('main .cb-sec.cur[data-tab="curriculum"]') && !!document.querySelector('main .cb-sec[data-tab="observations"]:not(.cur)'));
     go('a-programmes', { id: 'NV-N1', tab: 'obs' }); const steps = [...document.querySelectorAll('main .cb-nav .cb-sec')];
-    ok('N5a-B4 new programme: Observations is section 4 (after Curriculum and Assessments), current, editable in the Draft', steps.length === 8 && steps[3].classList.contains('cur') && /Observations/.test(steps[3].textContent) && !!document.querySelector('main .n5-head') && !!document.querySelector('main [data-act="n5Settings"]') && !/undefined/.test(main()));
-    ok('N5a-B4 …"Fees & Payments →" follows it', /Fees & Payments →/.test((document.querySelector('main .cb-foot') || {}).textContent || ''));
+    ok('N5a-B4 new programme: Observations is step 4 (after Curriculum and Assessments), current; in the Draft it first asks the Course Details answer (CBR PD-CBR-07)', steps.length === 7 && steps[3].classList.contains('cur') && /Observations/.test(steps[3].textContent) && !!document.querySelector('main .cb-body [data-go][data-tab="details"]') && !/undefined/.test(main()));
+    ok('N5a-B4 …"Next: Fees & Payment Plans →" follows it', /Next: Fees & Payment Plans →/.test((document.querySelector('main .cb-foot') || {}).textContent || ''));
     go('a-programmes', { id: 'NV-N1', tab: 'review' });
-    ok('N5a-B5 wizard Review: an Observations line and the blocking "choose whether observation is required"', /* CB11 (PD-CB-73): was the CH-8 review's .n5-rev line and .ch8-review list */ !!document.querySelector('main .cb-rv-sec[data-sec="observations"]') && /Blocking\s*Choose whether observation is required for Version 1 \(Yes or No\)/.test(document.querySelector('main .cb-rv-todo').textContent));
+    ok('N5a-B5 wizard Review: an Observations line and the blocking "choose whether observation is required"', /* CB11 (PD-CB-73): was the CH-8 review's .n5-rev line and .ch8-review list */ !!document.querySelector('main .cb-rv-sec[data-sec="observations"]') && /Blocking\s*Choose whether observation is required for Version 1 \(Yes or No\)/.test(document.querySelector('main .cbr2-rv').textContent /* CBR-2 (PD-CBR2-07): listed under its step — was '.cb-rv-todo' */));
     go('a-programmes', { id: 'NV-L3O', tab: 'obs' });
-    ok('N5a-B6 retired programme: read-only, no edit controls', /Retired programme — read-only/.test(main()) && !document.querySelector('main [data-act^="n5"]'));
+    ok('N5a-B6 retired programme: read-only, no edit controls', /read-only historical record/.test(main()) && !document.querySelector('main [data-act^="n5"]') && !document.querySelector('main [data-act="cbrObsLoc"]:not([disabled])'));
   });
 
   /* ---------- Settings, enabled / disabled, ways to observe ---------- */
@@ -112,7 +116,7 @@
     ok('N5a-S4 "No": no observation criteria, routes or evidence demanded; the Academy criteria stay in the version (history)', !ck.block.some(b => /evidence|workplace|Academy-office|no active NVQ/.test(b)) && d.ia.length === 4 && ck.warn.some(w => /kept in this version for history/.test(w)));
     dmpComply('NV-L3'); ACT.kPubProg({ dataset: { id: 'NV-L3' } });
     ok('N5a-S4 …the publish dialog shows the review flag', /^Publish/.test(MODAL && MODAL.title) && /Review \(D5\)/.test((mroot().querySelector('.n5-warn') || {}).textContent || '')); closeModal();
-    go('a-programmes', { id: 'NV-L3', tab: 'obs' }); ok('N5a-S4 …and the tab lists it as "Review"', !!document.querySelector('main .n5-checks .n5-review'));
+    go('a-programmes', { id: 'NV-L3', tab: 'review' }); ok('N5a-S4 …and Review & Publish lists it as a review warning (CBR: the checks are listed there)', /Review \(D5\)/.test(document.querySelector('main .cbr2-rv').textContent /* CBR-2 (PD-CBR2-07): listed under its step — was '.cb-rv-todo' */));
     settings('NV-L3', 'yes', 'Not permitted', 'Not available');
     ok('N5a-S5 required with no way to observe: blocking', n5Check(pr('NV-L3')).block.some(b => /no way to observe/.test(b)));
     settings('NV-L3', null, 'Not permitted', 'Available');
@@ -122,7 +126,7 @@
     ok('N5a-S6 required with evidence settings missing: blocking (NVQ and Academy criteria named)', n5Check(pr('NV-L3')).block.some(b => /permitted evidence for 6 NVQ criteria/.test(b)) && n5Check(pr('NV-L3')).block.some(b => /permitted evidence for 4 Academy criteria: IA-1, IA-2, IA-3, IA-4/.test(b)));
     // A wizard Draft with no Observation Learning Outcome: required → blocking; not required → fine
     SA(); const n1 = pr('NV-N1'); settings('NV-N1', 'yes', 'Permitted', 'Available');
-    ok('N5a-S7 required but no NVQ observation criteria: blocking in the wizard Review (ch8Check)', ch8Check(n1).block.some(b => /no active NVQ observation criteria/.test(b)));
+    ok('N5a-S7 required but no NVQ observation criteria: blocking in the wizard Review (ch8Check)', ch8Check(n1).block.some(b => /no qualification observation criteria/.test(b))); // CBC3: one name for them
     settings('NV-N1', 'no'); ok('N5a-S8 observation not required and no Observation criteria: no observation blockers', !n5Check(n1).block.length && !ch8Check(n1).block.some(b => /^Observations/.test(b)));
     // CB4 (PD-CB-30) supersedes choosing the Observation type while "Not required": that is now refused (logged) and the type is
     // unchanged; the D5 review is still reached the way it arises now — the type chosen while observation is required, then "No"
@@ -195,7 +199,8 @@
     ok('N5a-T2 Academy office: NVQ criteria only', off.ok && off.items.length === 6 && off.items.every(i => i.kind === 'NVQ'));
     ok('N5a-T3 nothing on a checklist carries an outcome', wp.items.every(i => !('st' in i) && !('outcome' in i) && !('result' in i)));
     go('a-programmes', { id: 'NV-L3', tab: 'obs' });
-    ok('N5a-T4 the tab states both (OBS-1b summary): workplace = 6 NVQ + 4 programme Academy criteria; office = 6 NVQ and no programme Academy criteria', /6 qualification \(NVQ\) criteria \+ 4 programme Academy criteria/.test(document.querySelector('main .ol1b-map .ol1b-wp').textContent) && /6 qualification \(NVQ\) criteria/.test(document.querySelector('main .ol1b-map .ol1b-off').textContent) && !/programme Academy/.test(document.querySelector('main .ol1b-map .ol1b-off').textContent));
+    // CBR (PD-CBR-07) supersedes the OBS-1b "Criteria by location" summary: each location column says what else is observed there
+    ok('N5a-T4 each location states what else is observed: workplace = 6 qualification criteria + the programme\'s Academy standards; Academy = the 6 qualification criteria only', /Qualification criteria from the curriculum \(6\)/.test(document.querySelector('main .cbr2-qual summary').textContent) && /workplace only/.test(document.querySelector('main .cbr2-qual h4').textContent) && !/qualification/i.test(document.querySelector('main .cbr-col[data-loc="wp"]').textContent + document.querySelector('main .cbr-col[data-loc="off"]').textContent) /* CBC2: one shared, compact section (6 criteria; the programme's Academy criteria marked workplace only) — was a line repeated in each column */);
     settings('NV-L3', null, 'Not permitted'); ok('N5a-T5 workplace not permitted: no workplace checklist; the office one is unchanged', !n5Checklist(p, d, 'workplace').ok && n5Checklist(p, d, 'office').items.length === 6);
     settings('NV-L3', null, 'Permitted', 'Not available'); ok('N5a-T6 office not available: no office checklist', !n5Checklist(p, d, 'office').ok && n5Checklist(p, d, 'workplace').ok);
     settings('NV-L3', 'no'); ok('N5a-T7 observation not required: no checklist of either type', !n5Checklist(p, d, 'workplace').ok && !n5Checklist(p, d, 'office').ok);
@@ -227,10 +232,10 @@
     ok('N5a-R1 new programme (negative): Publish disabled until "Observation required" is chosen', document.querySelector('main [data-act="cbPublish"]').disabled /* CB11 (PD-CB-77): was ch8Publish */ && ch8Check(n1).block.some(b => /choose whether observation is required for Version 1/.test(b)));
     settings('NV-N1', 'no');
     ok('N5a-R1 new programme (positive): "No" clears the observation blockers — no criteria or routes demanded (no Observation Learning Outcome)', !ch8Check(n1).block.some(b => /^Observations/.test(b)) && !ch8Check(n1).warn.some(w => /Review \(D5\)/.test(w)) && D('NV-N1').workplace === null && D('NV-N1').office === null);
-    settings('NV-N1', 'yes'); ok('N5a-R1 new programme: "Yes" brings back the full validation (routes, NVQ criteria)', ch8Check(n1).block.some(b => /choose whether workplace observation is permitted/.test(b)) && ch8Check(n1).block.some(b => /no active NVQ observation criteria/.test(b)));
+    settings('NV-N1', 'yes'); ok('N5a-R1 new programme: "Yes" brings back the full validation (routes, NVQ criteria)', ch8Check(n1).block.some(b => /choose whether workplace observation is permitted/.test(b)) && ch8Check(n1).block.some(b => /no qualification observation criteria/.test(b))); // CBC3
     // New Draft programme in the S3 builder
     go('a-programmes', { id: 'NV-L3D', tab: 'obs' });
-    ok('N5a-R2 Draft programme NV-L3D: "Not chosen yet" with the reason; blocking until chosen', /Not chosen yet/.test(document.querySelector('main .n5-settings').textContent) && n5Check(pr('NV-L3D')).block.some(b => /choose whether observation is required/.test(b)));
+    ok('N5a-R2 Draft programme NV-L3D: "Not chosen yet" with the reason; blocking until chosen', /Does this course contain observations/.test(document.querySelector('main .cb-body').textContent) /* CBR: asked in Course Details */ && n5Check(pr('NV-L3D')).block.some(b => /choose whether observation is required/.test(b)));
     // New version of a migrated programme (Level 5): blocked without a choice; "No" with Observation LOs → review flag, publishes
     newVer('NV-L5'); publish('NV-L5');
     ok('N5a-R3 new version of a migrated programme (negative): refused without a choice; still Version 1', /Can't publish/.test(MODAL && MODAL.title) && pr('NV-L5').version === 1); closeModal();
@@ -241,7 +246,7 @@
     // Historical published versions migrated with unknown settings are not invalidated
     ok('N5a-R4 historical versions (negative case of retroactive checks): migrated versions still have "not recorded" settings, no blockers, and stay frozen', ['NV-L2', 'NV-L3', 'NV-L4'].every(id => { const c = P(id, pr(id).version); return c.required === null && Object.isFrozen(c) && !n5Check(pr(id)).block.length && !n5Check(pr(id)).review.length; }) && P('NV-L5', 1).required === null);
     go('a-programmes', { id: 'NV-L3', tab: 'obs' });
-    ok('N5a-R4 …the tab shows "Published before N5 — not recorded" and no publishing checks', /Published before N5 — not recorded/.test(document.querySelector('main .n5-settings').textContent) && !document.querySelector('main .n5-checks'));
+    ok('N5a-R4 …the tab shows "Published before N5 — not recorded" and no publishing checks', /published before "Observation required" was recorded/.test(document.querySelector('main .cbr-obs').textContent) /* CBR: said once on the step */ && !document.querySelector('main .n5-checks'));
     ok('N5a-R4 …and a learner\'s pinned migrated version still resolves to its configuration', n5ConfigFor('NV-L3', 2) === P('NV-L3', 2) && n5ConfigFor('NV-L5', 1) === P('NV-L5', 1));
     // Structure blockers come first (S3-04, unchanged); the observation items join the same refusal
     fresh(); SA(); dmpComply('NV-L3D'); ACT.kPubProg({ dataset: { id: 'NV-L3D' } });
@@ -257,7 +262,7 @@
     ok('N5a-W2 publishing the version is refused while evidence is missing (the observation item is listed)', n2.version === 1 && /Can't publish/.test(MODAL && MODAL.title) && /permitted evidence for 1 NVQ criterion: 201 2\.1/.test(mroot().textContent)); closeModal();
     // CB6 (PD-CB-41): a required configuration also needs observation events — refused until one covers 201 2.1, then published
     nvqEv('NV-N2', '201 2.1', ['notes', 'docs']); dmpComply('NV-N2'); ACT.s3WizPublish({ dataset: { id: 'NV-N2' } });
-    ok('N5a-W2b (CB6) publishing is refused while no observation event covers the criteria', n2.version === 1 && /Can't publish/.test(MODAL && MODAL.title) && /at least one observation event/.test(mroot().textContent)); closeModal();
+    ok('N5a-W2b (CB6) publishing is refused while no observation event covers the criteria', n2.version === 1 && /Can't publish/.test(MODAL && MODAL.title) && /at least one Required Observation/.test(mroot().textContent) /* CBC2 */); closeModal();
     ACT.cbObsEv({ dataset: { p: 'NV-N2', e: '' } }); tick('.ev-l', ['workplace']); tick('.ev-c', ['201 2.1']); tick('.ev-e', ['notes']); press();
     dmpComply('NV-N2'); ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Publish Version 2');
     { const i = ADMIN.audit.findIndex(a => a.action === 'Version 2 published'); // DM-P (PD-DM-15): the fee package approved for Version 2 goes into force with it and is logged just after (was: "Version 2 published" the latest entry)
@@ -323,8 +328,8 @@
     fresh(); SA(); newVer('NV-L3'); configure('NV-L3'); iaEdit('NV-L3', 'IA-3', { t: 'Infection control (2027)' });
     ok('N5a-K1 today\'s observation forms still use the shared library (IA-1–IA-4 unchanged by the programme draft)', STORE.worlds.C.iaCriteria.map(x => x.join(' ')).join() === STORE.aca.obsLib.filter(c => c.form && c.status === 'Active' && c.progs.includes('NV-L3')).map(c => c.code + ' ' + c.title).join());
     go('a-programmes', { id: 'NV-L3', tab: 'library' }); // CBX (PD-CBX-03): the old library link opens Observation settings, which links to the legacy list's own page
-    ok('N5a-K2 legacy link: no library actions in the course builder; Observation settings links to the legacy shared list', !!document.querySelector('main .cb-panels [data-tab="obs"][aria-selected="true"]') && !!document.querySelector('main .cbx-legacy [data-go="k-obslib"]') && !document.querySelector('main [data-act="kLib"], main [data-act="kLibAttach"], main [data-act="s3LibActivate"], main [data-act="kLibRetire"]'));
-    ok('N5a-K2 …guidance (CBX): the legacy list doesn\'t configure the programme; links to the legacy list page and to the Observation Criteria Library', /doesn't configure Level 3/.test(document.querySelector('main .cbx-legacy').textContent) && !!document.querySelector('main .cbx-legacy [data-go="k-obslib"]') && !!document.querySelector('main .cbx-legacy [data-go="k-ocl"]'));
+    ok('N5a-K2 legacy link: no library actions in the course builder; Observation settings links to the legacy shared list', !!document.querySelector('main .cb-body[data-panel="obs"]') && !!document.querySelector('main .cbx-legacy [data-go="k-obslib"]') && !document.querySelector('main [data-act="kLib"], main [data-act="kLibAttach"], main [data-act="s3LibActivate"], main [data-act="kLibRetire"]'));
+    ok('N5a-K2 …guidance (CBX): the legacy list doesn\'t configure the programme; links to the legacy list page and to the Observation Criteria Library', /not used by this course/.test(document.querySelector('main .cbx-legacy').textContent) /* CBC2: shortened */ && !!document.querySelector('main .cbx-legacy [data-go="k-obslib"]') && !!document.querySelector('main .cbx-legacy [data-go="k-ocl"]'));
     go('k-obslib'); ok('N5a-K2 …the shared library page itself is still editable (it supplies today\'s forms)', !!document.querySelector('main [data-act="kLib"]') && !!document.querySelector('main [data-act="kLibAttach"]'));
     go('k-obslib'); ok('N5a-K3 the library page still lists the merged list with "On observation forms" (S3-05)', /On observation forms/.test(main()) && /IA-15/.test(main()));
     ok('N5a-K4 assessment types are unchanged: Observation still can\'t be retired (S3-06)', (ACT.s3TypeRetire({ dataset: { id: 'T2' } }), s3Types().find(t => t.id === 'T2').status === 'Active'));

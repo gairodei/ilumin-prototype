@@ -3,6 +3,12 @@
 // S3: programme structures, versions, library and types, plus the S3 acceptance corrections A–E, 13 end-to-end
 // workflows (incl. learners keeping their version, programme isolation, access refusals) and the S2 / CH-17 marker line.
 (async function () {
+  // P3 (PD-P3-02): the learner chooses their batch on sign-up step 1. Fixtures that relied on the automatic (CH-42) assignment now pick, on
+  // the page, the earliest eligible batch (the one CH-42 assigned); a batch the fixture already set, and that is still eligible, is kept
+  const p3Pick = () => { const w = W; if (!w || !p3Open(w) || chStepKey(w) !== 'details' || ui('suBatch', null) || (w.signup.batch && !p3Why(w, chBatch(w.signup.batch), { region: w.signup.l3cPin !== w.signup.batch }))) return; const r = S.route === 'admission' && document.querySelector('main input[name="su-batch"]'); if (r) { r.checked = true; INP.suBatch(r); } else { const b = p3Eligible(w)[0]; if (b) setUi('suBatch', b.code); } };
+  // FB1 (PD-FB1-03): this suite's deposit configuration, chosen explicitly where its fixture prepares a package for Finance — each new fee
+  // option "Allow Deposit: Yes" with the Academy default, through the Step 5 handler (an administrator's action; role checks apply).
+  const fb1Dep = p => { if (p && cb8Managed(p)) cb8Work(p).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: p.id, o: o.id, k: 'allow' }, checked: true })); };
   // DM-P (PD-DM-15): publishing a programme or version needs fee options by delivery mode, approved by Finance. Where a check isn't about
   // fees, this fixture takes the authorized Section 5 path first: the duration of a pre-builder course, a financial package, fee options by
   // delivery mode, a mode for each option (the Standard programme fee replaced by an option at the same fee), the Super Administrator's own approval (D8)
@@ -23,6 +29,7 @@
     });
     if (!cb8Work(pr).opts.some(o => o.status === 'Active' && !o.legacy && M_MODES.includes(o.mode))) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String((s4PlanCur(pr.id) || {}).fee || 2400); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); closeModal(); } // no option at all (a Level 3 package starts from the options in force): one at the plan's fee
     cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.pay.length).forEach(o => ACT.cb8PayAdd({ dataset: { p: pr.id, o: o.id, k: '1' } }));
+    fb1Dep(pr); // FB1: the fixture's fee options answer Allow Deposit (Yes) before the Super Administrator's own approval
     if (!(cb8Wf(pr) && cb8Wf(pr).status === 'Approved')) { ACT.cb8SaApprove({ dataset: { p: pr.id } }); rs(); }
     closeModal(); if (aca) { acaEnter(av); S.signedIn = true; } else setAdminIdentity(av); S.portal = po; return true;
   };
@@ -449,7 +456,7 @@
   };
   // … then the unsupported Learning Outcome is changed to Observation and Version 2 is published
   const n2Custom = () => { const li = n2Draft(); INP.ch8LoType({ value: 'Observation', dataset: { id: 'NV-N2', u: '0', m: '0', l: String(li) } }); obsDecide('NV-N2'); dmpComply('NV-N2'), ACT.s3WizPublish({ dataset: { id: 'NV-N2' } }); reason('Publish Version 2'); };
-  const signUp = (batch) => { learner('A'); go('browse'); ACT.applyNvq({ dataset: { id: 'k-NV-N2' } }); { const r = document.querySelector('#modal-root input[name="r1-opt"]'); if (r && !document.querySelector('#modal-root input[name="r1-opt"]:checked')) r.checked = true; } /* DM-P: once the course has fee options, the learner chooses one */ prim(); const w = W; ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); if (batch) chSetBatch(w, batch); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal(); return w; };
+  const signUp = (batch) => { learner('A'); go('browse'); ACT.applyNvq({ dataset: { id: 'k-NV-N2' } }); { const r = document.querySelector('#modal-root input[name="r1-opt"]'); if (r && !document.querySelector('#modal-root input[name="r1-opt"]:checked')) r.checked = true; } /* DM-P: once the course has fee options, the learner chooses one */ prim(); const w = W; (p3Pick(), ACT.suNext()); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); (p3Pick(), ACT.suNext()); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); if (batch) chSetBatch(w, batch); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal(); return w; };
 
   await T('S3 correction A — custom assessment types show their configured name; rules follow the evidence method', async () => {
     fresh(); SA(); addType('Written reflection', 'Written assignment questions'); addType('Professional discussion', 'Professional discussion');
@@ -465,7 +472,7 @@
     ok('A / E2E-8: the new sign-up gets NV-N2\'s current published structure (Version 2), not Level 3\'s', w.tree.map(u => u.code).join() === ch8Tree('NV-N2').map(u => u.code).join() && !w.tree.some(u => u.code === 'U301') && w.nvq.version === 'Version 2' && w.tree.every(u => u.mods.every(m => m.los.every(l => l.crit.every(c => c.st === 'Not Started')))));
     const cr = allCrit(), wr = cr.find(c => c.typeName === 'Written reflection');
     ok('A: learner criteria inherit the Learning Outcome type (name kept, rule applied)', !!wr && wr.type === 'Knowledge' && !cr.some(c => s3Other(c.typeName || c.type)));
-    ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal();
+    (p3Pick(), ACT.suNext()); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); (p3Pick(), ACT.suNext()); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal();
     go('progress', { tab: 'tree' }); /* CF (PD-CF-08): the tree is the Criteria & evidence tab. Was: go('progress') */ ok('A: learner Progress shows the configured name', /Written reflection/.test(main()) && /Observation \/ Competency/.test(main()));
     setUi('trType', 'Knowledge'); render(); ok('A: learner "Knowledge" filter includes the written custom type, not the Observation one', /Written reflection/.test(main()) && !/Discuss a recent decision/.test(main())); setUi('trType', '');
   });
@@ -578,7 +585,7 @@
   await T('S3 end to end — create, isolate, publish, keep learners, batches, keys, library scope, access', async () => {
     fresh(); acaEnter('KA'); S.signedIn = true; go('a-programmes'); ACT.chProgNew();
     // R1 (final review): a new Level 3 programme is created with fee options instead of a single price — one option at the same £1,500
-    fill({ '#np-t': 'Level 3 Certificate in Dementia Care', '#np-l': 'Level 3', '#np-r': 'QN 610/7777/1', '#np-d': '9', '#np-du': 'months' /* E1-A: number + unit (was free text '9 months') */, '#np-ds': 'Dementia care.' }); fill({ 'main .r1-np-l': 'Standard', 'main .r1-np-f': '1500', 'main .r1-np-m': 'Fully Assisted' });
+    fill({ '#np-t': 'Level 3 Certificate in Dementia Care', '#np-l': 'Level 3', '#np-r': 'QN 610/7777/1', '#cbc3-dd-n': '12', '#np-d': '9', '#np-du': 'months' /* E1-A: number + unit (was free text '9 months') */, '#np-ds': 'Dementia care.' }); fill({ 'main .r1-np-l': 'Standard', 'main .r1-np-f': '1500', 'main .r1-np-m': 'Fully Assisted' });
     // CB2 (PD-CB-14) supersedes the creation dialog: Course Details of an unsaved course; the observation question is required; "Save and continue"
     document.querySelector('#np-obs-no').checked = true; (document.querySelector('#np-code') || {}).value = 'L3DEM-9M'; crT(ACT.cbDetCreate)();
     const pr = (STORE.chNewProgs || []).slice(-1)[0], id = pr.id; go('a-programmes', { id, tab: 'structure' });
@@ -632,7 +639,7 @@
   const apply4 = (v, title, country) => { learner(v); if (country) W.me.country = country; go('browse'); const c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === title); ACT.applyNvq({ dataset: { id: c.id } }); prim(); return W; };
   const farBatch = title => ADMIN.batches.find(b => b.course === title && ['Open', 'Planned'].includes(b.status) && daysTo(b.start) >= 30 && b.enrolled < b.cap);
   // Details, documents, the letter; then pay (bank transfer: no checkout pop-up) with the option asked for
-  const finish4 = (w, opt, batch) => { chSetBatch(w, batch || farBatch(w.nvq.title)); ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); setUi('suOpt', opt || 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal(); return w; };
+  const finish4 = (w, opt, batch) => { chSetBatch(w, batch || farBatch(w.nvq.title)); (p3Pick(), ACT.suNext()); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); (p3Pick(), ACT.suNext()); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); setUi('suOpt', opt || 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal(); return w; };
   const ckAdd = (pid, o, r = 'Setup test') => { ACT.s4CkAdd({ dataset: { p: pid } }); fill(o); if (o['#ck-e']) document.querySelector('#ck-e').checked = true; reason(r); };
   const planSet = (pid, o) => { ACT.s4PlanEdit({ dataset: { p: pid } }); if ('dep' in o) { document.querySelector(`input[name="pp-dm"][value="${o.dep == null ? 'default' : 'own'}"]`).checked = true; if (o.dep != null) fill({ '#pp-dv': String(o.dep) }); } if (o.fee) fill({ '#pp-f': String(o.fee) }); if (o.n) fill({ '#pp-n': String(o.n) }); return reason(o.r || 'Setup test'); };
   const cfgSet = (d, h) => { ACT.s4CfgEdit(); fill({ '#cf-d': String(d), '#cf-h': String(h) }); return reason('Setup test'); };
@@ -655,7 +662,7 @@
     // New applicants: Daniel (UK) on Level 3, Fatima (UAE) on Level 2, Tom (country India) on Level 3
     const d = apply4('A', T3), dn = d.docs.map(x => x.name);
     ok('S4-05 Daniel (UK, Level 3): All + UK items, the Level 3 list (not Level 2\'s), in its order', d.signup.prog === 'NV-L3' && dn.includes('Passport or UK photo driving licence') && dn.includes('Enhanced DBS certificate') && !dn.includes('Passport') && !dn.includes('Emirates ID and residence visa') && !dn.includes('Overseas qualification statement') && !dn.includes('Employer reference letter') && !dn.includes('Care Certificate (if you hold one)') && d.docs.find(x => x.name === 'CV').max === '2 MB');
-    go('admission'); ok('S4-05 consuming screen: Daniel\'s documents step lists those items', S.route === 'admission' && (ACT.suNext(), /Enhanced DBS certificate/.test(main())) && !/Emirates ID/.test(main()) && /Documents for applicants in United Kingdom/.test(main()));
+    go('admission'); ok('S4-05 consuming screen: Daniel\'s documents step lists those items', S.route === 'admission' && ((p3Pick(), ACT.suNext()), /Enhanced DBS certificate/.test(main())) && !/Emirates ID/.test(main()) && /Documents for applicants in United Kingdom/.test(main()));
     ok('S4-05 has-expiry reaches the applicant', /has an expiry date/.test(main()) && d.docs.find(x => x.name === 'Right to work (share code letter)').expiryReq);
     startUpload(d.docs.find(x => x.name === 'CV').id, 'cv.pdf', 3 * 1048576); ok('S4-05 the item\'s own maximum size is enforced (3 MB CV refused at 2 MB)', /maximum size is 2 MB/.test(JSON.stringify(ui('upl-' + d.docs.find(x => x.name === 'CV').id, {}))));
     const f = apply4('F', T3), fnm = f.docs.map(x => x.name);
@@ -724,7 +731,7 @@
     learner('A'); go('browse'); const c = CATALOGUE.find(x => x.id === 'k7'); ACT.applyNvq({ dataset: { id: 'k7' } }); prim();
     ok('S4a Priya\'s demo journey isn\'t used for new learners; she still opens hers from the demo switcher', W.v === 'A' && W.signup.prog === 'NV-L3' && STORE.worlds.B.signup.step === 4 - 0 && !!c);
     FA4(); ACT.s4PlanRetire({ dataset: { p: 'NV-L2' } }); reason('Repricing'); const f = apply4('E', T2);
-    ACT.suNext(); f.docs.forEach(x => { x.status = 'Submitted'; }); ACT.suNext(); setUi('suSig', 'Tom Whitfield'); setUi('suDecl', true); ACT.suSign(); render();
+    (p3Pick(), ACT.suNext()); f.docs.forEach(x => { x.status = 'Submitted'; }); (p3Pick(), ACT.suNext()); setUi('suSig', 'Tom Whitfield'); setUi('suDecl', true); ACT.suSign(); render();
     ok('S4-06 a plan that needs configuration blocks payment with a clear message', /Payment isn't available yet — needs configuration/.test(main()) && !app().querySelector('[data-act="suPay"]'));
     ACT.suPay(); ok('S4-06 (negative) a direct payment attempt is refused and logged; nothing recorded', !f.signup.done && !f.plans.some(p => p.e === 'nvq') && ADMIN.audit[0].action === 'Blocked: payment');
   });
@@ -763,7 +770,7 @@
     SA(); ACT.s4LetterRestore({ dataset: { id: 'NV-L3', v: '1' } }); reason('Back to the client template');
     const v3 = chLetterCur('NV-L3');
     ok('S4-09 Restore as new version: version 3 = version 1\'s text; history kept', v3.v === 3 && JSON.stringify(v3.text) === v1t && v3.from === 1 && chLetters('NV-L3').length === 3 && ADMIN.audit[0].action === 'Offer letter restored as new version');
-    learner('A'); go('admission'); ACT.suNext(); d.docs.forEach(x => { x.status = 'Submitted'; }); ACT.suNext();
+    learner('A'); go('admission'); (p3Pick(), ACT.suNext()); d.docs.forEach(x => { x.status = 'Submitted'; }); (p3Pick(), ACT.suNext());
     ok('S4-09 Daniel reads version 2 (his pinned version), not the newer version 3', /Version two paragraph about Level 3 Diploma/.test(main()) && /letter version 2/.test(main()));
     setUi('suSig', 'Daniel Okafor'); setUi('suDecl', true); ACT.suSign();
     ok('S4-09 signing keeps an unchangeable snapshot of the signed text, with the version', d.signup.sig.v === 2 && d.signup.sig.snapshot && /Version two paragraph/.test(d.signup.sig.snapshot.text[0]) && Object.isFrozen(d.signup.sig.snapshot));
@@ -836,7 +843,7 @@
     FA4(); cfgSet(300, 21);
     const mk = (code, days) => { const b = { code, label: 'Test intake ' + days, course: T3, start: inDays(days), end: D(days + 300), cap: 10, enrolled: 0, mode: 'Online', coord: 'Laura Kemp', teachers: [], assessors: [], status: 'Open', wait: 0, roster: [], coh: [], w1opts: ['L3-FO-STD'], dmode: 'Fully Assisted' }; ADMIN.batches.push(b); return b; }; // NB-1: ready for enrolment like the seeded Level 3 batches (PD-CR-15), since payment re-checks the batch
     const b27 = mk('TST-27', 27), b28 = mk('TST-28', 28);
-    const toPay = (v, b) => { const w = apply4(v, T3); ACT.suNext(); w.docs.forEach(x => { x.status = 'Submitted'; }); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); chSetBatch(w, b); setUi('suOpt', ''); render(); return w; };
+    const toPay = (v, b) => { const w = apply4(v, T3); (p3Pick(), ACT.suNext()); w.docs.forEach(x => { x.status = 'Submitted'; }); (p3Pick(), ACT.suNext()); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); chSetBatch(w, b); setUi('suOpt', ''); render(); return w; };
     const a = toPay('A', b27);
     ok('CH-10 payment step: batch 27 days away with a 21-day hold → no deposit option, the reason says 28 days', !document.querySelector('input[name="su-opt"][value="deposit"]') && /28 days or more/.test(main()));
     const e = toPay('E', b28);
@@ -867,7 +874,7 @@
     // The same distinction end to end on a published wizard programme (NV-N2): inherit, sign up, override, sign up
     planSet('NV-N2', { dep: null, r: 'Follow the default' }); go('f-plans', { tab: 'templates' });
     ok('Builder: NV-N2 now shows the default deposit', /\(default\)/.test(app().querySelector('.s4-plans tr[data-pid="NV-N2"]').textContent) && /£260\.00/.test(app().querySelector('.s4-plans tr[data-pid="NV-N2"]').textContent));
-    const n2T = n2().title, w1 = apply4('A', n2T); ACT.suNext(); w1.docs.forEach(x => { x.status = 'Submitted'; }); ACT.suNext(); setUi('suSig', 'Daniel Okafor'); setUi('suDecl', true); ACT.suSign(); chSetBatch(w1, ADMIN.batches.find(b => b.code === 'L2PW-DEC26-ONL')); setUi('suOpt', 'deposit'); render();
+    const n2T = n2().title, w1 = apply4('A', n2T); (p3Pick(), ACT.suNext()); w1.docs.forEach(x => { x.status = 'Submitted'; }); (p3Pick(), ACT.suNext()); setUi('suSig', 'Daniel Okafor'); setUi('suDecl', true); ACT.suSign(); chSetBatch(w1, ADMIN.batches.find(b => b.code === 'L2PW-DEC26-ONL')); setUi('suOpt', 'deposit'); render();
     ok('Payment step: the inherited deposit (£260)', /Deposit \(holds your seat\) — £260\.00 now/.test(main()));
     setUi('suMethod', 'bank'); render(); ACT.suPay();
     ok('Payment record: deposit £260, balance £640', w1.admission.deposit.min === 260 && w1.plans.find(p => p.e === 'nvq').rows[0].amount === 640 && w1.signup.plan.own === false);
@@ -875,7 +882,7 @@
     planSet('NV-N2', { dep: 180, r: 'Own deposit' }); cfgSet(270, 28);
     ok('Override: NV-N2\'s £180 stays when the default changes; the earlier learner keeps £260', s4TermsOf('NV-N2').deposit === 180 && w1.admission.deposit.min === 260);
     go('f-plans', { tab: 'templates' }); ok('Builder: NV-N2 shows its own deposit', /£180\.00 \(own\)/.test(app().querySelector('.s4-plans tr[data-pid="NV-N2"]').textContent));
-    const w2 = apply4('E', n2T); ACT.suNext(); w2.docs.forEach(x => { x.status = 'Submitted'; }); ACT.suNext(); setUi('suSig', 'Tom Whitfield'); setUi('suDecl', true); ACT.suSign(); chSetBatch(w2, ADMIN.batches.find(b => b.code === 'L2PW-DEC26-ONL')); setUi('suOpt', 'deposit'); setUi('suMethod', 'bank'); render();
+    const w2 = apply4('E', n2T); (p3Pick(), ACT.suNext()); w2.docs.forEach(x => { x.status = 'Submitted'; }); (p3Pick(), ACT.suNext()); setUi('suSig', 'Tom Whitfield'); setUi('suDecl', true); ACT.suSign(); chSetBatch(w2, ADMIN.batches.find(b => b.code === 'L2PW-DEC26-ONL')); setUi('suOpt', 'deposit'); setUi('suMethod', 'bank'); render();
     ok('Payment step: the own deposit (£180)', /Deposit \(holds your seat\) — £180\.00 now/.test(main()));
     ACT.suPay(); ok('Payment record: deposit £180, balance £720, recorded as own', w2.admission.deposit.min === 180 && w2.plans.find(p => p.e === 'nvq').rows[0].amount === 720 && w2.signup.plan.own === true);
   });
@@ -1060,7 +1067,7 @@
   const calCount = id => app().querySelectorAll(`main [data-id="${id}"]`).length;
 
   await T('S4b shared class: one session, two batches of the same programme', async () => {
-    fresh(); const d = apply4('A', T3); finish4(d, 'instalment'); const LEI = d.signup.batch, t = apply4('E', T3); ACT.suNext(); t.docs.forEach(x => { x.status = 'Submitted'; }); ACT.suNext(); setUi('suSig', 'Tom Whitfield'); setUi('suDecl', true); ACT.suSign(); chSetBatch(t, ADMIN.batches.find(b => b.code === 'L3AC-JAN27-MAN')); setUi('suOpt', 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal();
+    fresh(); const d = apply4('A', T3); finish4(d, 'instalment'); const LEI = d.signup.batch, t = apply4('E', T3); (p3Pick(), ACT.suNext()); t.docs.forEach(x => { x.status = 'Submitted'; }); (p3Pick(), ACT.suNext()); setUi('suSig', 'Tom Whitfield'); setUi('suDecl', true); ACT.suSign(); chSetBatch(t, ADMIN.batches.find(b => b.code === 'L3AC-JAN27-MAN')); setUi('suOpt', 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal();
     const pins0 = JSON.stringify([STORE.worlds.C.nvq.progVersion, d.nvq.progVersion, d.signup.plan, STORE.worlds.C.plans, d.plans, d.admission.deposit]), nSess0 = s4bAllSess().length;
     SA(); ACT.addSession({ dataset: { b: 'L3AC-JAN26' } });
     ok('Share: the session editor offers only other batches of the same programme', [...document.querySelectorAll('.se-w')].every(x => s4PidOfTitle(ADMIN.batches.find(b => b.code === x.value).course) === 'NV-L3') && !!document.querySelector(`.se-w[value="${LEI}"]`) && !document.querySelector('.se-w[value="L2DC-MAR26"]'));
@@ -1232,7 +1239,7 @@
     go('c-batches', { id: 'L3SP-MAR27' }); ok('N2 Coordinator overview: channel and mode separate; no "weekly live classes" claim for Self-Paced', /Delivery channel/.test(main()) && /Self-Paced/.test(app().querySelector('.n2-mode').textContent) && !/Online delivery with weekly live classes/.test(main()) && /No learners yet\. Each learner's delivery mode comes from their fee option/.test(main()));
     // A learner on the Self-Paced batch
     const d = apply4('A', T3); ok('N2 sign-up batch panel shows the assigned batch\'s delivery mode', /Fully Assisted/.test(chAssignedHtml(d)));
-    ACT.suNext(); d.docs.forEach(x => { x.status = 'Submitted'; }); ACT.suNext(); setUi('suSig', 'Daniel Okafor'); setUi('suDecl', true); ACT.suSign(); chSetBatch(d, sp); setUi('suOpt', 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal();
+    (p3Pick(), ACT.suNext()); d.docs.forEach(x => { x.status = 'Submitted'; }); (p3Pick(), ACT.suNext()); setUi('suSig', 'Daniel Okafor'); setUi('suDecl', true); ACT.suSign(); chSetBatch(d, sp); setUi('suOpt', 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal();
     learner('A'); go('course', { id: 'nvq' }); ok('N2 learner programme overview: Delivery channel and Delivery mode (Self-Paced) with the support wording', d.signup.batch === 'L3SP-MAR27' && /Delivery channel/.test(main()) && /Self-Paced/.test((app().querySelector('.n2-mode') || {}).textContent || '') && /not routine phone calls/.test(main()));
     ok('N2 same programme structure and version for both modes', d.tree.map(u => u.code).join() === STORE.s3.trees['NV-L3'].map(u => u.code).join() && d.nvq.title === T3);
     // Editing: allowed while empty (with a reason, audited); refused once learners are enrolled, also when forced
@@ -1271,7 +1278,7 @@
     ok('N2 historical learners, plans, fees, versions and assessments unchanged', JSON.stringify([STORE.worlds.C.plans, STORE.worlds.C.nvq, STORE.worlds.C.tree, STORE.worlds.D.plans, STORE.chFees, STORE.worlds.B.signup]) === keep);
     const f = chFeeRaise(d.me.id, T3, D(5), 'A', true); ok('N2 CH-38 not changed in N2 (transitional until N5): a fee for a Self-Paced batch learner still follows the programme setting (£70)', !!f && f.amount === 70 && f.support === 'Fully assisted' && sp.dmode === 'Self-Paced');
     // P-31 wording
-    go('a-programmes', { id: 'NV-L3D', tab: 'support' }); ok('N2 programme Support type = default for new batches (not the mode of enrolled batches); P-31 tag kept', /Observation fee rate/.test(main()) && /doesn't set anyone's delivery mode/.test(main()) && !!app().querySelector('.tbd') && !!document.querySelector('input[name="ch-sup"][value="Self-paced"]:checked')); // R2 final review (Level 3): observation-fee rate only
+    go('a-programmes', { id: 'NV-L3D', tab: 'support' }); ok('N2 programme Support type = default for new batches (not the mode of enrolled batches); P-31 tag kept', /Observation fee rate/.test(main()) && /observation-fee rate only/.test(main()) && /delivery mode comes from their fee option/.test(main()) /* CBC3: shortened — was "doesn't set anyone's delivery mode" */ && !!app().querySelector('.tbd') && !!document.querySelector('input[name="ch-sup"][value="Self-paced"]:checked')); // R2 final review (Level 3): observation-fee rate only
     acaEnter('KA'); S.signedIn = true; go('a-programmes', { id: 'NV-N1', tab: 'details' }); ok('N2 wizard Details: "Default delivery mode for new batches"', /Default delivery mode for new batches/.test(main()) && !/<legend class="lbl">Support type<\/legend>/.test(html()));
     go('a-programmes', { id: 'NV-N1', tab: 'review' }); ok('N2 wizard Review: the same label', /Delivery modes offered/.test(main())); // CR (PD-CR-03, supersedes "Default delivery mode for new batches"): Review & Publish shows the modes offered
     ACT.scOpen(); go('ux-changelog'); ok('UX Changelog: N2 entry; N4 limitations stated', /NVQ batch-level delivery mode/.test(main()) && /NOT client-approved academic eligibility policies/.test(main()) && /Thresholds tab is not functional yet/.test(main()) && /unverified demo data/.test(main()) && /Grace Mensah/.test(main()));
@@ -1294,7 +1301,7 @@
     const r2 = n3Save('L3FA-W27', { f, to: t4 }); ok('N3 saving the same plan again creates no duplicates', /No change to the sessions/.test(r2.pv) && s4bSessFor('L3FA-W27').length === 4 && Object.values(n3Plan('L3FA-W27').occ).join() === ids.join());
     // Learners: one on the FA batch (roster), Daniel on the Self-Paced batch
     const lid = ADMIN.learners[40].id; fa.roster.push([ADMIN.learners[40].name, lid, 'Self-funded']);
-    const d = apply4('A', T3); ACT.suNext(); d.docs.forEach(x => { x.status = 'Submitted'; }); ACT.suNext(); setUi('suSig', 'Daniel Okafor'); setUi('suDecl', true); ACT.suSign(); chSetBatch(d, sp); setUi('suOpt', 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal(); const plan0 = JSON.stringify(d.plans);
+    const d = apply4('A', T3); (p3Pick(), ACT.suNext()); d.docs.forEach(x => { x.status = 'Submitted'; }); (p3Pick(), ACT.suNext()); setUi('suSig', 'Daniel Okafor'); setUi('suDecl', true); ACT.suSign(); chSetBatch(d, sp); setUi('suOpt', 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal(); const plan0 = JSON.stringify(d.plans);
     // A held class (attended) and one changed individually
     SA(); const [s1, s2, s3, s4] = ss; s1.start = D(-1, '17:00'); s1.end = D(-1, '18:30'); ACT.n4Import({ dataset: { s: s1.id } }); const rows1 = JSON.stringify(N4().regs[s1.id].rows);
     ACT.s4bSessEdit({ dataset: { b: 'L3FA-W27', id: s2.id } }); fill({ '#se-d': s2.start.slice(0, 11) + '19:00', '#se-r': 'Teacher training' }); prim(); closeModal(); const s2start = s2.start;

@@ -6,6 +6,12 @@
 // js/ac-integrity.js), on records that are thrown away by the next fixture load.
 (async function () {
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // P6 (PD-P6-02): a batch change is a transfer request carried out after approval — in these fixtures a Super Administrator override (audited)
+  // P6 correction (PD-P6-05): a transfer needs an explicitly configured Academy time zone on both batches — test setup configures one where missing
+  const p6TzAll = () => ADMIN.batches.forEach(b => { if (!tzOk(b.tz)) b.tz = typeof chBatchCountry === 'function' && chBatchCountry(b) === 'United Arab Emirates' ? 'Asia/Dubai' : 'Europe/London'; });
+  const p6AsSA = f => { const av = ADMIN.av, po = S.portal, si = S.signedIn; setAdminIdentity('A'); S.portal = 'admin'; try { return f(); } finally { if (av && av !== 'A') setAdminIdentity(av); S.portal = po; S.signedIn = si; } };
+  const p6Ok = (why = 'Approved (test)') => p6AsSA(() => { p6TzAll(); const q = (SEATS().xfer || { reqs: [] }).reqs.find(x => x.state === 'Pending Academic Approval'); return q ? p6Decide(q.id, 'override', why) : { ok: false, why: 'no pending request' }; });
+  const p6Xfer = (lid, to, why = 'Transfer (test)') => p6AsSA(() => { p6TzAll(); const q = p6Request(lid, typeof to === 'string' ? to : to.code, why); return q.ok ? p6Decide(q.id, 'override', why) : q; });
   const J = JSON.stringify, $1 = s => document.querySelector(s), $a = s => [...document.querySelectorAll(s)];
   const main = () => ($1('main') || document.body).textContent.replace(/\s+/g, ' ');
   const T = async (n, f) => { try { closeModal(); S.frame = 'auto'; await f(); } catch (e) { R.push('FAIL ' + n + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
@@ -200,14 +206,15 @@
     pick('aca'); ACT.newBatch(); if (!MODAL) { ok('AC1-M setup: new batch wizard opens', false); return; }
     $1('#nb-c').value = 'DEMO-L3-MAR27'; const co = $1('#nb-co'); co.value = [...co.options].map(o => o.value).filter(Boolean)[0]; if (INP.n2NbCourse) INP.n2NbCourse(co);
     $a('#modal-root .m-m').forEach(c => { c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })); });
-    if ($1('#nb-s')) $1('#nb-s').value = new Date(now().getTime() + 120 * 864e5).toISOString().slice(0, 10); if ($1('#nb-e')) $1('#nb-e').value = new Date(now().getTime() + 480 * 864e5).toISOString().slice(0, 10);
+    // PD-L3C2-03: moves (here and in AC1-C) may not change signed payment dates, so the new batch starts on the demo batch's start day. Was: now + 120 days
+    if ($1('#nb-s')) $1('#nb-s').value = bCD().start.slice(0, 10); if ($1('#nb-e')) $1('#nb-e').value = new Date(now().getTime() + 480 * 864e5).toISOString().slice(0, 10);
     if ($1('#nb-m')) $1('#nb-m').value = 'Online'; if ($1('#nb-cap')) $1('#nb-cap').value = '10';
     prim(); const ac = $1('#nb-ac'); if (ac) ac.value = 'Laura Kemp'; $a('#modal-root .mc-nb-c').forEach(i => { if (i.value === 'Laura Kemp') i.checked = true; }); $a('#modal-root .nb-t').forEach(i => { if (i.value === 'Tom Whitfield') i.checked = true; }); $a('#modal-root .nb-a').forEach(i => { if (i.value === 'Sarah Okonkwo') i.checked = true; });
     prim(); prim(); prim(); prim(); closeModal();
     NB = ADMIN.batches.find(x => x.code === 'DEMO-L3-MAR27'); ok('AC1-M setup: temporary batch DEMO-L3-MAR27 created (Planned)', !!NB && NB.status === 'Planned', NB && NB.status); if (!NB) return;
     ACT.batchLife({ dataset: { id: NB.code, to: 'Open' }, textContent: 'Open for enrolment' }); reason();
     ok('AC1-M the Academic Admin opens it (the next lifecycle step)', NB.status === 'Open', NB.status);
-    const b = bCD(); ACT.chMoveBatch({ dataset: { id: AM } }); if (MODAL) { $1('#ch-mv-b').value = NB.code; reason('AC-1 move'); }
+    const b = bCD(); p6TzAll(); ACT.chMoveBatch({ dataset: { id: AM } }); if (MODAL) { $1('#ch-mv-b').value = NB.code; reason('AC-1 move'); p6Ok('AC-1 move'); } // P6 (PD-P6-02): the dialog now submits a request; approval carries it out
     ok('AC1-M Amira\'s record names the new batch', STORE.worlds.CD1.signup.batch === NB.code, STORE.worlds.CD1.signup.batch);
     ok('AC1-M her cohort place moved (new batch has her, old batch does not)', chCohLids(NB).includes(AM) && !chCohLids(b).includes(AM), J({ nb: chCohLids(NB), b: chCohLids(b) }));
     ok('AC1-M her Coordinator allocation moved: none left in the old batch, a Coordinator of the new batch now', !(b.mcA || {})[AM] && mcHas(NB, mcOf(AM, NB)) && (b.mcH || []).some(h => h.lid === AM && h.kind === 'moved'), J({ old: (b.mcA || {})[AM], nw: mcOf(AM, NB) }));

@@ -45,18 +45,19 @@
 
   await T('CB12-C Fees & Payments is the home; one Deposit heading', async () => {
     fresh(); ACA(); go('a-programmes'); ACT.chProgNew();
-    fill({ '#np-t': 'CB12 Level 3 course', '#np-l': 'Level 3', '#np-r': 'QN 610/7712/1', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
+    fill({ '#np-t': 'CB12 Level 3 course', '#np-l': 'Level 3', '#np-r': 'QN 610/7712/1', '#cbc3-dd-n': '12', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
     (document.querySelector('#np-code') || {}).value = 'CB12A'; document.querySelector('#np-obs-no').checked = true;
     const r = document.querySelector('main .r1-np-row'); r.querySelector('.r1-np-l').value = 'Fully Assisted'; r.querySelector('.r1-np-f').value = '2400'; r.querySelector('.r1-np-m').value = 'Fully Assisted';
     // CR (PD-CR-07): the course offers only its option's mode, so the package can be approved without a Self-Paced option
     document.querySelectorAll('main .cr-dm-c').forEach(x => { x.checked = x.value === 'Fully Assisted'; }); const pr = ACT.cbDetCreate(); closeModal();
     open(pr.id, 'payments'); const heads = qa('.cb8-sec h3').filter(h => /^Deposit/.test(h.textContent));
-    ok('CB12-C editable package: exactly one "Deposit" heading, with the current setting stated once, and no visible "Deposit" legend', heads.length === 1 && !!q('.cb8-depnow') && !qa('.cb8-sec legend.lbl').some(l => /^Deposit$/.test(l.textContent.trim())), heads.length);
-    ok('CB12-C …the deposit choice is still there (not available / default / custom) and still saves', qa('input[name="e1-wdm"]').length === 3 && (() => { const x = q('input[name="e1-wdm"][value="none"]'); x.checked = true; ACT.cb8Dep({ dataset: { p: pr.id } }); return cb8Work(pr).dep.mode === 'none'; })());
-    ok('CB12-C Section 5 says it is where fee options, observation fees, payment options and the deposit are set', /where this programme's fee options, observation fees, payment options \(how many instalments\) and deposit are set and changed/.test(q('.cb-home').textContent));
+    // FB1 (PD-FB1-01): Step 5 no longer has a programme deposit editor; the deposit is chosen on each fee option (Allow Deposit Yes / No)
+    ok('CB12-C editable package: no "Deposit" heading, no programme deposit editor and no visible "Deposit" legend; each option has Allow Deposit', heads.length === 0 && !q('.cbr2-pdep') && !q('input[name="e1-wdm"]') && !qa('.cb8-sec legend.lbl').some(l => /^Deposit$/.test(l.textContent.trim())) && qa('.cbr2-opt .fb1-yn').length === qa('.cbr2-opt').length && qa('.cbr2-opt').length > 0, heads.length);
+    ok('CB12-C …the deposit choice is still there per option (No / Yes — the Academy default or custom) and still saves', (() => { const o = cb8Work(pr).opts.find(x => x.status === 'Active'); q(`.cbr2-opt[data-o="${o.id}"] .fb1-yn input[data-k="no"]`).click(); return cb8Work(pr).opts.find(x => x.id === o.id).dep.mode === 'none'; })());
+    ok('CB12-C the Fees step says in one line what it holds (CBR supersedes the longer "home" note)', /^Step \d of \d$/.test(q('.cbr-hint').textContent.trim()) /* CBR-2: no explanatory line under the step title — was the one-line description */);
     open(pr.id, 'details'); ok('CB12-C Course Details: fees are managed in Section 5, with "Open Fees & Payments"', !!q('.cb-feelink') && q('.cb-feelink').dataset.tab === 'payments');
     q('.cb-feelink').click(); ok('CB12-C …which opens Section 5', q('.cb').dataset.sec === 'payments');
-    open('NV-L3', 'details'); ok('CB12-C read-only Course Details (seeded) links to Fees & Payments too', !!q('.cb-feelink'));
+    open('NV-L3', 'details'); ok('CB12-C read-only Course Details (seeded): Fees & Payment Plans is reachable from the step bar', !!q('.cbr-steps [data-tab="payments"]:not([disabled])')); // CBR-2 (PD-CBR2-01): no fees link inside the approved form
     SA(); ACT.cb8SaApprove({ dataset: { p: pr.id } }); if (MODAL) { document.querySelector('#rsn').value = 'x'; MODAL.actions.find(a => /primary/.test(a.cls || '')).fn(); closeModal(); }
     ACT.cb8ViewPkg({ dataset: { p: pr.id } }); ok('CB12-C the approved package (read-only view) shows its Deposit under one heading', !!MODAL && [...document.querySelectorAll('#modal-root h3')].filter(h => /^Deposit/.test(h.textContent)).length === 1); closeModal();
   });
@@ -70,11 +71,12 @@
     open('NV-L3', 'plan'); ok('CB12-D legacy: seeded NV-L3 keeps its plan in force, read-only, with Finance as owner', /Version \d in force/.test(main()) && /Finance/.test(main()));
   });
 
-  await T('CB12-E the eight sections in order', async () => {
-    fresh(); SA(); open('NV-N1', 'details'); const seen = [q('.cb').dataset.sec];
-    for (let i = 0; i < 7; i++) { const nx = q('.cb-foot .btn-primary'); if (!nx) break; nx.click(); seen.push(q('.cb').dataset.sec); } // CBX: eight sections
-    ok('CB12-E "Next" walks Course Details → Curriculum → Assessments → Observations → Fees & Payments → Offer Letter & Documents → Resources & Delivery → Review & Publish', seen.join(',') === 'details,curriculum,assessments,observations,payments,documents,delivery,review', seen.join(','));
-    ok('CB12-E Review & Publish is the last section (no Next) and has Back to Resources & Delivery', !q('.cb-foot .btn-primary') && /Back: Resources & Delivery/.test(q('.cb-foot').textContent));
+  await T('CB12-E the seven steps in order', async () => { // CBR (PD-CBR-01) supersedes CBX's eight sections
+    fresh(); SA(); open('NV-N1', 'details'); q('#cbr2-obs-yes').click(); // CBC1 (CBR-01): Next needs an explicit Yes / No — NV-N1's was never recorded
+    const seen = [q('.cb').dataset.sec];
+    for (let i = 0; i < 6; i++) { const nx = q('.cb-foot .btn-primary'); if (!nx) break; nx.click(); seen.push(q('.cb').dataset.sec); } // CBR: seven steps (NV-N1's observations aren't answered No, so step 4 is shown)
+    ok('CB12-E "Next" walks Course Details → Curriculum & Outcomes → Assessments → Observations → Fees & Payment Plans → Offer Letters → Review & Publish', seen.join(',') === 'details,curriculum,assessments,observations,payments,documents,review', seen.join(','));
+    ok('CB12-E Review & Publish is the last step (no Next) and has Back to Offer Letters', !q('.cb-foot .btn-primary') && /Back: Offer Letters/.test(q('.cb-foot').textContent));
   });
 
   const pre = document.createElement('pre'); pre.id = 'ft-out'; pre.textContent = R.join('\n'); document.body.appendChild(pre);

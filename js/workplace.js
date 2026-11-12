@@ -5,7 +5,7 @@
 'use strict';
 
 const WPC_TZ_LABEL = { 'Asia/Dubai': 'GST' };
-const wNow = () => new Date(now().getTime() + ((STORE.wpc && STORE.wpc.offset) || 0) * DAY);
+const wNow = () => Clock.scenario('workplace'); // P2: the workplace-link demo date (STORE.wpc.offset days on the one clock)
 const wIso = () => wNow().toISOString();
 function wfmt(iso, tz = 'Europe/London', time = true) {
   const d = new Date(iso), o = { timeZone: tz, weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };

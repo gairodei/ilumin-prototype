@@ -3,6 +3,9 @@
 // by the Academic Admin and approved by a Finance Admin inside the test (Reset restores the starting demo). Expected money is
 // worked out here in integer pence from the learners' own records.
 (async function () {
+  // P3 (PD-P3-02): the learner chooses their batch on sign-up step 1. Fixtures that relied on the automatic (CH-42) assignment now pick, on
+  // the page, the earliest eligible batch (the one CH-42 assigned); a batch the fixture already set, and that is still eligible, is kept
+  const p3Pick = () => { const w = W; if (!w || !p3Open(w) || chStepKey(w) !== 'details' || ui('suBatch', null) || (w.signup.batch && !p3Why(w, chBatch(w.signup.batch), { region: w.signup.l3cPin !== w.signup.batch }))) return; const r = S.route === 'admission' && document.querySelector('main input[name="su-batch"]'); if (r) { r.checked = true; INP.suBatch(r); } else { const b = p3Eligible(w)[0]; if (b) setUi('suBatch', b.code); } };
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   const J = JSON.stringify, $1 = s => document.querySelector(s), $a = s => [...document.querySelectorAll(s)];
   const main = () => ($1('main') || document.body).textContent.replace(/\s+/g, ' ');
@@ -42,9 +45,9 @@
   const toPayment = (w, mode = 'Self-Paced') => {
     go('browse'); const c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === CD_T); ACT.applyNvq({ dataset: { id: c.id } });
     const o = r1Opts(cdPr().id).find(x => x.status === 'Active' && x.mode === mode); $1(`#modal-root input[name="r1-opt"][value="${o.id}"]`).checked = true; press();
-    go('admission'); $1('#su-dob').value = '1992-03-04'; $1('#su-ad').value = '9 Test Road, Luton'; click($1('main [data-act="suNext"]'));
+    go('admission'); $1('#su-dob').value = '1992-03-04'; $1('#su-ad').value = '9 Test Road, Luton'; click((p3Pick(), $1('main [data-act="suNext"]')));
     fxFast(ff => { w.docs.filter(d => d.mand).forEach(d => ACT.sampleUpload({ dataset: { id: d.id } })); ff(3000); });
-    click($1('main [data-act="suNext"]')); setUi('suSig', chFullName(w)); setUi('suDecl', true); render(); click($1('main #su-sign'));
+    click((p3Pick(), $1('main [data-act="suNext"]'))); setUi('suSig', chFullName(w)); setUi('suDecl', true); render(); click($1('main #su-sign'));
   };
   const choose = (opt, method) => { const r = $1(`main input[name="cb9-pay"][value="${opt}"]`); if (r) { r.checked = true; INP.cb9Pay(r); } const m = $1(`main input[name="su-m"][value="${method}"]`); if (m) { m.checked = true; INP.suMethod(m); } };
   const payCo = open => fxFast(ff => { open(); if (!MODAL || !/Pay now/.test(MODAL.title || '')) return false; prim(); ff(3000); closeModal(); return true; });
@@ -60,10 +63,11 @@
   // The configured deposit, through the real screens: the Academic Admin changes it on Fees & Payments, a Finance Admin approves
   const setDeposit = amt => {
     ACA2(); const id = cdPr().id; go('a-programmes', { id, tab: 'fees' });
-    $1(`main input[name="e1-wdm"][value="${amt == null ? 'default' : 'own'}"]`).checked = true; if (amt != null) $1('main #e1-d').value = String(amt);
-    ACT.cb8Dep({ dataset: { p: id } }); ACT.cb8Submit({ dataset: { p: id } }); if (MODAL) press();
+    // FB1: Step 5 has no programme deposit editor — the deposit is set on each fee option (Allow Deposit → Academy default / Custom amount)
+    cb8Work(cdPr()).opts.filter(o => o.status === 'Active').forEach(o => { INP.cbr2Dep({ dataset: { p: id, o: o.id, k: amt == null ? 'default' : 'own' } }); if (amt != null) INP.cbr2Dep({ dataset: { p: id, o: o.id, k: 'amount' }, value: String(amt), id: 'fcd-dep-' + o.id }); });
+    ACT.cb8Submit({ dataset: { p: id } }); if (MODAL) press();
     const wf = cb8Wf(cdPr()); FA(); go('a-queue', { id: wf.qid }); ACT.e1Decide({ dataset: { id: wf.qid, a: 'approve' } }); if (MODAL) reason('Deposit for the FCD test');
-    return cb8Cur(id).dep.eff;
+    return (() => { const c = cb8Cur(cdPr().id), d = c.opts.filter(o => o.status === 'Active').map(o => o.dep || c.dep); return d.every(x => x.mode === d[0].mode && x.eff === d[0].eff) ? d[0] : { mode: null, eff: null }; })().eff;
   };
   // A new learner through the real sign-up up to the payment step (registration, programme and fee option, details, documents, letter)
   const signUp = (name, email, mode = 'Self-Paced') => { const w = register(name, email); toPayment(w, mode); return w; };
@@ -75,7 +79,7 @@
   let ava, hal;
   await T('FCD-A the configured deposit and the payment step', async () => {
     // PD-FD-01: the demo programme now starts on its own approved £100.00 deposit (Academy default stays £300.00). Was: programme on the £300.00 Academy default.
-    ok('FCD-A the demo programme starts on its own approved £100.00 deposit (Academy default £300.00)', cb8Cur(cdPr().id).dep.mode === 'own' && cb8Cur(cdPr().id).dep.eff === 100 && S4().cfg.deposit === 300);
+    ok('FCD-A the demo programme starts on its own approved £100.00 deposit (FB1: on each fee option; Academy default £300.00)', (() => { const c = cb8Cur(cdPr().id), d = c.opts.filter(o => o.status === 'Active').map(o => o.dep || c.dep); return d.every(x => x.mode === d[0].mode && x.eff === d[0].eff) ? d[0] : { mode: null, eff: null }; })().mode === 'own' && (() => { const c = cb8Cur(cdPr().id), d = c.opts.filter(o => o.status === 'Active').map(o => o.dep || c.dep); return d.every(x => x.mode === d[0].mode && x.eff === d[0].eff) ? d[0] : { mode: null, eff: null }; })().eff === 100 && S4().cfg.deposit === 300);
     // PD-FD-01: the deposit is already £100.00, so the flow is proved by approving a different amount (£150.00) and then £100.00 again, each a new plan version. Was: one change £300.00 → £100.00.
     const v0 = s4PlanCur(cdPr().id).v, d150 = setDeposit(150), v1 = s4PlanCur(cdPr().id).v, d100 = setDeposit(100), v2 = s4PlanCur(cdPr().id).v;
     ok('FCD-A the Academic Admin sets a £150.00 then a £100.00 deposit and a Finance Admin approves each (new plan version each time)', d150 === 150 && d100 === 100 && v1 > v0 && v2 > v1 && S4().cfg.deposit === 300, J([d150, d100, v0, v1, v2]));
@@ -163,8 +167,10 @@
     const p = pl(iv), b = chBatch(iv.signup.batch), s0 = b.start, h0 = p.deposit.hold, d1 = p.rows[0].due, d2 = p.rows[1].due, pin0 = J(p.pin);
     b.start = new Date(new Date(s0).getTime() + 30 * DAY).toISOString(); FA(); render();
     ok('FCD-Q batch start moved 30 days: instalment 1 stays due on the seat-hold deadline, the hold is unchanged (deposit still pending)', p.rows[0].due === d1 && d1 === h0 && p.deposit.hold === h0 && iv.admission.deposit.holdUntil === h0, J([p.rows[0].due, h0]));
-    ok('FCD-Q later unpaid instalments follow the existing revision rule (PD-CB-10); the signed terms are not altered', p.rows[1].due !== d2 && J(p.pin) === pin0 && Object.isFrozen(p.pin));
-    ok('FCD-Q the change is recorded for an administrative impact review', ADMIN.audit.some(x => /impact review needed/.test(x.action) && x.entity.includes(iv.me.id)));
+    // PD-L3C2-05 supersedes PD-CB-10 here: a pinned schedule is never recalculated. Was: later unpaid instalments moved (p.rows[1].due !== d2)
+    // and the change was logged "Batch date changed — deposit route: impact review needed".
+    ok('FCD-Q later unpaid instalments keep their signed dates; the signed terms are not altered', p.rows[1].due === d2 && J(p.pin) === pin0 && Object.isFrozen(p.pin));
+    ok('FCD-Q the difference is recorded for Finance (signed dates kept)', ADMIN.audit.some(x => x.action === 'Batch start differs from the signed payment schedule — dates kept' && x.entity.includes(iv.me.id)));
     b.start = s0; render();
   });
   await T('FCD-P Finance views agree', async () => {
@@ -181,7 +187,7 @@
     ok('FCD-P batch-wise report: net received for the batch = the learners\' own records (pence)', +sec.dataset.received - +sec.dataset.refunded === expect, (+sec.dataset.received - +sec.dataset.refunded) + ' vs ' + expect);
     setUi('fcC-fr', ''); setUi('fcB-fr', ''); setUi('fcC-fl', ''); setUi('fcB-fl', '');
     // PD-FD-01: after Reset the programme has its own £100.00 deposit and the demo has 5 payments. Was: £300.00 Academy default, 3 payments.
-    ACT.resetDemo(); ok('FCD-K Reset demo: the starting records, the programme £100.00 deposit again (Academy default £300.00), no test learners', cb8Cur(cdPr().id).dep.mode === 'own' && cb8Cur(cdPr().id).dep.eff === 100 && S4().cfg.deposit === 300 && allTx().length === 5 && !learnerAccounts().some(v => /^G/.test(v)));
+    ACT.resetDemo(); ok('FCD-K Reset demo: the starting records, the programme £100.00 deposit again (FB1: on each fee option; Academy default £300.00), no test learners', (() => { const c = cb8Cur(cdPr().id), d = c.opts.filter(o => o.status === 'Active').map(o => o.dep || c.dep); return d.every(x => x.mode === d[0].mode && x.eff === d[0].eff) ? d[0] : { mode: null, eff: null }; })().mode === 'own' && (() => { const c = cb8Cur(cdPr().id), d = c.opts.filter(o => o.status === 'Active').map(o => o.dep || c.dep); return d.every(x => x.mode === d[0].mode && x.eff === d[0].eff) ? d[0] : { mode: null, eff: null }; })().eff === 100 && S4().cfg.deposit === 300 && allTx().length === 5 && !learnerAccounts().some(v => /^G/.test(v)));
   });
   signOutUI();
   const pre = document.createElement('pre'); pre.id = 'ft-out'; pre.textContent = R.join('\n'); document.body.appendChild(pre);

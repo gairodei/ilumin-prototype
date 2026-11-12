@@ -67,7 +67,7 @@ const _baCB8 = buildAdmin; buildAdmin = function () { const r = _baCB8.apply(thi
 // From the approved package in force, or (for a programme that has none yet) from its current terms: the same options, counts and deposit
 function cb8Derive(pr) {
   const cur = cb8Cur(pr.id);
-  if (cur) return { pid: pr.id, derived: true, dep: { mode: cur.dep.mode, amount: cur.dep.amount }, partial: cur.partial, opts: cur.opts.map(o => ({ id: o.id, label: o.label, mode: o.mode, fee: o.fee, legacy: !!o.legacy, status: o.status, inForce: true, obsWp: o.keptWp != null ? o.keptWp : o.obsWp, obsOff: o.keptOff != null ? o.keptOff : o.obsOff, pay: o.pay.map(x => ({ id: x.id, k: x.k })) })) };
+  if (cur) return { pid: pr.id, derived: true, dep: { mode: cur.dep.mode, amount: cur.dep.amount }, partial: cur.partial, opts: cur.opts.map(o => ({ id: o.id, label: o.label, mode: o.mode, fee: o.fee, legacy: !!o.legacy, status: o.status, inForce: true, obsWp: o.keptWp != null ? o.keptWp : o.obsWp, obsOff: o.keptOff != null ? o.keptOff : o.obsOff, pay: o.pay.map(x => ({ id: x.id, k: x.k })), ...(o.dep ? { dep: cb8DepCopy(o.dep) } : {}) })) };
   const p = s4PlanCur(pr.id) || s4PlanLast(pr.id), T = e1T(pr.id), t = T && pr.status === 'Draft' && T.status !== 'Approved' && T.prop ? T.prop : e1TermsOfPlan(p);
   const ks = (t.meth === 'one-time' ? [1] : t.meth === 'both' ? [1, t.inst] : [t.inst]).filter(k => Number.isInteger(k) && k >= 1);
   const opts = cb8L3(pr) ? r1Opts(pr.id).map(o => ({ id: o.id, label: o.legacy ? 'Standard programme fee' : o.label, mode: o.mode, fee: r1FeeOf(o), legacy: !!o.legacy, status: o.status, inForce: true }))
@@ -78,17 +78,21 @@ function cb8Derive(pr) {
 const cb8Work = pr => { const w = CB8().work[pr.id]; return w && !w.derived ? w : cb8Derive(pr); };
 const cb8Mut = pr => { let w = CB8().work[pr.id]; if (!w || w.derived) { w = CB8().work[pr.id] = cb8Derive(pr); w.derived = false; } return w; };
 const cb8DepEff = P => (P.dep.mode === 'none' ? null : P.dep.mode === 'default' ? S4().cfg.deposit : P.dep.amount);
+// CBR-2: a fee option may carry its own deposit setting (o.dep, the same shape as P.dep); without one it uses the package's, as before
+const cb8DepOf = (P, o) => (o && o.dep ? o.dep : P.dep);
+const cb8DepE = d => (d.eff !== undefined ? d.eff : d.mode === 'none' ? null : d.mode === 'default' ? S4().cfg.deposit : d.amount);
+const cb8DepCopy = d => (d ? { mode: d.mode, amount: d.mode === 'own' ? d.amount : null } : undefined);
 const cb8Act = P => P.opts.filter(o => o.status === 'Active');
 const cb8Sort = o => { o.pay.sort((a, b) => a.k - b.k); };
 
 // Blocking problems: [{ o: option id or null, msg }]
 function cb8Issues(pr, P) {
   const out = [], b = cb8Basis(pr), act = cb8Act(P), dep = cb8DepEff(P), seen = new Set(), add = (o, msg) => out.push({ o: o ? o.id : null, msg });
-  if (!b.dur) add(null, 'Set the course duration in Section 1 — Course Details: payment dates are worked out from it.');
-  if (b.req === null) add(null, 'Answer "Does this course contain observations?" in Section 1 — Course Details: it decides which observation fees apply.');
-  if (b.req === true && !b.wp && !b.off) add(null, 'Observations are required, but no location is permitted (Section 4 — Observations): permit the workplace or the Academy office.');
+  if (!b.dur) add(null, 'Set the Payment Schedule Duration: payment dates are worked out from it.');
+  if (b.req === null) add(null, 'Answer "Observation required for this course" in Course Details: it decides which observation fees apply.');
+  if (b.req === true && !b.wp && !b.off) add(null, 'Observations are required but no location is on: turn on Workplace or Academy in Observations.');
   if (!act.length) add(null, 'Add at least one fee option.');
-  if (P.dep.mode === 'own' && !(cb8Money(P.dep.amount) > 0)) add(null, 'Enter a custom deposit above £0, in whole pence.');
+  if (P.dep.mode === 'own' && (!act.length || act.some(o => !o.dep)) && !(cb8Money(P.dep.amount) > 0)) add(null, 'Enter a custom deposit above £0, in whole pence.');
   act.forEach(o => {
     const nm = o.label || 'A fee option';
     if (!o.label) add(o, 'A fee option has no name.'); else if (seen.has(o.label.toLowerCase())) add(o, `${nm}: another fee option has the same name.`); seen.add(String(o.label).toLowerCase());
@@ -98,7 +102,9 @@ function cb8Issues(pr, P) {
     if (b.req === true && b.off && o.obsOff == null) add(o, `${nm}: set the Academy-office observation fee (£0 for no charge).`);
     if (!o.pay.length) add(o, `${nm}: add at least one payment option.`);
     o.pay.forEach(x => { const why = b.dur && o.fee > 0 ? cbOptWhy(b.dur, x.k, o.fee) : ''; if (why) add(o, `${nm}, ${cb8PayLbl(x.k)}: ${why}`); });
-    if (dep != null && o.fee > 0 && !(dep < o.fee)) add(o, `${nm}: the deposit (${money(dep, 'GBP')}) must be below the fee (${money(o.fee, 'GBP')}).`);
+    if (o.dep && o.dep.mode === 'own' && !(cb8Money(o.dep.amount) > 0)) add(o, `${nm}: enter the deposit amount above £0, in whole pence.`);
+    const de = o.dep ? cb8DepE(o.dep) : dep;
+    if (de != null && o.fee > 0 && !(de < o.fee)) add(o, `${nm}: the deposit (${money(de, 'GBP')}) must be below the fee (${money(o.fee, 'GBP')}).`);
   });
   return out;
 }
@@ -108,14 +114,16 @@ function cb8Freeze(pr, P) {
   return e1Freeze(JSON.parse(JSON.stringify({ pid: pr.id, rule: CB_SCHED_RULE, basis: b, dur: b.dur, dep: { mode: P.dep.mode, amount: P.dep.mode === 'own' ? P.dep.amount : null, eff: cb8DepEff(P) }, partial: P.partial,
     opts: P.opts.map(o => ({ id: o.id, label: o.label, mode: o.mode || null, fee: o.fee, legacy: !!o.legacy, status: o.status,
       obsWp: b.req === true && b.wp ? o.obsWp : null, obsOff: b.req === true && b.off ? o.obsOff : null, keptWp: o.obsWp, keptOff: o.obsOff,
-      pay: o.status === 'Active' ? o.pay.map(x => ({ id: x.id, k: x.k, rule: cbRuleTxt(b.dur, x.k), points: cbPointsTxt(b.dur, x.k), pence: e1SchedP(o.fee, x.k) })) : [] })),
+      pay: o.status === 'Active' ? o.pay.map(x => ({ id: x.id, k: x.k, rule: cbRuleTxt(b.dur, x.k), points: cbPointsTxt(b.dur, x.k), pence: e1SchedP(o.fee, x.k) })) : [],
+      ...(o.dep ? { dep: { ...cb8DepCopy(o.dep), eff: cb8DepE(cb8DepCopy(o.dep)) } } : {}) })),
     at: now().toISOString(), by: ADMIN.me.name })));
 }
-const cb8PkgKey = k => JSON.stringify(k && { basis: cb8Key(k.basis), dep: k.dep, partial: k.partial, opts: k.opts.map(o => [o.id, o.label, o.mode, o.fee, o.status, o.obsWp, o.obsOff, o.pay.map(x => x.k)]) });
+const cb8PkgKey = k => JSON.stringify(k && { basis: cb8Key(k.basis), dep: k.dep, partial: k.partial, opts: k.opts.map(o => [o.id, o.label, o.mode, o.fee, o.status, o.obsWp, o.obsOff, o.pay.map(x => x.k)].concat(o.dep ? [[o.dep.mode, o.dep.amount]] : [])) });
 // Why a submitted package can no longer be approved as it stands ('' when it can)
 function cb8Stale(pr, pkg) {
   if (cb8Key(pkg.basis) !== cb8Key(cb8Basis(pr))) return 'the course duration, level or observation settings changed after these terms were submitted';
   if (pkg.dep.mode === 'default' && pkg.dep.eff !== S4().cfg.deposit) return `the Academy default deposit changed after submission (${money(pkg.dep.eff, 'GBP')} then, ${money(S4().cfg.deposit, 'GBP')} now)`;
+  const od = pkg.opts.find(o => o.status === 'Active' && o.dep && o.dep.mode === 'default' && o.dep.eff !== S4().cfg.deposit); if (od) return `the Academy default deposit changed after submission (${od.label}: ${money(od.dep.eff, 'GBP')} then, ${money(S4().cfg.deposit, 'GBP')} now)`;
   const iss = cb8Issues(pr, { dep: pkg.dep, partial: pkg.partial, opts: pkg.opts.map(o => ({ ...o, obsWp: o.keptWp, obsOff: o.keptOff, pay: o.pay })) });
   return iss.length ? iss[0].msg : '';
 }
@@ -141,7 +149,7 @@ function cb8OptHtml(pr, o, b, anchor, ed, iss) {
   const obs = b.req === true, wpOn = obs && b.wp, offOn = obs && b.off, ret = o.status !== 'Active', mine = iss.filter(x => x.o === o.id);
   const obsDd = (on, v, kept) => (!obs ? '<span class="muted">Not applicable — no observations</span>' : !on ? `<span class="muted">Not applicable — location not permitted</span>${kept != null ? ` <span class="xs muted">(kept: ${money(kept, 'GBP')})</span>` : ''}` : cb8ObsTxt(v));
   return `<article class="cb8-opt${ret ? ' cb8-ret' : ''}" data-o="${esc(o.id)}"><div class="cb8-oh"><div class="cb8-ot"><h3>${esc(o.label || 'Unnamed fee option')}</h3><span class="xs muted mono">${esc(o.id)}</span></div><div class="cb8-oc">${cb8L3(pr) ? chip(o.legacy ? 'Mode of the batch (legacy)' : o.mode || 'No mode', o.mode ? 'blue' : 'grey') : ''}${ret ? chip('Retired', 'grey') : ''}</div></div>
-    <dl class="cb8-fees"><div><dt>Tuition fee</dt><dd class="num">${o.fee > 0 ? money(o.fee, 'GBP') : '<span class="muted">Not set</span>'}</dd></div><div><dt>Workplace observation fee</dt><dd>${obsDd(wpOn, o.obsWp, o.keptWp != null ? o.keptWp : o.obsWp)}</dd></div><div><dt>Academy-office observation fee</dt><dd>${obsDd(offOn, o.obsOff, o.keptOff != null ? o.keptOff : o.obsOff)}</dd></div></dl>
+    <dl class="cb8-fees"><div><dt>Tuition fee</dt><dd class="num">${o.fee > 0 ? money(o.fee, 'GBP') : '<span class="muted">Not set</span>'}</dd></div><div><dt>Workplace observation fee</dt><dd>${obsDd(wpOn, o.obsWp, o.keptWp != null ? o.keptWp : o.obsWp)}</dd></div><div><dt>Academy-office observation fee</dt><dd>${obsDd(offOn, o.obsOff, o.keptOff != null ? o.keptOff : o.obsOff)}</dd></div>${o.dep ? `<div><dt>Deposit (this option)</dt><dd>${esc(cb8DepTxt(o.dep))}${o.dep.mode === 'default' ? ` (${money(cb8DepE(o.dep), 'GBP')})` : ''}</dd></div>` : ''}</dl>
     ${ret ? '<p class="xs muted">Retired: not offered to new learners. Learners who chose it keep their terms.</p>' : `<h4 class="cb8-ph">Payment options <span class="xs muted">(${o.pay.length})</span></h4>${o.pay.length ? `<ul class="cb8-pays">${o.pay.map(x => cb8PayHtml(pr, o, x, b.dur, anchor, ed)).join('')}</ul>` : '<p class="small cb8-none">No payment options yet.</p>'}
     ${ed ? `<div class="cb8-add"><div class="field"><label for="cb8-k-${esc(o.id)}">Add payment option — number of payments (1–${CB_K_MAX})</label><div class="cb8-addrow"><input class="input num" type="number" min="1" max="${CB_K_MAX}" step="1" inputmode="numeric" id="cb8-k-${esc(o.id)}" data-oninput="cb8KLive" data-p="${pr.id}" data-o="${esc(o.id)}" data-cb-keep placeholder="e.g. 4"><button class="btn btn-sm btn-primary" data-act="cb8PayAdd" data-p="${pr.id}" data-o="${esc(o.id)}">${ic('plus', 14)}Add payment option</button></div><span class="hint">1 = pay in full. Any number the course duration allows; dates follow the duration.</span></div><div class="xs cb8-prev" aria-live="polite"></div></div>` : ''}`}
     ${mine.length ? `<ul class="list small cb8-iss">${mine.map(x => `<li class="li">${chip('To fix', 'red')} ${esc(x.msg)}</li>`).join('')}</ul>` : ''}
@@ -151,12 +159,12 @@ function cb8OptHtml(pr, o, b, anchor, ed, iss) {
 function cb8View(pr, P, o = {}) {
   const b = o.basis || cb8Basis(pr), anchor = o.anchor || cb8Anchor(pr), iss = o.ed ? cb8Issues(pr, P) : [], dep = P.dep.eff !== undefined ? P.dep.eff : cb8DepEff(P), hold = chHoldDays();
   const opts = P.opts.filter(x => x.status === 'Active').concat(P.opts.filter(x => x.status !== 'Active'));
-  return `<div class="cb8-pkg" data-pid="${pr.id}"><p class="small muted cb8-basis">Course duration: <strong>${esc(b.dur ? e1DurFmt(b.dur) : 'not set')}</strong> · observations: <strong>${b.req === true ? `yes — ${esc([b.wp && 'workplace', b.off && 'Academy office'].filter(Boolean).join(' and ') || 'no location permitted')}` : b.req === false ? 'no' : 'not answered'}</strong>. Payment 1 is due at batch start; the first payment is collected at checkout. One observation fee per learner per course, priced by the location of the first confirmed observation (PD-CB-11).</p>
+  return `<div class="cb8-pkg" data-pid="${pr.id}"><p class="small muted cb8-basis">Course duration: <strong>${esc(b.dur ? e1DurFmt(b.dur) : 'not set')}</strong> · observations: <strong>${b.req === true ? `yes — ${esc([b.wp && 'workplace', b.off && 'Academy office'].filter(Boolean).join(' and ') || 'no location permitted')}` : b.req === false ? 'no' : 'not answered'}</strong>. Payment 1 is due at batch start; the first payment is collected at checkout. One observation fee per learner per course, priced by the location of the first confirmed observation.</p>
     <div class="cb8-opts">${opts.map(x => cb8OptHtml(pr, x, b, anchor, !!o.ed, iss)).join('')}</div>
-    ${o.noDep ? '' : `<div class="cb8-dep"><h3>Deposit <span class="xs muted">a separate route, not combined with payment options</span></h3><p class="small">${cb8DepSum(P, dep, hold)}</p></div>`}</div>`;
+    ${o.noDep ? '' : `<div class="cb8-dep"><h3>Deposit <span class="xs muted">a separate route, not combined with payment options</span></h3><p class="small">${cb8DepSum(P, dep, hold)}</p>${opts.some(x => x.status === 'Active' && x.dep) ? `<p class="xs muted cb8-depuse">Used by: ${esc(opts.filter(x => x.status === 'Active' && !x.dep).map(x => x.label).join(', ') || 'no fee option — each has its own deposit setting')}. Fee options with their own setting show it on their card.</p>` : ''}</div>`}</div>`;
 }
 // What the deposit setting means for learners (one sentence, shown once)
-const cb8DepSum = (P, dep, hold) => (P.dep.mode === 'none' ? 'Not available — learners pay by one of the payment options.' : `${money(dep, 'GBP')} — ${P.dep.mode === 'default' ? 'Academy default' : 'custom amount for this programme'}. Offered only when the learner's batch starts in ${CH_HOLD_DAYS} days or more (CH-10); the balance is paid in one payment within the ${hold}-day seat hold.`);
+const cb8DepSum = (P, dep, hold) => (P.dep.mode === 'none' ? 'Not available — learners pay by one of the payment options.' : `${money(dep, 'GBP')} — ${P.dep.mode === 'default' ? 'Academy default' : 'custom amount for this programme'}. Offered only when the learner's batch starts in ${CH_HOLD_DAYS} days or more; the balance is paid in one payment within the ${hold}-day seat hold.`);
 
 /* ---------- Section 5 ---------- */
 const CB8_ST = { legacy: ['Terms in force (before financial packages)', 'grey'], Draft: ['Draft — not yet sent to Finance', 'grey'], Pending: ['Waiting for Finance review', 'amber'], Changes: ['Changes requested by Finance', 'red'], Approved: ['Approved', 'green'] };
@@ -187,7 +195,7 @@ function cb8Panel(pr) {
 function cb8StartCard(pr) {
   if (cbRetired(pr) || !cbAdmin()) return '';
   const p = s4PlanCur(pr.id) || s4PlanLast(pr.id);
-  return `<section class="card cb8-start"><h2>Financial package</h2>${pr.durV ? `<p class="small">Fees, fee options, observation fees and payment options are set as one financial package and approved by Finance. This programme's terms were set before packages${p ? ` (plan version ${p.v})` : ''}.</p><div class="row"><button class="btn btn-primary" data-act="cb8Start" data-p="${pr.id}">Start a new financial package</button></div><p class="xs muted">A draft copy of these terms that you can change and submit to Finance. Learners keep getting the current terms until Finance approves it.</p>` : `<p class="small cb8-nodur">${ic('info', 14)} A financial package needs a structured course duration, because payment dates are worked out from it. This programme's duration isn't recorded (it was set up before durations had a number and unit), so its terms stay as they are, changed by Finance in Finance → Payment Plans.</p>`}</section>`;
+  return `<section class="card cb8-start"><h2>Financial package</h2>${pr.durV ? `<p class="small">Fees, fee options, observation fees and payment options form one package, approved by Finance. Current terms are from before packages${p ? ` (plan version ${p.v})` : ''}.</p><div class="row"><button class="btn btn-primary" data-act="cb8Start" data-p="${pr.id}">Start a new financial package</button></div><p class="xs muted">A draft copy of these terms that you can change and submit to Finance. Learners keep getting the current terms until Finance approves it.</p>` : `<p class="small cb8-nodur">${ic('info', 14)} A financial package needs a recorded Payment Schedule Duration. Until then, Finance changes these terms in Finance → Payment Plans.</p>`}</section>`;
 }
 // Version history: every plan version (package or legacy), the workflow history and the audit
 function cb8HistPanel(pr) {
@@ -203,7 +211,7 @@ cbPanels = function (pr, sec) {
   const H = f => () => { const d = document.createElement('div'); d.innerHTML = f(); return cbHtml(d, pr); }, sup = r.find(p => p[0] === 'support');
   // a programme without a package keeps its existing panels (its plan stays with Finance), plus the way to start one
   if (!cb8Managed(pr)) return r.map(p => (p[0] === 'plan' ? [p[0], p[1], () => p[2]() + H(() => cb8StartCard(pr))()] : p));
-  const supNote = !cbObsNo(pr) ? `<p class="small cb8-supnote">${ic('info', 14)} Learners whose terms come from an approved financial package pay the observation fee of their fee option (Fees &amp; payment options). This rate applies to learners on legacy terms only, and its delivery-mode setting is the default class pattern for new batches.</p>` : '';
+  const supNote = !cbObsNo(pr) ? `<p class="small cb8-supnote">${ic('info', 14)} Applies to learners on legacy terms only; others pay their fee option's observation fee.</p>` : '';
   return [['fees', 'Fees & payment options', H(() => cb8Panel(pr))], ['payhist', 'Financial versions', H(() => cb8HistPanel(pr))]].concat(sup ? [['support', 'Legacy observation fee rate', () => supNote + sup[2]()]] : []);
 };
 CB_ROUTE.payhist = ['payments', 'payhist']; // "plan" and "fees" keep their routes: a package programme has no "plan" panel, so it opens Fees & payment options
@@ -241,7 +249,7 @@ ACT.cb8Start = el => {
   const g = cb8Guard(el, 'start a financial package', { start: true }); if (!g) return; const { pr } = g, cur = s4PlanCur(pr.id);
   CB8().wf[pr.id] = { status: 'Draft', qid: null, hist: [[now().toISOString(), ADMIN.me.name, 'Financial package draft started', cur ? `From plan version ${cur.v}` : '']], approved: null };
   cb8Mut(pr); logA('Payment Plans', cb8Ent(pr), 'Financial package draft started', cur ? `Plan v${cur.v}` : '—', 'Draft package', 'Fees & payment options');
-  render(); toast('Draft package started from the terms in force. Learners keep the current terms until Finance approves a new package.');
+  render(); toast('Draft package started. Learners keep the current terms until Finance approves it.');
 };
 // Add or edit a fee option: name, delivery mode (Level 3), tuition fee and the applicable observation fees
 ACT.cb8Opt = el => {
@@ -297,7 +305,7 @@ function cb8KRead(pr, o, s) {
   const b = cb8Basis(pr), t = String(s == null ? '' : s).trim(), k = Number(t);
   if (!/^\d+$/.test(t) || !cbKOk(k)) return { why: `Enter a whole number of payments from 1 to ${CB_K_MAX}.` };
   if (o.pay.some(x => x.k === k)) return { why: `${o.label} already offers ${cb8PayLbl(k).toLowerCase()}.` };
-  if (!b.dur) return { why: 'Set the course duration in Section 1 first: payment dates are worked out from it.' };
+  if (!b.dur) return { why: 'Set the Payment Schedule Duration first: payment dates are worked out from it.' };
   if (!(o.fee > 0)) return { why: 'Set this option\'s tuition fee first.' };
   const why = cbOptWhy(b.dur, k, o.fee); return why ? { why } : { k };
 }
@@ -325,7 +333,7 @@ function cb8DepRead() { const dm = ($('main input[name="e1-wdm"]:checked') || {}
 const cb8DepTxt = d => (d.mode === 'none' ? 'Deposit not available' : d.mode === 'default' ? 'Academy default deposit' : `Custom deposit ${money(d.amount, 'GBP')}`);
 function cb8DepApply(pr, d) { const W8 = cb8Work(pr); if (W8.dep.mode === d.mode && (d.mode !== 'own' || W8.dep.amount === d.amount)) return false; const m = cb8Mut(pr), was = cb8DepTxt(m.dep); m.dep = d; cb8Touch(pr, 'Deposit setting changed', was, cb8DepTxt(d)); return true; }
 // E2's rule: a custom deposit must be below every fee of the programme (every active fee option), checked when it is saved
-const cb8DepWhy = (pr, d) => { if (d.mode !== 'own') return ''; const o = cb8Act(cb8Work(pr)).find(x => x.fee > 0 && !(d.amount < x.fee)); return o ? `${o.label}: The deposit (${money(d.amount, 'GBP')}) must be below the fee (${money(o.fee, 'GBP')})` : ''; };
+const cb8DepWhy = (pr, d) => { if (d.mode !== 'own') return ''; const o = cb8Act(cb8Work(pr)).find(x => !x.dep && x.fee > 0 && !(d.amount < x.fee)); return o ? `${o.label}: The deposit (${money(d.amount, 'GBP')}) must be below the fee (${money(o.fee, 'GBP')})` : ''; };
 ACT.cb8Dep = el => {
   const g = cb8Guard(el, 'change the deposit setting'); if (!g) return; const d = cb8DepRead(); if (d === false) return; if (!d) return toast('Choose a deposit setting.', 'err');
   const why = cb8DepWhy(g.pr, d); if (why) return fieldErr('main #e1-d', why);
@@ -345,7 +353,7 @@ function cb8Legacy(pkg) {
   const act = pkg.opts.filter(o => o.status === 'Active'), ks = [...new Set(act.flatMap(o => o.pay.map(x => x.k)))].sort((a, b) => a - b), many = ks.filter(k => k > 1);
   return { meth: ks.includes(1) && many.length ? 'both' : ks.includes(1) ? 'one-time' : 'instalments', inst: many.length ? many[0] : 1, dep: pkg.dep.mode === 'own' ? pkg.dep.amount : null, depOff: pkg.dep.mode === 'none' };
 }
-const cb8Txt = pkg => pkg.opts.filter(o => o.status === 'Active').map(o => `${o.label} ${money(o.fee, 'GBP')}: ${o.pay.map(x => cb8PayLbl(x.k).toLowerCase()).join(', ')}`).join(' · ') + ` · ${cb8DepTxt(pkg.dep).toLowerCase()}`;
+const cb8Txt = pkg => pkg.opts.filter(o => o.status === 'Active').map(o => `${o.label} ${money(o.fee, 'GBP')}: ${o.pay.map(x => cb8PayLbl(x.k).toLowerCase()).join(', ')}${o.dep ? ` (${cb8DepTxt(o.dep).toLowerCase()})` : ''}`).join(' · ') + ` · ${cb8DepTxt(pkg.dep).toLowerCase()}`;
 function cb8SubmitNow(pr) {
   const wf = cb8Wf(pr) || (CB8().wf[pr.id] = { status: 'Draft', hist: [], approved: null }), pkg = cb8Freeze(pr, cb8Work(pr)), at = now().toISOString(), first = e1Approver(), txt = cb8Txt(pkg), act = pkg.opts.filter(o => o.status === 'Active');
   let n = 7600 + ADMIN.queue.length, id = 'AQ-' + n; while (ADMIN.queue.some(i => i.id === (id = 'AQ-' + n))) n++;
@@ -534,8 +542,8 @@ ch8Check = function (pr) {
    the applicant's fee option offers, each with its dated schedule from the batch start, and the deposit only when offered. */
 function cb8PayTermsTxt(pkg, o, anchor, depOk) {
   if (!pkg || !o || !cbYmdOk(anchor)) return null;
-  const parts = [], dep = pkg.dep.eff;
-  if (depOk && pkg.dep.mode !== 'none' && dep > 0) parts.push(`a deposit of ${money(dep, 'GBP')}`);
+  const D = o.dep || pkg.dep, parts = [], dep = D.eff;
+  if (depOk && D.mode !== 'none' && dep > 0) parts.push(`a deposit of ${money(dep, 'GBP')}`);
   o.pay.forEach(x => { const s = cbSched(anchor, pkg.dur, o.fee, x.k); if (s.why) return; parts.push(x.k === 1 ? `the full fee of ${money(o.fee, 'GBP')} (due ${cbFd(s.rows[0].due)})` : `the first of ${x.k} payments (${s.rows.map(r => `${money(r.amount, 'GBP')} due ${cbFd(r.due)}`).join(', ')})`); });
   return parts.length ? 'pay ' + (parts.length > 1 ? `${parts.slice(0, -1).join('; ')}; or ${parts[parts.length - 1]}` : parts[0]) : null;
 }
@@ -548,7 +556,7 @@ e2PayTxt = function (t, depOk) {
 };
 function cb8LetterCard(pr) {
   const pkg = cb8Cur(pr.id); if (cbRetired(pr)) return '';
-  if (!pkg) return `<section class="card cb8-lt"><h2>Payment wording</h2><p class="small">${cb8Managed(pr) ? 'No financial package has been approved yet, so the {{payment_terms}} field shows the programme\'s current terms. Once Finance approves the package, the preview uses its payment options and dates.' : 'This programme\'s terms were set before financial packages; {{payment_terms}} uses them as before.'}</p></section>`;
+  if (!pkg) return `<section class="card cb8-lt"><h2>Payment wording</h2><p class="small">${cb8Managed(pr) ? 'No package approved yet: {{payment_terms}} shows the current terms until Finance approves one.' : 'This programme\'s terms were set before financial packages; {{payment_terms}} uses them as before.'}</p></section>`;
   const o = cb8LtOpt(pr, pkg), a = cb8Anchor(pr), L = chLetterCur(pr.id), uses = !!(L && /\{\{payment_terms\}\}/.test((L.text || []).join(' ')));
   return `<section class="card cb8-lt"><h2>Payment wording — approved payment options</h2><p class="small muted">The letter text is the client's and isn't changed. Only the <span class="ch-merge">{{payment_terms}}</span> merge field is filled, from the applicant's fee option and its approved payment options, dated from their batch start. ${uses ? `Offer letter version ${L.v} uses it.` : `The current letter version${L ? ` (${L.v})` : ''} doesn't use it, so no letter wording changes; this shows what the field would say.`}</p>
     <div class="form-grid"><div class="field"><label for="cb8-lo-${pr.id}">Fee option</label><select class="select" id="cb8-lo-${pr.id}" data-onchange="cb8LtOpt" data-p="${pr.id}" data-cb-keep>${pkg.opts.filter(x => x.status === 'Active').map(x => `<option value="${esc(x.id)}" ${x === o ? 'selected' : ''}>${esc(x.label)} — ${money(x.fee, 'GBP')}</option>`).join('')}</select></div>${cb8AnchorPick(pr)}</div>

@@ -3,6 +3,9 @@
 // nothing completes, passes or scores from SCORM, earlier records are untouched. suites.sh runs it with FIXTURE=client; phase 1 is a
 // real refresh, then Reset demo, then the legacy fixture (seeded SCORM records, and a fresh NVQ course created, published and versioned).
 (async function () {
+  // FB1 (PD-FB1-03): this suite's deposit configuration, chosen explicitly where its fixture prepares a package for Finance — each new fee
+  // option "Allow Deposit: Yes" with the Academy default, through the Step 5 handler (an administrator's action; role checks apply).
+  const fb1Dep = p => { if (p && cb8Managed(p)) cb8Work(p).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: p.id, o: o.id, k: 'allow' }, checked: true })); };
   const SS = window.sessionStorage, PH = +(SS.getItem('ft-aafu.phase') || 0);
   const R = JSON.parse(SS.getItem('ft-aafu.R') || '[]'); const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   const J = JSON.stringify, $1 = s => document.querySelector(s), $a = s => [...document.querySelectorAll(s)];
@@ -49,9 +52,9 @@
     await T('AAFU-1 new course form', async () => {
       pick('aca'); go('a-programmes', { id: 'new', tab: 'details' }); const f = $1('main .cb-det-form');
       const codeLabels = $a('main .cb-det-form label, main .cb-det-form .lbl').map(l => l.textContent.trim()).filter(t => /code/i.test(t));
-      ok('AAFU-1 the form has one course code field, "Awarding body course code"; no Academy course code input, label or id', !$1('main #np-code') && J(codeLabels) === J(['Awarding body course code']) && !/Academy course code|Course code</.test(f.innerHTML.replace(/Awarding body course code</g, '')), J(codeLabels));
+      ok('AAFU-1 the form has one course code field, "Awarding body course code"; no Academy course code input, label or id', !$1('main #np-code') && J(codeLabels) === J(['Awarding Body Course Code']) /* CBR-2 (PD-CBR2-01) */ && !/Academy course code|Course code</.test(f.innerHTML.replace(/Awarding Body Course Code</g, '')), J(codeLabels));
       ok('AAFU-1 the client\'s guidance is on the field; it is still marked required', $1('main .aafa-refwhy').textContent.startsWith('Required. ' + GUIDE));
-      ok('AAFU-1 the internal programme ID is shown as automatic, not an input', /Internal programme ID\s*Assigned automatically/.test(main()) && !$1('main .aafa-pid input'));
+      ok('AAFU-1 the internal programme ID is never an input (assigned automatically; shown in the header once saved — CBR-2 PD-CBR2-01)', !$1('main .aafa-pid input') && !$1('main .cbr2-grid [id*="pid"]'));
       ok('AAFU-1 no former-code row on a new course', !$1('main .cb-former-code'));
     });
     await T('AAFU-1 lists, header and learner', async () => {
@@ -196,7 +199,7 @@
     let pr = null;
     await T('AAFU NVQ create', async () => {
       ACA(); go('a-programmes'); ACT.chProgNew();
-      fillM({ '#np-t': 'AAFU Level 3 course', '#np-l': 'Level 3', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel($1('#np-l')); $1('#np-obs-no').checked = true;
+      fillM({ '#np-t': 'AAFU Level 3 course', '#np-l': 'Level 3', '#cbc3-dd-n': '12', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel($1('#np-l')); $1('#np-obs-no').checked = true;
       [{ l: 'Fully Assisted — standard', f: 2400, m: 'Fully Assisted' }, { l: 'Self-Paced — standard', f: 1800, m: 'Self-Paced' }].forEach((x, k) => { if (k) ACT.r1NpAdd(); const r = $a('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = x.l; r.querySelector('.r1-np-f').value = String(x.f); r.querySelector('.r1-np-m').value = x.m; });
       const n0 = ADMIN.programmes.length; ACT.cbDetCreate(); closeModal();
       ok('AAFU NVQ (negative) without the awarding body course code nothing is created', ADMIN.programmes.length === n0 && /Enter the awarding body course code/.test(main()));
@@ -225,13 +228,13 @@
       INP.mapChange({ checked: true, dataset: { id: d.id, q: d.qs[0].id, c: s2Crit(d).find(c => c.type === 'Knowledge').code } }); go('a-programmes', { id, tab: 'assessments' }); ACT.pubAsg({ dataset: { id: d.id } }); crPd(); reason('Publish');
       const [a, b] = cb8Work(pr).opts; [[a.id, [1, 4]], [b.id, [1]]].forEach(([oid, ks]) => { const x = cb8Work(pr).opts.find(y => y.id === oid); x.pay.map(y => y.k).forEach(k => ACT.cb8PayDel({ dataset: { p: id, o: oid, k: String(k) } })); ks.forEach(k => ACT.cb8PayAdd({ dataset: { p: id, o: oid, k: String(k) } })); });
       go('a-programmes', { id, tab: 'letter' }); ACT.chLetterUp({ dataset: { id } }); ACT.chLetterSample(); reason('First version');
-      go('a-programmes', { id, tab: 'fees' }); ACT.cb8Submit({ dataset: { p: id } }); if (MODAL) press();
+      go('a-programmes', { id, tab: 'fees' }); fb1Dep(cbPr(id)); ACT.cb8Submit({ dataset: { p: id } }); if (MODAL) press();
       const qid = cb8Wf(pr).qid; FA(); go('a-queue', { id: qid }); ACT.e1Decide({ dataset: { id: qid, a: 'approve' } }); if (MODAL) reason('Checked'); ACA();
       const bl = cbRvChecks(pr).block; ok('AAFU NVQ (setup) ready to publish: no blockers (the awarding body course code is present)', !bl.length, J(bl.map(x => x.msg)));
       ACT.cbPublish({ dataset: { id } }); reason('Ready');
       ok('AAFU NVQ published as Version 1: same ID, awarding body course code kept, no Academy code', pr.status === 'Active' && pr.version === 1 && pr.id === id && pr.ref === 'QN 610/7702/2' && !('code' in pr), J([pr.status, pr.version]));
       go('a-programmes', { id, tab: 'details' }); ok('AAFU NVQ published details are read-only with the awarding body course code', !$1('main #np-r') && /Awarding body course code\s*QN 610\/7702\/2/.test(main()) && !/Former Academy course code/.test(main()));
-      ACT.s3WizVersion({ dataset: { id } }); reason('2028 changes'); go('a-programmes', { id, tab: 'details' }); $1('main #np-obs-no').checked = true; ACT.cbObsSave({ dataset: { id } });
+      ACT.s3WizVersion({ dataset: { id } }); reason('2028 changes'); go('a-programmes', { id, tab: 'details' }); { const b = $1('main #cbr2-obs-no'); b.checked = true; INP.cbr2Obs(b); if (MODAL) { const a = MODAL.actions.find(x => /danger|primary/.test(x.cls || '')); if (a && a.fn) a.fn(); closeModal(); } } // CBR-2 (PD-CBR2-02): the checkbox; CBC1 (CBR-01): the explicit No
       const bl2 = cbRvChecks(pr).block; ACT.cbPublish({ dataset: { id } }); reason('Version 2');
       ok('AAFU NVQ Version 2 published: the programme ID and awarding body course code are unchanged; still no Academy code', pr.version === 2 && !pr.nextDraft && pr.id === id && pr.ref === 'QN 610/7702/2' && !('code' in pr), J([pr.version, bl2.map(x => x.msg)]));
       go('a-programmes', { id, tab: 'versions' }); ok('AAFU NVQ version history lists both versions under the same programme', /Version 1/.test(main()) && /Version 2/.test(main()));

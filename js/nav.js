@@ -124,7 +124,7 @@ if (typeof cooNotifs === 'function') {
     return _cn().map(n => {
       if (!['c-learners', 'c-submissions', 'c-progress'].includes(n.go)) return n;
       const who = L.find(l => (n.b || '').startsWith(l.name)); if (!who) return n;
-      const s = n.go === 'c-submissions' && subs.find(x => x.L.lid === who.lid && (n.b || '').includes(x.a.title.split(' —')[0]));
+      const s = n.go === 'c-submissions' && subs.find(x => x.L.lid === who.lid && x.at && (n.b || '').includes(x.a.title.split(' —')[0])); // only a submitted row (otherwise the learner)
       return { ...n, go: s ? 'c-sub.' + s.key : 'c-learner.' + who.lid };
     });
   };

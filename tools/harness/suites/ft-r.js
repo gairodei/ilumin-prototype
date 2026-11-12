@@ -2,6 +2,12 @@
 // the Assessor's final assignment outcome, Self-Paced monthly worklists, and the cross-stage journeys. Each check does the action
 // through the screen or handler, then checks the consuming screen, and includes the negative case.
 (async function () {
+  // P3 (PD-P3-02): the learner chooses their batch on sign-up step 1. Fixtures that relied on the automatic (CH-42) assignment now pick, on
+  // the page, the earliest eligible batch (the one CH-42 assigned); a batch the fixture already set, and that is still eligible, is kept
+  const p3Pick = () => { const w = W; if (!w || !p3Open(w) || chStepKey(w) !== 'details' || ui('suBatch', null) || (w.signup.batch && !p3Why(w, chBatch(w.signup.batch), { region: w.signup.l3cPin !== w.signup.batch }))) return; const r = S.route === 'admission' && document.querySelector('main input[name="su-batch"]'); if (r) { r.checked = true; INP.suBatch(r); } else { const b = p3Eligible(w)[0]; if (b) setUi('suBatch', b.code); } };
+  // FB1 (PD-FB1-03): this suite's deposit configuration, chosen explicitly where its fixture prepares a package for Finance — each new fee
+  // option "Allow Deposit: Yes" with the Academy default, through the Step 5 handler (an administrator's action; role checks apply).
+  const fb1Dep = p => { if (p && cb8Managed(p)) cb8Work(p).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: p.id, o: o.id, k: 'allow' }, checked: true })); };
   const dmpPrice = () => { const r = document.querySelector('main #cr-pm-price'); if (r && !r.checked) { r.checked = true; INP.crPm(r); } }; // DM-P (PD-DM-18): "One programme price" is now an explicit choice (fee options by delivery mode are the default)
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
@@ -39,7 +45,7 @@
   // (the details step assigns the nearest batch for the learner's country — CH-42 — so a chosen batch is set after the letter, as in the N2 test)
   // Sign up to any Level 3 programme from Browse, choosing one of its options
   const apply3x = (v, pr, optId) => { m11Accept(); learner(v); go('browse'); const c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === pr.title); ACT.applyNvq({ dataset: { id: c.id } }); if (optId) { const r = document.querySelector(`input[name="r1-opt"][value="${optId}"]`); if (r) r.checked = true; } const res = prim(); if (res !== false) closeModal(); return W; };
-  const finish = (w, opt, batch) => { m11Accept(); chSetBatch(w, batch || farBatch(T3)); ACT.suNext(); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); if (batch) chSetBatch(w, batch); setUi('suOpt', opt || 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal(); return w; };
+  const finish = (w, opt, batch) => { m11Accept(); chSetBatch(w, batch || farBatch(T3)); (p3Pick(), ACT.suNext()); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); (p3Pick(), ACT.suNext()); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); if (batch) chSetBatch(w, batch); setUi('suOpt', opt || 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal(); return w; };
 
   /* ================= R1 — Level 3 fee options ================= */
   await T('R1 seed: one legacy option; existing Level 3 learners keep their exact fee, mode, deposit and payments', async () => {
@@ -469,7 +475,7 @@
   const npOpen = () => { SA(); go('a-programmes'); ACT.chProgNew(); const o = document.querySelector('#np-obs-no'); if (o) o.checked = true; const c = document.querySelector('#np-code'); if (c) c.value = 'R1F' + (++npN); /* CB2 correction: course code required */ };
   const npRow = (k, o) => { const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = o.l; r.querySelector('.r1-np-f').value = String(o.f); r.querySelector('.r1-np-m').value = o.m; };
   // A new Level 3 programme through the wizard, with fee options (rows: [{l, f, m}])
-  const newL3 = (title, rows) => { npOpen(); fill({ '#np-t': title, '#np-r': 'QN 610/' + (1000 + title.length) + '/3', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */ }); rows.forEach((o, k) => { if (k) ACT.r1NpAdd(); npRow(k, o); }); const r = crT(ACT.cbDetCreate)(); if (r === false) return null; closeModal(); return (STORE.chNewProgs || []).slice(-1)[0]; };
+  const newL3 = (title, rows) => { npOpen(); fill({ '#np-t': title, '#np-r': 'QN 610/' + (1000 + title.length) + '/3', '#cbc3-dd-n': '12', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */ }); rows.forEach((o, k) => { if (k) ACT.r1NpAdd(); npRow(k, o); }); const r = crT(ACT.cbDetCreate)(); if (r === false) return null; closeModal(); return (STORE.chNewProgs || []).slice(-1)[0]; };
   const add8 = (act, ds, o) => { ACT[act]({ dataset: ds }); fill(o); return prim(); };
   // Publish with the existing wizard steps: one unit / module / outcome / criterion, an offer letter
   const pubNew = pr => { const id = pr.id; go('a-programmes', { id, tab: 'structure' }); add8('ch8AddUnit', { id }, { '#u-c': 'U370', '#u-t': 'Practice' }); add8('ch8AddMod', { id, u: 0 }, { '#m-t': 'Core practice', '#m-ab': 'C/650/3701' }); add8('ch8AddLo', { id, u: 0, m: 0 }, { '#lo-t': 'Understand practice', '#lo-y': 'Knowledge' }); add8('ch8AddCrit', { id, u: 0, m: 0, l: 0 }, { '#c-d': 'Describe practice', '#c-e': 'Written account' });
@@ -488,7 +494,7 @@
     fresh(); npOpen();
     ok('R1f wizard (Level 3): fee options instead of the single price', vis(document.querySelector('main .r1-np-l3')) && !vis(document.querySelector('#np-p')) && !!document.querySelector('main .r1-np-row'));
     ok('R1f wizard (Level 3): no delivery-mode / class-pattern selector; the mode comes from the fee option; no "Pending" label shown', !vis(document.querySelector('main .r1-np-sup')) && /comes from the fee option/.test(document.querySelector('main .r1-np-modes').textContent) && /Self-Paced and Fully Assisted learners/.test(document.querySelector('main .r1-np-modes').textContent) && !vis(document.querySelector('#modal-root .tbd')));
-    fill({ '#np-t': 'Level 3 Certificate in Support Work', '#np-r': 'QN 610/5555/3', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */ });
+    fill({ '#np-t': 'Level 3 Certificate in Support Work', '#np-r': 'QN 610/5555/3', '#cbc3-dd-n': '12', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */ });
     ok('R1f (negative) at least one complete option (label required)', crT(ACT.cbDetCreate)() === false && !(STORE.chNewProgs || []).some(p => p.title === 'Level 3 Certificate in Support Work'));
     // E1 clarification (20 Oct 2026) supersedes: "a fee that doesn't divide into the instalments is refused" (£500 against 6, at Step 1).
     // Step 1 now checks the amount only; the split is checked in the Payment Plan step against the configured method (ft-e1.js, E1-CL).
@@ -501,7 +507,7 @@
     ok('R1f created: Level 3 Draft with 3 options (empty rows ignored), stable IDs under the programme ID', !!pr && pr.level === 'Level 3' && o.length === 3 && o.map(x => x.id).join() === [1, 2, 3].map(n => pr.id + '-FO-00' + n).join() && o.every(x => x.pid === pr.id) && o.map(x => x.mode).join() === 'Self-Paced,Fully Assisted,Self-Paced');
     ok('R1f the plan keeps its deposit and instalments; its reference fee is the lowest option fee', s4TermsOf(pr.id).fee === 600 && s4TermsOf(pr.id).inst === 6 && r1Eligible(pr.id).length === 3 && ADMIN.audit.some(a => a.action === 'Fee option added' && a.entity.includes(pr.id + '-FO-001')));
     // CB8 (PD-CB-48) supersedes "managed under Finance → Instalment plans": a new programme's fee options are managed in Section 5 (its financial package)
-    go('a-programmes', { id: pr.id, tab: 'details' }); ok('R1f the Draft\'s details list its options (managed in Section 5 — Fees & Payments)', /Managed in Section 5 — Fees &amp; Payments\.|Managed in Section 5 — Fees & Payments\./.test(main()) && main().includes(pr.id + '-FO-002'));
+    go('a-programmes', { id: pr.id, tab: 'details' }); ok('R1f the Draft\'s details list its options (managed in Section 5 — Fees & Payments)', /Managed in Fees (&amp;|&) Payment Plans\./.test(main()) /* CBC3: the step's name — was "Section [45] — Fees & Payments" */ /* CBR (PD-CBR-02): Section 4 when the course has no observations */ && main().includes(pr.id + '-FO-002'));
     // CB1 (PD-CB-01) supersedes the address only: "support" wasn't a step of new programmes, so it showed Details; it now opens the
     // observation fee rate panel. The check (the Details text) is unchanged and now goes to Details directly.
     go('a-programmes', { id: pr.id, tab: 'details' }); ok('R1f new programme Details (Level 3): the learner-level rule, not the batch-level P-31 wording', /comes from the fee option/.test(main()));
@@ -515,7 +521,7 @@
     ['Level 2', 'Level 5'].forEach(L => { lv.value = L; INP.r1NpLevel(lv); dmpPrice(); ok('R1f wizard (' + L + '): unchanged — single price and the delivery-mode selector', vis(document.querySelector('#np-p')) && vis(document.querySelector('main .cr-pm')) && !vis(document.querySelector('main .r1-np-l3'))); }); // DM (PD-DM-04, supersedes PD-CR-02)
     lv.value = 'Level 3'; INP.r1NpLevel(lv); ok('R1f wizard: switching back to Level 3 hides the selector again', !vis(document.querySelector('main .r1-np-sup')) && vis(document.querySelector('main .r1-np-l3')));
     lv.value = 'Level 4'; INP.r1NpLevel(lv);
-    fill({ '#np-t': 'Level 4 Certificate in Team Leading', '#np-r': 'QN 610/4444/4', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600' }), dmpPrice(); crT(ACT.cbDetCreate)(); closeModal();
+    fill({ '#np-t': 'Level 4 Certificate in Team Leading', '#np-r': 'QN 610/4444/4', '#cbc3-dd-n': '12', '#np-d': '12', '#np-du': 'months' /* E1-A: number + unit (was free text '12 months') */, '#np-p': '2600' }), dmpPrice(); crT(ACT.cbDetCreate)(); closeModal();
     const p4 = (STORE.chNewProgs || []).find(x => x.title === 'Level 4 Certificate in Team Leading');
     ok('R1f Level 4 created with its price and no fee options', !!p4 && p4.price === 2600 && !r1IsL3Pid(p4.id) && !r1Opts(p4.id).length);
     go('a-finance', { tab: 'plans' }); const cards = [...app().querySelectorAll('.r1-opts')].map(c => c.dataset.pid);
@@ -530,7 +536,7 @@
     // CB8 (PD-CB-48, PD-CB-52) supersedes Finance's fee-option card (r1OptAdd / r1OptEdit / r1OptRetire) for a programme made in the builder: options are
     // added, edited and retired in its financial package (Section 5) and reach the R1 store, with the same stable IDs, when the package is approved
     // (the Super Administrator's own package at once, D8). The rule tested is unchanged: each programme keeps its own options and learners are never repriced.
-    const pk = (f, note) => { f(); ACT.cb8SaApprove({ dataset: { p: pr.id } }); reason(note); };
+    const pk = (f, note) => { f(); fb1Dep(pr); ACT.cb8SaApprove({ dataset: { p: pr.id } }); reason(note); };
     pk(() => { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); fill({ '#c8-l': 'Fully Assisted plus', '#c8-f': '1800', '#c8-m': 'Fully Assisted' }); press(); ACT.cb8PayAdd({ dataset: { p: pr.id, o: pr.id + '-FO-003', k: '6' } }); }, 'Extra option');
     ok('R1f adding an option to the new programme leaves the Diploma\'s options unchanged', r1Opts(pr.id).length === 3 && r1Opts('NV-L3').length === 2 && r1Opts(pr.id)[2].id === pr.id + '-FO-003');
     ok('R1f publish the new programme with the existing wizard steps', pubNew(pr), pr.status);

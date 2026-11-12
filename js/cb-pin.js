@@ -31,9 +31,12 @@ ch8StartSignup = function (w, pr) {
   const t = w.signup.plan, p = s4PlanCur(pr.id), pkg = p && p.pkg; if (!pkg || t.issue) return r;
   const want = t.opt ? t.opt.id : null, o = pkg.opts.find(x => x.status === 'Active' && (want ? x.id === want : true));
   if (!o || !o.pay.length) return r; // e.g. the legacy standard option of a programme on old terms: keeps its terms as before
-  const cb8 = e1Freeze({ pid: pr.id, planV: p.v, rule: pkg.rule, dur: pkg.dur, dep: pkg.dep, obsReq: pkg.basis.req,
+  const cb8 = e1Freeze({ pid: pr.id, planV: p.v, rule: pkg.rule, dur: pkg.dur, dep: o.dep || pkg.dep, obsReq: pkg.basis.req, // CBR-2: the option's own deposit, when it has one
     opt: { id: o.id, label: o.label, mode: o.mode, fee: o.fee, obsWp: o.obsWp, obsOff: o.obsOff, pay: o.pay.map(x => ({ k: x.k, pence: x.pence })) } });
-  w.signup.plan = Object.freeze({ ...t, cb8 });
+  // CBR-2: a fee option with its own deposit setting gives the applicant's terms that deposit (or none) — the amount checkout takes
+  const od = o.dep ? { deposit: o.dep.mode === 'none' ? null : o.dep.eff, own: o.dep.mode === 'own', depOff: o.dep.mode === 'none' } : null;
+  w.signup.plan = Object.freeze({ ...t, ...(od || {}), cb8 });
+  if (od && w.admission && w.admission.deposit) Object.assign(w.admission.deposit, od.depOff ? { min: null, balance: null } : { min: od.deposit, balance: o.fee - od.deposit });
   logA('Admissions', `${chFullName(w)} (${w.me.id})`, 'Approved payment options fixed', '—', `${o.label}: ${o.pay.map(x => cb9PayLbl(x.k).toLowerCase()).join(', ')} · plan v${p.v}`, pr.title);
   return r;
 };
@@ -200,7 +203,7 @@ ACT.applyNvq = el => {
   const r = _applyCB9(el), c = CATALOGUE.find(x => x.id === (el && el.dataset && el.dataset.id)), pr = c && c.kind === 'nvq' ? s3Progs().find(p => p.title === c.title) : null, pkg = pr && cb8Cur(pr.id);
   if (!MODAL || !pkg) return r;
   const t = document.createElement('template'); t.innerHTML = MODAL.body;
-  const txt = o => `${e2DepOr({ depOff: pkg.dep.mode === 'none', deposit: pkg.dep.eff != null ? pkg.dep.eff : S4().cfg.deposit }, true)}${o.pay.map(x => cb9PayLbl(x.k).toLowerCase()).join(', ')} — payment 1 now, the rest on dates from your batch start.`;
+  const txt = o => `${e2DepOr({ depOff: (o.dep || pkg.dep).mode === 'none', deposit: (o.dep || pkg.dep).eff != null ? (o.dep || pkg.dep).eff : S4().cfg.deposit }, true)}${o.pay.map(x => cb9PayLbl(x.k).toLowerCase()).join(', ')} — payment 1 now, the rest on dates from your batch start.`;
   t.content.querySelectorAll('.r1-pick').forEach(l => { const o = pkg.opts.find(x => x.id === (l.querySelector('input') || {}).value), s = l.querySelector('.xs.muted'); if (o && s) s.textContent = (o.mode ? '' : 'Delivery mode: the mode of the batch you are assigned. ') + txt(o); });
   if (!cbIsL3(pr)) { const o = pkg.opts.find(x => x.status === 'Active'), p = [...t.content.querySelectorAll('p.small.muted')].find(x => /^Price /.test(x.textContent)); if (o && p) p.textContent = `Price ${money(o.fee, 'GBP')} — ${txt(o)}`; }
   MODAL.body = t.innerHTML; renderModal(); return r;

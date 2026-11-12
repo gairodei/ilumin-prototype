@@ -113,7 +113,7 @@ function cbDetails(pr) {
 function cbDetailsView(pr) {
   const obs = cbObsOf(pr), l3 = cbIsL3(pr), dv = cbDraftV(pr), q = pr.qual || {};
   const why = cbRetired(pr) ? 'Retired — a read-only historical record.'
-    : !pr.chNew ? 'Details of programmes that existed before the course builder are read-only in this prototype: their title and reference are used throughout learners\' records.'
+    : !pr.chNew ? 'Read-only: this programme was set up before the course builder.'
     : pr.status === 'Draft' ? 'Only the Super Admin, Academic Admin and System Admin can edit a Draft programme\'s details.'
     : `Version ${pr.version} is published, so its details are fixed for the learners on it.`;
   const obsEd = cbObsEditable(pr) && !(pr.chNew && pr.status === 'Draft');

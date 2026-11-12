@@ -21,19 +21,19 @@ const cbEvTxt = e => `${e.name} · ${cbLocTxt(e.loc)} · ${plural(e.crit.length,
 /* ---------- Problems with a configuration's events (only a draft is checked; published ones never are) ---------- */
 function cbEvProblems(pr, d) {
   const block = [], warn = [], evs = cbEvOf(d); if (!d || d.state !== 'Draft') return { block, warn };
-  if (d.required === false) { if (evs.length) warn.push(`Observations: ${plural(evs.length, 'observation event is', 'observation events are')} kept in this version for history but not used while observation isn't required`); return { block, warn }; }
+  if (d.required === false) { if (evs.length) warn.push(`Observations: ${plural(evs.length, 'Required Observation is', 'Required Observations are')} kept in this version for history but not used while observation isn't required`); return { block, warn }; }
   if (d.required !== true) return { block, warn };
   const nvq = n5NvqOk(pr, d).map(c => c.code), iaOn = d.ia.filter(c => c.status === 'Active').map(c => c.code), ok = new Set(nvq.concat(iaOn));
-  if (!evs.length) { block.push('Observations: add at least one observation event (how many observations, what each covers, where and with which evidence)'); return { block, warn }; }
-  const un = nvq.filter(c => !evs.some(e => e.crit.includes(c))); if (un.length) block.push(`Observations: ${plural(un.length, 'NVQ observation criterion isn\'t', 'NVQ observation criteria aren\'t')} covered by any observation event: ${un.slice(0, 6).join(', ')}${un.length > 6 ? '…' : ''}`);
+  if (!evs.length) { block.push('Observations: add at least one Required Observation before publishing'); return { block, warn }; }
+  const un = nvq.filter(c => !evs.some(e => e.crit.includes(c))); if (un.length) block.push(`Observations: add ${plural(un.length, 'qualification criterion', 'qualification criteria')} to a Required Observation: ${un.slice(0, 6).join(', ')}${un.length > 6 ? '…' : ''}`);
   evs.forEach(e => {
-    const st = e.crit.filter(c => !ok.has(c)); if (st.length) block.push(`Observations: event "${e.name}" covers criteria that aren't active in this version: ${st.join(', ')}`);
-    const bad = (e.loc || []).filter(k => !cbLocOk(d, k)); if (bad.length) block.push(`Observations: event "${e.name}" uses a location this version doesn't permit: ${cbLocTxt(bad)}`);
-    if (!(e.loc || []).length) block.push(`Observations: event "${e.name}" has no location`);
-    if (!(e.ev || []).length) block.push(`Observations: event "${e.name}" has no permitted evidence`);
-    if (!(e.loc || []).includes('workplace') && e.crit.some(c => iaOn.includes(c))) block.push(`Observations: event "${e.name}" covers Academy criteria but isn't a workplace observation (Academy criteria are used on workplace observations only)`);
+    const st = e.crit.filter(c => !ok.has(c)); if (st.length) block.push(`Observations: "${e.name}" includes criteria that aren't active in this version: ${st.join(', ')}`);
+    const bad = (e.loc || []).filter(k => !cbLocOk(d, k)); if (bad.length) block.push(`Observations: "${e.name}" uses a location that is turned off: ${cbLocTxt(bad)}`);
+    if (!(e.loc || []).length) block.push(`Observations: "${e.name}" has no location`);
+    if (!(e.ev || []).length) block.push(`Observations: "${e.name}" has no permitted evidence`);
+    if (!(e.loc || []).includes('workplace') && e.crit.some(c => iaOn.includes(c))) block.push(`Observations: "${e.name}" includes Academy criteria but isn't at the workplace (they are used at the workplace only)`);
   });
-  const unIa = iaOn.filter(c => !evs.some(e => e.crit.includes(c))); if (unIa.length) warn.push(`Observations: ${plural(unIa.length, 'Academy criterion isn\'t', 'Academy criteria aren\'t')} in any observation event: ${unIa.join(', ')}`);
+  const unIa = iaOn.filter(c => !evs.some(e => e.crit.includes(c))); if (unIa.length) warn.push(`Observations: ${plural(unIa.length, 'Academy criterion isn\'t', 'Academy criteria aren\'t')} in any Required Observation: ${unIa.join(', ')}`);
   return { block, warn };
 }
 const _checkCB6 = n5Check;
@@ -41,27 +41,26 @@ n5Check = function (pr) { const r = _checkCB6.apply(this, arguments), d = pr && 
 
 /* ---------- Actions: add / edit, reorder, remove (draft only, N5a's gate: role + draft) ---------- */
 ACT.cbObsEv = el => {
-  const g = n5Gate(el, el.dataset.e ? 'change an observation event' : 'add an observation event'); if (!g) return; const { pr, d } = g;
-  if (d.required === false) { n5Log(pr, 'Blocked: observation event (observation not required)', `Version ${d.v}`, '—', 'Course Details: no observations'); toast('This course has no observations (Course Details), so no observation events are set.', 'err'); return; }
-  if (!Array.isArray(d.events)) d.events = []; const evs = d.events, e = el.dataset.e ? evs.find(x => x.id === el.dataset.e) : null; if (el.dataset.e && !e) { toast('Event not found in this version.', 'err'); return; }
+  const g = n5Gate(el, el.dataset.e ? 'change a Required Observation' : 'add a Required Observation'); if (!g) return; const { pr, d } = g;
+  if (d.required === false) { n5Log(pr, 'Blocked: observation event (observation not required)', `Version ${d.v}`, '—', 'Course Details: no observations'); toast('This course has no observations (Course Details), so no Required Observations are set.', 'err'); return; }
+  if (!Array.isArray(d.events)) d.events = []; const evs = d.events, e = el.dataset.e ? evs.find(x => x.id === el.dataset.e) : null; if (el.dataset.e && !e) { toast('Required Observation not found in this version.', 'err'); return; }
   const nvq = n5NvqOk(pr, d), ia = d.ia.filter(c => c.status === 'Active'), cur = e || { name: `Observation ${evs.length + 1}`, loc: CB_LOC.map(x => x[0]).filter(k => cbLocOk(d, k)), crit: [], ev: ['notes'] };
   const cb = (cls, v, on, lab, dis) => `<label class="check"><input type="checkbox" class="${cls}" value="${esc(v)}" ${on ? 'checked' : ''} ${dis ? 'disabled' : ''}><span>${lab}</span></label>`;
-  openModal({ title: (e ? 'Edit observation event' : 'Add observation event') + ' — Version ' + d.v, size: 'lg', body: `<p class="small muted">Saved in Version ${d.v} (draft) and published with it. Learners on earlier versions keep theirs.</p>
-    <div class="field"><label for="ev-n">Name</label><input class="input" id="ev-n" value="${esc(cur.name)}" placeholder="e.g. Observation 1 — personal care"></div>
-    <fieldset class="field n5-fs"><legend class="lbl">Where it may happen</legend>${CB_LOC.map(([k, l]) => cb('ev-l', k, (cur.loc || []).includes(k) && cbLocOk(d, k), `${l}${cbLocOk(d, k) ? '' : ' <span class="xs muted">— not permitted in this version (Observation settings)</span>'}`, !cbLocOk(d, k))).join('')}</fieldset>
-    <fieldset class="field n5-fs"><legend class="lbl">NVQ observation criteria it covers</legend>${nvq.length ? `<div class="n5-maps">${nvq.map(c => cb('ev-c', c.code, cur.crit.includes(c.code), `<span class="code">${esc(c.code)}</span> ${esc(c.d)}`)).join('')}</div>` : '<p class="small muted">This version has no active NVQ observation criteria — give a Learning Outcome the Observation type in Section 2 — Curriculum.</p>'}</fieldset>
-    ${ia.length ? `<fieldset class="field n5-fs"><legend class="lbl">Academy criteria it covers (workplace observations only)</legend><div class="n5-maps">${ia.map(c => cb('ev-c', c.code, cur.crit.includes(c.code), `<span class="code">${esc(c.code)}</span> ${esc(c.title)}`)).join('')}</div></fieldset>` : ''}
-    <fieldset class="field n5-fs"><legend class="lbl">Evidence the assessor may record</legend><div class="n5-evs">${N5_EV.map(([k, l]) => cb('ev-e', k, (cur.ev || []).includes(k), l)).join('')}</div></fieldset>`,
-    actions: [{ label: 'Cancel' }, { label: e ? 'Save event' : 'Add event', cls: 'btn-primary', fn: () => {
+  openModal({ title: (e ? 'Edit Required Observation' : 'Add Required Observation') + ' — Version ' + d.v, size: 'lg', body: `<div class="field"><label for="ev-n">Observation title</label><input class="input" id="ev-n" value="${esc(cur.name)}" placeholder="e.g. Observation 1 — personal care"></div>
+    <fieldset class="field n5-fs"><legend class="lbl">Location</legend>${CB_LOC.map(([k, l]) => cb('ev-l', k, (cur.loc || []).includes(k) && cbLocOk(d, k), `${l}${cbLocOk(d, k) ? '' : ' <span class="xs muted">— turned off for this course</span>'}`, !cbLocOk(d, k))).join('')}</fieldset>
+    <fieldset class="field n5-fs"><legend class="lbl">Qualification criteria</legend>${nvq.length ? `<div class="n5-maps">${nvq.map(c => cb('ev-c', c.code, cur.crit.includes(c.code), `<span class="code">${esc(c.code)}</span> ${esc(c.d)}`)).join('')}</div>` : '<p class="small muted">None yet — give a Learning Outcome the Observation type in Curriculum &amp; Outcomes.</p>'}</fieldset>
+    ${ia.length ? `<fieldset class="field n5-fs"><legend class="lbl">Programme Academy criteria (workplace only)</legend><div class="n5-maps">${ia.map(c => cb('ev-c', c.code, cur.crit.includes(c.code), `<span class="code">${esc(c.code)}</span> ${esc(c.title)}`)).join('')}</div></fieldset>` : ''}
+    <fieldset class="field n5-fs"><legend class="lbl">Permitted evidence</legend><div class="n5-evs">${N5_EV.map(([k, l]) => cb('ev-e', k, (cur.ev || []).includes(k), l)).join('')}</div></fieldset>`,
+    actions: [{ label: 'Cancel' }, { label: e ? 'Save' : 'Add Required Observation', cls: 'btn-primary', fn: () => {
       if (!n5Still(g)) return n5Lost(g);
       const pick = c => $$('#modal-root .' + c + ':checked').map(x => x.value), nx = { name: mval('#ev-n'), loc: pick('ev-l'), crit: pick('ev-c'), ev: pick('ev-e') };
-      if (!nx.name) return fieldErr('#ev-n', 'Enter a name'), false;
-      if (evs.some(x => x !== e && x.name.toLowerCase() === nx.name.toLowerCase())) return fieldErr('#ev-n', 'Another event in this version has this name'), false;
+      if (!nx.name) return fieldErr('#ev-n', 'Enter a title'), false;
+      if (evs.some(x => x !== e && x.name.toLowerCase() === nx.name.toLowerCase())) return fieldErr('#ev-n', 'Another Required Observation has this title'), false;
       if (!nx.loc.length) return fieldErr('#ev-n', 'Choose where it may happen'), false;
-      if (nx.loc.some(k => !cbLocOk(d, k))) return fieldErr('#ev-n', 'That location isn\'t permitted in this version'), false;
+      if (nx.loc.some(k => !cbLocOk(d, k))) return fieldErr('#ev-n', 'That location is turned off for this course'), false;
       if (!nx.crit.length) return fieldErr('#ev-n', 'Choose the criteria it covers'), false;
       if (!nx.ev.length) return fieldErr('#ev-n', 'Choose the permitted evidence'), false;
-      if (!nx.loc.includes('workplace') && nx.crit.some(c => ia.some(x => x.code === c))) return fieldErr('#ev-n', 'Academy criteria are used on workplace observations only'), false;
+      if (!nx.loc.includes('workplace') && nx.crit.some(c => ia.some(x => x.code === c))) return fieldErr('#ev-n', 'Academy criteria are used at the workplace only'), false;
       if (!e) { let n = 1; while (evs.some(x => x.id === 'EV-' + n)) n++; evs.push({ id: 'EV-' + n, ...nx }); n5Log(pr, 'Observation event added', '—', cbEvTxt(nx), `Version ${d.v} (draft)`); toast(`"${nx.name}" added to Version ${d.v} (draft).`); }
       else { if (JSON.stringify(nx) === JSON.stringify({ name: e.name, loc: e.loc, crit: e.crit, ev: e.ev })) { toast('Nothing has changed.', 'info'); return false; } const was = cbEvTxt(e); Object.assign(e, nx); n5Log(pr, 'Observation event changed', was, cbEvTxt(e), `Version ${d.v} (draft)`); toast('Saved.'); }
       render();
@@ -72,8 +71,8 @@ ACT.cbObsEvMove = el => {
   if (i < 0 || j < 0 || j >= evs.length) return; [evs[i], evs[j]] = [evs[j], evs[i]]; n5Log(pr, 'Observation events reordered', '—', evs.map(x => x.name).join(' → '), `Version ${d.v} (draft)`); render();
 };
 ACT.cbObsEvRemove = el => {
-  const g = n5Gate(el, 'remove an observation event'); if (!g) return; const { pr, d } = g, evs = cbEvOf(d), e = evs.find(x => x.id === el.dataset.e); if (!e) return;
-  reasonDlg({ title: `Remove "${esc(e.name)}" — Version ${d.v}`, ok: 'Remove', danger: true, body: `<p class="small">Removed from Version ${d.v} (draft). Published versions keep their events; no learner's observation record changes.</p>`,
+  const g = n5Gate(el, 'remove a Required Observation'); if (!g) return; const { pr, d } = g, evs = cbEvOf(d), e = evs.find(x => x.id === el.dataset.e); if (!e) return;
+  reasonDlg({ title: `Remove "${esc(e.name)}" — Version ${d.v}`, ok: 'Remove', danger: true, body: `<p class="small">Removed from Version ${d.v} (draft). Published versions keep theirs; no learner's observation record changes.</p>`,
     onOk: r => { if (!n5Still(g)) return n5Lost(g); evs.splice(evs.indexOf(e), 1); n5Log(pr, 'Observation event removed', cbEvTxt(e), '—', r); render(); toast('Removed.'); } });
 };
 

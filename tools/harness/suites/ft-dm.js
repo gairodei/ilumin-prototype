@@ -4,6 +4,9 @@
 // legacy courses. Every check acts through the screen handlers.
 // Shared helpers for probes and screenshot setups (real handlers, as in ft-cb11 / ft-cr)
 window.H = (function () {
+  // FB1 (PD-FB1-03): this suite's deposit configuration, chosen explicitly where its fixture prepares a package for Finance — each new fee
+  // option "Allow Deposit: Yes" with the Academy default, through the Step 5 handler (an administrator's action; role checks apply).
+  const fb1Dep = p => { if (p && cb8Managed(p)) cb8Work(p).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: p.id, o: o.id, k: 'allow' }, checked: true })); };
   const q = s => document.querySelector('main ' + s), qa = s => [...document.querySelectorAll('main ' + s)];
   const qm = s => document.querySelector('#modal-root ' + s), qma = s => [...document.querySelectorAll('#modal-root ' + s)];
   const fill = o => Object.entries(o).forEach(([k, v]) => { const e = document.querySelector(k); e.value = v; });
@@ -19,7 +22,7 @@ window.H = (function () {
   // Section 1 through the real form. o: { title, level, rows: [{l,f,m}], price, modes (only while the old field exists) }
   const make = (o = {}) => {
     ACA(); go('a-programmes'); ACT.chProgNew(); const n = ++n0, lv = o.level || 'Level 3';
-    fill({ '#np-t': o.title || 'Probe course ' + n, '#np-l': lv, '#np-r': 'QN 610/' + (8800 + n) + '/1', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
+    fill({ '#np-t': o.title || 'Probe course ' + n, '#np-l': lv, '#np-r': 'QN 610/' + (8800 + n) + '/1', '#cbc3-dd-n': '12', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
     document.querySelector('#np-obs-no').checked = true;
     if (q('#np-p') && o.price) fill({ '#np-p': String(o.price) });
     if (lv !== 'Level 3' && o.rows) { const r = q('#cr-pm-opts'); if (r) { r.checked = true; INP.crPm(r); } }
@@ -51,7 +54,7 @@ window.H = (function () {
     const id = pr.id; go('a-programmes', { id, tab: 'letter' });
     ACT.chLetterUp({ dataset: { id } }); ACT.chLetterSample(); const t = document.querySelector('#lt-x'); if (t) t.value = t.value + '\n\nTo confirm your place, please {{payment_terms}}.'; reason('First version');
   };
-  const submit = pr => { ACA(); go('a-programmes', { id: pr.id, tab: 'fees' }); ACT.cb8Submit({ dataset: { p: pr.id } }); if (MODAL) press(); return cb8Wf(pr) && cb8Wf(pr).qid; };
+  const submit = pr => { ACA(); fb1Dep(pr); go('a-programmes', { id: pr.id, tab: 'fees' }); ACT.cb8Submit({ dataset: { p: pr.id } }); if (MODAL) press(); return cb8Wf(pr) && cb8Wf(pr).qid; };
   const approve = qid => { FA(); go('a-queue', { id: qid }); ACT.e1Decide({ dataset: { id: qid, a: 'approve' } }); if (MODAL) reason('Checked against the price list'); ACA(); };
   const publish = pr => { ACA(); go('a-programmes', { id: pr.id, tab: 'review' }); const b = q('[data-act="cbPublish"]'); if (!b || b.disabled) return cbRvChecks(pr).block.map(x => x.msg); b.click(); reason('Ready for intake'); return pr.status; };
   // the whole builder journey; approveFin=false leaves the package with Finance
@@ -65,6 +68,9 @@ window.H = (function () {
 })();
 // Acceptance probe for the DM correction: the exact user journeys (section C of the request)
 (async function () {
+  // FB1 (PD-FB1-03): this suite's deposit configuration, chosen explicitly where its fixture prepares a package for Finance — each new fee
+  // option "Allow Deposit: Yes" with the Academy default, through the Step 5 handler (an administrator's action; role checks apply).
+  const fb1Dep = p => { if (p && cb8Managed(p)) cb8Work(p).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: p.id, o: o.id, k: 'allow' }, checked: true })); };
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   const { q, qa, qm, qma, fill, prim, press, reason, ACA, FA } = H; const J = JSON.stringify;
   const mroot = () => document.getElementById('modal-root');

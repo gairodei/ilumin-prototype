@@ -3,6 +3,9 @@
 // stay editable; typed values are kept across sections; published, seeded and retired programmes are read-only; role guards hold.
 // Each check acts through the screen (clicks, typing) or the handler, then checks the page or the record, with the negative case.
 (async function () {
+  // FB1 (PD-FB1-03): this suite's deposit configuration, chosen explicitly where its fixture prepares a package for Finance — each new fee
+  // option "Allow Deposit: Yes" with the Academy default, through the Step 5 handler (an administrator's action; role checks apply).
+  const fb1Dep = p => { if (p && cb8Managed(p)) cb8Work(p).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: p.id, o: o.id, k: 'allow' }, checked: true })); };
   const dmpPrice = () => { const r = document.querySelector('main #cr-pm-price'); if (r && !r.checked) { r.checked = true; INP.crPm(r); } }; // DM-P (PD-DM-18): "One programme price" is now an explicit choice (fee options by delivery mode are the default)
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
@@ -25,7 +28,7 @@
   const progs = () => ADMIN.programmes.length, made = () => (STORE.chNewProgs || []).filter(p => !p.seed);
   const blocked = (a0, re) => ADMIN.audit.slice(0, ADMIN.audit.length - a0).some(x => /^Blocked/.test(x.action) && (!re || re.test(x.action)));
   const obsReq = pr => n5Shown(pr).required;
-  const fillL4 = (title = 'Level 4 Certificate in CB2 Leadership', code = 'L4-CB2') => { type('#np-l', 'Level 4'); INP.r1NpLevel(q('#np-l')); type('#np-t', title); void code; /* CR: no course code (PD-CR-06). DM (PD-DM-01, supersedes PD-CR-01): no modes-offered field — a one-price course, as before */ type('#np-r', 'QN 610/8282/4'); type('#np-d', '9'); type('#np-du', 'months'); type('#np-p', '2400'); dmpPrice(); type('#np-ds', 'For team leaders in care.'); type('#np-q-body', 'NCFE CACHE'); type('#np-q-glh', '320'); type('#np-q-tqt', '540'); type('#np-q-credits', '54'); };
+  const fillL4 = (title = 'Level 4 Certificate in CB2 Leadership', code = 'L4-CB2') => { type('#np-l', 'Level 4'); INP.r1NpLevel(q('#np-l')); type('#np-t', title); void code; /* CR: no course code (PD-CR-06). DM (PD-DM-01, supersedes PD-CR-01): no modes-offered field — a one-price course, as before */ type('#np-r', 'QN 610/8282/4'); type('#cbc3-dd-n', '9'); /* FB2 (PD-FB2-01): the Course Duration is the programme duration (was #np-d 9 with a separate Display Duration 12) */ type('#np-p', '2400'); dmpPrice(); type('#np-ds', 'For team leaders in care.'); type('#np-q-body', 'NCFE CACHE'); type('#np-q-glh', '320'); type('#np-q-tqt', '540'); type('#np-q-credits', '54'); };
   const openNew = enter => { (enter || SYS)(); go('a-programmes'); q('[data-act="chProgNew"]').click(); };
   const createL4 = (obs = 'yes', enter, title) => { openNew(enter); fillL4(title); q('#np-obs-' + obs).click(); q('[data-act="cbDetCreate"]').click(); return made().slice(-1)[0]; };
 
@@ -36,20 +39,21 @@
     // CR (PD-CR-06, PD-CR-01): no course code field; "Course name"; the delivery modes offered
     const fields = ['#np-t', '#np-l', /* DM (PD-DM-01): was '#cr-dm-0', '#cr-dm-1' — now the fee options (Level 3) */ '.r1-np-m', '#np-r', '#np-q-body', '#np-q-glh', '#np-q-tqt', '#np-q-credits', '#np-d', '#np-du', '#np-ds', '#np-obs-yes', '#np-obs-no'];
     // PD-M-10 supersedes the reference label — was: label[for="np-r"] === 'Qualification number / reference' — now: 'Awarding body course code' (same field, pr.ref)
-    ok('CB2-A fields: course name, NVQ level, course code, qualification number / reference and awarding body (three separate fields), GLH, TQT, credits, duration (number + unit), description, observations Yes / No', fields.every(s => !!q(s)) && !q('#np-code') && q('label[for="np-t"]').textContent === 'Course name' && q('label[for="np-r"]').textContent === 'Awarding body course code' && q('label[for="np-q-body"]').textContent === 'Awarding body' && q('#np-r').value === '' && [...q('#np-du').options].map(o => o.textContent).join() === 'Days,Weeks,Months,Years');
-    ok('CB2-A the observation question is prominent, required and unanswered at first', !!q('.cb-obs') && /Does this course contain observations\?/.test(q('.cb-obs legend').textContent) && /Required/.test(q('.cb-obs legend').textContent) && !q('#np-obs-yes').checked && !q('#np-obs-no').checked && q('.cb-det-form').firstElementChild === q('.cb-obs'));
-    ok('CB2-A sections 2–8 can\'t be opened before saving (disabled, "After saving"); the header says "Not saved yet"', qa('.cb-nav .cb-sec').length === 8 && qa('.cb-nav .cb-sec[disabled]').length === 7 && /Not saved yet/.test(q('.page-h').textContent));
+    ok('CB2-A fields: course name, NVQ level, course code, qualification number / reference and awarding body (three separate fields), GLH, TQT, credits, duration (number + unit), description, observations Yes / No', fields.every(s => !!q(s)) && !q('#np-code') && /* CBR-2 (PD-CBR2-01): the approved labels — was 'Course name' / 'Awarding body course code' / 'Awarding body' */ q('label[for="np-t"]').textContent === 'Course Name' && q('label[for="np-r"]').textContent === 'Awarding Body Course Code' && q('label[for="np-q-body"]').textContent === 'Awarding Body' && q('#np-r').value === '' && [...q('#np-du').options].map(o => o.textContent).join() === 'Days,Weeks,Months,Years');
+    // CBR-2 (PD-CBR2-02) supersedes the required Yes / No question: one checkbox, "Observation required for this course", after a divider at the bottom (unticked = No)
+    ok('CB2-A the observation answer is "Observation required for this course" — Yes / No, neither chosen at first ("Not answered"), after a divider', !!q('hr.cbr2-hr + .cbr2-obs #cbr2-obs-yes') && !!q('.cbr2-obs #cbr2-obs-no') && !q('input[name="cbr2-obs"]:checked') && !!q('.cbr2-obs .cbr2-obs-na') /* CBC1 (CBR-01): was one checkbox, unticked = No */ && !q('#np-obs-yes').checked && !q('#np-obs-no').checked && !!q('#np-obs-yes').closest('[hidden]'));
+    ok('CB2-A sections 2–8 can\'t be opened before saving (disabled, "After saving"); the header says "Not saved yet"', qa('.cb-nav .cb-sec').length === 7 && qa('.cb-nav .cb-sec[disabled]').length === 6 /* CBR (PD-CBR-01): seven steps */ && /Not saved yet/.test(q('.page-h').textContent));
     // CB8 (PD-CB-48) supersedes "fees stay on the form for now, marked as moving to Fees & Payments (CB8)": they are the starting fees, managed in Section 5 after saving
-    ok('CB2-A fees on the new-course form are the starting fees, then managed in Section 5 — Fees & Payments', /Starting fees\. After the course is saved, fees, fee options, observation fees and payment options are managed in Section 5 — Fees & Payments\./.test(main()));
+    ok('CB2-A fees on the new-course form are the starting fees, then managed in Fees & Payment Plans', /Needed to create the course\. After saving, fees are set in Fees & Payment Plans\./.test(main())); // CBR-2 (PD-CBR2-01): was "Starting fees. After the course is saved … Section 5"
   });
 
   await T('CB2-B validation before anything is created', async () => {
     fresh(); const n0 = progs(); openNew();
     q('[data-act="cbDetCreate"]').click(); ok('CB2-B empty form: "Enter a title", nothing created', /Enter a title/.test(main()) && progs() === n0);
-    fillL4(); q('[data-act="cbDetCreate"]').click(); ok('CB2-B the observation question must be answered (marked), nothing created', /Choose Yes or No — does this course contain observations\?/.test(main()) && progs() === n0);
+    fillL4(); // CBC1 (CBR-01) restores "the observation question must be answered" before creating (explicit Yes / No; tested in ft-cbc1 CBC1-F10…F13)
     type('#np-q-glh', '1.5'); q('#np-obs-yes').click(); q('[data-act="cbDetCreate"]').click(); ok('CB2-B GLH must be a whole number (or blank), nothing created', /whole number, or leave it blank/.test(main()) && progs() === n0);
-    type('#np-q-glh', '320'); type('#np-d', '0'); q('[data-act="cbDetCreate"]').click(); ok('CB2-B duration rule unchanged (E1): 0 refused, nothing created', /whole number from 1 to 999/.test(main()) && progs() === n0);
-    type('#np-d', '9'); type('#np-t', 'Level 3 Diploma in Adult Care (England)'); q('[data-act="cbDetCreate"]').click(); ok('CB2-B a duplicate title is refused, nothing created', /already exists/.test(main()) && progs() === n0);
+    type('#np-q-glh', '320'); type('#cbc3-dd-n', '0'); q('[data-act="cbDetCreate"]').click(); ok('CB2-B duration rule (FB2: the Course Duration, 1–60): 0 refused, nothing created', /from 1 to 60/.test(main()) && progs() === n0);
+    type('#cbc3-dd-n', '9'); type('#np-t', 'Level 3 Diploma in Adult Care (England)'); q('[data-act="cbDetCreate"]').click(); ok('CB2-B a duplicate title is refused, nothing created', /already exists/.test(main()) && progs() === n0);
     openNew(); q('[data-act="cbDetDiscard"]').click(); prim(); // the typed values above are kept with the unsaved course until discarded
     type('#np-t', 'Level 3 CB2 no options'); type('#np-r', 'QN 603/8282/3'); q('#np-obs-no').click(); q('[data-act="cbDetCreate"]').click();
     ok('CB2-B (Level 3) at least one fee option is needed (R1 unchanged), nothing created', progs() === n0 && !made().length);
@@ -77,12 +81,13 @@
 
   await T('CB2-E return to Course Details and edit the Draft', async () => {
     fresh(); const pr = createL4('yes'); q('.cb-sec[data-tab="details"]').click();
-    ok('CB2-E Section 1 of the Draft: the same form with the saved values, editable (Save details / Save and continue)', cur() === 'details' && q('#np-t').value === pr.title && q('#np-q-glh').value === '320' && q('#np-obs-yes').checked && !!q('[data-act="cbDetSave"]') && !!q('[data-act="cbDetSave"][data-next="curriculum"]'));
-    type('#np-t', 'Level 4 Certificate in CB2 Leadership (revised)'); type('#np-d', '12'); type('#np-ds', 'Revised description.'); type('#np-q-glh', '360'); type('#np-q-body', 'Pearson');
+    ok('CB2-E Section 1 of the Draft: the same form with the saved values, editable (Save details / Save and continue)', cur() === 'details' && q('#np-t').value === pr.title && q('#np-q-glh').value === '320' && q('#np-obs-yes').checked && !!q('[data-act="cbDetSave"]') && !!q('[data-act="cbrDetNext"][data-next="curriculum"]')); // CBR (PD-CBR-12): Next saves first when something was typed
+    type('#np-t', 'Level 4 Certificate in CB2 Leadership (revised)'); type('#np-ds', 'Revised description.'); type('#np-q-glh', '360'); type('#np-q-body', 'Pearson');
     q('[data-act="cbDetSave"]:not([data-next])').click();
+    go('a-programmes', { id: pr.id, tab: 'details' }); type('#cbc3-dd-n', '12'); // FB2 (PD-FB2-04): the duration is the Course Duration, saved at once in Course Details (CBC3: the Payment Schedule Duration in Fees & Payment Plans)
     ok('CB2-E every edited field saved (name, duration, description, GLH, awarding body), audited', pr.title === 'Level 4 Certificate in CB2 Leadership (revised)' && pr.durV.n === 12 && pr.desc === 'Revised description.' && pr.qual.glh === 360 && pr.qual.body === 'Pearson' && ADMIN.audit.some(a => a.action === 'Details changed') && ADMIN.audit.some(a => a.action === 'Qualification details changed' && /Pearson/.test(a.after)));
     ok('CB2-E the saved values show again on the form; no unsaved marker', q('#np-t').value === pr.title && q('#np-q-glh').value === '360' && !q('.cb-unsaved') && !q('.cb-sec[data-tab="details"] .cb-badge.warn'));
-    type('#np-q-credits', '60'); q('[data-act="cbDetSave"][data-next="curriculum"]').click(); ok('CB2-E "Save and continue" saves and opens Curriculum', pr.qual.credits === 60 && cur() === 'curriculum');
+    type('#np-q-credits', '60'); q('[data-act="cbrDetNext"][data-next="curriculum"]').click(); ok('CB2-E "Save and continue" saves and opens Curriculum', pr.qual.credits === 60 && cur() === 'curriculum');
     go('a-programmes', { id: pr.id, tab: 'details' }); type('#np-t', ''); q('[data-act="cbDetSave"]:not([data-next])').click(); ok('CB2-E (negative) a blank name is refused; nothing saved', /Enter a title/.test(main()) && pr.title === 'Level 4 Certificate in CB2 Leadership (revised)');
   });
 
@@ -107,11 +112,13 @@
     ACT.n5Settings({ dataset: { p: pr.id } }); document.querySelector('#modal-root input[name="n5-wp"][value="Permitted"]').checked = true; document.querySelector('#modal-root input[name="n5-off"][value="Available"]').checked = true; prim(); closeModal();
     const ia0 = JSON.stringify(d().ia), wp0 = d().workplace;
     go('a-programmes', { id: pr.id, tab: 'details' }); q('#np-obs-no').click(); q('[data-act="cbDetSave"]:not([data-next])').click();
+    // CBR (PD-CBR-02): turning observations off with configuration set up lists what is kept and asks first
+    ok('CB2-G Yes → No with configuration set up asks first, listing what is kept', !!MODAL && /Turn observations off/.test(MODAL.title) && /Academy standard/.test(MODAL.body)); prim();
     ok('CB2-G No: N5a "Observation required" becomes No; the Academy criteria and routes already set up are kept', d().required === false && JSON.stringify(d().ia) === ia0 && d().workplace === wp0 && /CB2 Academy criterion/.test(ia0));
-    ok('CB2-G …Section 4 is marked "Not applicable" in the section bar', /Not applicable/.test(q('.cb-sec[data-tab="observations"] .cb-badge').textContent) && !q('.cb-sec[data-tab="observations"] .cb-badge.bad'));
+    ok('CB2-G …the Observations step is hidden from the step bar (CBR PD-CBR-02 supersedes the "Not applicable" badge)', !q('.cb-sec[data-tab="observations"]') && qa('.cb-nav .cb-sec').length === 6);
     go('a-programmes', { id: pr.id, tab: 'observations' }); ok('CB2-G …the Observations section says it doesn\'t apply and keeps the configuration for history', /Not applicable — this course has no observations/.test(q('.cb-na').textContent) && /CB2 Academy criterion/.test(main()));
     go('a-programmes', { id: pr.id, tab: 'support' }); ok('CB2-G …no observation fee is asked for; the stored rate is kept, not used', !!q('.cb-na-fee') && !q('[data-act="chSupSave"]') && chSupportOf(pr.id) === 'Fully assisted');
-    go('a-programmes', { id: pr.id, tab: 'review' }); const rv = qa('.cb-rv-todo li'); /* CB11 (PD-CB-73): was '.ch8-review li' */
+    go('a-programmes', { id: pr.id, tab: 'review' }); const rv = qa('.cbr2-rvi li'); /* CBR-2 (PD-CBR2-07): items sit under their step — was '.cb-rv-todo li' */ /* CB11 (PD-CB-73): was '.ch8-review li' */
     ok('CB2-G …Review lists no observation blocker, and says the kept Academy criterion isn\x27t used (N5a warning)', !rv.some(li => /Blocking/.test(li.textContent) && /observation/i.test(li.textContent)) && rv.some(li => /Warning/.test(li.textContent) && /kept in this version for history but not used/.test(li.textContent)), rv.map(li => li.textContent).join(' | '));
     ACT.n5Settings({ dataset: { p: pr.id } }); ok('CB2-G …the Observations section\'s own settings show the same answer (one field)', document.querySelector('#modal-root input[name="n5-req"][value="no"]').checked); closeModal();
     go('a-programmes', { id: pr.id, tab: 'details' }); q('#np-obs-yes').click(); q('[data-act="cbDetSave"]:not([data-next])').click();
@@ -122,13 +129,13 @@
   // e1Submit); while Finance reviews, a level change is still refused on the form; after approval a fee change is made in Section 5
   // (the Course Details price is read-only there) and still sends the terms back to Draft.
   await T('CB2-H existing Finance rules are retained', async () => {
-    fresh(); const pr = createL4('no', ACA, 'Level 4 CB2 Finance'); go('a-programmes', { id: pr.id, tab: 'fees' }); ACT.cb8Submit({ dataset: { p: pr.id } }); press();
+    fresh(); const pr = createL4('no', ACA, 'Level 4 CB2 Finance'); go('a-programmes', { id: pr.id, tab: 'fees' }); fb1Dep(pr); ACT.cb8Submit({ dataset: { p: pr.id } }); press();
     ok('CB2-H the creator\'s terms go to Finance (Pending)', e1T(pr.id).status === 'Pending');
     go('a-programmes', { id: pr.id, tab: 'details' }); type('#np-l', 'Level 5'); type('#np-q-glh', '999'); q('#np-obs-yes').click(); q('[data-act="cbDetSave"]:not([data-next])').click();
     ok('CB2-H while Finance reviews, a level change is refused (E1) — and nothing else on the form is saved', pr.level === 'Level 4' && /with Finance for review/.test(main()) && pr.qual.glh === 320 && obsReq(pr) === false);
     FA(); const qi = ADMIN.queue.find(i => i.id === e1T(pr.id).qid); go('a-queue', { id: qi.id }); ACT.e1Decide({ dataset: { id: qi.id, a: 'approve' } }); reason('Approved');
     ACA(); go('a-programmes', { id: pr.id, tab: 'details' }); const p0 = pr.price;
-    ok('CB2-H after approval the Course Details price is read-only (changed in Section 5)', q('#np-p').readOnly && /Change it in Section 5/.test(main()));
+    ok('CB2-H after approval the Course Details price is read-only (changed in Section 5)', q('#np-p').readOnly && /Change it in Fees &(amp;)? Payment Plans/.test(main()) /* CBC3: the step's name — was "Section [45]" */ /* CBR (PD-CBR-02): Section 4 without observations */);
     ACT.cb8Opt({ dataset: { p: pr.id, o: cb8Work(pr).opts[0].id } }); document.querySelector('#modal-root #c8-f').value = '2600'; press();
     ok('CB2-H after approval, a changed fee sends the terms back to Draft for approval (E1); the approved price stays in force until approved again', cb8Work(pr).opts[0].fee === 2600 && pr.price === p0 && e1T(pr.id).status === 'Draft');
   });
@@ -145,23 +152,23 @@
       enter(); go('a-programmes', { id: pr.id, tab: 'details' }); type('#np-q-credits', String(40 + k)); q('[data-act="cbDetSave"]:not([data-next])').click();
       ok(`CB2-I ${who}: can edit the Draft's details`, pr.qual.credits === 40 + k);
     });
-    go('a-programmes', { id: 'NV-N2', tab: 'details' }); ok('CB2-I published new programme (NV-N2): the same layout read-only, with why', !q('#np-t') && !!q('.cb-dl') && /published, so its details are fixed/.test(main()));
+    go('a-programmes', { id: 'NV-N2', tab: 'details' }); ok('CB2-I published new programme (NV-N2): the same layout read-only, with why', !q('#np-t') && !!q('.cbr2-view') /* CBR-2: was '.cb-dl' */ && /published, so its details are fixed/.test(main()));
     const t0 = s3Pr('NV-N2').title; ACT.cbDetSave({ dataset: { id: 'NV-N2' } }); ok('CB2-I …its details can\'t be saved directly', s3Pr('NV-N2').title === t0);
     ACT.s3WizVersion({ dataset: { id: 'NV-N2' } }); reason('CB2 draft version'); go('a-programmes', { id: 'NV-N2', tab: 'details' });
-    ok('CB2-I …with a draft version, its observation answer is editable in Course Details (the version\'s own N5a field)', !!q('.cb-obs-card #np-obs-yes'));
-    q('#np-obs-yes').click(); q('[data-act="cbObsSave"]').click(); ok('CB2-I …saved in the draft version only', N5().draft['NV-N2'].required === true && N5().draft['NV-N2'].v === s3Pr('NV-N2').version + 1);
+    ok('CB2-I …with a draft version, its observation answer is editable in Course Details (the version\'s own N5a field)', !!q('#cbr2-obs-yes:not([disabled])') && !!q('#cbr2-obs-no:not([disabled])')); // CBC1: Yes / No — CBR-2 (PD-CBR2-02): the checkbox, saved at once — was the Yes / No card with "Save observation answer"
+    const ob = q('#cbr2-obs-yes'); ob.checked = true; INP.cbr2Obs(ob); /* CBC1: the explicit Yes */ ok('CB2-I …saved in the draft version only', N5().draft['NV-N2'].required === true && N5().draft['NV-N2'].v === s3Pr('NV-N2').version + 1);
   });
 
   await T('CB2-J seeded and historical programmes are unaffected', async () => {
     fresh(); SA(); const keep = () => JSON.stringify({ p: ADMIN.programmes.filter(p => !p.chNew), tr: STORE.s3 && STORE.s3.trees, n5: STORE.n5 && STORE.n5.pub, pl: STORE.s4 && STORE.s4.plans, r1: STORE.r1 }); s2Defs(); const k0 = keep();
     // PD-M-10: was /Qualification number \/ reference/ — now /Awarding body course code/ (the same row, relabelled)
     ['NV-L2', 'NV-L3', 'NV-L4', 'NV-L5', 'NV-L3D', 'NV-L3O'].forEach(id => { go('a-programmes', { id, tab: 'details' });
-      ok(`CB2-J ${id} (${s3Pr(id).status}): the same Course Details layout, read-only (no details form)`, !!q('.cb-dl') && !q('#np-t') && !q('[data-act="cbDetSave"]') && /Delivery modes offered/.test(main()) /* CR (PD-CR-06): was /Course code/ */ && /Awarding body course code/.test(main()) && /Does this course contain observations\?|Observations/.test(main())); });
+      ok(`CB2-J ${id} (${s3Pr(id).status}): the same Course Details layout, read-only (no details form)`, !!q('.cb-dl') && !q('#np-t') && !q('[data-act="cbDetSave"]') && /Delivery mode/i.test(main()) /* CBR-2 (PD-CBR2-01): the learner types' delivery modes — was the CR row "Delivery modes offered" */ && /Awarding body course code/i.test(main()) && /Observation required for this course/.test(main())); });
     go('a-programmes', { id: 'NV-L3O', tab: 'details' }); ok('CB2-J retired: no observation answer to edit, no save buttons', !q('.cb-obs-card') && !q('[data-act="cbObsSave"]') && /read-only historical record/.test(main()));
     const a0 = ADMIN.audit.length; ACT.cbObsSave({ dataset: { id: 'NV-L3O' } }); ACT.cbDetSave({ dataset: { id: 'NV-L3O' } }); ok('CB2-J retired: direct calls refused and logged', blocked(a0));
     go('a-programmes', { id: 'NV-L3', tab: 'details' }); ok('CB2-J published seeded programme without a draft version: no observation answer to edit', !q('.cb-obs-card'));
     ok('CB2-J viewing and refused attempts changed no seeded programme, structure, published observation configuration, plan or fee option', keep() === k0);
-    go('a-programmes', { id: 'NV-L3D', tab: 'details' }); ok('CB2-J seeded Draft (NV-L3D): its observation answer can be recorded here (N5a draft field)', !!q('.cb-obs-card #np-obs-no'));
+    go('a-programmes', { id: 'NV-L3D', tab: 'details' }); ok('CB2-J seeded Draft (NV-L3D): its observation answer can be recorded here (N5a draft field)', !!q('#cbr2-obs-yes:not([disabled])')); // CBC1: Yes / No — CBR-2 (PD-CBR2-02): the checkbox — was the Yes / No card
   });
 
   await T('CB2-K Level 3 on the page: fee options and level switching', async () => {
@@ -172,7 +179,7 @@
     row(0, 'Self-Paced', '1800', 'Self-Paced'); q('[data-act="r1NpAdd"]').click(); row(1, 'Fully Assisted', '2400', 'Fully Assisted');
     q('.cb-sec[data-tab="details"]').click(); go('a-programmes'); q('[data-act="chProgNew"]').click();
     ok('CB2-K the typed fee-option rows are kept with the unsaved course', qa('.r1-np-row').length === 2 && qa('.r1-np-row')[1].querySelector('.r1-np-l').value === 'Fully Assisted');
-    q('#np-obs-yes').click(); qa('.cr-dm-c').forEach(x => { x.checked = true; }); /* CR (PD-CR-01) */ q('[data-act="cbDetCreate"]').click(); const pr = made().slice(-1)[0];
+    q('#np-obs-yes').click(); qa('.cr-dm-c').forEach(x => { x.checked = true; }); /* CR (PD-CR-01) */ type('#cbc3-dd-n', '12'); /* FB2 (PD-FB2-01): required */ q('[data-act="cbDetCreate"]').click(); const pr = made().slice(-1)[0];
     ok('CB2-K created with both fee options (R1), Observation required Yes', !!pr && r1Opts(pr.id).map(o => o.label + ':' + o.fee).join() === 'Self-Paced:1800,Fully Assisted:2400' && obsReq(pr) === true);
   });
 

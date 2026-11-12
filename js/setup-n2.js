@@ -75,7 +75,7 @@ const _assignedN2 = chAssignedHtml;
 chAssignedHtml = function (w) { const h = _assignedN2.apply(this, arguments), b = chNearestFor(w), m = n2ModeOf(b); return m ? h.replace(`<p class="small muted">${esc(b.mode)} · in `, `<p class="small muted">${esc(b.mode)} · <span class="n2-mode">${esc(m)}</span> · in `) : h; };
 
 /* ---------- Programme "Support type" = the default for new batches (P-31, proposed resolution) ---------- */
-const N2_P31 = 'Each NVQ batch has its own delivery mode (Fully Assisted or Self-Paced), chosen when the batch is created. This programme setting only pre-selects the mode for new batches — it never changes an existing batch or its learners. Transitional until N5: the observation fee (CH-38) is still worked out from this programme setting, not from the learner\'s batch.';
+const N2_P31 = 'Each batch has its own delivery mode, chosen when it is created. This setting only pre-selects the mode for new batches; the legacy observation fee is still worked out from it.';
 const _supTabN2 = chSupportTab;
 chSupportTab = function (pr) { return _supTabN2.apply(this, arguments).replace('<h2>Support type</h2>', `<h2>Support type — default delivery mode for new batches</h2><div class="note b-blue n2-p31">${ic('info')}<div class="small">${esc(N2_P31)}</div></div>`); };
 const _detN2 = ch8DetailsFields;

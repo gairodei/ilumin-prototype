@@ -6,6 +6,10 @@
   // isn't about that, Finance adds them first through its fee-option card (r1AddOpt): Self-Paced and Fully Assisted at the course's fee
   const dmpElig = (pid = 'NV-L2', modes = M_MODES) => { const fee = crNcFee(s3Pr(pid)) || 2400; modes.forEach(m => { if (!crApprOpts(pid).some(o => o.mode === m)) r1AddOpt(pid, { label: m, fee, mode: m }, 'Fixture (DM-P)', 'Added'); }); };
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // P6 (PD-P6-02): a batch change is a transfer request carried out after approval — in these fixtures a Super Administrator override (audited)
+  const p6AsSA = f => { const av = ADMIN.av, po = S.portal, si = S.signedIn; setAdminIdentity('A'); S.portal = 'admin'; try { return f(); } finally { if (av && av !== 'A') setAdminIdentity(av); S.portal = po; S.signedIn = si; } };
+  const p6Ok = (why = 'Approved (test)') => p6AsSA(() => { const q = (SEATS().xfer || { reqs: [] }).reqs.find(x => x.state === 'Pending Academic Approval'); return q ? p6Decide(q.id, 'override', why) : { ok: false, why: 'no pending request' }; });
+  const p6Xfer = (lid, to, why = 'Transfer (test)') => p6AsSA(() => { const q = p6Request(lid, typeof to === 'string' ? to : to.code, why); return q.ok ? p6Decide(q.id, 'override', why) : q; });
   const main = () => (document.querySelector('main') || document.getElementById('app')).textContent;
   const mroot = () => document.getElementById('modal-root');
   const T = async (n, f) => { try { closeModal(); S.frame = 'auto'; await f(); } catch (e) { R.push('FAIL ' + n + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
@@ -350,7 +354,12 @@
     s4bNotifyBatch(b, 'MC15 schedule', 'Class moved'); n3Notify(['L3AC-JAN26'], 'MC15 n3', 'Timetable changed');
     ok('MC-15 schedule notices written to the legacy field reach every Coordinator once', notes('MC15 schedule').split(',').length === 10 && notes('MC15 n3').split(',').length === 10 && new Set(notes('MC15 n3').split(',')).size === 10);
     SA(); const x = mcLids(b).find(l => l !== lid && !chWorldKey(l)); mcReassign(b, x, CN(5), 'Move test'); const nb2 = B('L3AC-NOV26');
-    chDoMove(x, b, nb2, 'Earlier start');
+    // P1 (PD-P1-03): a move now needs a place in the destination. Was: chDoMove into L3AC-NOV26 at 14 of 14 (overbooking it to 15).
+    // One historical (unattributed) place is freed first, so the move — and the notice routing this check is about — happens.
+    seatSetDemo(nb2, nb2.cap - 1, 'MC-15 test: one place free');
+    // P6 (PD-P6-04): L3AC-JAN26 has started, so no transfer out of it is possible any more. The notice a move sends is raised directly through the
+    // same routing (the learner's context). Was: chDoMove(x, b, nb2, 'Earlier start')
+    mcCtx('lid', x, () => chCooNotify(b.coord, 'Learner batch changed', `${chLidName(x)}: ${b.code} → ${nb2.code} — Earlier start`, 'c-batches.' + b.code));
     ok('MC-15 a learner moved out of the batch: the old batch notice goes to their Coordinator (sixth) only', STORE.coo.notifs.filter(n => n.t === 'Learner batch changed' && n.b.includes('L3AC-JAN26 →')).some(n => n.to === CN(5)) && !STORE.coo.notifs.some(n => n.t === 'Learner batch changed' && n.mc && n.to === 'Dr Helen Carter'));
     ACA(); setUi('kcS', CN(9)); const h9 = kCalBody(); setUi('kcS', 'Dr Helen Carter'); const h1 = kCalBody(); setUi('kcS', '');
     const nosel = h => h.replace(/<select[\s\S]*?<\/select>/g, ''); ok('MC-15 Academic calendar staff filter: the tenth Coordinator matches the batch as the first does', nosel(h9) === nosel(h1) && nosel(h9).length > 200);

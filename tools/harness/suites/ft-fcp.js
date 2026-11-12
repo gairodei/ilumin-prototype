@@ -3,6 +3,9 @@
 // whole financial state comes back identical — never the ledger without its balances, plans, refunds and seats — then that
 // legacy test data never leaks in and Reset demo deletes the saved copy. Expected state is captured before each refresh.
 (async function () {
+  // P3 (PD-P3-02): the learner chooses their batch on sign-up step 1. Fixtures that relied on the automatic (CH-42) assignment now pick, on
+  // the page, the earliest eligible batch (the one CH-42 assigned); a batch the fixture already set, and that is still eligible, is kept
+  const p3Pick = () => { const w = W; if (!w || !p3Open(w) || chStepKey(w) !== 'details' || ui('suBatch', null) || (w.signup.batch && !p3Why(w, chBatch(w.signup.batch), { region: w.signup.l3cPin !== w.signup.batch }))) return; const r = S.route === 'admission' && document.querySelector('main input[name="su-batch"]'); if (r) { r.checked = true; INP.suBatch(r); } else { const b = p3Eligible(w)[0]; if (b) setUi('suBatch', b.code); } };
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   const J = JSON.stringify, $1 = s => document.querySelector(s), $a = s => [...document.querySelectorAll(s)];
   const main = () => ($1('main') || document.body).textContent.replace(/\s+/g, ' ');
@@ -42,9 +45,9 @@
   const toPayment = (w, mode = 'Self-Paced') => {
     go('browse'); const c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === CD_T); ACT.applyNvq({ dataset: { id: c.id } });
     const o = r1Opts(cdPr().id).find(x => x.status === 'Active' && x.mode === mode); $1(`#modal-root input[name="r1-opt"][value="${o.id}"]`).checked = true; press();
-    go('admission'); $1('#su-dob').value = '1992-03-04'; $1('#su-ad').value = '9 Test Road, Luton'; click($1('main [data-act="suNext"]'));
+    go('admission'); $1('#su-dob').value = '1992-03-04'; $1('#su-ad').value = '9 Test Road, Luton'; click((p3Pick(), $1('main [data-act="suNext"]')));
     fxFast(ff => { w.docs.filter(d => d.mand).forEach(d => ACT.sampleUpload({ dataset: { id: d.id } })); ff(3000); });
-    click($1('main [data-act="suNext"]')); setUi('suSig', chFullName(w)); setUi('suDecl', true); render(); click($1('main #su-sign'));
+    click((p3Pick(), $1('main [data-act="suNext"]'))); setUi('suSig', chFullName(w)); setUi('suDecl', true); render(); click($1('main #su-sign'));
   };
   const choose = (opt, method) => { const r = $1(`main input[name="cb9-pay"][value="${opt}"]`); if (r) { r.checked = true; INP.cb9Pay(r); } const m = $1(`main input[name="su-m"][value="${method}"]`); if (m) { m.checked = true; INP.suMethod(m); } };
   const payCo = open => fxFast(ff => { open(); if (!MODAL || !/Pay now/.test(MODAL.title || '')) return false; prim(); ff(3000); closeModal(); return true; });
@@ -67,7 +70,7 @@
     acct: learnerAccounts().map(v => (a => [v, a.received, a.refunded, a.outstanding])(fiAcct(STORE.worlds[v]))), stamps: STORE.fcStamp });
   const same = (n, a, b) => ok(n, J(a) === J(b), J(a) === J(b) ? '' : J(a).slice(0, 300) + ' ≠ ' + J(b).slice(0, 300));
   // PD-FC-11: a learner on the deposit-then-instalments route, through the real screens (the £100.00 deposit configured and approved first)
-  const setDeposit = amt => { closeModal(); acaEnter('KA'); S.signedIn = true; S.ui = {}; const id = cdPr().id; go('a-programmes', { id, tab: 'fees' }); $1('main input[name="e1-wdm"][value="own"]').checked = true; $1('main #e1-d').value = String(amt); ACT.cb8Dep({ dataset: { p: id } }); ACT.cb8Submit({ dataset: { p: id } }); if (MODAL) press(); const wf = cb8Wf(cdPr()); FA(); go('a-queue', { id: wf.qid }); ACT.e1Decide({ dataset: { id: wf.qid, a: 'approve' } }); if (MODAL) reason('FCP deposit'); };
+  const setDeposit = amt => { closeModal(); acaEnter('KA'); S.signedIn = true; S.ui = {}; const id = cdPr().id; go('a-programmes', { id, tab: 'fees' }); cb8Work(cdPr()).opts.filter(o => o.status === 'Active').forEach(o => { INP.cbr2Dep({ dataset: { p: id, o: o.id, k: 'allow' }, checked: true }); INP.cbr2Dep({ dataset: { p: id, o: o.id, k: 'own' } }); INP.cbr2Dep({ dataset: { p: id, o: o.id, k: 'amount' }, value: String(amt), id: 'fb1-dep' }); }); /* FB1: the deposit is set on each fee option (no programme editor in Step 5) */ ACT.cb8Submit({ dataset: { p: id } }); if (MODAL) press(); const wf = cb8Wf(cdPr()); FA(); go('a-queue', { id: wf.qid }); ACT.e1Decide({ dataset: { id: wf.qid, a: 'approve' } }); if (MODAL) reason('FCP deposit'); };
   const payRow1 = w => { learner(w.v); go('payments'); payCo(() => ACT.payInst({ dataset: { e: 'nvq', n: '1' } })); };
   const next = (ph, extra = {}) => { window.localStorage.setItem(TK, J({ ...st, ...extra, ph, R })); setTimeout(() => location.reload(), 30); };
 
@@ -107,7 +110,7 @@
       ok('FCP-2 Zoe after the refresh: seat still secured, one plan, deposit credited once to instalment 1, £300.00 received, £1,500.00 outstanding', dpSeat(z).st === 'occupied' && z.plans.filter(x => x.e === 'nvq').length === 1 && P(zp.rows[0].credit) === 10000 && P(zp.rows[0].paid) === 30000 && z.tx.reduce((a, t) => a + P(t.amount), 0) === 30000 && P(fpLedger(zp).outstanding) === 150000 && fpLedger(zp).ok);
       ok('FCP-2 Zoe signed terms: still one frozen object on the plan and the sign-up', z.signup.pin === zp.pin && Object.isFrozen(zp.pin) && zp.pin.route === 'deposit-instalments');
       fpCredit(z, 'after refresh'); ok('FCP-2 crediting again after the refresh changes nothing', P(zp.rows[0].credit) === 10000 && P(zp.rows[0].paid) === 30000);
-      ok('FCP-2 the programme still takes the £100.00 deposit (the approved change was kept)', cb8Cur(cdPr().id).dep.eff === 100);
+      ok('FCP-2 the programme still takes the £100.00 deposit (the approved change was kept; FB1: on each fee option)', (() => { const c = cb8Cur(cdPr().id), d = c.opts.filter(o => o.status === 'Active').map(o => o.dep || c.dep); return d.every(x => x.mode === d[0].mode && x.eff === d[0].eff) ? d[0] : { mode: null, eff: null }; })().eff === 100);
       const it = ADMIN.queue.find(i => i.id === st.it), n = STORE.worlds.CD3.tx.length; FA('FB'); applyDecision(it, 'approve', 'again'); refundEffect(it);
       ok('FCP-2 the processed refund can\'t be paid again after the refresh', STORE.worlds.CD3.tx.length === n);
       ok('FCP-2 the same payment reference is still refused after the refresh', rec('CD1|nvq|3', 300, 'BACS-FCP-1') === false);
@@ -140,7 +143,7 @@
     // PD-FD-01: the client demo now starts with 5 payments. Was: three payments.
     ok('FCP-5 the starting demo: five payments, no refunds, no registered learners, nothing saved', allTx().length === 5 && !ADMIN.queue.some(i => i.type === 'Refund') && !learnerAccounts().some(v => /^G/.test(v)) && !LS() && !FCP.restored, J([allTx().length, ADMIN.queue.filter(i => i.type === 'Refund').length, learnerAccounts(), !!LS(), FCP.restored]));
     // PD-FD-01: the programme now has its own approved £100.00 deposit; the Academy default stays £300.00. Was: programme on the £300.00 Academy default.
-    ok('FCP-5 the programme deposit is its own approved £100.00 again (Academy default still £300.00)', cb8Cur(cdPr().id).dep.mode === 'own' && cb8Cur(cdPr().id).dep.eff === 100 && S4().cfg.deposit === 300);
+    ok('FCP-5 the programme deposit is its own approved £100.00 again (FB1: on each fee option; Academy default still £300.00)', (() => { const c = cb8Cur(cdPr().id), d = c.opts.filter(o => o.status === 'Active').map(o => o.dep || c.dep); return d.every(x => x.mode === d[0].mode && x.eff === d[0].eff) ? d[0] : { mode: null, eff: null }; })().mode === 'own' && (() => { const c = cb8Cur(cdPr().id), d = c.opts.filter(o => o.status === 'Active').map(o => o.dep || c.dep); return d.every(x => x.mode === d[0].mode && x.eff === d[0].eff) ? d[0] : { mode: null, eff: null }; })().eff === 100 && S4().cfg.deposit === 300);
     ok('FCP-5 Amira £300.00 / Dev £433.33 / Lena £45.00 as at the start', J(['CD1', 'CD2', 'CD3'].map(v => fiAcct(STORE.worlds[v]).received)) === J([30000, 43333, 4500]));
   });
   window.localStorage.removeItem(TK);

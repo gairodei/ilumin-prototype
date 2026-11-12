@@ -21,18 +21,22 @@ function r4Info(s) {
 }
 const r4IsSP = s => r4Info(s).mode === R4_SP;
 const r4GroupLbl = g => { const o = g && r1Opt(g); return o ? `${o.label} (${o.id})` : g || '—'; };
-// The submission period (15th → 14th) a date falls in, and when its review normally starts (the next 15th)
+// The submission period (15th → 14th) a date falls in, and when its review normally starts (the next 15th). Periods change at
+// 00:00 UTC on the 15th (the date is read in UTC). T-3: start and end are those boundaries (they were 09:00, which no rule used) and
+// the label's dates are written in UTC, so every viewer sees the same period whatever their own time zone.
+const R4_UTC = { timeZone: 'UTC' };
+const R4_TZ_NOTE = 'Periods change at 00:00 UTC on the 15th (01:00 UK time during British Summer Time).';
 function r4Cycle(iso) {
   if (!iso) return null; const d = new Date(iso); let y = d.getUTCFullYear(), m = d.getUTCMonth(); if (d.getUTCDate() < 15) { m -= 1; if (m < 0) { m = 11; y -= 1; } }
-  const start = new Date(Date.UTC(y, m, 15, 9)).toISOString(), end = new Date(Date.UTC(y, m + 1, 14, 9)).toISOString(), review = new Date(Date.UTC(y, m + 1, 15, 0)).toISOString();
-  return { key: `${y}-${String(m + 1).padStart(2, '0')}`, start, end, review, label: `${fmt(start, { day: 'numeric', month: 'short' })} – ${fd(end)}`, open: now() < new Date(review) };
+  const start = new Date(Date.UTC(y, m, 15, 0)).toISOString(), review = new Date(Date.UTC(y, m + 1, 15, 0)).toISOString(), end = new Date(Date.UTC(y, m + 1, 15, 0) - 1).toISOString();
+  return { key: `${y}-${String(m + 1).padStart(2, '0')}`, start, end, review, label: `${fmt(start, { day: 'numeric', month: 'short', ...R4_UTC })} – ${fmt(end, { day: 'numeric', month: 'short', year: 'numeric', ...R4_UTC })}`, reviewLbl: fmt(review, { day: 'numeric', month: 'short', year: 'numeric', ...R4_UTC }), open: now() < new Date(review) };
 }
 const r4CycleLbl = s => { if (!r4IsSP(s)) return 'Not Self-Paced'; const c = r4Cycle(s.at); return c ? c.label : 'Not submitted'; };
 
 /* ---------- Marking chips: no escalation claim; Self-Paced rows show the cycle, not an ageing colour ---------- */
 function r4MarkChip(d, sp) {
   if (d == null) return '<span class="muted small">—</span>';
-  if (sp) return `<span class="chip t-outline r4-sp" title="Self-Paced: reviewed in the monthly cycle (submissions from the 15th to the 14th are normally reviewed from the 15th). No marking deadline and no escalation." data-tip="1"><span class="chip-i" aria-hidden="true">${ic('cal', 12)}</span>${d} ${d === 1 ? "day" : "days"} · monthly</span>`;
+  if (sp) return `<span class="chip t-outline r4-sp" title="Self-Paced: reviewed in the monthly cycle (submissions from the 15th to the 14th are normally reviewed from the 15th; ${R4_TZ_NOTE}). No marking deadline and no escalation." data-tip="1"><span class="chip-i" aria-hidden="true">${ic('cal', 12)}</span>${d} ${d === 1 ? "day" : "days"} · monthly</span>`;
   const t = d >= 7 ? 'red' : d >= 5 ? 'amber' : 'outline';
   return `<span class="chip t-${t} r4-mk" title="Days since the learner submitted, to help you prioritise. Marking isn't escalated automatically." data-tip="1"><span class="chip-i" aria-hidden="true">${ic(d >= 5 ? 'clock' : 'circle', 12)}</span>${d} ${d === 1 ? "day" : "days"}</span>`;
 }
@@ -73,7 +77,7 @@ function r4Worklist(rows, act) {
   sp.forEach(s => { const c = r4Cycle(s.at); if (!c) return; (by[c.key] = by[c.key] || { c, n: 0 }).n++; });
   const ready = Object.values(by).filter(x => !x.c.open).reduce((a, x) => a + x.n, 0), open = Object.values(by).filter(x => x.c.open).reduce((a, x) => a + x.n, 0);
   // one concise line: the period, when its review starts, what is waiting, and the way into the Self-Paced view
-  return `<section class="card r4-wl"><div class="row-b"><div><strong>Self-Paced monthly worklist</strong> <span class="small muted">· periods run from the 15th to the 14th · current period ${esc(cur.label)}, reviewed from ${fd(cur.review)}</span></div><div class="small"><strong>${ready}</strong> from earlier periods · <strong>${open}</strong> this period · <button class="linklike" data-act="${act}" data-k="sp">Open the Self-Paced view</button></div></div></section>`;
+  return `<section class="card r4-wl"><div class="row-b"><div><strong>Self-Paced monthly worklist</strong> <span class="small muted">· periods run from the 15th to the 14th (<abbr class="r4-tz" title="${R4_TZ_NOTE}">UTC</abbr>) · current period ${esc(cur.label)}, reviewed from ${esc(cur.reviewLbl)}</span></div><div class="small"><strong>${ready}</strong> from earlier periods · <strong>${open}</strong> this period · <button class="linklike" data-act="${act}" data-k="sp">Open the Self-Paced view</button></div></div></section>`;
 }
 const _tqR4 = SCREENS['t-queue'];
 SCREENS['t-queue'] = p => { const h = _tqR4(p), k = h.indexOf('<div class="tabs'); const card = r4Worklist(tasSubs().filter(s => s.toMark), 'mqTab'); return k < 0 ? card + h : h.slice(0, k) + card + h.slice(k); };
@@ -84,7 +88,7 @@ SCREENS['c-submissions'] = p => { const h = _csR4(p), k = h.indexOf('<div class=
 const _asgR4 = SCREENS.assignments;
 SCREENS.assignments = p => {
   const h = _asgR4(p); if (!W || !r1IsL3W(W) || r2ModeOfW(W) !== R4_SP) return h;
-  const c = r4Cycle(now().toISOString()), note = `<div class="note b-blue r4-learner">${ic('cal')}<div class="small"><strong>Self-Paced:</strong> submit your assignments whenever you're ready — several at once if you like. Work submitted between ${esc(c.label)} is reviewed from ${fd(c.review)}. There's no monthly submission deadline.</div></div>`;
+  const c = r4Cycle(now().toISOString()), note = `<div class="note b-blue r4-learner">${ic('cal')}<div class="small"><strong>Self-Paced:</strong> submit your assignments whenever you're ready — several at once if you like. Work submitted between ${esc(c.label)} is reviewed from ${esc(c.reviewLbl)}. There's no monthly submission deadline. <span class="xs muted r4-tz">${R4_TZ_NOTE}</span></div></div>`;
   const k = h.indexOf('<div class="tabs'); return k < 0 ? note + h : h.slice(0, k) + note + h.slice(k);
 };
 

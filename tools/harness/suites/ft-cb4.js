@@ -4,6 +4,9 @@
 // Course Details removes the Observation type for new Learning Outcomes. Every mutation checks the role in the action. Each check
 // acts through the screen or the handler, then checks the page and the record, with the negative case.
 (async function () {
+  // FB1 (PD-FB1-03): this suite's deposit configuration, chosen explicitly where its fixture prepares a package for Finance — each new fee
+  // option "Allow Deposit: Yes" with the Academy default, through the Step 5 handler (an administrator's action; role checks apply).
+  const fb1Dep = p => { if (p && cb8Managed(p)) cb8Work(p).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: p.id, o: o.id, k: 'allow' }, checked: true })); };
   // DM-P (PD-DM-15): publishing a programme or version needs fee options by delivery mode, approved by Finance. Where a check isn't about
   // fees, this fixture takes the authorized Section 5 path first: the duration of a pre-builder course, a financial package, fee options by
   // delivery mode, a mode for each option (the Standard programme fee replaced by an option at the same fee), the Super Administrator's own approval (D8)
@@ -24,6 +27,7 @@
     });
     if (!cb8Work(pr).opts.some(o => o.status === 'Active' && !o.legacy && M_MODES.includes(o.mode))) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String((s4PlanCur(pr.id) || {}).fee || 2400); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); closeModal(); } // no option at all (a Level 3 package starts from the options in force): one at the plan's fee
     cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.pay.length).forEach(o => ACT.cb8PayAdd({ dataset: { p: pr.id, o: o.id, k: '1' } }));
+    fb1Dep(pr); // FB1: the fixture's fee options answer Allow Deposit (Yes) before the Super Administrator's own approval
     if (!(cb8Wf(pr) && cb8Wf(pr).status === 'Approved')) { ACT.cb8SaApprove({ dataset: { p: pr.id } }); rs(); }
     closeModal(); if (aca) { acaEnter(av); S.signedIn = true; } else setAdminIdentity(av); S.portal = po; return true;
   };
@@ -47,14 +51,14 @@
   const learner = v => { S.variant = v; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; };
   const COO = () => { S.coo.v = 'A'; cooEnter(); S.signedIn = true; };
   const open = (id, tab = 'structure') => go('a-programmes', { id, tab });
-  const cur = () => (q('.cb-sec.cur') || { dataset: {} }).dataset.tab, pan = () => (q('.cb-panels .tab[aria-selected="true"]') || { dataset: {} }).dataset.tab;
+  const cur = () => (q('.cb-sec.cur') || { dataset: {} }).dataset.tab, pan = () => (q('.cb-body') || { dataset: {} }).dataset.panel; // CBR (PD-CBR-01): no panel tabs — the route's area within the step
   const since = a0 => ADMIN.audit.slice(0, ADMIN.audit.length - a0);
   const blocked = (a0, re) => since(a0).some(x => /^Blocked/.test(x.action) && (!re || re.test(x.action)));
   const J = o => JSON.stringify(o);
   const T3 = id => STORE.s3.trees[id];
   const units = () => qa('.cb-cur-tree > details[data-cbu]').map(d => d.dataset.cbu).join();
   const edit = (p, path, codes, vals) => { ACT.cbCurEdit({ dataset: { p, path, codes } }); if (!MODAL) return 'no dialog'; fill(vals); return press(); };
-  const newCourse = (obs = 'yes', title = 'Level 4 CB4 Curriculum') => { SYS(); go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': 'Level 4', /* CR (PD-CR-06): no course code */ '#np-r': 'QN 610/4444/4', '#np-p': '2400' }), dmpPrice(); document.querySelector('#np-obs-' + obs).checked = true; crT(ACT.cbDetCreate)(); return (STORE.chNewProgs || []).slice(-1)[0]; };
+  const newCourse = (obs = 'yes', title = 'Level 4 CB4 Curriculum') => { SYS(); go('a-programmes'); ACT.chProgNew(); fill({ '#np-t': title, '#np-l': 'Level 4', /* CR (PD-CR-06): no course code */ '#np-r': 'QN 610/4444/4', '#cbc3-dd-n': '12' /* FB2 (PD-FB2-01): the Course Duration is required */, '#np-p': '2400' }), dmpPrice(); document.querySelector('#np-obs-' + obs).checked = true; crT(ACT.cbDetCreate)(); return (STORE.chNewProgs || []).slice(-1)[0]; };
 
   /* ================= A. Seeded Level 2, 3, 4 and 5 ================= */
   await T('CB4-A seeded curricula', async () => {
@@ -64,8 +68,8 @@
       ok(`CB4-A ${id}: cbTree resolves the programme's own stored tree (the same record, not a copy)`, cbTree(pr) === t && cbTree(pr, pr.version) === t && cbCurMode(pr) === mode);
       ok(`CB4-A ${id}: Section 2 shows its own units in order, nothing from another programme`, cur() === 'curriculum' && pan() === 'structure' && units() === t.map(u => u.code).join() && !qa('.cb-cur-tree [data-cbu]').some(d => !t.some(u => u.code === d.dataset.cbu)));
       const los = t.flatMap(u => u.mods.flatMap(m => m.los)), crit = los.flatMap(l => l.crit);
-      ok(`CB4-A ${id}: every Learning Outcome and criterion is listed, with its type and evidence requirement`, qa('.cb-cur-lo').length === los.length && qa('.cb-cur-c').length === crit.length && crit.every(c => main().includes(c.d)) && qa('.cb-cur-guide').length === los.length && /Evidence requirement:/.test(main()));
-      ok(`CB4-A ${id}: the summary counts match the record`, new RegExp(`${t.length} units? · `).test(q('.cb-cur-sum').textContent) && q('.cb-cur-sum').textContent.includes(plural(los.length, 'Learning Outcome')));
+      ok(`CB4-A ${id}: every Learning Outcome and criterion is listed, with its type and evidence requirement`, qa('.cb-cur-lo').length === los.length && qa('.cb-cur-c').length === crit.length && crit.every(c => main().includes(c.d)) && qa('.cb-cur-lo').every(l => !!l.querySelector('.cb-cur-ty, .chip, .typebadge, select') || /Assessment type/.test(l.textContent)) /* CBR-2 (PD-CBR2-03): the type on each Learning Outcome; the "Assessed by" guidance line is not part of the approved layout */ && /Evidence requirement:/.test(main()));
+      ok(`CB4-A ${id}: every unit of the record is shown, numbered (CBR-2 PD-CBR2-03: no summary-count line)`, qa('details[data-cbu]').length === t.length && qa('details[data-cbu] > summary .cbr2-lvl').every((x, i) => x.textContent === `Unit ${i + 1} —`));
     });
     open('NV-L3'); ok('CB4-A Level 3 (published): read-only — no Add, Edit or type list; the banner says how to change it', /Version 2 — published, read-only/.test(main()) && /Create new version/.test(q('.cb-cur-where').textContent) && !q('.cb-cur [data-act="nodeAdd"]') && !q('.cb-cur [data-act="cbCurEdit"]') && !q('.cb-cur [data-onchange="loType"]'));
     ok('CB4-A Level 3: module awarding-body codes shown read-only on the published version; answer keys managed as before (CH-18, 9 modules)', qa('.cb-cur [data-onchange="chModCode"]').length === 0 && qa('.cb-cur [data-act="chAnsUp"][data-p="NV-L3"]').length === 9 && /H\/652\/0101/.test(q('.cb-cur').textContent));
@@ -84,7 +88,7 @@
   await T('CB4-B newly created course', async () => {
     fresh(); const pr = newCourse(); open(pr.id);
     ok('CB4-B a new course opens with an empty curriculum: no units, an empty state and "Add the first unit"', J(cbTree(pr)) === '[]' && cbCurMode(pr) === 'draftProg' && !!q('.cb-cur-empty') && /No units yet/.test(main()) && !!q('.cb-cur-empty [data-act="ch8AddUnit"]') && !qa('.cb-cur-tree').length);
-    ok('CB4-B …and the banner says it is a Draft whose changes are saved straight away', /Draft programme — Version 1/.test(q('.cb-cur-where').textContent));
+    ok('CB4-B …and the step says changes are saved to the draft as they are made (CBR-2: in the footer — the Draft banner repeated it)', /Changes are saved to Version 1 \(draft\) as you make them/.test(q('.cbr-saved').textContent));
     ok('CB4-B nothing from another programme is shown', !/U301|U401|U201/.test(q('.cb-body').textContent));
   });
 
@@ -100,7 +104,7 @@
     fill({ '#c-d': 'Explain a model of change management', '#c-e': 'Written account (assignment)' }); press();
     const t = ch8Tree(id), lo = t[0].mods[0].los[0];
     ok('CB4-C the whole chain is stored in the programme\'s own tree', t.length === 1 && t[0].mods[0].ab === 'T/650/4511' && lo.type === 'Knowledge' && lo.crit[0].d === 'Explain a model of change management' && lo.crit[0].ev === 'Written account (assignment)');
-    ok('CB4-C …and shown immediately in Section 2 with its type and evidence', /Explain a model of change management/.test(main()) && /Written account \(assignment\)/.test(main()) && /Knowledge rules/.test(main()));
+    ok('CB4-C …and shown immediately in Section 2 with its type and evidence', /Explain a model of change management/.test(main()) && /Written account \(assignment\)/.test(main()) && /Knowledge/.test(main())); // CBR-2 (PD-CBR2-03): the type shown on the Learning Outcome — was the "Knowledge rules" guidance line
     ok('CB4-C every step audited', ['Unit added', 'Module added', 'Learning Outcome added', 'Criterion added'].every(a => ADMIN.audit.some(x => x.action === a && x.entity.includes(id))));
     open(id, 'details'); open(id); ok('CB4-C leaving the section and returning keeps the saved curriculum', units() === 'U451' && /Explain a model of change management/.test(main()));
     ok('CB4-C the curriculum change history lists the changes', /Curriculum change history \((\d+)\)/.test(main()) && +main().match(/Curriculum change history \((\d+)\)/)[1] >= 4);
@@ -263,8 +267,8 @@
   /* ================= J. Compatibility ================= */
   await T('CB4-J compatibility with S3, R1–R5, N5a, W0, W1, CB1–CB3', async () => {
     fresh(); SA();
-    [['tree', 'structure'], ['structure', 'structure'], ['types', 'types'], ['curriculum', 'structure']].forEach(([t, p]) => { open('NV-L3', t); ok(`CB4-J old address .${t} opens Curriculum → ${p}`, cur() === 'curriculum' && pan() === p); });
-    open('NV-L3', 'types'); ok('CB4-J Assessment types: how this programme uses them, then the shared list (Add type kept)', !!q('.cb-cur-types') && /Assessment types in this programme/.test(main()) && /Knowledge/.test(q('.cb-cur-types').textContent) && !!q('[data-act="addType"]'));
+    [['tree', 'structure'], ['structure', 'structure'], ['types', 'types'], ['curriculum', 'structure']].forEach(([t, p]) => { open('NV-L3', t); const s = t === 'types' ? 'assessments' : 'curriculum'; ok(`CB4-J old address .${t} opens ${s === 'curriculum' ? 'Curriculum' : 'Assessments (CBR PD-CBR-01: types moved)'} → ${p}`, cur() === s && pan() === p); });
+    open('NV-L3', 'types'); ok('CB4-J Assessment types: the shared registry (Add type) first, then how this programme uses them', !!q('.cb-cur-types') && /Used in this programme/.test(main()) && /Knowledge/.test(q('.cb-cur-types').textContent) && !!q('[data-act="addType"]') && !!(q('.cbr2-treg').compareDocumentPosition(q('.cb-cur-types')) & Node.DOCUMENT_POSITION_FOLLOWING)); // CBC1: registry first (was "Assessment types in this programme", then the shared list)
     q('.cb-cur-types [data-act="cbCurType"]').click(); ok('CB4-J "View type" explains the evidence and the rules it follows', !!MODAL && /Assessment type —/.test(MODAL.title) && /Evidence it uses/.test(document.querySelector('#modal-root').textContent)); closeModal();
     open('NV-L3O'); const a0 = ADMIN.audit.length;
     ok('CB4-J Retired: read-only — no Add, Edit, reorder, type list, module code or answer-key controls', /Retired — read-only/.test(main()) && !q('.cb-cur [data-act="nodeAdd"]') && !q('.cb-cur [data-act="cbCurEdit"]') && !q('.cb-cur [data-act="cbCurMove"]') && !q('.cb-cur select') && !q('.cb-cur [data-onchange="chModCode"]') && !q('.cb-cur [data-act="chAnsUp"]'));

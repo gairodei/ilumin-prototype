@@ -2,6 +2,9 @@
 // A real create-to-publish journey through the screens (the build fixture is ft-cbf's, copied unchanged), then the new structure: eight
 // steps, states, Resources & Delivery, merged panels, review links, versions, legacy programmes, permissions and the client demo.
 (async function () {
+  // FB1 (PD-FB1-03): this suite's deposit configuration, chosen explicitly where its fixture prepares a package for Finance — each new fee
+  // option "Allow Deposit: Yes" with the Academy default, through the Step 5 handler (an administrator's action; role checks apply).
+  const fb1Dep = p => { if (p && cb8Managed(p)) cb8Work(p).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: p.id, o: o.id, k: 'allow' }, checked: true })); };
   const dmpComply = (pid, mode = 'Fully Assisted') => {
     const pr = s3Pr(pid) || cbPr(pid); if (!pr) return false; const av = ADMIN.av, po = S.portal, aca = typeof isAca === 'function' && isAca();
     const qm1 = k => document.querySelector('#modal-root ' + k), put = (k, v) => { const e = qm1(k); if (e && !e.value) e.value = v; };
@@ -19,6 +22,7 @@
     });
     if (!cb8Work(pr).opts.some(o => o.status === 'Active' && !o.legacy && M_MODES.includes(o.mode))) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String((s4PlanCur(pr.id) || {}).fee || 2400); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); closeModal(); } // no option at all (a Level 3 package starts from the options in force): one at the plan's fee
     cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.pay.length).forEach(o => ACT.cb8PayAdd({ dataset: { p: pr.id, o: o.id, k: '1' } }));
+    fb1Dep(pr); // FB1: the fixture's fee options answer Allow Deposit (Yes) before the Super Administrator's own approval
     if (!(cb8Wf(pr) && cb8Wf(pr).status === 'Approved')) { ACT.cb8SaApprove({ dataset: { p: pr.id } }); rs(); }
     closeModal(); if (aca) { acaEnter(av); S.signedIn = true; } else setAdminIdentity(av); S.portal = po; return true;
   };
@@ -52,7 +56,7 @@
   let codeN = 0;
   const make = (o = {}) => {
     go('a-programmes'); ACT.chProgNew(); const n = ++codeN;
-    fill({ '#np-t': o.title || 'CB11 Level 3 course ' + n, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (5500 + n) + '/1', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
+    fill({ '#np-t': o.title || 'CB11 Level 3 course ' + n, '#np-l': 'Level 3', '#np-r': 'QN 610/' + (5500 + n) + '/1', '#cbc3-dd-n': '12', '#np-d': '6', '#np-du': 'months' }); INP.r1NpLevel(document.querySelector('#np-l'));
     (document.querySelector('#np-code') || {}).value = 'CB11C' + n; document.querySelector('#np-obs-' + (o.obs ? 'yes' : 'no')).checked = true;
     [{ l: 'Fully Assisted — standard', f: 2400, m: 'Fully Assisted' }, { l: 'Self-Paced — standard', f: 1800, m: 'Self-Paced' }].forEach((x, k) => { if (k) ACT.r1NpAdd(); const r = document.querySelectorAll('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = x.l; r.querySelector('.r1-np-f').value = String(x.f); r.querySelector('.r1-np-m').value = x.m; });
     const pr = crT(ACT.cbDetCreate)(); closeModal(); return pr;
@@ -97,7 +101,7 @@
     go('a-programmes', { id, tab: 'docs' }); ACT.s4CkAdd({ dataset: { p: id } }); fill({ '#ck-n': 'Care Certificate (if held)', '#ck-f': 'PDF' }); document.querySelector('#ck-m').value = '0'; reason('Optional prior learning');
   };
   const submitAndApprove = pr => {
-    go('a-programmes', { id: pr.id, tab: 'fees' }); ACT.cb8Submit({ dataset: { p: pr.id } }); if (MODAL) press();
+    go('a-programmes', { id: pr.id, tab: 'fees' }); fb1Dep(pr); ACT.cb8Submit({ dataset: { p: pr.id } }); if (MODAL) press();
     const qid = cb8Wf(pr).qid; FA(); go('a-queue', { id: qid }); ACT.e1Decide({ dataset: { id: qid, a: 'approve' } }); if (MODAL) reason('Checked against the price list'); return qid;
   };
   const batch = (pr, code) => {
@@ -106,26 +110,28 @@
   };
   const click = el => { if (!el) throw new Error('missing control'); el.click(); };
   // ---------------- CBX — the restructured course builder (PD-CBX-*) ----------------
-  const secKeys = () => qa('.cb-nav .cb-sec').map(b => b.dataset.tab), cur = () => (q('.cb-sec.cur') || {}).dataset && q('.cb-sec.cur').dataset.tab, pan = () => (q('.cb-panels .tab[aria-selected="true"]') || {}).dataset ? q('.cb-panels .tab[aria-selected="true"]').dataset.tab : null;
+  const secKeys = () => qa('.cb-nav .cb-sec').map(b => b.dataset.tab), cur = () => (q('.cb-sec.cur') || {}).dataset && q('.cb-sec.cur').dataset.tab, pan = () => (q('.cb-body') || { dataset: {} }).dataset.panel || null; // CBR (PD-CBR-01): no panel tabs
   const badge = k => (q(`.cb-sec[data-tab="${k}"]`) || { textContent: '' }).textContent;
   let P = null;
-  await T('CBX-A a new course from an empty draft: eight steps with descriptions, states and named Back / Next', async () => {
+  // CBR (PD-CBR-01…07) supersedes CBX's eight sections: seven steps, Resources & Delivery folded into Curriculum (resources) and Batch
+  // Management (batches, live sessions); the observation tabs are one page. Each CBX check is restated for that structure.
+  await T('CBX-A a new course from an empty draft: seven steps with descriptions, states and named Back / Next', async () => {
     fresh(); ACA(); P = make({ obs: true, title: 'CBX Level 3 course' });
     ok('CBX-A1 created as Draft Version 1 and opened in Curriculum & Outcomes', !!P && P.status === 'Draft' && cur() === 'curriculum');
-    ok('CBX-A1 eight sections in the approved order, with Resources & Delivery before Review & Publish', J(secKeys()) === J(['details', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'delivery', 'review']));
-    ok('CBX-A1 the labels say what each step is', /Curriculum & Outcomes/.test(badge('curriculum')) && /Assignments & Assessments/.test(badge('assessments')) && /Resources & Delivery/.test(badge('delivery')));
-    ok('CBX-A1 every step states its number and purpose', /Step 2 of 8/.test(q('.cbx-desc').textContent) && /Units, modules, Learning Outcomes/.test(q('.cbx-desc').textContent));
-    ok('CBX-A1 Back and Next name where they go', /Back: Course Details/.test(q('.cb-foot').textContent) && /Next: Assignments & Assessments →/.test(q('.cb-foot .btn-primary').textContent));
+    ok('CBX-A1 seven steps in order (CBR): no Resources & Delivery', J(secKeys()) === J(['details', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'review']));
+    ok('CBX-A1 the labels say what each step is', /Curriculum & Outcomes/.test(badge('curriculum')) && /Assessments/.test(badge('assessments')) && /Fees & Payment Plans/.test(badge('payments')) && /Offer Letters/.test(badge('documents')));
+    ok('CBX-A1 every step states its number and purpose', /Step 2 of 7/.test(q('.cbr-hint').textContent) && /Curriculum & Outcomes/.test(q('.cb-h').textContent)); // CBR-2: the step title names it; no description line
+    ok('CBX-A1 Back and Next name where they go', /Back: Course Details/.test(q('.cb-foot').textContent) && /Next: Assessments →/.test(q('.cb-foot .btn-primary').textContent));
     ok('CBX-A2 states before anything is added: Course Details Complete; Curriculum Not started or to fix (one badge, the stronger); Assignments Optional', /Complete/.test(badge('details')) && /Not started|to fix/.test(badge('curriculum')) && !/Complete/.test(badge('curriculum')) && /Optional|to fix/.test(badge('assessments')), J([badge('details'), badge('curriculum'), badge('assessments')]));
     structure(P, true); go('a-programmes', { id: P.id, tab: 'curriculum' });
     ok('CBX-A3 the curriculum (Unit → Module → LO → criteria) made through Section 2: Curriculum Complete', /Complete/.test(badge('curriculum')) && (cbTree(P) || []).length === 1);
     author(P, 'CBX assignment 1'); go('a-programmes', { id: P.id, tab: 'assessments' });
-    ok('CBX-A4 a published assignment: Assignments & Assessments Complete', /Complete/.test(badge('assessments')) && cbAsgOf(P).some(a => a.status === 'Published'));
+    ok('CBX-A4 a published assignment: Assessments Complete', /Complete/.test(badge('assessments')) && cbAsgOf(P).some(a => a.status === 'Published'));
   });
   await T('CBX-B observations: settings, library category in the builder, Same as Workplace with an exclusion, events', async () => {
     ACA(); const { nvq } = observations(P); go('a-programmes', { id: P.id, tab: 'observations' });
-    ok('CBX-B1 Observation settings, Workplace and Academy criteria, Observation events — no legacy library tab', J(qa('.cb-panels .tab').map(t => t.textContent)) === J(['Observation settings', 'Workplace Observation Criteria', 'Academy Observation Criteria', 'Observation events']));
-    ok('CBX-B1 settings show the summary by location, not the criteria cards', !!q('.ol1b-map') && !q('.n5-nvq') && !q('.n5-ia'));
+    ok('CBX-B1 one Observations page: Workplace and Academy side by side, then the events — no tabs, no legacy library tab (CBR PD-CBR-07)', !q('.cb-panels') && !!q('.cbr-col[data-loc="wp"]') && !!q('.cbr-col[data-loc="off"]') && !!q('#cbr-events'));
+    ok('CBX-B1 the qualification criteria are shown once, under the locations', qa('.n5-nvq').length === 1);
     go('a-programmes', { id: P.id, tab: 'wpcrit' }); click(q('[data-act="ol1CbNew"]'));
     fill({ '#ol1-code': 'CBX', '#ol1-name': 'Course builder standards' }); const rows = [...document.querySelectorAll('#modal-root .ol1-row')];
     rows.forEach((r, k) => { r.querySelector('.ol1-rt').value = ['Greets the individual', 'Records the visit'][k]; r.querySelector('.ol1-ri').value = 'Observe it once.'; r.querySelectorAll('.ol1-ev').forEach(x => { x.checked = (k ? ['docs', 'refs'] : ['notes', 'photos']).includes(x.value); }); });
@@ -133,30 +139,30 @@
     ok('CBX-B2 a new library category made inside the builder (two criteria, own evidence fields) is selected for Workplace', !!c && ol1Resolve(n5Draft(P), 'wp').items.map(i => i.code).join() === 'CBX-01,CBX-02' && J(ol1Resolve(n5Draft(P), 'wp').items.map(i => i.ev)) === J([['notes', 'photos'], ['docs', 'refs']]));
     go('a-programmes', { id: P.id, tab: 'offcrit' }); const inh = ol1Resolve(n5Draft(P), 'off').items.find(i => i.code === 'CBX-02');
     ok('CBX-B3 Academy office inherits Workplace by default (Same as Workplace)', ol1Mode(n5Draft(P)) === 'same' && !!inh && inh.from === 'inherited');
-    click(q(`[data-act="ol1Excl"][data-c="${inh.id}"]`)); ok('CBX-B3 an inherited criterion is excluded at the Academy office only', !ol1Resolve(n5Draft(P), 'off').items.some(i => i.code === 'CBX-02') && ol1Resolve(n5Draft(P), 'wp').items.some(i => i.code === 'CBX-02'));
+    click(q(`input[data-onchange="cbr2Inh"][data-c="${inh.id}"]`)); // CBR-2 (PD-CBR2-05): untick it in the Academy column ok('CBX-B3 an inherited criterion is excluded at the Academy office only', !ol1Resolve(n5Draft(P), 'off').items.some(i => i.code === 'CBX-02') && ol1Resolve(n5Draft(P), 'wp').items.some(i => i.code === 'CBX-02'));
     ok('CBX-B4 the qualification (NVQ) criteria stay separate on both tabs', !!q('.n5-nvq') && nvq.every(code => !!q(`.n5-nvq tr[data-code="${code}"]`)) && !q('.ol1-preview tr[data-code="' + nvq[0] + '"]'));
     go('a-programmes', { id: P.id, tab: 'events' });
-    ok('CBX-B5 Observation events: locations shown read-only with a link to Observation settings (one settings editor)', !!q('.cb-locs') && !q('.cb-locs [data-act="n5Settings"]') && !!q('.cb-locs [data-tab="obs"]') && qa('tbody tr[data-e]').length >= 2);
+    ok('CBX-B5 Observation events on the same page; the locations are only switched above them (one settings editor)', !q('.cb-locs') && !!q('.cbr-col input[data-onchange="cbr2Loc"]') /* CBR-2: each column's checkbox */ && qa('#cbr-events .cbr2-ro[data-e]').length >= 2 /* CBC2: Required Observations as rows */);
     ok('CBX-B6 a library problem links to the Workplace / Academy criteria tab, not the settings', J(cbRvWhere(P, 'Observations: Workplace Observation Criteria — X is retired')) === J(['observations', 'wpcrit']) && J(cbRvWhere(P, 'Observations: Academy Observation Criteria — Y')) === J(['observations', 'offcrit']));
   });
   await T('CBX-C fees and enrolment, Resources & Delivery, review, publish', async () => {
     ACA(); fees(P, true); documents(P);
     go('a-programmes', { id: P.id, tab: 'payments' });
-    ok('CBX-C1 Fees & Payments: the package panels — fee options and the financial history (no separate legacy tab)', J(qa('.cb-panels .tab').map(t => t.dataset.tab)) === J(['fees', 'payhist']));
-    go('a-programmes', { id: P.id, tab: 'documents' }); ok('CBX-C2 Offer Letter & Documents: a letter is uploaded — Complete', /Complete/.test(badge('documents')) && chLetters(P.id).length === 2);
+    ok('CBX-C1 Fees & Payment Plans: the package on one page, the financial history folded (no tabs)', !q('.cb-panels') && !!q('.cb8-sec') && !!q('#cbr-fhist'));
+    go('a-programmes', { id: P.id, tab: 'documents' }); ok('CBX-C2 Offer Letters: a letter is uploaded — Complete', /Complete/.test(badge('documents')) && chLetters(P.id).length === 2);
     go('a-programmes', { id: P.id, tab: 'delivery' });
-    ok('CBX-C3 Resources & Delivery: delivery modes from the fee options, with a link to Fees & Payments', cur() === 'delivery' && pan() === 'delivery' && /Self-Paced/.test(q('.cbx-modes').textContent) && /Fully Assisted/.test(q('.cbx-modes').textContent) && !!q('.cbx-modes [data-tab="payments"]'));
-    ok('CBX-C3 …no batches before publication (said so, no Create batch on a Draft); live sessions scheduled per batch, linked', /No batches yet/.test(q('.cbx-batches').textContent) && !q('.cbx-batches [data-act="newBatch"]') && !!q('.cbx-sessions [data-go="a-scheduling"]'));
-    click(q('.cb-panels [data-tab="dresources"]')); ok('CBX-C3 Learning resources: an empty state and the way to Learning Resources', /No learning resources are mapped to this course yet/.test(q('.cbx-res').textContent) && !!q('.cbx-res [data-go="a-resources"]'));
+    ok('CBX-C3 the old Resources & Delivery address opens Curriculum & Outcomes at the resources (CBR PD-CBR-04); delivery modes are the learner types / fee options', cur() === 'curriculum' && pan() === 'resources' && !!q('#cbr-resources') && J(cbrTypes(P).map(t => t.mode).sort()) === J(['Fully Assisted', 'Self-Paced']));
+    ok('CBX-C3 …no batch or live-session controls in the builder of a Draft (batches and sessions are in Batch Management)', !q('[data-act="newBatch"]') && !/Zoom/.test(q('.cb-body').textContent));
+    ok('CBX-C3 Learning resources: none yet, with Add from library / New resource at programme level', /None yet/.test(q('#cbr-resources .cbr-res').textContent) && !!q('#cbr-resources [data-act="cbr2Res"]')); // CBR-2 (PD-CBR2-03): one Add Resource (library or new)
     submitAndApprove(P); ACA(); go('a-programmes', { id: P.id, tab: 'review' });
-    ok('CBX-C4 Review & Publish summarises all seven sections, including Resources & Delivery', qa('.cb-rv-sec').length === 7 && !!q('.cb-rv-sec[data-sec="delivery"]') && /Delivery modes/.test(q('.cb-rv-sec[data-sec="delivery"]').textContent));
+    ok('CBX-C4 Review & Publish summarises the six configuration steps, with the resources and learner types', qa('.cb-rv-sec').length === 6 && /Resources/.test(q('.cb-rv-sec[data-sec="curriculum"]').textContent) && /Learner types/.test(q('.cb-rv-sec[data-sec="details"]').textContent));
     const blk = cbRvChecks(P).block; ok('CBX-C4 nothing blocks publishing', !blk.length, J(blk.map(b => b.msg)));
     click(q('[data-act="cbPublish"]')); reason('CBX create-to-publish');
     ok('CBX-C5 published from the screen: Active, Version 1, audited', P.status === 'Active' && P.version === 1 && ADMIN.audit.slice(0, 15).some(a => /publish/i.test(a.action) && String(a.entity).includes(P.id)));
-    ok('CBX-C5 the version bar points to Section 8 — Review & Publish (never the old Section 7)', (go('a-programmes', { id: P.id, tab: 'details' }), /Section 8 — Review & Publish/.test(q('.cb-ver').textContent) && !/Section 7/.test(q('.cb-ver').textContent)), q('.cb-ver').textContent.slice(0, 200));
-    go('a-programmes', { id: P.id, tab: 'delivery' }); ok('CBX-C6 once published, Create batch is offered here', !!q('.cbx-batches [data-act="newBatch"]'));
-    const bt = batch(P, 'CBX-B1'); ACA(); go('a-programmes', { id: P.id, tab: 'delivery' });
-    ok('CBX-C6 the new batch is listed with its delivery modes and an Open link', !!bt && !!q('.cbx-batches tr[data-b="CBX-B1"] [data-go="a-batches"]'));
+    ok('CBX-C5 the version bar points to Review & Publish by name (CBC3: was "Section 7")', (go('a-programmes', { id: P.id, tab: 'details' }), /publish in Review & Publish/.test(q('.cb-ver').textContent) && !/Section \d/.test(q('.cb-ver').textContent)), q('.cb-ver').textContent.slice(0, 200));
+    go('a-programmes', { id: P.id, tab: 'details' }); ok('CBX-C6 once published, Create batch is offered in the version bar', !!q('.cb-ver [data-act="newBatch"]'));
+    const bt = batch(P, 'CBX-B1'); ACA(); go('a-batches');
+    ok('CBX-C6 the new batch is listed in Batch Management (where its sessions are scheduled)', !!bt && bt.course === P.title && main().includes('CBX-B1'));
   });
   await T('CBX-D version workflow and history', async () => {
     ACA(); const pub0 = J(STORE.n5.pub[P.id]); go('a-programmes', { id: P.id, tab: 'review' }); click(q('[data-act="s3WizVersion"]')); reason('Version 2');
@@ -167,38 +173,39 @@
   });
   await T('CBX-E legacy programmes, retired, permissions', async () => {
     fresh(); SA(); go('a-programmes', { id: 'NV-L3', tab: 'library' });
-    ok('CBX-E1 the old "library" link opens Observation settings, with a link to the legacy list page (no copy in the builder)', cur() === 'observations' && pan() === 'obs' && !!q('.cbx-legacy [data-go="k-obslib"]') && !q('.cb-panels [data-tab="library"]'));
-    go('a-programmes', { id: 'NV-L3O', tab: 'curriculum' }); ok('CBX-E2 a retired programme: read-only, no state badges', !qa('.cb-nav .cbx-st').length && !q('[data-act="cbDetSave"]'));
+    ok('CBX-E1 the old "library" link opens Observations, with a link to the legacy list page (no copy in the builder)', cur() === 'observations' && pan() === 'obs' && !!q('.cbx-legacy [data-go="k-obslib"]') && !q('.cb-panels'));
+    go('a-programmes', { id: 'NV-L3O', tab: 'curriculum' }); ok('CBX-E2 a retired programme: read-only, no state badges', !qa('.cb-nav .cbr-s').length && !q('[data-act="cbDetSave"]'));
     FA(); const a0 = ADMIN.audit.length, p0 = s3Pr('NV-L3D').status; ACT.cbPublish({ dataset: { id: 'NV-L3D' } }); closeModal();
     ok('CBX-E3 a Finance Admin cannot publish (refused, nothing published)', s3Pr('NV-L3D').status === p0);
     BA(); ACT.ol1CbNew({ dataset: { p: 'NV-L3D', loc: 'wp' } }); ok('CBX-E3 a Business Admin cannot create observation criteria in the builder', !MODAL); closeModal();
   });
   await T('CBX-F the client demo programme is intact in the new structure', async () => {
     fxLoadClient(); ACA(); const pr = ADMIN.programmes.find(p => p.title === 'Level 3 Diploma in Care Practice (client demo)'), b0 = J(ADMIN.batches.map(b => [b.code, b.enrolled, b.status]));
-    go('a-programmes', { id: pr.id, tab: 'delivery' });
-    ok('CBX-F1 Resources & Delivery lists the demo batch DEMO-L3-JAN27 with both delivery modes', !!q('.cbx-batches tr[data-b="DEMO-L3-JAN27"]') && /Self-Paced/.test(q('.cbx-batches tr[data-b="DEMO-L3-JAN27"]').textContent) && /Fully Assisted/.test(q('.cbx-batches tr[data-b="DEMO-L3-JAN27"]').textContent));
+    go('a-batches'); const db = ADMIN.batches.find(b => b.code === 'DEMO-L3-JAN27');
+    ok('CBX-F1 the demo batch DEMO-L3-JAN27 is in Batch Management with both delivery modes', main().includes('DEMO-L3-JAN27') && !!db && J((crBModes(db) || []).slice().sort()) === J(['Fully Assisted', 'Self-Paced']));
     ['details', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'delivery', 'review'].forEach(k => go('a-programmes', { id: pr.id, tab: k }));
     ok('CBX-F2 every section opens; nothing in the demo data changed', !/undefined|NaN/.test(main()) && J(ADMIN.batches.map(b => [b.code, b.enrolled, b.status])) === b0 && pr.status === 'Active' && pr.version === 1);
   });
 
-  await T('CBX-G every step: heading, description, Back / Next, Fix-in links; Step 7 is an overview', async () => {
+  await T('CBX-G every step: heading, description, Back / Next, Fix-in links', async () => {
     fresh(); SA(); const id = 'NV-L3D', pr = cbPr(id), keys = CB_SECTIONS.map(s => s[0]), bad = [];
     keys.forEach((k, i) => {
-      go('a-programmes', { id, tab: k }); const h = q('h2.cb-h'), d = q('.cbx-desc'), nx = q('.cb-foot .btn-primary'), bk = qa('.cb-foot .btn:not(.btn-primary)')[0];
+      go('a-programmes', { id, tab: k }); const h = q('h2.cb-h'), d = q('.cbr-hint'), nx = q('.cb-foot .btn-primary'), bk = qa('.cb-foot .btn:not(.btn-primary)')[0];
       if (!h || !h.textContent.includes(CB_SECTIONS[i][1])) bad.push(k + ': heading');
-      if (!d || !new RegExp(`Step ${i + 1} of 8`).test(d.textContent) || d.textContent.length < 40) bad.push(k + ': description');
+      if (!d || !new RegExp(`Step ${i + 1} of 7`).test(d.textContent) || false) bad.push(k + ': description'); // CBR-2: "Step N of 7" without a description line
       if (i < keys.length - 1) { if (!nx) bad.push(k + ': no Next'); else { nx.click(); if (cur() !== keys[i + 1]) bad.push(k + ': Next went to ' + cur()); } } else if (nx) bad.push(k + ': Next on the last step');
       go('a-programmes', { id, tab: k }); if (i > 0) { const b = qa('.cb-foot .btn:not(.btn-primary)')[0]; if (!b) bad.push(k + ': no Back'); else { b.click(); if (cur() !== keys[i - 1]) bad.push(k + ': Back went to ' + cur()); } }
     });
-    ok('CBX-G1 all eight steps: heading, "Step N of 8" with a description, Next to the following step and Back to the previous', !bad.length, J(bad));
+    ok('CBX-G1 all seven steps: heading, "Step N of 7" with a description, Next to the following step and Back to the previous', !bad.length, J(bad));
     go('a-programmes', { id, tab: 'review' }); const fixes = qa('.cb-rv-fix').map(b => b.dataset.tab), wrong = fixes.filter(t => { const r = CB_ROUTE[t]; if (!r) return true; const ps = cbPanels(pr, r[0]).map(p => p[0]); return r[1] && !ps.includes(r[1]) && !(t === 'support' && cb8Managed(pr)); });
     ok('CBX-G2 every "Fix in" link on Review & Publish opens an existing step and tab', fixes.length > 0 && !wrong.length, J({ fixes, wrong }));
     fixes.slice(0, 3).forEach(t => { go('a-programmes', { id, tab: t }); }); ok('CBX-G2 …and they open (no missing page)', !/We can't find that page|undefined/.test(main()));
+    // CBR (PD-CBR-01/04) supersedes the Step 7 overview: its old address opens Curriculum & Outcomes at the resources; batches and live
+    // sessions stay in Batch Management and Scheduling (nothing about them inside the builder)
     go('a-programmes', { id, tab: 'delivery' });
-    ok('CBX-G3 Step 7 says it is an overview: live sessions are managed within batches, delivery modes come from the fee options', /Overview only — nothing to set up here/.test(q('.cbx-ov').textContent) && /scheduled within each batch/.test(q('.cbx-ov').textContent) && /managed within each batch/.test(q('.cbx-sessions').textContent) && /An overview with links — nothing is set here/.test(q('.cbx-desc').textContent));
-    ok('CBX-G3 …its tabs are named for what they show', J(qa('.cb-panels .tab').map(t => t.textContent)) === J(['Batches & live sessions', 'Learning resources (by module)']));
-    ok('CBX-G3 …and it has no input of its own (nothing configured here)', !qa('.cb-body input, .cb-body select, .cb-body textarea').filter(x => !x.closest('.dt, .dt-filt')).length);
-    click(q('.cb-panels [data-tab="dresources"]')); ok('CBX-G3 Learning resources: managed within modules, in Learning Resources', /managed within modules/.test(q('.cbx-ov').textContent) && /Manage resources by module/.test(q('.cbx-res [data-go="a-resources"]').textContent));
+    ok('CBX-G3 the old Resources & Delivery address opens Curriculum & Outcomes at the resources', cur() === 'curriculum' && pan() === 'resources' && !!q('#cbr-resources'));
+    ok('CBX-G3 …resources sit at programme, unit and module level in the tree', !!q('.cbr-res[data-lvl="prog"]') && qa('.cbr-res[data-lvl="unit"]').length === (cbTree(pr) || []).length && qa('.cbr-res[data-lvl="mod"]').length === (cbTree(pr) || []).reduce((n, u) => n + u.mods.length, 0));
+    ok('CBX-G3 …and no live-session, Zoom or batch content in the curriculum', !/Zoom|live sessions|Create batch/i.test(q('.cb-body').textContent));
   });
 
   const pre = document.createElement('pre'); pre.id = 'ft-out'; pre.textContent = R.join('\n'); document.body.appendChild(pre);

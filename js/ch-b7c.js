@@ -81,7 +81,7 @@ const _sponsCh7c = ACT.chSponsoredSignup;
 ACT.chSponsoredSignup = el => { const r = _sponsCh7c(el), w = W, b = chNearestFor(w); if (b && !w.signup.done) { chSetBatch(w, b); render(); } return r; };
 // Demo: "Your batch fills before payment"; the instalment run: a place opens on Online Cohort 9 (starts in under 28 days)
 const _scInstCh7c = ACT.chScInstalment;
-ACT.chScInstalment = el => { const o = chBatch('L3AC-OCT26-ONL'); if (o && o.enrolled >= o.cap) o.enrolled = o.cap - 1; return _scInstCh7c(el); };
+ACT.chScInstalment = el => { const o = chBatch('L3AC-OCT26-ONL'); if (o && o.enrolled >= o.cap) seatSetDemo(o, o.cap - 1, 'Demo: a place opens on Online Cohort 9'); return _scInstCh7c(el); };
 AFTER.push(() => { const b = document.querySelector('#demo-root [data-act="chIntakeFills"]'); if (b) b.textContent = 'Your batch fills before payment'; });
 
 /* ---------- P-32 released seat ---------- */
@@ -89,7 +89,7 @@ const chReleased = w => !!(w && w.admission && w.admission.deposit && w.admissio
 const CH_REL_BANNER = 'Your seat was released because the balance wasn\'t paid. You can still view your materials. To continue, sign up again.';
 function chReleaseSeat(w, quiet) {
   const s = w.signup, b = chBatch(s.releasedFrom || s.batch); if (s.releasedFrom) return;
-  if (b) b.enrolled = Math.max(0, b.enrolled - 1);
+  if (b) seatRelease(b, w.me.id, { origin: 'Seat released (P-32)' }); // P1: the seat ledger
   s.releasedFrom = b ? b.code : s.batch; s.batch = null; w.nvq.batch = ''; w.nvq.status = 'Seat released';
   Object.assign(w.admission.deposit, { released: true, kept: true }); w.flags.admitted = true; if (!w.enrolments.includes(w.nvq)) w.enrolments.unshift(w.nvq);
   const hd = w.admission.deposit.holdDays || chHoldDays(); // S4-07: the hold agreed at payment
@@ -152,7 +152,7 @@ ACT.chMoveBatch = el => {
 };
 function chDoMove(lid, b, nb, r) {
   const w = chWorldByLid(lid), name = chLidName(lid);
-  b.enrolled = Math.max(0, b.enrolled - 1); nb.enrolled++;
+  if (!seatMove(lid, b, nb, { origin: 'Batch changed', why: r })) { chMoveRefuse(lid, `${nb.label || nb.code} has no place left — nothing was changed.`); return false; } // P1: one move in the seat ledger (checked against the destination's capacity)
   if (w) { chSetBatch(w, nb); w.admission.history.push([`Batch changed: ${b.code} → ${nb.code}`, now().toISOString()]); notifyLearner(w.v, 'Admission', 'Your batch has changed', `You're now in ${nb.label}, starting ${fd(nb.start)}. Your course, fees, payment plan and offer letter don't change${w.admission.deposit && w.admission.deposit.paid ? '; your deposit moves with you' : ''}.`, 'admission'); }
   else { const e = (b.coh || []).find(x => x.lid === lid); if (e) { b.coh = b.coh.filter(x => x !== e); (nb.coh = nb.coh || []).push(e); } }
   logA('Batches', `${name} · ${b.code} → ${nb.code}`, 'Batch changed (before start)', `${b.label} (${b.code})`, `${nb.label} (${nb.code})`, r);

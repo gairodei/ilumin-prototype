@@ -33,7 +33,7 @@ const dpRowLbl = (pl, r) => (pl.plan === 'Deposit and balance' ? 'balance' : pl.
 
 /* ---------- The seat: one status for every screen (round 2) ---------- */
 // The date seat holds are checked against: the demo's today plus Finance's simulated-date offset (CB10). No timer runs.
-const dpNow = () => new Date(now().getTime() + ((STORE.cbRem && STORE.cbRem.offset) || 0) * DAY);
+const dpNow = () => Clock.scenario('finance'); // P2: Finance's simulated date (STORE.cbRem.offset days on the one clock)
 // FC (PD-FC-11): a deposit followed by the approved instalments (depRoute 'inst') holds the seat too, until instalment 1 is settled
 const dpHoldPl = w => { const pl = fpPl(w); return pl && pl.deposit && (pl.plan === 'Deposit and balance' || pl.depRoute === 'inst') ? pl : null; };
 function dpSeat(w) {

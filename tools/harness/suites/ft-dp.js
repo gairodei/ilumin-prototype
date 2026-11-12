@@ -5,6 +5,9 @@
 // Then the numerical interpretations (A: gross, model only — no approved plan makes one; B: a £200 custom deposit approved through
 // Course Builder and Finance) and the edge cases. Reset restores the starting demo. Every check reads the consuming screen or record.
 (async function () {
+  // P3 (PD-P3-02): the learner chooses their batch on sign-up step 1. Fixtures that relied on the automatic (CH-42) assignment now pick, on
+  // the page, the earliest eligible batch (the one CH-42 assigned); a batch the fixture already set, and that is still eligible, is kept
+  const p3Pick = () => { const w = W; if (!w || !p3Open(w) || chStepKey(w) !== 'details' || ui('suBatch', null) || (w.signup.batch && !p3Why(w, chBatch(w.signup.batch), { region: w.signup.l3cPin !== w.signup.batch }))) return; const r = S.route === 'admission' && document.querySelector('main input[name="su-batch"]'); if (r) { r.checked = true; INP.suBatch(r); } else { const b = p3Eligible(w)[0]; if (b) setUi('suBatch', b.code); } };
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   const J = JSON.stringify, $1 = s => document.querySelector(s), $a = s => [...document.querySelectorAll(s)];
   const main = () => ($1('main') || document.body).textContent.replace(/\s+/g, ' ');
@@ -39,14 +42,14 @@
   };
   // Sign up in two parts: Browse → fee option, then details → documents → offer letter
   const startSignup = (w, mode = 'Self-Paced') => { go('browse'); const c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === CD_T); ACT.applyNvq({ dataset: { id: c.id } }); const o = r1Opts(cdPr().id).find(x => x.status === 'Active' && x.mode === mode); $1(`#modal-root input[name="r1-opt"][value="${o.id}"]`).checked = true; press(); go('admission'); };
-  const contSignup = w => { go('admission'); $1('#su-dob').value = '1992-03-04'; $1('#su-ad').value = '9 Test Road, Luton'; click($1('main [data-act="suNext"]')); fxFast(ff => { w.docs.filter(d => d.mand).forEach(d => ACT.sampleUpload({ dataset: { id: d.id } })); ff(3000); }); click($1('main [data-act="suNext"]')); setUi('suSig', chFullName(w)); setUi('suDecl', true); render(); click($1('main #su-sign')); };
+  const contSignup = w => { go('admission'); $1('#su-dob').value = '1992-03-04'; $1('#su-ad').value = '9 Test Road, Luton'; click((p3Pick(), $1('main [data-act="suNext"]'))); fxFast(ff => { w.docs.filter(d => d.mand).forEach(d => ACT.sampleUpload({ dataset: { id: d.id } })); ff(3000); }); click((p3Pick(), $1('main [data-act="suNext"]'))); setUi('suSig', chFullName(w)); setUi('suDecl', true); render(); click($1('main #su-sign')); };
   // Sign up from Browse on the programme's option of this mode, up to the payment step
   const toPayment = (w, mode = 'Self-Paced') => {
     go('browse'); const c = CATALOGUE.find(x => x.kind === 'nvq' && x.title === CD_T); ACT.applyNvq({ dataset: { id: c.id } }); const dlg = mtxt();
     const o = r1Opts(cdPr().id).find(x => x.status === 'Active' && x.mode === mode); $1(`#modal-root input[name="r1-opt"][value="${o.id}"]`).checked = true; press();
-    go('admission'); $1('#su-dob').value = '1992-03-04'; $1('#su-ad').value = '9 Test Road, Luton'; click($1('main [data-act="suNext"]'));
+    go('admission'); $1('#su-dob').value = '1992-03-04'; $1('#su-ad').value = '9 Test Road, Luton'; click((p3Pick(), $1('main [data-act="suNext"]')));
     fxFast(ff => { w.docs.filter(d => d.mand).forEach(d => ACT.sampleUpload({ dataset: { id: d.id } })); ff(3000); });
-    click($1('main [data-act="suNext"]')); setUi('suSig', chFullName(w)); setUi('suDecl', true); render(); click($1('main #su-sign')); return dlg;
+    click((p3Pick(), $1('main [data-act="suNext"]'))); setUi('suSig', chFullName(w)); setUi('suDecl', true); render(); click($1('main #su-sign')); return dlg;
   };
   const choose = (opt, method) => { const r = $1(`main input[name="cb9-pay"][value="${opt}"]`); if (r) { r.checked = true; INP.cb9Pay(r); } const m = $1(`main input[name="su-m"][value="${method}"]`); if (m) { m.checked = true; INP.suMethod(m); } };
   const depRow = w => $a('main table tbody tr').find(tr => tr.textContent.includes(chFullName(w)));
@@ -60,7 +63,7 @@
   await T('DP-A inventory', async () => {
     const pr = cdPr(), b = cdBatch(), cur = s4PlanCur(pr.id);
     // PD-FD-01: the programme deposit is now programme-specific £100 (approved change AQ-7601); Academy default stays £300. Was: mode default, eff £300.
-    ok('DP-A the client demo programme offers a deposit: programme-specific £100 (Academy default stays £300), seat hold 28 days (plan version ' + cur.v + ')', cur.pkg.dep.mode === 'own' && cur.pkg.dep.amount === 100 && cur.pkg.dep.eff === 100 && S4().cfg.deposit === 300 && S4().cfg.hold === 28);
+    ok('DP-A the client demo programme offers a deposit: programme-specific £100 (Academy default stays £300), seat hold 28 days (plan version ' + cur.v + ')', cur.pkg.opts.filter(o => o.status === 'Active').every(o => { const d = o.dep || cur.pkg.dep; return d.mode === 'own' && d.amount === 100 && d.eff === 100; }) /* FB1: set on each fee option */ && S4().cfg.deposit === 300 && S4().cfg.hold === 28);
     ok('DP-A its batch starts in 28 days or more, so the deposit route is open for it (DEMO-L3-JAN27, ' + daysTo(b.start) + ' days)', chDepositOk(b) && b.status === 'Open' && chHasPlace(b));
     ok('DP-A the two admitted demo learners are on instalments (no deposit): Amira 6 × £300, Dev 5 × £433.33 + £433.35', !pl(STORE.worlds.CD1).deposit && J(pl(STORE.worlds.CD1).rows.map(r => r.amount)) === J([300, 300, 300, 300, 300, 300]) && !pl(STORE.worlds.CD2).deposit && pl(STORE.worlds.CD2).rows[5].amount === 433.35);
     // PD-FD-01: Deposits starts with the two demo deposit learners (Sam seat secured, Tom awaiting) and one awaiting transfer (Tom). Was: Deposits empty.
@@ -186,13 +189,14 @@
   let w2;
   await T('DP-D scenario B (net basis, through Course Builder and Finance)', async () => {
     const pr = cdPr(), id = pr.id; ACA(); go('a-programmes', { id, tab: 'fees' }); ACT.cb8Start({ dataset: { p: id } });
-    const r = $1('main input[name="e1-wdm"][value="own"]'); r.checked = true; INP.e1DepMode(r); $1('main #e1-d').value = '200'; ACT.cb8Dep({ dataset: { p: id } });
-    ACT.cb8Submit({ dataset: { p: id } }); if (MODAL) press(); const wf = cb8Wf(pr);
+    // FB1 (PD-FB1-01): Step 5 has no programme deposit editor — the £200 is typed into each fee option's Custom amount (real controls)
+    cb8Work(pr).opts.filter(o => o.status === 'Active').forEach(o => { go('a-programmes', { id, tab: 'fees' }); const a = $1(`main .cbr2-opt[data-o="${o.id}"] .cbr2-depf input[data-k="amount"]`); a.value = '200'; a.dispatchEvent(new Event('change', { bubbles: true })); });
+    ACT.cb8Submit({ dataset: { p: id } }); if (MODAL) press(); const wf = cb8Wf(pr), own200 = P => P.opts.filter(o => o.status === 'Active').every(o => o.dep && o.dep.mode === 'own' && o.dep.amount === 200);
     // PD-FD-01: changed to a different custom amount (£200), since the programme is already at £100. Was: £100.
-    ok('DP-D Course Builder → Fees & payments: a custom £200 deposit (changed from £100), submitted to Finance', !!wf && !!wf.qid && cb8Work(pr).dep.mode === 'own' && cb8Work(pr).dep.amount === 200, J(wf));
+    ok('DP-D Course Builder → Fees & payments: a custom £200 deposit (changed from £100) on each fee option, submitted to Finance', !!wf && !!wf.qid && own200(cb8Work(pr)), J(wf));
     FA(); go('a-queue', { id: wf.qid }); ACT.e1Decide({ dataset: { id: wf.qid, a: 'approve' } }); if (MODAL) reason('Custom deposit for the test');
     // PD-FD-01: the new version carries £200. Was: £100.
-    const cur = s4PlanCur(id); ok('DP-D Finance approves: a new plan version (v' + v0 + ' → v' + cur.v + ') with the £200 deposit', cur.v === v0 + 1 && cur.pkg.dep.eff === 200);
+    const cur = s4PlanCur(id); ok('DP-D Finance approves: a new plan version (v' + v0 + ' → v' + cur.v + ') with the £200 deposit', cur.v === v0 + 1 && cur.pkg.opts.filter(o => o.status === 'Active').every(o => o.dep && o.dep.eff === 200) && cur.deposit === 200 /* FB1: on each option; the plan summary follows */);
     ok('DP-D Amira\'s and Dev\'s agreed terms are not changed by the new version (still plan v' + v0 + ')', snapCD() === cd0);
     w2 = register('Uma Reed', 'uma.reed@test.example'); toPayment(w2);
     // PD-FD-01: £200 deposit, £1,600 balance. Was: £100 / £1,700.
@@ -350,7 +354,7 @@
   await T('DP-G6 sign up again: a new place, the earlier record kept', async () => {
     const b = cdBatch(), n0 = b.enrolled, old = pl(ta);
     asL(ta.v); click($1('#app [data-act="chSignAgain"]')); go('admission'); const dob = $1('#su-dob'), ad = $1('#su-ad'); if (dob && !dob.value) dob.value = '1992-03-04'; if (ad && !ad.value) ad.value = '9 Test Road, Luton';
-    for (let g = 0; g < 4 && ta.signup.step < 4 && $1('main [data-act="suNext"]'); g++) click($1('main [data-act="suNext"]'));
+    for (let g = 0; g < 4 && ta.signup.step < 4 && $1('main [data-act="suNext"]'); g++) click((p3Pick(), $1('main [data-act="suNext"]')));
     if (ta.signup.step === 3) { setUi('suSig', chFullName(ta)); setUi('suDecl', true); render(); const sg = $1('main #su-sign'); if (sg) click(sg); } render();
     ok('DP-G6 signing up again: no deposit offered (instalments only) and no seat taken before payment', ta.signup.step === 4 && b.enrolled === n0 && !$1('main input[name="cb9-pay"][value="deposit"]'));
     const c = payCo(() => click($1('main [data-act="suPay"]')));

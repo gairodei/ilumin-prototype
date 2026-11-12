@@ -5,6 +5,12 @@
 (async function () {
   const SS = window.sessionStorage, PH = +(SS.getItem('ft-iqbc.phase') || 0);
   const R = JSON.parse(SS.getItem('ft-iqbc.R') || '[]'); const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // P6 (PD-P6-02): a batch change is a transfer request carried out after approval — in these fixtures a Super Administrator override (audited)
+  // P6 correction (PD-P6-05): a transfer needs an explicitly configured Academy time zone on both batches — test setup configures one where missing
+  const p6TzAll = () => ADMIN.batches.forEach(b => { if (!tzOk(b.tz)) b.tz = typeof chBatchCountry === 'function' && chBatchCountry(b) === 'United Arab Emirates' ? 'Asia/Dubai' : 'Europe/London'; });
+  const p6AsSA = f => { const av = ADMIN.av, po = S.portal, si = S.signedIn; setAdminIdentity('A'); S.portal = 'admin'; try { return f(); } finally { if (av && av !== 'A') setAdminIdentity(av); S.portal = po; S.signedIn = si; } };
+  const p6Ok = (why = 'Approved (test)') => p6AsSA(() => { p6TzAll(); const q = (SEATS().xfer || { reqs: [] }).reqs.find(x => x.state === 'Pending Academic Approval'); return q ? p6Decide(q.id, 'override', why) : { ok: false, why: 'no pending request' }; });
+  const p6Xfer = (lid, to, why = 'Transfer (test)') => p6AsSA(() => { p6TzAll(); const q = p6Request(lid, typeof to === 'string' ? to : to.code, why); return q.ok ? p6Decide(q.id, 'override', why) : q; });
   const J = JSON.stringify, $1 = s => document.querySelector(s), $a = s => [...document.querySelectorAll(s)];
   const T = async (n, f) => { try { closeModal(); await f(); } catch (e) { R.push('FAIL ' + n + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
   const click = el => { if (!el) throw new Error('missing control'); el.click(); };
@@ -26,7 +32,8 @@
   // The wizard up to the Staff step, then the staff ticks
   const wiz1 = (code, course) => { ACT.newBatch(); $1('#nb-c').value = code; const co = $1('#nb-co'); co.value = course || [...co.options].map(o => o.value).filter(Boolean)[0]; if (INP.n2NbCourse) INP.n2NbCourse(co);
     $a('#modal-root .m-m').forEach(c => { c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })); });
-    if ($1('#nb-s')) $1('#nb-s').value = new Date(now().getTime() + 120 * 864e5).toISOString().slice(0, 10); if ($1('#nb-e')) $1('#nb-e').value = new Date(now().getTime() + 480 * 864e5).toISOString().slice(0, 10);
+    // PD-L3C2-03: Dev's move may not change his signed payment dates, so the new batch starts on the demo batch's day. Was: now + 120 days
+      if ($1('#nb-s')) $1('#nb-s').value = (chBatch('DEMO-L3-JAN27') ? chBatch('DEMO-L3-JAN27').start : new Date(now().getTime() + 120 * 864e5).toISOString()).slice(0, 10); /* legacy fixture: no demo batch, no move */ if ($1('#nb-e')) $1('#nb-e').value = new Date(now().getTime() + 480 * 864e5).toISOString().slice(0, 10);
     if ($1('#nb-m')) $1('#nb-m').value = 'Online'; if ($1('#nb-cap')) $1('#nb-cap').value = '10'; prim(); };
   const tickS = ({ coord = 'Laura Kemp', teachers = ['Tom Whitfield'], assessors = ['Sarah Okonkwo'], iqas = [] }) => {
     $a('#modal-root .mc-nb-c').forEach(i => { i.checked = i.value === coord; }); const ac = $1('#nb-ac'); if (ac) { if (![...ac.options].some(o => o.value === coord)) ac.insertAdjacentHTML('beforeend', `<option>${coord}</option>`); ac.value = coord; }
@@ -51,7 +58,7 @@
     });
     await T('IQBC the IQA sees the new batch', async () => {
       pick('aca'); const b = iqbBatch(C1); ACT.batchLife({ dataset: { id: C1, to: 'Open' }, textContent: 'Open for enrolment' }); reason();
-      ACT.chMoveBatch({ dataset: { id: DV } }); if (MODAL) { $1('#ch-mv-b').value = C1; reason('IQBC move'); }
+      p6TzAll(); ACT.chMoveBatch({ dataset: { id: DV } }); if (MODAL) { $1('#ch-mv-b').value = C1; reason('IQBC move'); p6Ok('IQBC move'); } // P6 (PD-P6-02)
       ok('IQBC setup: the batch is opened and Dev moved to it', b.status === 'Open' && chCohLids(b).includes(DV));
       QB(); go('q-learners'); const m = main();
       ok('IQBC-09 the new batch appears at once in IQA B\'s assigned batches (his only one — he starts with none) and batch filter', /Your assigned batches \(1\)/.test(m) && m.includes(C1) && $a('#iqb-b option').map(o => o.value).includes(C1));

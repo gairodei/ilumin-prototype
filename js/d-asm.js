@@ -81,8 +81,10 @@ feedbackTop = function (a) {
 
 /* ---------- No late submissions (the stated rule), in the action itself ---------- */
 const dDue = a => a.resubDue || a.due;
-const dLate = a => !!a && (a.closed || (dDue(a) && new Date(dDue(a)) < now()));
-const dLateRefuse = (a, what) => { logA('Assessment', `${W.me.first} ${W.me.last} (${W.me.id}) · ${a.title}`, 'Blocked: ' + what + ' after the deadline', '—', '—', `Deadline ${fdt(dDue(a))}${a.originalDue ? ' (extended)' : ''} — no late submissions`); toast('The deadline has passed, so this can\'t be submitted. If you need more time, ask your assessor for an extension.', 'err'); return false; };
+// The date that binds the learner's submission. L3-B (l3b-sp-deadline.js): a Self-Paced learner isn't bound by the batch due date.
+let dBindDue = dDue;
+const dLate = a => !!a && (a.closed || (dBindDue(a) && new Date(dBindDue(a)) < now()));
+const dLateRefuse = (a, what) => { logA('Assessment', `${W.me.first} ${W.me.last} (${W.me.id}) · ${a.title}`, 'Blocked: ' + what + ' after the deadline', '—', '—', `Deadline ${fdt(dBindDue(a))}${a.originalDue ? ' (extended)' : ''} — no late submissions`); toast('The deadline has passed, so this can\'t be submitted. If you need more time, ask your assessor for an extension.', 'err'); return false; };
 const _revD = ACT.reviewSubmit;
 // (a released seat keeps its own refusal first — P-32)
 const dSeatReleased = () => typeof chReleased === 'function' && chReleased(W) && !(W.signup && W.signup.again && W.signup.done);

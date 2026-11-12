@@ -55,7 +55,10 @@ const cbHtml = (div, pr) => (cbRetired(pr) ? cbHistText(cbReadOnly(div)) : div).
 const CB_HIST_TEXT = [
   ['Changes apply to new applicants only — an application keeps the list copied when it started.', 'Kept as a historical record: this programme is retired and takes no new applicants. Each application keeps the list copied when it started.'],
   ['Enrolled learners stay on their version. Migrating a cohort is an explicit, audited decision.', 'Kept as a historical record: learners who studied this programme stay on their version.'],
-  [' (assessment type set here)', ' (assessment type)']];
+  [' (assessment type set here)', ' (assessment type)'],
+  // CBC3: the shortened wording of the same sentences
+  ['Changes apply to new applicants only.', 'Kept as a historical record: this programme is retired and takes no new applicants.'],
+  ['Applies to new applicants only.', 'Kept as a historical record.']];
 function cbHistText(div) {
   const w = document.createTreeWalker(div, NodeFilter.SHOW_TEXT); let n;
   while ((n = w.nextNode())) CB_HIST_TEXT.forEach(([a, b]) => { if (n.nodeValue.includes(a)) n.nodeValue = n.nodeValue.split(a).join(b); });
@@ -63,7 +66,7 @@ function cbHistText(div) {
   return div;
 }
 // Retired: one accurate note in place of the version area (which said "Saving creates Version N" and offered new versions)
-const cbHistNote = pr => `<div class="note b-grey cb-hist" role="status">${ic('lock')}<div class="small"><strong>Retired — a read-only historical record.</strong> Version ${pr.version} was the last version. Nothing in this programme can be saved, and no new version can be created. Learners who studied it keep their versions, signed documents and payment records.</div></div>`;
+const cbHistNote = pr => `<div class="note b-grey cb-hist" role="status">${ic('lock')}<div class="small"><strong>Retired — a read-only historical record.</strong> Version ${pr.version} was the last version and can't be changed. Learners keep their versions, signed documents and payments.</div></div>`;
 
 /* ---------- Panels of each section ---------- */
 // Each panel: [route value, label, () => body html]. Panels are only listed where the programme has that control today.
@@ -95,9 +98,9 @@ const cbObsNA = pr => `<div class="note b-grey cb-na" role="status">${ic('info')
 const cbFeeNA = pr => `<section class="card cb-na-fee"><h2>Observation fee rate</h2><p class="small">Not applicable — this course has no observations (Course Details), so no observation fee is asked for. The rate stored for the programme (${esc(chSupportOf(pr.id))}) is kept, not used.</p></section>`;
 function cbPlanRO(pr) {
   const p = s4PlanCur(pr.id), issue = s4TermsOf(pr.id).issue;
-  if (cbRetired(pr)) return `<section class="card cb-plan"><div class="row-b"><h2>Payment plan</h2>${chip('Retired', 'grey')}</div><p class="small">This programme is retired, so it offers no payment plan to new learners and none can be set. Learners who studied it keep their own agreed terms and payment records.</p>${p ? `<div class="cb-sum">${e1Summary(pr, e1TermsOfPlan(p))}</div>` : ''}</section>`;
+  if (cbRetired(pr)) return `<section class="card cb-plan"><div class="row-b"><h2>Payment plan</h2>${chip('Retired', 'grey')}</div><p class="small">Retired: no payment plan for new learners. Learners keep their agreed terms and payments.</p>${p ? `<div class="cb-sum">${e1Summary(pr, e1TermsOfPlan(p))}</div>` : ''}</section>`;
   return `<section class="card cb-plan"><div class="row-b"><h2>Payment plan</h2>${p ? chip('Version ' + p.v + ' in force', 'green') : chip('Not set up', 'red')}</div>
-    <p class="small muted">${ic('lock', 12)} Owned by Finance Admins and the Super Administrator and edited in Finance → Payment Plans (Super Administrator: Finance → Instalment plans). Shown here read-only.</p>
+    <p class="small muted">${ic('lock', 12)} Owned by Finance (Finance → Payment Plans). Read-only here.</p>
     ${p ? `<div class="cb-sum">${e1Summary(pr, e1TermsOfPlan(p))}</div>` : `<p class="small">${issue ? esc(issue) : 'This programme has no payment plan in force.'}</p>`}
     </section>`;
 }

@@ -49,9 +49,9 @@ cbDetailsView = function (pr) {
 };
 
 /* ---------- AA-02 / AA-03: the curriculum dialogs ---------- */
-const AAFA_EV_HINT = 'What the learner must produce or show to meet this criterion, in plain words — for example "A written account of how you agree a care plan", "Direct observation of supporting an individual at work" or "A reflective log with a witness statement". Learners see it on the assignments that cover this criterion; Assessors see it when they judge the criterion; observers see it on the observation checklist. It is guidance, not a file type: attachments are set per assignment question (Section 3) and permitted evidence types per observation criterion (Section 4).';
+const AAFA_EV_HINT = 'What the learner must produce or show, in plain words — e.g. "A written account of how you agree a care plan". Learners and observers see it; Assessors see it when they judge the criterion. It is guidance, not a file type.';
 const AAFA_AB_HINT = 'Optional. The awarding body\'s reference for this unit of the qualification (for example its Ofqual unit reference, T/650/0001). Record it when known; once recorded it can be corrected but not removed. It is shown to learners next to the module name.';
-const AAFA_INT = { 'Unit code': ['Internal unit reference (automatic)', 'Assigned automatically and never changes or is reused. Criterion references, assignment links, answer keys and learners\' evidence are built on it. The awarding body\'s reference is recorded on each module.'],
+const AAFA_INT = { 'Unit code': ['Internal unit reference (automatic)', 'Assigned automatically; never changes or is reused. The awarding body\'s reference is recorded on each module.'],
   'Module code': ['Internal module reference (automatic)', 'Assigned automatically and never changes: answer keys, assignment links and learners\' evidence are linked to it.'],
   'Learning Outcome code': ['Internal Learning Outcome reference (automatic)', 'Assigned automatically and never changes.'],
   'Criterion code': ['Criterion reference (automatic)', 'Built from the unit number and the Learning Outcome (e.g. 001 1.2 = unit 001, Learning Outcome 1, criterion 2). It never changes: learners\' evidence, assignment questions and judgements are linked to it.'] };
@@ -123,13 +123,13 @@ const aafaQNums = d => { const m = {}; (d.qs || []).filter(q => q.status === 'Ac
 function aafaCoverage(pr) {
   const t = typeof cbAsgTreeOf === 'function' ? cbAsgTreeOf(pr) : []; if (!t.length) return '';
   const list = cbAsgOf(pr).filter(d => d.status !== 'Retired'), by = {};
-  list.forEach(d => { const n = aafaQNums(d); d.qs.filter(q => q.status === 'Active').forEach(q => aafaDefCrits(q).forEach(c => (by[c] = by[c] || []).push(`${esc(d.title.split(' — ')[0])} · ${n[q.id]}${d.status === 'Draft' ? ' <span class="xs muted">(draft)</span>' : ''}`))); });
+  list.forEach(d => { const n = aafaQNums(d); if (asgWhole(d)) asgCodes(d).forEach(c => (by[c] = by[c] || []).push(`${esc(d.title.split(' — ')[0])} · whole assessment${d.status === 'Draft' ? ' <span class="xs muted">(draft)</span>' : ''}`)); d.qs.filter(q => q.status === 'Active').forEach(q => aafaDefCrits(q).forEach(c => (by[c] = by[c] || []).push(`${esc(d.title.split(' — ')[0])} · ${n[q.id]}${d.status === 'Draft' ? ' <span class="xs muted">(draft)</span>' : ''}`))); });
   let know = 0, un = 0;
   const rows = t.flatMap(u => u.mods.map((m, k) => {
     const cs = (m.crit || []); if (!cs.length) return '';
     return `<tr class="aafa-cov-m"><th colspan="3" scope="colgroup">${esc(u.code)} · Module ${k + 1} — ${esc(m.title)}</th></tr>` + cs.map(c => {
       const kn = c.type === 'Knowledge'; if (kn) { know++; if (!by[c.code]) un++; }
-      return `<tr data-c="${esc(c.code)}"><td class="mono">${esc(c.code)}</td><td class="small">${esc(c.d)}</td><td class="small">${!kn ? `<span class="muted">${ic('lock', 11)} Assessed by observation (Section 4)</span>` : by[c.code] ? by[c.code].join('<br>') : '<span class="aafa-gap">Not covered by an assignment question yet</span>'}</td></tr>`;
+      return `<tr data-c="${esc(c.code)}"><td class="mono">${esc(c.code)}</td><td class="small">${esc(c.d)}</td><td class="small">${!kn ? `<span class="muted">${ic('lock', 11)} Assessed by observation</span>` : by[c.code] ? by[c.code].join('<br>') : '<span class="aafa-gap">Not covered by an assignment question yet</span>'}</td></tr>`;
     }).join('');
   })).join('');
   return `<section class="card aafa-cov"><h3>Criteria coverage (read-only)</h3><p class="small muted">Which assignment questions cover each criterion of ${esc(pr.title)} (the version shown in Section 2). ${know ? `${know - un} of ${plural(know, 'knowledge criterion', 'knowledge criteria')} covered.` : 'No knowledge criteria yet.'} Change the mapping in an assignment's Criteria mapping tab.</p>
@@ -159,13 +159,13 @@ function aafaPreview(d, all) {
   const used = new Set(act.flatMap(aafaDefCrits)), un = know.filter(c => !used.has(c.code));
   const qrow = (q, i) => { const cs = aafaDefCrits(q); return `<li class="aafa-pq"><div><strong>Q${i + 1}.</strong> ${esc(q.text)}</div>${cs.length ? `<ul class="aafa-pc">${cs.map(c => `<li><span class="mono">${esc(c)}</span> ${esc((cm[c] || {}).d || '')}<div class="xs muted">Evidence requirement: ${esc((cm[c] || {}).ev || '—')}</div></li>`).join('')}</ul>` : '<p class="xs aafa-gap">Not mapped yet — publishing is blocked until it is.</p>'}${q.ev ? `<p class="xs"><strong>Evidence to include:</strong> ${esc(q.ev)}</p>` : ''}</li>`; };
   return `<section class="card aafa-prev"><h3>Coverage and learner preview (read-only)</h3>
-    <p class="small muted">How this assignment will look to the learner: each question with the criteria it covers and their evidence requirements. The Assessor marks the same criteria, one judgement each. Nothing here can be changed — use the grid above.</p>
+
     ${act.length ? `<ol class="aafa-pl">${act.map(qrow).join('')}</ol>` : '<p class="small muted">No questions yet.</p>'}
     <p class="small"><strong>Knowledge criteria of this unit not covered by this assignment:</strong> ${un.length ? un.map(c => `<span class="mono">${esc(c.code)}</span>`).join(', ') + ' <span class="xs muted">(another assignment may cover them — see Criteria coverage in the assignments list)</span>' : 'none'}</p></section>`;
 }
 
 /* ---------- AA-17: question numbering ---------- */
-const AAFA_QN_HINT = 'Questions are numbered automatically (Q1, Q2 …) in their current order. Moving or retiring a question renumbers the ones after it while the assignment is a Draft; once it is published the numbers are fixed, and learners and Assessors see the same numbers. A question\'s number is not a criterion reference: Q1 is the first question, while 001 1.1 is unit 001, Learning Outcome 1, criterion 1.';
+const AAFA_QN_HINT = 'Questions are numbered automatically (Q1, Q2 …). While the assignment is a Draft, moving or retiring a question renumbers the ones after it; once published the numbers are fixed. Q1 is a question number, not a criterion reference (001 1.1).';
 const _qsAAFA = s2Questions;
 s2Questions = function (d) {
   const h = _qsAAFA.apply(this, arguments); if (!d) return h;
@@ -208,7 +208,7 @@ const _qDlgAAFA = s2QDlg;
 s2QDlg = function (d, q) {
   const before = MODAL, r = _qDlgAAFA.apply(this, arguments); aafaWrapModal(d, q ? q.id : null, before);
   if (MODAL && MODAL !== before && typeof MODAL.body === 'string' && MODAL.body.includes('Evidence to include')) {
-    MODAL.body = MODAL.body.replace(/(<label for="aq-ev">[^<]*<\/label><textarea[^>]*>[^<]*<\/textarea>)/, (m, a) => `${a}${aafaHint('Optional guidance for this question only. The evidence requirement of each mapped criterion is shown to the learner as well, so there is no need to repeat it.')}`); renderModal();
+    MODAL.body = MODAL.body.replace(/(<label for="aq-ev">[^<]*<\/label><textarea[^>]*>[^<]*<\/textarea>)/, (m, a) => `${a}${aafaHint('Optional guidance for this question only. Each mapped criterion\'s evidence requirement is shown as well.')}`); renderModal();
   }
   return r;
 };

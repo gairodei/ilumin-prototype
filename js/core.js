@@ -9,7 +9,20 @@ const BOOT = Date.now();
 const NOW = new Date('2026-10-04T08:15:00Z');
 const DAY = 864e5;
 let CLOCK_SHIFT = 0; // FC: a demo restored from this browser's saved copy continues its clock from the moment it was saved
-const now = () => new Date(NOW.getTime() + (Date.now() - BOOT) + CLOCK_SHIFT);
+// P2: one clock. Every policy time reading goes through Clock.ms(): the demo clock (the fixed "today" + time since boot + CLOCK_SHIFT),
+// a frozen instant for deterministic tests (Clock.freeze / unfreeze), or the real time (mode 'production'). The demo simulations that
+// move their own date (agency, Finance reminders, workplace links) stay separate scenarios on top of it (Clock.scenario). Date.now()
+// remains only for identifiers and on-screen cooldown timers, never for policy time.
+const Clock = {
+  mode: 'demo', frozen: null,
+  ms() { if (this.frozen != null) return this.frozen; return this.mode === 'production' ? Date.now() : NOW.getTime() + (Date.now() - BOOT) + CLOCK_SHIFT; },
+  freeze(at) { const t = typeof at === 'number' ? at : Date.parse(at); if (!Number.isFinite(t)) throw new Error('Clock.freeze: not a time'); this.frozen = t; return new Date(t); },
+  unfreeze() { this.frozen = null; },
+  SCENARIOS: { agency: () => STORE.agy && STORE.agy.offset, finance: () => STORE.cbRem && STORE.cbRem.offset, workplace: () => STORE.wpc && STORE.wpc.offset },
+  offsetDays(name) { const f = this.SCENARIOS[name]; if (!f) throw new Error('Clock.scenario: unknown ' + name); try { return +(typeof STORE !== 'undefined' && f()) || 0; } catch (e) { return 0; } },
+  scenario(name) { return new Date(this.ms() + this.offsetDays(name) * DAY); }
+};
+const now = () => new Date(Clock.ms());
 // D(days, 'HH:MM[:SS]') → ISO string, time given in UTC
 const D = (days, hm = '09:00') => { const [h, m, s] = hm.split(':').map(Number); return new Date(Date.UTC(2026, 9, 4 + days, h, m, s || 0)).toISOString(); };
 

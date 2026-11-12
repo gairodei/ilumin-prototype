@@ -30,10 +30,20 @@ const r3Deny = (where, what, why, logf) => {
 
 /* ---------- Assessor: who may mark this submission (the same rule as the CH-17 screen check, now inside every action) ---------- */
 const r3StaffSub = key => S.portal === 'staff' && typeof tasSubs === 'function' ? tasSubs(true).find(x => x.key === key) || null : null;
+// A submission row with nothing submitted (no submission time, or still Not Started): no date is formatted or invented for it, and it
+// gets no answers, criterion feedback, marking or release — the review pages say "Not submitted yet" (CMA stability follow-up)
+const r3NoSub = s => !s || !s.at || s.status === 'Not Started';
+const R3_NOSUB = 'Nothing has been submitted for this assignment yet.';
+function r3NotSubPage(s, crumbs) {
+  const a = s.live || s.a || {};
+  return `${pageA(esc(a.title || 'Assignment'), `${esc(s.L.name)}${s.L.batch ? ' · ' + esc(s.L.batch.label) : ''} · not submitted yet`, chip('Not Started'), crumbs)}
+  <section class="card r3-nosub" aria-labelledby="r3-nosub-h"><h2 id="r3-nosub-h">Not submitted yet</h2><p class="small">${esc(s.L.name)} hasn't submitted this assignment, so there are no answers to review, no criterion feedback to give and nothing to mark.</p><p class="xs muted">It appears in the submission lists once the learner submits.</p></section>`;
+}
 function r3MarkWhy(key) {
   if (S.portal !== 'staff') return 'Marking is done in the Assessor portal by the learner\'s assignment assessor.';
   if (CAN('mark') !== 'yes') return 'Only Assessors mark (G6.1).';
   const s = r3StaffSub(key); if (!s) { const raw = chRaw(() => tasSubs(true).find(x => x.key === key)); return raw ? `Only the allocated assignment assessor (${chEff(raw.L.lid, 'asg', raw.L.batch)}) can mark this submission.` : 'This submission isn\'t in your marking.'; }
+  if (r3NoSub(s)) return R3_NOSUB; // no marking, release or override without a submission (a direct call is refused and logged)
   return '';
 }
 const R3_MK = { mkMet: 'record a criterion judgement', mkRag: 'set feedback colour', mkVerify: 'verify a criterion', mkRelease: 'send marking for release', mkRec: 'record a recommendation' };
@@ -86,7 +96,7 @@ function r3OutWhy(key) {
   const asg = chEff(s.L.lid, 'asg', s.L.batch); if (asg !== me) return `Only the allocated assignment assessor (${asg}) can declare this outcome.`;
   if (s.L.batch && s.L.batch.coord === me) return 'The batch\'s Academic Coordinator can\'t declare outcomes for it (P-33).';
   if (s.L.status === 'Discontinued') return 'This learner\'s enrolment is Discontinued — read-only.';
-  if (s.status === 'Not Started' || !s.at) return 'Nothing has been submitted for this assignment yet.';
+  if (r3NoSub(s)) return R3_NOSUB;
   const o = r3Out(key), round = tasAsg(s).round || 'Sub 1';
   if (o && o.round === round) return `The outcome for ${round} is already declared (${o.result}). A correction goes through a Data Correction.`;
   return '';
@@ -120,7 +130,7 @@ function r3CooWhy(key) {
   const s = mySubmissions(true).find(x => x.key === key); if (!s) return 'This submission isn\'t in your batches.';
   if (roBatch(s.L.batch)) return `This batch is ${s.L.batch.status} — read-only.`;
   if (s.L.status === 'Discontinued') return 'This learner\'s enrolment is Discontinued — read-only.';
-  if (s.status === 'Not Started' || !s.at) return 'Nothing has been submitted for this assignment yet.';
+  if (r3NoSub(s)) return R3_NOSUB;
   return '';
 }
 // The Coordinator's unpublished drafts (one per question / criterion) — never shown to the learner
@@ -172,6 +182,7 @@ ACT.r3CooPubAll = el => {
 // The Coordinator's assignment review: each answer beside its criterion assessment; the written comment is secondary
 SCREENS['c-sub'] = p => {
   const s = mySubmissions(true).find(x => x.key === (p && p.id)); if (!s) return denied('submission ' + (p && p.id));
+  if (r3NoSub(s)) return r3NotSubPage(s, [['Submissions & Feedback', 'c-submissions'], [s.L.name]]);
   const a = synthAsg(s), why = r3CooWhy(s.key), o = r3Out(s.key), ro = roBatch(s.L.batch) || s.L.status === 'Discontinued', drafts = Object.keys(r3CDraft(s.key)).length;
   const draft = cooDraft(s.key) || { text: '', scope: 'Overall submission' };
   const qs = a.qs.map((q, k) => { const last = q.rounds.length - 1;
@@ -195,6 +206,10 @@ SCREENS['c-sub'] = p => {
     <h3>Earlier coordinator comments</h3>${s.coo.length ? s.coo.map(c => `<div class="coord"><div class="c-h">${ic('users')}Coordinator comment${c.scope && c.scope !== 'Overall submission' ? ' · ' + esc(c.scope) : ''}</div><p class="small">${esc(c.text)}</p><p class="xs muted">${esc(c.by)} · ${fdt(c.at)}</p></div>`).join('') : '<p class="small muted">None.</p>'}</details>
   ${r3HistCard(s.key, 'coord')}`;
 };
+
+// The Coordinator's written comment needs a submission too (its draft and its posting; a direct post is refused and logged)
+{ const f = ACT.cfPost; ACT.cfPost = function (el) { const key = el && el.dataset && el.dataset.k, s = S.portal === 'coord' && key ? mySubmissions(true).find(x => x.key === key) : null; if (s && r3NoSub(s)) return r3Deny(String(key), 'post coordinator feedback', R3_NOSUB, cooLog); return f.apply(this, arguments); }; }
+['cfInput', 'cfScope'].forEach(k => { const f = INP[k]; INP[k] = function (el) { const key = el && el.dataset && el.dataset.k, s = S.portal === 'coord' && key ? mySubmissions(true).find(x => x.key === key) : null; if (s && r3NoSub(s)) return false; return f.apply(this, arguments); }; });
 
 /* ---------- History (staff) and the learner's view (published judgements only; no outcome yet) ---------- */
 function r3HistCard(key, who) {

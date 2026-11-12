@@ -6,6 +6,12 @@
 (async function () {
   const SS = window.sessionStorage, PH = +(SS.getItem('ft-iqb.phase') || 0);
   const R = JSON.parse(SS.getItem('ft-iqb.R') || '[]'); const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
+  // P6 (PD-P6-02): a batch change is a transfer request carried out after approval — in these fixtures a Super Administrator override (audited)
+  // P6 correction (PD-P6-05): a transfer needs an explicitly configured Academy time zone on both batches — test setup configures one where missing
+  const p6TzAll = () => ADMIN.batches.forEach(b => { if (!tzOk(b.tz)) b.tz = typeof chBatchCountry === 'function' && chBatchCountry(b) === 'United Arab Emirates' ? 'Asia/Dubai' : 'Europe/London'; });
+  const p6AsSA = f => { const av = ADMIN.av, po = S.portal, si = S.signedIn; setAdminIdentity('A'); S.portal = 'admin'; try { return f(); } finally { if (av && av !== 'A') setAdminIdentity(av); S.portal = po; S.signedIn = si; } };
+  const p6Ok = (why = 'Approved (test)') => p6AsSA(() => { p6TzAll(); const q = (SEATS().xfer || { reqs: [] }).reqs.find(x => x.state === 'Pending Academic Approval'); return q ? p6Decide(q.id, 'override', why) : { ok: false, why: 'no pending request' }; });
+  const p6Xfer = (lid, to, why = 'Transfer (test)') => p6AsSA(() => { p6TzAll(); const q = p6Request(lid, typeof to === 'string' ? to : to.code, why); return q.ok ? p6Decide(q.id, 'override', why) : q; });
   const J = JSON.stringify, $1 = s => document.querySelector(s), $a = s => [...document.querySelectorAll(s)];
   const T = async (n, f) => { try { closeModal(); await f(); } catch (e) { R.push('FAIL ' + n + ' — threw ' + e.message + ' ' + (e.stack || '').split('\n')[1]); } };
   const click = el => { if (!el) throw new Error('missing control'); el.click(); };
@@ -53,11 +59,12 @@
       // a second NVQ batch, and Dev moved to it before it starts (the AC-1 batch move)
       ACT.newBatch(); $1('#nb-c').value = NBC; const co = $1('#nb-co'); co.value = [...co.options].map(o => o.value).filter(Boolean)[0]; if (INP.n2NbCourse) INP.n2NbCourse(co);
       $a('#modal-root .m-m').forEach(c => { c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })); });
-      if ($1('#nb-s')) $1('#nb-s').value = new Date(now().getTime() + 120 * 864e5).toISOString().slice(0, 10); if ($1('#nb-e')) $1('#nb-e').value = new Date(now().getTime() + 480 * 864e5).toISOString().slice(0, 10);
+      // PD-L3C2-03: Dev's move may not change his signed payment dates, so the new batch starts on the demo batch's day. Was: now + 120 days
+      if ($1('#nb-s')) $1('#nb-s').value = chBatch('DEMO-L3-JAN27').start.slice(0, 10); if ($1('#nb-e')) $1('#nb-e').value = new Date(now().getTime() + 480 * 864e5).toISOString().slice(0, 10);
       if ($1('#nb-m')) $1('#nb-m').value = 'Online'; if ($1('#nb-cap')) $1('#nb-cap').value = '10';
       prim(); const ac = $1('#nb-ac'); if (ac) ac.value = 'Laura Kemp'; $a('#modal-root .mc-nb-c').forEach(i => { if (i.value === 'Laura Kemp') i.checked = true; }); $a('#modal-root .nb-t').forEach(i => { if (i.value === 'Tom Whitfield') i.checked = true; }); $a('#modal-root .nb-a').forEach(i => { if (i.value === 'Sarah Okonkwo') i.checked = true; });
       prim(); prim(); prim(); prim(); closeModal(); NB = iqbBatch(NBC);
-      if (NB) { ACT.batchLife({ dataset: { id: NB.code, to: 'Open' }, textContent: 'Open for enrolment' }); reason(); ACT.chMoveBatch({ dataset: { id: DV } }); if (MODAL) { $1('#ch-mv-b').value = NB.code; reason('IQB move'); } }
+      if (NB) { ACT.batchLife({ dataset: { id: NB.code, to: 'Open' }, textContent: 'Open for enrolment' }); reason(); p6TzAll(); ACT.chMoveBatch({ dataset: { id: DV } }); if (MODAL) { $1('#ch-mv-b').value = NB.code; reason('IQB move'); p6Ok('IQB move'); /* P6 (PD-P6-02) */ } }
       ok('IQB setup: a second NVQ batch (no IQA yet) with Dev moved to it', !!NB && iqbNvq(NB) && !iqbNamesOn(NBC).length && chCohLids(NB).includes(DV), J(NB && [NB.status, chCohLids(NB)]));
       go('a-batches', { id: NBC, tab: 'staff' }); ok('IQB-01 a batch with no IQA says so, and that nobody can see its learners until one is assigned', /No IQA assigned/.test(main()) && /No IQA can see this batch's learners/.test(main()));
       // independence at allocation

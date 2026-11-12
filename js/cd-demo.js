@@ -36,7 +36,7 @@ function cdBuild() {
   const aca = () => { acaEnter('KA'); S.signedIn = true; S.ui = {}; }, fin = () => { setAdminIdentity('FA'); S.portal = 'admin'; S.signedIn = true; S.ui = {}; };
   // 1. Course Details: Level 3, fee options by delivery mode (demonstration fees)
   aca(); go('a-programmes'); ACT.chProgNew();
-  put({ '#np-t': CD_T, '#np-l': 'Level 3', '#np-r': 'QN 610/0001/0 (demo)', '#np-d': '12', '#np-du': 'months' }); INP.r1NpLevel($('#np-l')); $('#np-obs-yes').checked = true;
+  put({ '#np-t': CD_T, '#np-l': 'Level 3', '#np-r': 'QN 610/0001/0 (demo)', '#cbc3-dd-n': '12', '#np-d': '12', '#np-du': 'months' }); INP.r1NpLevel($('#np-l')); $('#np-obs-yes').checked = true;
   [['Self-Paced', 1800], ['Fully Assisted', 2600]].forEach(([m, f], k) => { if (k) ACT.r1NpAdd(); const r = $$('main .r1-np-row')[k]; r.querySelector('.r1-np-l').value = m + ' (demo fee)'; r.querySelector('.r1-np-f').value = String(f); r.querySelector('.r1-np-m').value = m; });
   const pr = ACT.cbDetCreate(); closeModal(); if (!pr || !pr.id) throw new Error('Course Details: ' + $$('main .err').map(e => e.textContent).join(' '));
   const id = pr.id;
@@ -70,6 +70,8 @@ function cdBuild() {
   cb8Work(pr).opts.filter(o => o.status === 'Active').map(o => o.id).forEach(oid => { const o = cb8Work(pr).opts.find(x => x.id === oid), rate = String(chFeeAmt(o.mode === 'Self-Paced' ? 'Self-paced' : 'Fully assisted'));
     ACT.cb8Opt({ dataset: { p: id, o: oid } }); [['#c8-wp', rate], ['#c8-off', rate]].forEach(([k, v]) => { const e = $('#modal-root ' + k); if (e && !e.value) e.value = v; }); ok1(); });
   cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.pay.length).forEach(o => ACT.cb8PayAdd({ dataset: { p: id, o: o.id, k: '6' } }));
+  // FB1: each new fee option answers Allow Deposit explicitly — Yes, the Academy default (the deposit these options inherited before)
+  cb8Work(pr).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: id, o: o.id, k: 'allow' }, checked: true }));
   // 6. Offer letter (the sample template)
   go('a-programmes', { id, tab: 'letter' }); ACT.chLetterUp({ dataset: { id } }); ACT.chLetterSample(); ok1('Client demo — first version');
   // 7. Finance: the Academic Admin submits; a Finance Admin approves in the Approvals Queue
@@ -183,6 +185,8 @@ function cdWorld(key, L, m) {
 const cdAs = key => { S.edge = 'none'; S.variant = key; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; S.ui = {}; };
 const cdPress = () => { const a = MODAL && MODAL.actions.find(x => /primary/.test(x.cls || '')); return a && a.fn ? a.fn() : undefined; };
 const cdErr = (w, what) => new Error(`${what} (${chFullName(w)}): ` + ($$('#modal-root .err, main .err').map(e => e.textContent).join(' ') || ($('#toast-root') || {}).textContent || 'refused'));
+// P3 (PD-P3-02): the learner chooses their batch on sign-up step 1 — the demo picks the demo batch's radio, as a learner does
+const cdPick = (w, code) => { const r = $(`main input[name="su-batch"][value="${code}"]`); if (!r) throw cdErr(w, 'Sign-up details: ' + code + ' is not offered'); r.checked = true; INP.suBatch(r); };
 // NVQ: sign-up from Browse on the mode's fee option, details, documents, offer letter, first instalment (simulated checkout)
 function cdSignup(key, m, ff) {
   const w = STORE.worlds[key], [dob, addr] = CD_SIGNUP[w.me.first + ' ' + w.me.last] || ['1990-01-01', '1 Demo Street, London'];
@@ -192,7 +196,7 @@ function cdSignup(key, m, ff) {
   ACT.applyNvq({ dataset: { id: c.id } }); const r = $(`#modal-root input[name="r1-opt"][value="${opt.id}"]`); if (r) r.checked = true;
   if (cdPress() === false) throw cdErr(w, 'Sign-up'); closeModal(); if (!w.signup) throw cdErr(w, 'Sign-up not started');
   go('admission'); const fill = (s, v) => { const e = $(s); if (!e) throw cdErr(w, 'Sign-up details: missing ' + s); e.value = v; };
-  fill('#su-dob', dob); fill('#su-ad', addr); ACT.suNext(); if (w.signup.step !== 2) throw cdErr(w, 'Sign-up details');
+  fill('#su-dob', dob); fill('#su-ad', addr); cdPick(w, CD_B); ACT.suNext(); if (w.signup.step !== 2) throw cdErr(w, 'Sign-up details');
   w.docs.filter(d => d.mand).forEach(d => ACT.sampleUpload({ dataset: { id: d.id } })); ff(3000);
   if (!w.docs.filter(d => d.mand).every(d => d.status === 'Submitted')) throw cdErr(w, 'Documents');
   ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); if (!w.signup.sig) throw cdErr(w, 'Offer letter');
@@ -200,15 +204,17 @@ function cdSignup(key, m, ff) {
   if (!w.signup.done || w.signup.batch !== CD_B) throw cdErr(w, 'Payment');
 }
 // FD (PD-FD-01): the programme's own deposit — the Academic Admin changes it on Fees & Payments, a Finance Admin approves it in the Approvals
-// Queue (the Academy-wide default is unchanged)
+// Queue (the Academy-wide default is unchanged). FB1: set on each fee option (Allow Deposit → Custom amount), the same amount for every option.
+const cdDepOk = (id, amt) => cb8Cur(id).opts.filter(o => o.status === 'Active').every(o => { const d = o.dep || cb8Cur(id).dep; return d.mode !== 'none' && d.eff === amt; });
 function cdDeposit(amt) {
   const id = cdPr().id; acaEnter('KA'); S.signedIn = true; S.ui = {}; go('a-programmes', { id, tab: 'fees' });
-  const r = $('main input[name="e1-wdm"][value="own"]'), f = $('main #e1-d'); if (!r || !f) throw new Error('Fees & Payments: no deposit setting'); r.checked = true; f.value = String(amt);
-  ACT.cb8Dep({ dataset: { p: id } }); ACT.cb8Submit({ dataset: { p: id } }); if (MODAL) cdPress(); closeModal();
+  const opts = cb8Work(cdPr()).opts.filter(o => o.status === 'Active'); if (!opts.length || !$('main .cbr2-dep')) throw new Error('Fees & Payments: no deposit setting');
+  opts.forEach(o => { INP.cbr2Dep({ dataset: { p: id, o: o.id, k: 'own' } }); INP.cbr2Dep({ dataset: { p: id, o: o.id, k: 'amount' }, value: String(amt), id: 'cd-dep-' + o.id }); });
+  ACT.cb8Submit({ dataset: { p: id } }); if (MODAL) cdPress(); closeModal();
   const wf = cb8Wf(cdPr()); if (!wf || !wf.qid) throw new Error('Fees & Payments: the deposit change was not submitted');
   setAdminIdentity('FA'); S.portal = 'admin'; S.signedIn = true; S.ui = {}; go('a-queue', { id: wf.qid }); ACT.e1Decide({ dataset: { id: wf.qid, a: 'approve' } });
   if (MODAL) { const t = $('#rsn'); if (t) t.value = `Client demo — programme deposit ${money(amt, 'GBP')} (Academy default unchanged)`; cdPress(); } closeModal();
-  if (cb8Cur(id).dep.eff !== amt || S4().cfg.deposit === amt) throw new Error(`Fees & Payments: the ${money(amt, 'GBP')} programme deposit was not approved`);
+  if (!cdDepOk(id, amt) || S4().cfg.deposit === amt) throw new Error(`Fees & Payments: the ${money(amt, 'GBP')} programme deposit was not approved`);
 }
 // FD: sign-up on "Deposit, then N payments" (PD-FC-11) — card: the deposit, then instalment 1's remainder from Payments; bank: the transfer
 // is notified only (Finance confirms it in the demo)
@@ -219,7 +225,7 @@ function cdSignupDep(key, m, method, ff) {
   ACT.applyNvq({ dataset: { id: c.id } }); const r = $(`#modal-root input[name="r1-opt"][value="${opt.id}"]`); if (r) r.checked = true;
   if (cdPress() === false) throw cdErr(w, 'Sign-up'); closeModal(); if (!w.signup) throw cdErr(w, 'Sign-up not started');
   go('admission'); const fill = (s, v) => { const e = $(s); if (!e) throw cdErr(w, 'Sign-up details: missing ' + s); e.value = v; };
-  fill('#su-dob', dob); fill('#su-ad', addr); ACT.suNext(); if (w.signup.step !== 2) throw cdErr(w, 'Sign-up details');
+  fill('#su-dob', dob); fill('#su-ad', addr); cdPick(w, CD_B); ACT.suNext(); if (w.signup.step !== 2) throw cdErr(w, 'Sign-up details');
   w.docs.filter(d => d.mand).forEach(d => ACT.sampleUpload({ dataset: { id: d.id } })); ff(3000);
   ACT.suNext(); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); if (!w.signup.sig) throw cdErr(w, 'Offer letter');
   const k = (cb9Pin(w).opt.pay.find(x => x.k > 1) || {}).k; if (!k) throw cdErr(w, 'No approved instalment option');

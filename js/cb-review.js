@@ -65,7 +65,7 @@ function cbRvFinWarn(pr) {
 /* ---------- Knowledge criteria covered by this programme's assignments (replaces CH-8's count of every criterion) ---------- */
 function cbRvCoverage(pr, tree) {
   const kn = (tree || []).filter(cbRvL).flatMap(u => u.mods.filter(cbRvL).flatMap(m => m.los.filter(cbRvL).filter(lo => critKind(lo.type || '') === 'Knowledge').flatMap(lo => lo.crit.filter(cbRvL).map(c => c.code))));
-  const mapped = new Set(cbAsgOf(pr).filter(d => d.status !== 'Retired').flatMap(d => d.qs.filter(q => q.status === 'Active').flatMap(q => q.crit)));
+  const mapped = new Set(cbAsgOf(pr).filter(d => d.status !== 'Retired').flatMap(asgCodes)); // CMA: question or whole-assessment mappings
   return { all: kn, un: kn.filter(c => !mapped.has(c)) };
 }
 
@@ -146,7 +146,7 @@ function cbRvFees(pr) {
 
 /* ---------- The panel ---------- */
 const cbRvCap = t => t.charAt(0).toUpperCase() + t.slice(1);
-const cbRvFix = (pr, it) => (it.sec === 'review' ? '' : `<button class="btn btn-sm btn-ghost cb-rv-fix" data-go="a-programmes" data-id="${pr.id}" data-tab="${it.tab}">Fix in Section ${cbRvN(it.sec)} — ${esc(cbRvName(it.sec))}</button>`);
+const cbRvFix = (pr, it) => (it.sec === 'review' ? '' : `<button class="btn btn-sm btn-ghost cb-rv-fix" data-go="a-programmes" data-id="${pr.id}" data-tab="${it.tab}">Fix in ${esc(cbRvName(it.sec))}</button>`);
 function cbReview(pr) {
   const kind = cbRvKind(pr), ret = cbRetired(pr), c = cbRvChecks(pr), dv = cbDraftV(pr), can = cbRvCan() && !!kind;
   const per = k => ({ b: c.block.filter(x => x.sec === k), w: c.warn.filter(x => x.sec === k) });

@@ -415,7 +415,7 @@ function r2NbLabel() {
   const sel = $('#modal-root select#nb-dm'), co = $('#modal-root #nb-co'); if (!sel) return;
   const l3 = co ? r1IsL3Pid(s4PidOfTitle(co.value)) : false, lab = $('#modal-root label[for="nb-dm"]'), hint = $('#modal-root #nb-dmh');
   if (lab) lab.textContent = l3 ? 'Default delivery mode (class pattern)' : 'Delivery mode';
-  if (hint && l3) hint.textContent = 'Learners\' modes come from their fee options, so the batch can hold both. This sets its default class pattern.';
+  if (hint && l3) hint.textContent = 'Learners\' modes come from their fee options. This sets the batch\'s default class pattern.';
 }
 const _rmR2 = renderModal; renderModal = function () { const r = _rmR2.apply(this, arguments); try { r2NbLabel(); } catch (e) { /* no batch form open */ } return r; };
 const _nbCourseR2 = INP.n2NbCourse; INP.n2NbCourse = el => { const r = _nbCourseR2(el); r2NbLabel(); return r; };

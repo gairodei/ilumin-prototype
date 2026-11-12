@@ -141,7 +141,7 @@ ACT.cancelBatch = el => {
       sels.forEach(s => {
         const v = typeof fiWorldKey === 'function' ? fiWorldKey(s.lid) : null; if (!v || s.lid === 'IA-L-31188') return; // world B keeps its own handling
         const w = STORE.worlds[v], alt = ADMIN.batches.find(c => c.code === s.to);
-        if (alt) { const k = (alt.roster || []).findIndex(rw => rw[1] === s.lid && rw[2] === 'Moved after cancellation'); if (k >= 0) { alt.roster.splice(k, 1); alt.enrolled = Math.max(0, alt.enrolled - 1); } b.enrolled++; chDoMove(s.lid, b, alt, `Batch ${b.code} cancelled before start`); }
+        if (alt) { const k = (alt.roster || []).findIndex(rw => rw[1] === s.lid && rw[2] === 'Moved after cancellation'); if (k >= 0) alt.roster.splice(k, 1); chDoMove(s.lid, b, alt, `Batch ${b.code} cancelled before start`); }
         else { notifyLearner(v, 'Schedule', 'Batch cancelled', `Your batch ${b.label} was cancelled before it started. A refund request for what you paid is with Finance, who will confirm it.`, 'admission'); if (w.admission) w.admission.history.push([`Batch cancelled: ${b.code}`, now().toISOString()]); }
       });
       return out;

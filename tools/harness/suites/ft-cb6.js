@@ -2,6 +2,9 @@
 // observation events (name, permitted locations, criteria covered, evidence), edited only in a draft through N5a's gate and audit,
 // published and frozen with the version; coverage problems block publishing; not applicable when the course has no observations.
 (async function () {
+  // FB1 (PD-FB1-03): this suite's deposit configuration, chosen explicitly where its fixture prepares a package for Finance — each new fee
+  // option "Allow Deposit: Yes" with the Academy default, through the Step 5 handler (an administrator's action; role checks apply).
+  const fb1Dep = p => { if (p && cb8Managed(p)) cb8Work(p).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: p.id, o: o.id, k: 'allow' }, checked: true })); };
   // DM-P (PD-DM-15): publishing a programme or version needs fee options by delivery mode, approved by Finance. Where a check isn't about
   // fees, this fixture takes the authorized Section 5 path first: the duration of a pre-builder course, a financial package, fee options by
   // delivery mode, a mode for each option (the Standard programme fee replaced by an option at the same fee), the Super Administrator's own approval (D8)
@@ -22,6 +25,7 @@
     });
     if (!cb8Work(pr).opts.some(o => o.status === 'Active' && !o.legacy && M_MODES.includes(o.mode))) { ACT.cb8Opt({ dataset: { p: pr.id, o: '' } }); const l = qm1('#c8-l'); if (l) l.value = mode; const f = qm1('#c8-f'); if (f) f.value = String((s4PlanCur(pr.id) || {}).fee || 2400); const m = qm1('#c8-m'); if (m) m.value = mode; put('#c8-wp', '0'); put('#c8-off', '0'); go1(); closeModal(); } // no option at all (a Level 3 package starts from the options in force): one at the plan's fee
     cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.pay.length).forEach(o => ACT.cb8PayAdd({ dataset: { p: pr.id, o: o.id, k: '1' } }));
+    fb1Dep(pr); // FB1: the fixture's fee options answer Allow Deposit (Yes) before the Super Administrator's own approval
     if (!(cb8Wf(pr) && cb8Wf(pr).status === 'Approved')) { ACT.cb8SaApprove({ dataset: { p: pr.id } }); rs(); }
     closeModal(); if (aca) { acaEnter(av); S.signedIn = true; } else setAdminIdentity(av); S.portal = po; return true;
   };
@@ -54,21 +58,21 @@
   /* ================= A. Where the events live ================= */
   await T('CB6-A the Observation events panel', async () => {
     fresh(); SA(); open('NV-L3');
-    ok('CB6-A Section 4 has "Observation events" next to the configuration; the .events link opens it', (q('.cb-sec.cur') || {}).dataset.tab === 'observations' && qa('.cb-panels .tab').map(t => t.textContent).join('|') === 'Observation settings|Observation events' /* CBX (PD-CBX-03): renamed; the legacy list is a link */ && q('.cb-panels .tab[aria-selected="true"]').dataset.tab === 'events');
-    ok('CB6-A published Level 3 (migrated): read-only, "no events were recorded" (nothing invented), locations "Not recorded"', /No observation events were recorded for Version 2/.test(main()) && !q('[data-act="cbObsEv"]') && /Not recorded/.test(q('.cb-locs').textContent) && cbObsEventsFor('NV-L3', 2).length === 0);
-    ok('CB6-A no observation fee controls in this section', !/£|GBP/.test(q('.cb-ev').textContent) && /Observation fees are set in Section 5/.test(main()));
+    ok('CB6-A Section 4 has "Observation events" next to the configuration; the .events link opens it', (q('.cb-sec.cur') || {}).dataset.tab === 'observations' && !q('.cb-panels') && q('.cb-body').dataset.panel === 'events' && !!q('#cbr-events .cb-ev')); // CBR (PD-CBR-07): one page — the locations, then the events
+    ok('CB6-A published Level 3 (migrated): read-only, "no events were recorded" (nothing invented), locations "Not recorded"', /None recorded for Version 2/.test(q('.cb-ev').textContent) /* CBC2: was "No observation events were recorded…" */ && !q('[data-act="cbObsEv"]') && /Not recorded/.test(q('.cbr-obs').textContent) /* CBR: on the location switches */ && cbObsEventsFor('NV-L3', 2).length === 0);
+    ok('CB6-A no observation fee controls in this section', !/£|GBP/.test(q('.cb-ev').textContent) && !q('.cb-ev input') /* CBC2: the "Observation fees are set in Section 5" note was removed as clutter */);
   });
 
   /* ================= B. Add, edit, reorder, remove in a draft ================= */
   await T('CB6-B events in a draft', async () => {
     fresh(); SA(); settings('NV-L3D', 'yes', 'Permitted', 'Available'); open('NV-L3D'); const c = nvqOf('NV-L3D'), a0 = ADMIN.audit.length;
-    ok('CB6-B draft: Permitted locations card and "Add observation event"', /Workplace/.test(q('.cb-locs').textContent) && /Permitted/.test(q('.cb-locs').textContent) && !!q('[data-act="cbObsEv"][data-e=""]'));
+    ok('CB6-B draft: the locations switched on (CBR PD-CBR-07 supersedes the locations card) and "Add observation event"', q('.cbr2-col[data-loc="wp"] input[data-onchange="cbr2Loc"]').checked && q('.cbr2-col[data-loc="off"] input[data-onchange="cbr2Loc"]').checked /* CBR-2 (PD-CBR2-05): each column's checkbox — was the Yes / No switch */ && !!q('[data-act="cbObsEv"][data-e=""]'));
     q('[data-act="cbObsEv"][data-e=""]').click(); ok('CB6-B the dialog offers only permitted locations, the version\'s NVQ observation criteria and Academy criteria, and the evidence types', [...mroot().querySelectorAll('.ev-l')].every(x => !x.disabled) && mroot().querySelectorAll('.ev-c').length === c.length + D('NV-L3D').ia.filter(x => x.status === 'Active').length && mroot().querySelectorAll('.ev-e').length === N5_EV.length); closeModal();
     event('NV-L3D', { name: 'Observation 1 — communication', loc: ['workplace'], crit: c.slice(0, 3), ev: ['notes', 'photos'] });
     event('NV-L3D', { name: 'Observation 2 — leading a shift', loc: ['workplace', 'office'], crit: c.slice(3), ev: ['notes'] });
     const evs = D('NV-L3D').events;
     ok('CB6-B two events added in Version 1 (draft), audited', evs.length === 2 && evs[0].name === 'Observation 1 — communication' && J(evs[1].loc) === J(['workplace', 'office']) && since(a0).filter(x => x.action === 'Observation event added').length === 2);
-    open('NV-L3D'); ok('CB6-B listed with the count ("2 observations") and full coverage', qa('.cb-ev tbody tr').length === 2 && /2 observations/.test(q('.cb-ev').textContent) && new RegExp(`covered by events: ${c.length}`).test(main()));
+    open('NV-L3D'); ok('CB6-B listed with the count ("2 observations") and full coverage', qa('.cb-ev .cbr2-ro').length === 2 && new RegExp(`Qualification criteria included: ${c.length} of ${c.length}`).test(main()) /* CBC2: Required Observations as rows; was a table, "2 observations", "covered by events" */);
     event('NV-L3D', { e: evs[1].id, name: 'Observation 2 — team leadership' }); ok('CB6-B edit: renamed, audited before → after', evs[1].name === 'Observation 2 — team leadership' && ADMIN.audit[0].action === 'Observation event changed');
     ACT.cbObsEvMove({ dataset: { p: 'NV-L3D', e: evs[1].id, dir: '-1' } }); ok('CB6-B reorder', D('NV-L3D').events[0].name === 'Observation 2 — team leadership' && ADMIN.audit[0].action === 'Observation events reordered');
     ACT.cbObsEvRemove({ dataset: { p: 'NV-L3D', e: D('NV-L3D').events[1].id } }); reason('Merged');
@@ -94,17 +98,17 @@
   /* ================= D. Coverage checks before publishing ================= */
   await T('CB6-D coverage blockers', async () => {
     fresh(); SA(); const p = s3Pr('NV-L3D'); settings('NV-L3D', 'yes', 'Permitted', 'Available'); addIa('NV-L3D', 'Dignity and respect'); const c = nvqOf('NV-L3D');
-    ok('CB6-D required with no events: blocking', n5Check(p).block.some(b => /at least one observation event/.test(b)));
+    ok('CB6-D required with no events: blocking', n5Check(p).block.some(b => /at least one Required Observation/.test(b) /* CBC2 */));
     event('NV-L3D', { name: 'Partial', loc: ['workplace'], crit: c.slice(0, 2), ev: ['notes'] });
-    ok('CB6-D criteria not covered by any event: blocking, named', n5Check(p).block.some(b => /aren't covered by any observation event/.test(b) && b.includes(c[2])));
+    ok('CB6-D criteria not covered by any event: blocking, named', n5Check(p).block.some(b => /qualification criteri.* to a Required Observation/.test(b) && b.includes(c[2]) /* CBC2 */));
     event('NV-L3D', { name: 'Rest', loc: ['workplace'], crit: c.slice(2), ev: ['notes'] });
     ok('CB6-D every criterion covered: no event blockers', !n5Check(p).block.some(b => /observation event|event "/.test(b)));
-    ok('CB6-D Academy criteria not in any event: a warning (not blocking)', n5Check(p).warn.some(w => /Academy criteri.* in any observation event/.test(w)));
+    ok('CB6-D Academy criteria not in any event: a warning (not blocking)', n5Check(p).warn.some(w => /Academy criteri.* in any Required Observation/.test(w) /* CBC2 */));
     settings('NV-L3D', null, 'Not permitted', null);
-    ok('CB6-D a location later made not permitted: the events using it block publishing', n5Check(p).block.some(b => /uses a location this version doesn't permit: Workplace/.test(b)));
+    ok('CB6-D a location later made not permitted: the events using it block publishing', n5Check(p).block.some(b => /uses a location that is turned off: Workplace/.test(b) /* CBC2 */));
     settings('NV-L3D', null, 'Permitted', null); const at = (() => { const t = s3ViewTree('NV-L3D'); for (const u of t) for (const m of u.mods) for (const lo of m.los) for (const x of lo.crit) if (x.code === c[0]) return { u: u.code, m: m.code, lo: lo.code, c: x.code }; })();
     ACT.nodeState({ dataset: { p: 'NV-L3D', ...at } }); document.querySelector('#ns').value = 'Retired'; reason('Retire criterion');
-    ok('CB6-D a criterion retired in the curriculum: the event covering it blocks publishing (stale)', n5Check(p).block.some(b => /covers criteria that aren't active in this version: /.test(b) && b.includes(c[0])));
+    ok('CB6-D a criterion retired in the curriculum: the event covering it blocks publishing (stale)', n5Check(p).block.some(b => /includes criteria that aren't active in this version: /.test(b) /* CBC2 */ && b.includes(c[0])));
     open('NV-L3D'); ok('CB6-D the blockers are listed in the panel and badge the section', !!q('.cb-ev-checks') && !!q('.cb-sec[data-tab="observations"] .cb-badge.bad'));
   });
 
@@ -129,8 +133,8 @@
     const p3 = P('NV-L3', 3);
     ok('CB6-F published: Version 3\'s configuration carries the event, frozen', pr.version === 3 && !!p3 && cbObsEventsFor('NV-L3', 3).length === 1 && Object.isFrozen(p3.events[0]) && Object.isFrozen(p3.events));
     const a0 = ADMIN.audit.length; ACT.cbObsEv({ dataset: { p: 'NV-L3', e: p3.events[0].id } });
-    ok('CB6-F (negative) changing a published version\'s event is refused and logged', !MODAL && blocked(a0, /change an observation event/) && J(P('NV-L3', 3).events) === J(p3.events));
-    open('NV-L3'); ok('CB6-F published panel: read-only, lists the event', /Workplace observation/.test(q('.cb-ev').textContent) && !q('[data-act="cbObsEv"]') && /Published — read-only/.test(main()));
+    ok('CB6-F (negative) changing a published version\'s event is refused and logged', !MODAL && blocked(a0, /change a Required Observation/) /* CBC2 */ && J(P('NV-L3', 3).events) === J(p3.events));
+    open('NV-L3'); ok('CB6-F published panel: read-only, lists the event', /Workplace observation/.test(q('.cb-ev').textContent) && !q('[data-act="cbObsEv"]') && /Frozen with Version 3/.test(q('.cb-ev').textContent) /* CBC2: was "Published — read-only" */);
     ok('CB6-F no learner observation record or criterion judgement changed', hist() === h0);
     ok('CB6-F other programmes untouched (Level 3 2027 update has no events)', cbEvOf(n5Shown(s3Pr('NV-L3D'))).length === 0);
   });

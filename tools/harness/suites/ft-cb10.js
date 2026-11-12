@@ -3,6 +3,9 @@
 // deposit balances or learners on older terms; advancing the simulated date gives upcoming → due → overdue in order; every entry and
 // notice is labelled simulated; notification and audit histories are only appended to.
 (async function () {
+  // FB1 (PD-FB1-03): this suite's deposit configuration, chosen explicitly where its fixture prepares a package for Finance — each new fee
+  // option "Allow Deposit: Yes" with the Academy default, through the Step 5 handler (an administrator's action; role checks apply).
+  const fb1Dep = p => { if (p && cb8Managed(p)) cb8Work(p).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: p.id, o: o.id, k: 'allow' }, checked: true })); };
   const dmpPrice = () => { const r = document.querySelector('main #cr-pm-price'); if (r && !r.checked) { r.checked = true; INP.crPm(r); } }; // DM-P (PD-DM-18): "One programme price" is now an explicit choice (fee options by delivery mode are the default)
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   // CR (PD-CR-01, PD-CR-06, PD-CR-12): Course Details asks for the delivery modes offered — Level 3: both (any mode, as
@@ -27,11 +30,11 @@
   // A published Level 4 package programme (in full, 4 or 6 payments over 6 months) with a batch starting 13 Nov 2026
   const prog = () => {
     SA(); go('a-programmes'); ACT.chProgNew();
-    fill({ '#np-t': 'CB10 Level 4 course', '#np-l': 'Level 4', '#np-r': 'QN 610/4500/4', '#np-d': '6', '#np-du': 'months', '#np-p': '2400' }); INP.r1NpLevel(document.querySelector('#np-l')); { const r = document.querySelector('main .r1-np-row'); r.querySelector('.r1-np-l').value = 'Fully Assisted'; r.querySelector('.r1-np-f').value = '2400'; r.querySelector('.r1-np-m').value = 'Fully Assisted'; } // DM-P (PD-DM-15/18): a publishable course has a fee option with a delivery mode (was one programme price)
+    fill({ '#np-t': 'CB10 Level 4 course', '#np-l': 'Level 4', '#np-r': 'QN 610/4500/4', '#cbc3-dd-n': '6' /* FB2 (PD-FB2-01): the Course Duration is the payment duration — was 12 here with a separate 6-month payment duration */, '#np-d': '6', '#np-du': 'months', '#np-p': '2400' }); INP.r1NpLevel(document.querySelector('#np-l')); { const r = document.querySelector('main .r1-np-row'); r.querySelector('.r1-np-l').value = 'Fully Assisted'; r.querySelector('.r1-np-f').value = '2400'; r.querySelector('.r1-np-m').value = 'Fully Assisted'; } // DM-P (PD-DM-15/18): a publishable course has a fee option with a delivery mode (was one programme price)
     (document.querySelector('#np-code') || {}).value = 'CB10C'; document.querySelector('#np-obs-no').checked = true; const pr = crT(ACT.cbDetCreate)(); closeModal(); const id = pr.id;
     go('a-programmes', { id, tab: 'structure' }); add8('ch8AddUnit', { id }, { '#u-c': 'U101', '#u-t': 'Practice' }); add8('ch8AddMod', { id, u: 0 }, { '#m-t': 'Core', '#m-ab': 'C/650/1010' }); add8('ch8AddLo', { id, u: 0, m: 0 }, { '#lo-t': 'Understand practice', '#lo-y': 'Knowledge' }); add8('ch8AddCrit', { id, u: 0, m: 0, l: 0 }, { '#c-d': 'Describe practice', '#c-e': 'Written account' });
     ACT.chLetterUp({ dataset: { id } }); ACT.chLetterSample(); reason('First version');
-    const o = cb8Work(pr).opts[0].id; [1, 4].forEach(k => ACT.cb8PayAdd({ dataset: { p: id, o, k: String(k) } })); ACT.cb8SaApprove({ dataset: { p: id } }); reason('Terms');
+    const o = cb8Work(pr).opts[0].id; [1, 4].forEach(k => ACT.cb8PayAdd({ dataset: { p: id, o, k: String(k) } })); fb1Dep(cbPr(id)); ACT.cb8SaApprove({ dataset: { p: id } }); reason('Terms');
     ACT.ch8Publish({ dataset: { id } }); reason('Ready'); closeModal();
     ADMIN.batches.push({ code: 'CB10-NOV26', label: 'CB10 November batch', course: pr.title, start: D(40, '09:00'), end: D(240, '17:00'), cap: 20, enrolled: 0, mode: 'Online', coord: 'Dr Helen Carter', teachers: [], assessors: [], status: 'Open', wait: [], roster: [] }); // NB-1: sign-up needs a batch with an Academic Coordinator (was coord: '')
     return { pr, bt: chBatch('CB10-NOV26') };

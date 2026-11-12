@@ -10,6 +10,14 @@
 /* ---------- Constants and helpers ---------- */
 const CH_DEP = 300, CH_INST_N = 6, CH_HOLD_DAYS = 28, CH_ACADEMY_MAIL = 'info@welfarehs.co.uk';
 const CH_DECL = 'I hereby certify that the information and any documents provided are true, accurate and authentic. I have read and agree to the Terms & Conditions of Welfare Academy.';
+// L3-A: who an offer letter is issued by — the letterhead, watermark, signatory and declaration the letter carries. One issuer,
+// the Academy, for every programme and fee option: no per-option contracting entity is configured (the client hasn't confirmed
+// any). CH_ISSUER is the current record, used for unsigned letters and previews. A signed letter renders the issuer stored with
+// its signature (l3a-issuer.js), never this record. CH_ISSUER_AS_BUILT is exactly what every letter showed until 7 Nov 2026
+// (fixed in the code), kept apart so a later change to CH_ISSUER can't alter how older signed letters are shown.
+const CH_ISSUER_AS_BUILT = Object.freeze({ name: 'Welfare Academy', letterhead: 'Welfare Academy', watermark: 'Welfare Academy', signatory: 'Jenson Thomas', role: 'Admissions, Welfare Academy', decl: CH_DECL });
+const CH_ISSUER = { ...CH_ISSUER_AS_BUILT };
+const chIssuerFor = w => CH_ISSUER;
 const chW = v => STORE.worlds[v];
 // S4-06 / S4-07: fee, deposit, instalments and hold days come from these (setup-s4a.js reads the programme's plan and the configuration)
 let chProgFeeOf = w => NVQ_FEES[w.nvq.title] || 2400, chDepOf = w => CH_DEP, chInstNOf = w => CH_INST_N, chHoldDays = () => CH_HOLD_DAYS;
@@ -25,8 +33,8 @@ const chStepKey = w => (chSteps(w)[w.signup.step - 1] || [])[0];
 // Intakes the learner can choose: open or planned batches of their programme that haven't started and have a place
 const chIntakes = w => ADMIN.batches.filter(b => b.course === w.nvq.title && ['Open', 'Planned'].includes(b.status) && new Date(b.start) > now());
 const chHasPlace = b => b && b.enrolled < b.cap;
-// CH-10: a deposit is offered only when the batch starts in 28 days or more (fixed). The configurable hold (chHoldDays) is how long the seat is then held.
-const chDepositOk = b => !!b && daysTo(b.start) >= CH_HOLD_DAYS;
+// CH-10: a deposit is offered only when the batch starts in 28 days or more (fixed). The configurable hold (chHoldDays) is how long the seat is then held. (let: P4 layers the revised-terms rule over it for revised sign-ups only)
+let chDepositOk = b => !!b && daysTo(b.start) >= CH_HOLD_DAYS;
 const chMandUploaded = w => w.docs.filter(d => d.mand && d.status !== 'Pending');
 const chMandMissing = w => w.docs.filter(d => d.mand && d.status === 'Pending');
 const chFullName = w => (w.me.first + ' ' + w.me.last).trim();
@@ -63,15 +71,16 @@ const chLetterCur = id => { const l = chLetters(id); return l[l.length - 1]; };
 // The version the learner signs: the one current when they started their sign-up (a new version is for new applicants)
 const chLetterFor = w => { const id = chProgOf(w).id; if (!id) return null; const l = chLetters(id); return l.find(x => x.v === (w.signup.letterV || (w.signup.letterV = (chLetterCur(id) || {}).v))) || chLetterCur(id); };
 const chMerge = (s, name, sid) => esc(s).replace(/\{\{full_name\}\}/g, name).replace(/\{\{student_id\}\}/g, sid);
-function chLetterHtml(letter, { name, sid, raw } = {}) {
+function chLetterHtml(letter, { name, sid, raw, issuer } = {}) {
   if (!letter) return '<p class="small muted">No offer letter has been uploaded for this course.</p>';
+  const I = issuer || CH_ISSUER;
   const f = k => raw ? `<span class="ch-merge">{{${k}}}</span>` : `<strong>${esc(k === 'full_name' ? name : sid)}</strong>`;
   const para = s => raw ? esc(s).replace(/\{\{programme\}\}/g, esc(letter.programme)) : chMerge(s.replace(/\{\{programme\}\}/g, letter.programme), esc(name), esc(sid));
-  return `<article class="ch-letter" aria-label="Offer letter"><div class="ch-wm" aria-hidden="true">Welfare Academy</div>
-    <header class="ch-lh"><strong>Welfare Academy</strong><span class="xs muted">Offer of a place · letter version ${letter.v}</span></header>
+  return `<article class="ch-letter" aria-label="Offer letter"><div class="ch-wm" aria-hidden="true">${esc(I.watermark)}</div>
+    <header class="ch-lh"><strong>${esc(I.letterhead)}</strong><span class="xs muted">Offer of a place · letter version ${letter.v}</span></header>
     <p class="small">Student Name: ${f('full_name')}<br>Student ID: ${f('student_id')}<br>Programme: ${esc(letter.programme)}</p>
     <p>Dear ${f('full_name')},</p>${letter.text.map(t => `<p>${para(t)}</p>`).join('')}
-    <p>Yours sincerely,<br><strong>Jenson Thomas</strong><br><span class="small">Admissions, Welfare Academy</span></p></article>`;
+    <p>Yours sincerely,<br><strong>${esc(I.signatory)}</strong><br><span class="small">${esc(I.role)}</span></p></article>`;
 }
 const chSigBlock = s => `<div class="ch-sigblock"><strong>Signed electronically</strong> by ${esc(s.name)} · ${fdt(s.at)} · IP ${esc(s.ip)} (mock) · offer letter version ${s.v}</div>`;
 ACT.chSignedPdf = el => {
@@ -142,7 +151,7 @@ function chStepLetter(w) {
   return `<section class="card"><h2>3. Offer letter</h2><p class="small muted">Read your offer letter. To accept it, type your full name as your digital signature and tick the declaration.</p>
     ${chLetterHtml(L, { name: chFullName(w), sid: w.me.id })}
     <div class="field"><label for="su-sig">Digital signature — type your full name</label><input class="input ch-sig" id="su-sig" autocomplete="off" value="${esc(ui('suSig', ''))}" data-oninput="suSig"><span class="hint">As registered: ${esc(chFullName(w))}</span></div>
-    <label class="check small"><input type="checkbox" id="su-decl" ${ui('suDecl', false) ? 'checked' : ''} data-onchange="suDecl"> <span>${esc(CH_DECL)}</span></label>
+    <label class="check small"><input type="checkbox" id="su-decl" ${ui('suDecl', false) ? 'checked' : ''} data-onchange="suDecl"> <span>${esc(chIssuerFor(w).decl)}</span></label>
     ${chNav(w, `<button class="btn btn-primary" id="su-sign" data-act="suSign" ${why ? `disabled title="${esc(why)}"` : ''}>Sign and continue</button>`)}<p class="small muted ch-why" id="su-why" ${why ? '' : 'hidden'}>${esc(why)}</p></section>`;
 }
 const chRefOf = (w, opt) => `IA-${w.me.id.slice(-5)}-${opt === 'deposit' ? 'DEP' : 'INS1'}`;
@@ -212,8 +221,9 @@ ACT.suStart = () => chComplete(W, { opt: null, method: null });
 function chComplete(w, { opt, method, amount, ref }, fromCheckout, quiet) {
   const s = w.signup, b = chBatch(s.batch), at = quiet || now().toISOString(), fee = chFee(w), bank = method === 'bank';
   const status = bank ? 'Awaiting confirmation by Finance' : 'Paid', holdDays = chHoldDays(), hold = new Date(new Date(at).getTime() + holdDays * DAY).toISOString(), dep = chDepOf(w), n = chInstNOf(w);
+  // P1: the seat ledger takes the place first; a full batch refuses before anything on the sign-up changes
+  if (b && !seatTake(b, { lid: w.me.id, v: w.v, kind: chSponsored(w) ? 'sponsored' : 'learner', agency: chSponsored(w) ? (w.nvq.sponsor || w.me.agency || null) : null, origin: 'Sign-up completed', at })) return false;
   s.pay = opt ? { opt, method, amount, at, status, ref } : null; s.done = true; s.step = chSteps(w).length;
-  if (b) b.enrolled++;
   Object.assign(w.nvq, { batch: chBatchLbl(b), batchStart: b ? b.start : w.nvq.batchStart, start: b ? b.start : w.nvq.start, end: b ? b.end : w.nvq.end, status: 'Active', enrolled: at });
   w.flags.admitted = true; if (!w.enrolments.includes(w.nvq)) w.enrolments.unshift(w.nvq);
   const ad = w.admission; Object.assign(ad, { status: 'Awaiting review', batch: w.nvq.batch, batchStart: w.nvq.batchStart }); ad.history.push(['Sign-up complete', at]);
@@ -307,7 +317,7 @@ ACT.chSponsoredSignup = () => {
 };
 
 /* ---------- Demo controls for the sign-up ---------- */
-ACT.chIntakeFills = () => { const b = chBatch(W.signup.batch); if (b) { b.enrolled = b.cap; render(); toast(`Demo: ${b.label} is now full.`, 'info'); } };
+ACT.chIntakeFills = () => { const b = chBatch(W.signup.batch); if (b) { seatSetDemo(b, b.cap, 'Demo: the batch fills before payment'); render(); toast(`Demo: ${b.label} is now full.`, 'info'); } };
 // Scenario #16 (instalment case): a fresh run on the under-28-days intake, signed and ready to pay
 ACT.chScInstalment = () => {
   S.edge = 'none'; if (STORE.worlds.B.signup.done) STORE.worlds.B = makeWorld('B'); // a fresh run
@@ -345,7 +355,7 @@ function chLetterTab(pr) {
   const l = chLetters(pr.id), cur = l[l.length - 1];
   if (!cur) return `<section class="card"><h2>Offer letter</h2><p class="small">${pr.status === 'Retired' ? 'Retired programme — it takes no new applicants, so it has no offer letter.' : 'No offer letter uploaded yet.'}</p>${pr.status === 'Retired' ? '' : `<button class="btn btn-primary" data-act="chLetterUp" data-id="${pr.id}">Upload offer letter</button>`}</section>`;
   return `<section class="card"><div class="row-b"><h2>Offer letter</h2><button class="btn btn-sm btn-primary" data-act="chLetterUp" data-id="${pr.id}">${ic('upload', 14)}Upload new version</button></div>
-    <p class="small muted">Applicants read and sign this letter in step 3 of their sign-up. Merge fields: <span class="ch-merge">{{full_name}}</span> and <span class="ch-merge">{{student_id}}</span>; everything else, including the signatory, is fixed text. A new version applies to new applicants only — anyone who has already started their sign-up keeps the version they started with.</p>
+    <p class="small muted">Signed in step 3 of sign-up. Merge fields: <span class="ch-merge">{{full_name}}</span> and <span class="ch-merge">{{student_id}}</span>. A new version applies to new applicants only.</p>
     <dl class="kv"><dt>Current version</dt><dd>Version ${cur.v} · <span class="mono small">${esc(cur.file)}</span> · uploaded by ${esc(cur.by)} on ${fd(cur.at)}</dd></dl>
     <div class="row"><button class="btn btn-sm" data-act="chLetterPrev" data-id="${pr.id}">Preview with a sample learner</button></div>
     <h3>Template</h3>${chLetterHtml(cur, { raw: true })}</section>

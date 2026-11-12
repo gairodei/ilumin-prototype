@@ -75,7 +75,7 @@ function crFoList(pr) {
 }
 const crModesHtml = pr => {
   const m = crModes(pr), c = crCfg(pr), hist = (CRDM()[pr.id] || {}).hist ? ` <button class="btn btn-sm btn-ghost" data-act="crDmHist" data-id="${pr.id}">Former setting</button>` : '';
-  if (m.src === 'fee options' && m.modes.length) return `<span class="cr-dm-v">${m.modes.map(x => { const [t, k] = CR_FOST[crModeSt(pr, x)]; return `<span class="cr-dm-m" data-m="${x}">${chip(x, x === 'Self-Paced' ? 'blue' : 'grey')} ${chip(t, k)}</span>`; }).join(' ')}</span> <span class="xs muted">From the course's fee options — each fee option has one delivery mode. New batches can use a mode once Finance has approved its fee options and the version is published.</span>${hist}`;
+  if (m.src === 'fee options' && m.modes.length) return `<span class="cr-dm-v">${m.modes.map(x => { const [t, k] = CR_FOST[crModeSt(pr, x)]; return `<span class="cr-dm-m" data-m="${x}">${chip(x, x === 'Self-Paced' ? 'blue' : 'grey')} ${chip(t, k)}</span>`; }).join(' ')}</span> <span class="xs muted">From the fee options. New batches can use a mode once Finance approves it and the version is published.</span>${hist}`;
   if (m.src === 'legacy') return `<span class="cr-dm-v">${esc(mTxt(m.modes))}</span> <span class="xs muted">Recorded by ${esc(c.by)} on ${fd(c.at)}, before delivery modes came from fee options (kept). Fee options with a delivery mode replace it once they are configured.</span>${hist}`;
   const est = crEstMode(pr), run = `${est ? ` Its existing batches and learners run as ${est} on this price and stay as they are.` : ' Its existing batches and learners stay as they are.'} It can't take new batches until a version with Finance-approved fee options by delivery mode is published.`;
   return `<span class="muted cr-dm-v cr-nc-ro">${CR_NC_T}</span> <span class="xs muted">${m.src === 'fee options' ? 'Only the Standard programme fee from before fee options, with no delivery mode.' : `One programme price${crNcFee(pr) ? ` (${money(crNcFee(pr), 'GBP')})` : ''}, with no delivery mode.`}${run} To offer Self-Paced and Fully Assisted, configure fee options by delivery mode in Section 5 — Fees &amp; Payments; Finance approves them.</span>`;
@@ -181,7 +181,7 @@ const crDurWhy = pr => (!pr ? ['Programme not found', 'Programme not found.'] : 
 ACT.crDurRec = el => {
   const pr = cbPr(el && el.dataset && (el.dataset.p || el.dataset.id)), no = crDurWhy(pr); if (no) return crDurNo(pr, ...no);
   if (pr.durV) return toast('The duration is already recorded.', 'info');
-  reasonDlg({ title: 'Record the course duration — ' + esc(pr.title), ok: 'Record duration', body: `<p class="small">Payment dates in a financial package are worked out from the course duration, so a package needs it. Recording it changes nothing for learners, batches or the payment terms in force.</p>`,
+  reasonDlg({ title: 'Record the course duration — ' + esc(pr.title), ok: 'Record duration', body: `<p class="small">Payment dates are worked out from it. Recording it doesn't change learners, batches or the terms in force.</p>`,
     extra: `<fieldset class="field e1-dur" style="border:0;padding:0"><legend class="lbl">Duration</legend><div class="e1-dur-row"><label class="sr" for="cr-du-n">Duration — number</label><input class="input num" type="number" min="1" max="${E1_DUR_MAX}" step="1" inputmode="numeric" id="cr-du-n" value=""><label class="sr" for="cr-du-u">Duration — unit</label><select class="select" id="cr-du-u">${E1_UNITS.map(([k, l]) => `<option value="${k}" ${k === 'months' ? 'selected' : ''}>${l}</option>`).join('')}</select></div></fieldset>`,
     onOk: r => {
       const again = crDurWhy(pr); if (again) { closeModal(); return crDurNo(pr, ...again); }
@@ -222,7 +222,7 @@ function crFoBlocks(pr) {
   const pkg = typeof cb8Managed === 'function' && cb8Managed(pr), os = (pkg ? cb8Work(pr).opts : r1Opts(pr.id)).filter(o => o.status === 'Active'), out = [];
   if (!os.some(o => !o.legacy && M_MODES.includes(o.mode))) out.push('Fee options: add at least one fee option with a delivery mode (Self-Paced or Fully Assisted) in Section 5 — Fees & Payments');
   os.filter(o => o.legacy || !M_MODES.includes(o.mode)).forEach(o => out.push(`Fee option "${o.label || o.id}": choose its delivery mode (Self-Paced or Fully Assisted), or retire it, in Section 5 — Fees & Payments`));
-  if (!pkg) out.push('Fee options: start a financial package in Section 5 — Fees & Payments, so Finance approves the fee options for this version');
+  if (!pkg) out.push('Fee options: start a financial package in Fees & Payment Plans, so Finance approves the fee options for this version');
   return out;
 }
 const _finGateCR = cbFinGate;
@@ -279,7 +279,7 @@ function crNbCourses(body) {
   return body.replace(/(<select class="select" id="nb-co"[^>]*>)([\s\S]*?)(<\/select>)/, (x, o, inner, cl) => {
     const kept = inner.replace(/<option([^>]*)>([^<]*)<\/option>/g, (y, at, t) => (ok.includes(unesc(t)) ? y : ''));
     const sel = /selected/.test(kept) ? kept : kept.replace('<option ', '<option selected ');
-    return o + sel + cl + `<span class="hint cr-nb-elig">${ok.length ? 'Only active courses whose published version has Finance-approved fee options with a delivery mode are listed.' : 'No course is ready for new batches: a course needs a published version with Finance-approved fee options by delivery mode (Course Builder → Section 5 — Fees &amp; Payments, then Review &amp; Publish).'}</span>`;
+    return o + sel + cl + `<span class="hint cr-nb-elig">${ok.length ? 'Only courses with a published version and Finance-approved fee options are listed.' : 'No course is ready for new batches: a course needs a published version with Finance-approved fee options by delivery mode (Course Builder → Section 5 — Fees &amp; Payments, then Review &amp; Publish).'}</span>`;
   });
 }
 const unesc = s => String(s).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
@@ -389,7 +389,7 @@ let CR_ABC = null; // { code, abc } from step 1 of Create batch
 const CR_ABC_RE = /^[A-Za-z0-9][A-Za-z0-9 /.\-_()&#:]*$/;
 const crAbcNorm = v => String(v || '').trim().replace(/\s+/g, ' ');
 const crAbcWhy = v => (!v ? '' : v.length > 40 ? 'Use at most 40 characters' : !CR_ABC_RE.test(v) ? 'Use letters, digits, spaces and / - . _ ( ) & # : only, starting with a letter or digit' : '');
-const crAbcField = (id, v) => `<div class="field cr-abc-f"><label for="${id}">Awarding body batch code <span class="xs muted">(optional)</span></label><input class="input mono" id="${id}" maxlength="40" autocomplete="off" value="${esc(v || '')}" placeholder="As issued by the awarding body"><span class="hint">The awarding body's own reference for this cohort. Separate from the Academy's batch code and never used to identify the batch here.</span></div>`;
+const crAbcField = (id, v) => `<div class="field cr-abc-f"><label for="${id}">Awarding body batch code <span class="xs muted">(optional)</span></label><input class="input mono" id="${id}" maxlength="40" autocomplete="off" value="${esc(v || '')}" placeholder="As issued by the awarding body"><span class="hint">The awarding body's reference for this cohort (not the Academy's batch code).</span></div>`;
 
 const _omCR = openModal;
 openModal = function (m) {
@@ -596,7 +596,7 @@ ACT.pubAsg = function (el) {
 function crAsgBatches(d) {
   const pid = cbAsgPid(d), bs = (ADMIN.batches || []).filter(b => !['Cancelled', 'Archived'].includes(b.status) && (pid ? r2Pid(b) === pid : b.course === d.programme) && crAsgOf(b).includes(d));
   const row = b => { const x = crDl(b.code, d.id); return `<tr data-b="${b.code}"><td class="nowrap"><span class="mono">${esc(b.code)}</span></td><td>${x ? `<strong class="cr-due">${fdt(x.due)}</strong>` : crLegacy(d, b.code) ? `${fdt(d.due)} <span class="xs muted">course-level date (legacy)</span>` : `${chip('Deadline required', 'amber')}${d.status === 'Published' ? ' <span class="xs muted">Not released</span>' : ''}`}</td><td class="nowrap">${crCanDl() ? `<button class="btn btn-sm" data-act="crDlEdit" data-b="${b.code}" data-id="${d.id}">${x ? 'Change' : 'Set'}</button>` : ''}</td></tr>`; };
-  return `<div class="field full cr-asg-dl"><span class="lbl">Deadlines</span><p class="xs muted">Set by each batch — the same assignment can have a different deadline in each batch. ${d.due ? `This assignment was created with a course-level date (${fdt(d.due)}); the batches it was published to use it until they set their own; any other batch needs its own deadline.` : ''}</p>${bs.length ? `<div class="tbl-wrap"><table class="tbl dense"><thead><tr><th>Batch</th><th>Deadline</th><th></th></tr></thead><tbody>${bs.map(row).join('')}</tbody></table></div>` : '<p class="small muted">No current batch of this programme.</p>'}</div>`;
+  return `<div class="field full cr-asg-dl"><span class="lbl">Deadlines</span><p class="xs muted">Set per batch.${d.due ? ` Created with a course date (${fdt(d.due)}), which its batches use until they set their own.` : ''}</p>${bs.length ? `<div class="tbl-wrap"><table class="tbl dense"><thead><tr><th>Batch</th><th>Deadline</th><th></th></tr></thead><tbody>${bs.map(row).join('')}</tbody></table></div>` : '<p class="small muted">No current batch of this programme.</p>'}</div>`;
 }
 const _detCR = s2Details;
 s2Details = function (d) {
@@ -819,6 +819,9 @@ function crDemoFees(pr, why) {
     if (o.legacy) { const n = cb8Work(pr).opts.find(x => x.status === 'Active' && !x.legacy && x.mode === m && !x.pay.length); if (n) ks.forEach(k => ACT.cb8PayAdd({ dataset: { p: pr.id, o: n.id, k: String(k) } })); ACT.cb8OptRetire({ dataset: { p: pr.id, o: id } }); rsn(); ok1(); }
   });
   cb8Work(pr).opts.filter(o => o.status === 'Active' && !o.pay.length).forEach(o => ACT.cb8PayAdd({ dataset: { p: pr.id, o: o.id, k: '1' } }));
+  // FB1 (PD-FB1-03): a fee option added here answers Allow Deposit explicitly — the deposit the option it replaces inherited (the package setting)
+  if (typeof fb1Ask === 'function') { const D = cb8Work(pr).dep, ds = (o, k, x) => INP.cbr2Dep({ dataset: { p: pr.id, o: o.id, k }, ...x });
+    cb8Work(pr).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => { if (D.mode === 'none') return ds(o, 'no'); ds(o, 'allow', { checked: true }); if (D.mode === 'own') { ds(o, 'own'); ds(o, 'amount', { value: String(D.amount), id: 'cr-demo-dep' }); } }); }
   if (!(cb8Wf(pr) && cb8Wf(pr).status === 'Approved')) { ACT.cb8SaApprove({ dataset: { p: pr.id } }); rsn(); ok1(); }
   closeModal();
 }

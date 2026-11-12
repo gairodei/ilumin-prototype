@@ -213,7 +213,7 @@ INP.r1NpLevel = el => { _npLevelR5(el); $$(`${r1Sc()} .r1-np-sup`).forEach(x => 
 const _ch8ReviewR5 = ch8ReviewStep;
 ch8ReviewStep = function (pr) { const h = _ch8ReviewR5.apply(this, arguments); return pr && r1IsL3Pid(pr.id) ? h.replace(/<dt>Default class pattern<\/dt><dd>[\s\S]*?<\/dd>/, '<dt>Delivery mode</dt><dd>From each learner\'s fee option</dd>') : h; };
 // Support tab (Level 3): what the setting still does — the observation-fee rate, until learner-level fees exist
-const R5_SUP_NOTE = 'A Level 3 learner\'s delivery mode comes from their fee option. This setting only chooses which observation-fee rate applies to the programme for now; it doesn\'t set anyone\'s delivery mode or class pattern.';
+const R5_SUP_NOTE = 'Sets the legacy observation-fee rate only. A Level 3 learner\'s delivery mode comes from their fee option.';
 const _supTabR5 = chSupportTab;
 chSupportTab = function (pr) {
   const h = _supTabR5.apply(this, arguments); if (!pr || !r1IsL3Pid(pr.id)) return h;

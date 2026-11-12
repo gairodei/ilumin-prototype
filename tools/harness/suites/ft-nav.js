@@ -37,7 +37,7 @@
       clickEl(row); await tick();
       ok(`NAV ${who}: clicking a programme in the list opens it (${id})`, S.params.id === id && h1() === title && !is404() && location.hash === '#a-programmes.' + id, `h1 "${h1()}"`);
       // CB1 (PD-CB-01) supersedes: was the programme's tab bar (.subtabs, at least 3 tabs); now the seven course-builder sections
-      ok(`NAV ${who}: the programme's course-builder sections render`, document.querySelectorAll('main .cb-nav .cb-sec[data-tab]').length === 8); // CBX (PD-CBX-01)
+      ok(`NAV ${who}: the programme's course-builder sections render`, [6, 7].includes(document.querySelectorAll('main .cb-nav .cb-sec[data-tab]').length)); // CBR (PD-CBR-01/02): seven steps, six without observations
       history.back(); await new Promise(res => setTimeout(res, 50));
       ok(`NAV ${who}: Back returns to the list`, listShown() && location.hash === '#a-programmes', location.hash);
       clickEl(q('main [data-act="chProgNew"]'));
@@ -62,7 +62,7 @@
 
   await T('NAV refresh after creating a programme (the reported 404)', async () => {
     reload(); await viaPanel('sysA'); await clickSide('a-programmes'); clickEl(q('main [data-act="chProgNew"]'));
-    Object.entries({ '#np-t': 'Level 4 Certificate in Navigation Checks', '#np-l': 'Level 4', '#np-r': 'QN 610/5040/1', '#np-d': '12', '#np-du': 'months', '#np-p': '2400' }).forEach(([s, v]) => { const e = q('main ' + s); if (e) e.value = v; }); dmpPrice();
+    Object.entries({ '#np-t': 'Level 4 Certificate in Navigation Checks', '#np-l': 'Level 4', '#np-r': 'QN 610/5040/1', '#cbc3-dd-n': '12', '#np-d': '12', '#np-du': 'months', '#np-p': '2400' }).forEach(([s, v]) => { const e = q('main ' + s); if (e) e.value = v; }); dmpPrice();
     // CB2 (PD-CB-14): the page's "Save and continue" (was the dialog's "Create draft"); the observation question is required
     // CR (PD-CR-06): no course code; the delivery modes offered are required (PD-CR-01)
     /* DM (PD-DM-01): no modes-offered field — was clickEl(.cr-dm-c) */ clickEl(q('main #np-obs-no')); clickEl(q('main [data-act="cbDetCreate"]')); await tick();

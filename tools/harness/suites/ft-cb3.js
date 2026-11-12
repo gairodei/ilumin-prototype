@@ -20,7 +20,7 @@
   const SA = as('A'), SYS = as('SY'), FA = as('FA'), BA = as('BA');
   const ACA = () => { acaEnter('KA'); S.signedIn = true; S.ui = {}; };
   const learner = v => { S.variant = v; ACT.switchRole({ dataset: { r: 'learner' } }); S.signedIn = true; };
-  const cur = () => (q('.cb-sec.cur') || { dataset: {} }).dataset.tab, pan = () => (q('.cb-panels .tab[aria-selected="true"]') || { dataset: {} }).dataset.tab;
+  const cur = () => (q('.cb-sec.cur') || { dataset: {} }).dataset.tab, pan = () => (q('.cb-body') || { dataset: {} }).dataset.panel; // CBR (PD-CBR-01): no panel tabs — the route's area within the step
   const blocked = (a0, re) => ADMIN.audit.slice(0, ADMIN.audit.length - a0).some(x => /^Blocked/.test(x.action) && (!re || re.test(x.action)));
   const upload = (pid, text, why = 'CB3 new version') => { ACT.chLetterUp({ dataset: { id: pid } }); if (!MODAL) return false; ACT.chLetterSample(); if (text) document.querySelector('#lt-x').value = text; return reason(why); };
   // A learner without an NVQ starts a sign-up (the letter version is fixed then) and, optionally, signs
@@ -29,15 +29,15 @@
 
   await T('CB3-A Section 6 is "Offer Letter & Documents" — the offer letter is the course contract', async () => {
     fresh(); SA(); go('a-programmes', { id: 'NV-L3', tab: 'documents' });
-    ok('CB3-A section 6 is named "Offer Letter & Documents" in the section bar and heading', /Offer Letter & Documents/.test(q('.cb-sec[data-tab="documents"]').textContent) && /Offer Letter & Documents/.test(q('.cb-h').textContent));
-    ok('CB3-A two separate areas: "Offer letter" and "Required enrolment documents"', qa('.cb-panels .tab').map(t => t.textContent).join('|') === 'Offer letter|Required enrolment documents');
+    ok('CB3-A step 6 is named "Offer Letters" in the step bar and heading (CBR PD-CBR-01 supersedes "Offer Letter & Documents")', /Offer Letters/.test(q('.cb-sec[data-tab="documents"]').textContent) && /Offer Letters/.test(q('.cb-h').textContent));
+    ok('CB3-A two separate areas: the offer letter and, folded, "Required enrolment documents" (CBR: one page, no panel tabs)', !q('.cb-panels') && !!q('[data-act="chLetterUp"]') && /Required enrolment documents/.test(q('#cbr-docs > summary').textContent));
     ok('CB3-A the letter is stated as the course contract; no separate contract card, entity or signing step is offered', /This offer letter is the course contract/.test(main()) && /there is no separate contract to sign/.test(main()) && !q('.cb-contract') && !/Learner contract/.test(main()) && !qa('[data-act]').some(b => /contract/i.test(b.dataset.act)));
     ok('CB3-A old links still open the right area (.letter, .docs)', (go('a-programmes', { id: 'NV-L3', tab: 'docs' }), cur() === 'documents' && pan() === 'docs') && (go('a-programmes', { id: 'NV-L3', tab: 'letter' }), pan() === 'letter'));
   });
 
   await T('CB3-B a new course receives its first offer-letter version', async () => {
     fresh(); SYS(); go('a-programmes'); ACT.chProgNew(); const f = (s, v) => { document.querySelector(s).value = v; };
-    f('#np-t', 'Level 4 CB3 Letters'); f('#np-l', 'Level 4'); INP.r1NpLevel(document.querySelector('#np-l')); /* CR (PD-CR-06): no course code */ f('#np-r', 'QN 610/3333/4'); f('#np-p', '2400'); dmpPrice(); document.querySelector('#np-obs-no').checked = true; crT(ACT.cbDetCreate)();
+    f('#np-t', 'Level 4 CB3 Letters'); f('#np-l', 'Level 4'); INP.r1NpLevel(document.querySelector('#np-l')); /* CR (PD-CR-06): no course code */ f('#np-r', 'QN 610/3333/4'); f('#cbc3-dd-n', '12') /* FB2 (PD-FB2-01): the Course Duration is required to create a course */; f('#np-p', '2400'); dmpPrice(); document.querySelector('#np-obs-no').checked = true; crT(ACT.cbDetCreate)();
     const pr = (STORE.chNewProgs || []).slice(-1)[0]; go('a-programmes', { id: pr.id, tab: 'letter' });
     ok('CB3-B before its first version: "No offer letter uploaded yet" with Upload offer letter; Review blocks publishing', !chLetterCur(pr.id) && /No offer letter uploaded yet/.test(main()) && !!q('[data-act="chLetterUp"]') && ch8Check(pr).block.includes('No offer letter uploaded'));
     q('[data-act="chLetterUp"]').click(); ok('CB3-B the upload starts from the standard Academy letter text (existing wording)', document.querySelector('#lt-x').value === CH_LETTER_TEXT.join('\n\n')); ACT.chLetterSample(); reason('First version');
