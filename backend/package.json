@@ -1,0 +1,45 @@
+{
+  "name": "@ilumin/backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ilumin Academy LMS production backend (Stage 1A foundation + Stage 1B sessions, jobs and operations). Separate from the browser prototype in the repository root.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=.env src/main.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node --env-file-if-exists=.env dist/src/main.js",
+    "worker": "tsx --env-file-if-exists=.env src/worker-main.ts",
+    "worker:prod": "node --env-file-if-exists=.env dist/src/worker-main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "migrate": "tsx --env-file-if-exists=.env src/database/migrate-cli.ts up",
+    "migrate:status": "tsx --env-file-if-exists=.env src/database/migrate-cli.ts status",
+    "migrate:prod": "node dist/src/database/migrate-cli.js up",
+    "db:setup-local": "node --env-file-if-exists=.env scripts/db-setup-local.mjs",
+    "admin:bootstrap": "tsx --env-file-if-exists=.env src/cli/bootstrap-super-admin.ts",
+    "db:drill": "tsx --env-file-if-exists=.env src/cli/backup-drill.ts",
+    "test": "vitest run",
+    "test:ephemeral": "node scripts/test-with-ephemeral-pg.mjs",
+    "check": "npm run typecheck && npm run ci:static && npm run ci:migrations && npm run ci:secrets && npm run build && npm run test:ephemeral",
+    "ci:static": "node scripts/static-checks.mjs",
+    "ci:secrets": "node scripts/scan-secrets.mjs",
+    "ci:migrations": "node scripts/check-migrations.mjs",
+    "ci:audit": "npm audit --audit-level=high"
+  },
+  "dependencies": {
+    "@fastify/cors": "11.4.1",
+    "fastify": "5.12.7",
+    "jose": "6.2.17",
+    "pg": "8.23.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@types/pg": "8.23.1",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "4.1.12"
+  }
+}

@@ -1,0 +1,22 @@
+# Local development PostgreSQL only (not a deployment). Bound to loopback.
+#   POSTGRES_ADMIN_PASSWORD must be set in backend/.env (git-ignored); there is no default.
+#   docker compose up -d   →   then: npm run db:setup-local && npm run migrate
+services:
+  postgres:
+    image: postgres:18.1-bookworm
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?set POSTGRES_ADMIN_PASSWORD in backend/.env}
+      POSTGRES_DB: postgres
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ilumin-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  ilumin-pgdata:

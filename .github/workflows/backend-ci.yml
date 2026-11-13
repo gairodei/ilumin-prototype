@@ -1,0 +1,91 @@
+# Production backend CI (backend/ only). No deployment, no production credentials, disposable database only.
+# The browser prototype in the repository root is not built or tested here.
+name: backend-ci
+
+on:
+  push:
+    branches: [main]
+    paths: ['backend/**', '.github/workflows/backend-ci.yml']
+  pull_request:
+    paths: ['backend/**', '.github/workflows/backend-ci.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: typecheck, build, tests, migrations, audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the migration check compares against the target branch
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies (lockfile, exact versions)
+        run: npm ci
+
+      - name: Typecheck (strict)
+        run: npm run typecheck
+
+      - name: Static checks
+        run: npm run ci:static
+
+      - name: Migration integrity (naming, order, immutability versus the target branch)
+        env:
+          MIGRATION_BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || '' }}
+        run: npm run ci:migrations
+
+      - name: Secret scan (heuristic, backend files)
+        run: npm run ci:secrets
+
+      - name: Production build
+        run: npm run build
+
+      - name: Unit tests (no database)
+        run: npx vitest run tests/unit
+
+      - name: Install PostgreSQL 18 server binaries (runner-local, disposable)
+        working-directory: .
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-18
+
+      - name: PostgreSQL integration tests (migrations on an empty database, locking, sessions, outbox, jobs, backup/restore drill)
+        env:
+          PG_BIN: /usr/lib/postgresql/18/bin
+        run: npm run test:ephemeral -- tests/integration
+
+      - name: Dependency vulnerability scan (high and critical fail the build)
+        run: npm audit --audit-level=high
+
+  secret-scan:
+    name: gitleaks (backend)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: gitleaks
+        run: docker run --rm -v "$PWD/backend:/scan:ro" ghcr.io/gitleaks/gitleaks:v8.21.2 dir /scan --no-banner --redact --exit-code 1
