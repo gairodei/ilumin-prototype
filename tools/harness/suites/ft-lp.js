@@ -217,7 +217,7 @@
     pick('short'); go('browse'); const lc = $1('main .lp-continue');
     ok('LP-N Lena: "Continue learning" (not "Buy now") for her active Moving and Handling People enrolment', !!lc && !$a('main [data-act="buyCourse"]').length && /enrolled until/.test(main()));
     click(lc); ok('LP-N Continue learning opens her course', S.route === 'course' && /Moving and Handling People/.test(main()));
-    pick('nvq-fa'); go('browse'); ok('LP-N Dev (not enrolled on it) still sees "Buy now" at the same price', !!$1('main [data-act="buyCourse"]') && /£45\.00/.test(main()) && !$1('main .lp-continue'));
+    pick('nvq-fa'); go('browse'); ok('LP-N Dev (not enrolled on it) still sees "View details" (1B, PD-1B-01; was "Buy now") at the same price', !!$1('main .btn.n1b-view') && /£45\.00/.test(main()) && !$1('main .lp-continue'));
     // Coordinator: an unknown tab in the address
     pick('coord2'); go('c-batches', { id: CD_B, tab: 'no-such-tab' });
     ok('LP-N Coordinator batch page with an unknown tab: the overview with a note, never "undefined"', !/undefined/.test(main()) && !!$1('main .lp-tab') && /Overview/.test(main()));

@@ -60,7 +60,8 @@
   const reason = (r = 'Setup test') => { const t = document.querySelector('#rsn'); if (t) t.value = r; return press(); };
   // LP (PD-LP-15): a course the learner is actively enrolled on shows "Continue learning" (data-cat = its catalogue id) instead of "Buy now"; it is still listed.
   // Was: [...app().querySelectorAll('main [data-act="buyCourse"]')].map(b => b.dataset.id)
-  const browseIds = () => [...app().querySelectorAll('main [data-act="buyCourse"], main .lp-continue')].map(b => b.dataset.cat || b.dataset.id);
+  // 1B (PD-1B-01): a short-course card offers "View details" (was "Buy now"); Continue learning stays
+  const browseIds = () => [...app().querySelectorAll('main [data-act="buyCourse"], main .lp-continue, main .btn.n1b-view')].map(b => b.dataset.cat || b.dataset.id);
   const buy = async id => { ACT.buyCourse({ dataset: { id } }); prim(); await wait(3000); closeModal(); };
   // Build a complete course through the admin screens: details and price, two modules, content in both, questions
   const buildCourse = async (title, price) => {
@@ -181,7 +182,7 @@
     // CF (PD-CF-05): Daniel already has an active Moving and Handling enrolment (mh26), so a second purchase is refused; another learner buys it. Was: Daniel bought k5
     closeModal(); W.quiz = null; ok('S1 (negative) Daniel can\'t buy Moving and Handling again while mh26 is active', ACT.buyCourse({ dataset: { id: 'k5' } }) === false && !MODAL);
     learner(['D', 'E', 'F', 'H', 'B'].find(v => STORE.worlds[v] && !STORE.worlds[v].enrolments.some(x => x.base === 'Moving and Handling People' && ['Active', 'Payment Pending'].includes(x.status)))); go('browse'); await buy('k5'); const e = W.enrolments.find(x => x.id === 'bk5');
-    ok('S1 buying Moving and Handling: same content, modules, quiz settings and requirements as before', !!e && e.content.map(x => x.title).join('|') === shortContent('mh').map(x => x.title).join('|') && e.modules.map(m => m.id + ':' + m.items.join()).join('|') === shModules({ topic: 'mh' }).map(m => m.id + ':' + m.items.join()).join('|') && e.modules.every(m => m.quiz.q === 10 && m.quiz.pass === 80 && m.quiz.max === 3 && m.quiz.limit === 20) && e.reqs.map(r => r[0]).join('|') === 'Open all documents|Watch all videos to at least 90%|Pass every module quiz with 80% or more' && e.end === D(90), e && e.reqs.map(r => r[0]).join('|'));
+    ok('S1 buying Moving and Handling: same content, modules, quiz settings and requirements as before', !!e && e.content.map(x => x.title).join('|') === shortContent('mh').map(x => x.title).join('|') && e.modules.map(m => m.id + ':' + m.items.join()).join('|') === shModules({ topic: 'mh' }).map(m => m.id + ':' + m.items.join()).join('|') && e.modules.every(m => m.quiz.q === 10 && m.quiz.pass === 80 && m.quiz.max === 3 && m.quiz.limit === 20) && e.reqs.map(r => r[0]).join('|') === 'Open all documents|Watch all videos to at least 90%|Pass every module quiz with 80% or more' && Date.parse(e.end) - Date.parse(e.start) === 90 * DAY, /* 1B (PD-1B-06): 90 days from the purchase; was e.end === D(90), counted from the demo's fixed date */ e && e.reqs.map(r => r[0]).join('|'));
     ok('S1 bought quiz: today\'s bank questions', e.modules[0].quiz.qs.length === 10 && e.modules[0].quiz.qs[0][0] === QUIZ_BANK[0][0]);
   });
 
@@ -473,6 +474,9 @@
     const cr = allCrit(), wr = cr.find(c => c.typeName === 'Written reflection');
     ok('A: learner criteria inherit the Learning Outcome type (name kept, rule applied)', !!wr && wr.type === 'Knowledge' && !cr.some(c => s3Other(c.typeName || c.type)));
     (p3Pick(), ACT.suNext()); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); (p3Pick(), ACT.suNext()); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal();
+    // 1A (PD-1A-01/03) supersedes "content opens at sign-up" for a new enrolment: before its batch starts the page is refused. The checks
+    // below are about what Progress shows, so the sign-up is then treated as one started before 1A (no rule recorded — PD-1A-01).
+    go('progress', { tab: 'tree' }); ok('1A: the new sign-up\x27s Progress is refused before its batch starts', !!w.signup.startRule && !!(lockFor('progress') || {}).n1a); delete w.signup.startRule;
     go('progress', { tab: 'tree' }); /* CF (PD-CF-08): the tree is the Criteria & evidence tab. Was: go('progress') */ ok('A: learner Progress shows the configured name', /Written reflection/.test(main()) && /Observation \/ Competency/.test(main()));
     setUi('trType', 'Knowledge'); render(); ok('A: learner "Knowledge" filter includes the written custom type, not the Observation one', /Written reflection/.test(main()) && !/Discuss a recent decision/.test(main())); setUi('trType', '');
   });
@@ -1240,6 +1244,9 @@
     // A learner on the Self-Paced batch
     const d = apply4('A', T3); ok('N2 sign-up batch panel shows the assigned batch\'s delivery mode', /Fully Assisted/.test(chAssignedHtml(d)));
     (p3Pick(), ACT.suNext()); d.docs.forEach(x => { x.status = 'Submitted'; }); (p3Pick(), ACT.suNext()); setUi('suSig', 'Daniel Okafor'); setUi('suDecl', true); ACT.suSign(); chSetBatch(d, sp); setUi('suOpt', 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal();
+    // 1A (PD-1A-01/03): a new enrolment\x27s programme page is refused before its batch starts (was: open at sign-up). The check below is
+    // about the overview\x27s wording, so the sign-up is then treated as one started before 1A (no rule recorded).
+    learner('A'); go('course', { id: 'nvq' }); ok('1A: the new sign-up\x27s programme page is refused before its batch starts', !!d.signup.startRule && !!$('main .n1a-pre')); delete d.signup.startRule;
     learner('A'); go('course', { id: 'nvq' }); ok('N2 learner programme overview: Delivery channel and Delivery mode (Self-Paced) with the support wording', d.signup.batch === 'L3SP-MAR27' && /Delivery channel/.test(main()) && /Self-Paced/.test((app().querySelector('.n2-mode') || {}).textContent || '') && /not routine phone calls/.test(main()));
     ok('N2 same programme structure and version for both modes', d.tree.map(u => u.code).join() === STORE.s3.trees['NV-L3'].map(u => u.code).join() && d.nvq.title === T3);
     // Editing: allowed while empty (with a reason, audited); refused once learners are enrolled, also when forced

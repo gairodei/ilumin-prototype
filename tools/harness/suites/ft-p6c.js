@@ -158,7 +158,7 @@
     });
 
     await T('P6C-G P5 clarifications', async () => {
-      reset(); const src = lockFor.toString();
+      reset(); const src = (typeof n1aBase === 'function' ? n1aBase : lockFor).toString(); // 1A (PD-1A-03): 1A's commencement gate now wraps the chain outermost and consults it first; P5's wrapper is the one inside it (was: lockFor.toString())
       ok('P6C-G1 (A) the P5 gate is the outermost lockFor: every earlier lock is consulted first and can only add a lock, never return early past it', /p5Applies/.test(src) && /_lfWordsP5/.test(src), src.slice(0, 120));
       ok('P6C-G1b (A) no wrapper loaded after P5 replaces lockFor (P6 doesn\'t)', typeof p5Base === 'function' && lockFor !== p5Base);
       ok('P6C-G2 (B) workplace details and permission are protected learning operations under P5 (gated with Observations, page and actions)', SEC_ACTS.filter(a => ['wpSave', 'changeWp', 'resendPerm'].includes(a[1])).every(a => a[2]()[0] === 'observations') && P5_ROUTES.includes('observations'));

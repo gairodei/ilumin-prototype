@@ -3,6 +3,7 @@
 // and transfers keep the learner's fee option; shared classes don't depend on the organiser's stored mode. Every check does the action
 // through the screen or handler, then checks the consuming screen or record, and includes the negative case.
 (async function () {
+  window.ILM_N1A_PRE = true; // 1A (PD-1A-10): these journeys start learning straight after sign-up, written before 1A; their sign-ups are recorded as started before 1A (the commencement gate is tested in ft-n1a / ft-n1al)
   const R = []; const ok = (n, c, i = '') => R.push((c ? 'PASS ' : 'FAIL ') + n + (i ? ' — ' + i : ''));
   // P6 (PD-P6-02): a batch change is a transfer request carried out after approval — in these fixtures a Super Administrator override (audited)
   // P6 correction (PD-P6-05): a transfer needs an explicitly configured Academy time zone on both batches — test setup configures one where missing

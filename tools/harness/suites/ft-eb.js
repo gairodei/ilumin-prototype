@@ -1,6 +1,7 @@
 // Batch E-B — access control, batch eligibility and integration (PD-E-10…18): IQA scope and findings, IQA sees every learner's work,
 // agency roster and bundles, batch eligibility, G4 for every deciding verb, cross-learner / programme isolation, stale links.
 (async function () {
+  window.ILM_N1A_PRE = true; // 1A (PD-1A-10): these journeys start learning straight after sign-up, written before 1A; their sign-ups are recorded as started before 1A (the commencement gate is tested in ft-n1a / ft-n1al)
   // FB1 (PD-FB1-03): this suite's deposit configuration, chosen explicitly where its fixture prepares a package for Finance — each new fee
   // option "Allow Deposit: Yes" with the Academy default, through the Step 5 handler (an administrator's action; role checks apply).
   const fb1Dep = p => { if (p && cb8Managed(p)) cb8Work(p).opts.filter(o => o.status === 'Active' && fb1Ask(o)).forEach(o => INP.cbr2Dep({ dataset: { p: p.id, o: o.id, k: 'allow' }, checked: true })); };

@@ -2,6 +2,7 @@
 // the Assessor's final assignment outcome, Self-Paced monthly worklists, and the cross-stage journeys. Each check does the action
 // through the screen or handler, then checks the consuming screen, and includes the negative case.
 (async function () {
+  window.ILM_N1A_PRE = true; // 1A (PD-1A-10): these journeys start learning straight after sign-up, written before 1A; their sign-ups are recorded as started before 1A (the commencement gate is tested in ft-n1a / ft-n1al)
   // P3 (PD-P3-02): the learner chooses their batch on sign-up step 1. Fixtures that relied on the automatic (CH-42) assignment now pick, on
   // the page, the earliest eligible batch (the one CH-42 assigned); a batch the fixture already set, and that is still eligible, is kept
   const p3Pick = () => { const w = W; if (!w || !p3Open(w) || chStepKey(w) !== 'details' || ui('suBatch', null) || (w.signup.batch && !p3Why(w, chBatch(w.signup.batch), { region: w.signup.l3cPin !== w.signup.batch }))) return; const r = S.route === 'admission' && document.querySelector('main input[name="su-batch"]'); if (r) { r.checked = true; INP.suBatch(r); } else { const b = p3Eligible(w)[0]; if (b) setUi('suBatch', b.code); } };

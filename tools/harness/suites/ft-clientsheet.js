@@ -204,7 +204,7 @@
     ok('C12 expiring certificate with the course already active: "Continue your enrolment"', !!(ex && ex.querySelector('.cf-renew-cont[data-id="mh26"]')) && !ex.querySelector('[data-act="renewCert"]'));
     ok('C12 (negative) a direct Renew is refused (no checkout)', ACT.renewCert({ dataset: { id: 'c1' } }) === false && !MODAL); closeModal();
     W.enrolments.find(e => e.id === 'mh26').status = 'Completed'; go('dashboard'); const ex2 = app().querySelector('.cs-exp');
-    ok('C12 with no active enrolment on that course, Renew opens checkout (renewal kept)', !!(ex2 && ex2.querySelector('[data-act="renewCert"]')) && (ex2.querySelector('[data-act="renewCert"]').click(), !!MODAL)); closeModal(); W.enrolments.find(e => e.id === 'mh26').status = 'Active';
+    ok('C12 with no active enrolment on that course, Renew opens the course details to buy again (renewal kept; 1B PD-1B-08 — was: opened the checkout)', !!(ex2 && ex2.querySelector('[data-act="renewCert"]')) && (ex2.querySelector('[data-act="renewCert"]').click(), S.route === 'course-info' && !!document.querySelector('main [data-act="n1bBuy"]'))); closeModal(); W.enrolments.find(e => e.id === 'mh26').status = 'Active';
     learner('A'); go('dashboard'); c1.status = 'Valid'; go('dashboard'); ok('C12 hidden when nothing is expiring (same data as C2)', !app().querySelector('.cs-exp')); c1.status = 'Expiring soon';
     learner('C'); go('dashboard'); ok('C11 not on NVQ dashboards', !app().querySelector('.cs-cards'));
   });

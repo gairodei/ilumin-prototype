@@ -149,7 +149,7 @@
     fresh();
     ['A', 'B', 'C', 'F', 'H'].forEach(v => { learner(v); ['browse', 'payments', 'dashboard'].forEach(r => { go(r); ok(`CH-02 ${v} ${r}: GBP only`, !MULTI.test(main()) && (r !== 'browse' || /£/.test(main())), (main().match(MULTI) || [''])[0]); }); });
     learner('A'); go('payments'); ok('CH-02 Payments subtitle "All amounts in GBP (£)."', /All amounts in GBP \(£\)\./.test(main()));
-    learner('A'); go('browse'); const b = app().querySelector('main [data-act="buyCourse"]'); ACT.buyCourse({ dataset: { ...b.dataset } });
+    learner('A'); go('browse'); const b = app().querySelector('main .btn.n1b-view'); ACT.buyCourse({ dataset: { id: b.dataset.id } }); /* 1B (PD-1B-01): the card opens the course details, where the purchase starts; was the card's Buy now */
     const line = mroot().querySelector('.ch-stripe');
     ok('CH-02 checkout: grey Stripe line with the GBP amount', !!line && /^Stripe may show this amount in your local currency\. You'll be charged £[\d,]+\.\d\d\.$/.test(line.textContent.trim()) && line.classList.contains('muted'), line && line.textContent);
     ok('CH-02 checkout: no exchange-rate tag', !/exchange-rate|Pending client/.test(MODAL.body)); closeModal();
@@ -441,7 +441,7 @@
     ok('CH-14 shown as paused with the reason for staff', /Access paused \(manual\)/.test(main()) && /Card payment disputed/.test(main()) && !!app().querySelector('.ch-access [data-act="chRestore"][data-e="nvq"]'));
     const n = STORE.worlds.C.notifs[0]; ok('CH-14 learner notified, without the reason', n.title === 'Access paused' && !/disputed/.test(n.body));
     learner('C'); go('dashboard'); ok('CH-14 learner sees the paused banner, without the reason', /Access paused\./.test(main()) && /Level 3 Diploma/.test(main()) && !/disputed/.test(html()));
-    go('assignments'); ok('CH-14 the paused enrolment\'s content is locked', !!app().querySelector('main .lockpage') && /Access paused/.test(main()));
+    go('assignments'); /* Point 5 (PD-5-01): a paused enrolment's pages open read-only under the Access paused explanation, with no action controls. Was: a lock page */ ok('CH-14 the paused enrolment\'s content is locked (read-only, no action controls)', !!app().querySelector('main .n5-paused') && /Access paused/.test(main()) && !app().querySelector('main [data-act="reviewSubmit"], main [data-act="startQuiz"]'));
     const sc = W.enrolments.find(e => e.kind === 'short' && e.status === 'Active'); if (sc) { go('course', { id: sc.id }); ok('CH-14 other enrolments stay open', !app().querySelector('main .lockpage')); }
     ok('CH-14 separate from the automatic pause', !W.accessPaused);
     STORE.worlds.C.accessPaused = true; FA(); go('f-learner', { id: 'IA-L-18022' }); app().querySelector('.ch-access [data-act="chRestore"][data-e="nvq"]').click(); await wait(40); $('#rsn').value = 'Bank confirmed the payment'; act();

@@ -27,7 +27,7 @@
   // CH-02 / CH-03 / CH-05: the F2, F3 and F8 pending tags are resolved
   await T('F2 / F3 / F8 resolved (CH-02, CH-03, CH-05)', () => {
     SA(); go('a-courses', { id: ADMIN.courses[0].id }); ok('CH-02 no exchange-rate tag, no AED price field', !/exchange-rate source/.test(html()) && !$('#cd-a'));
-    learner('A'); go('browse'); const b = document.querySelector('main [data-act="buyCourse"]'); ACT.buyCourse({ dataset: { ...b.dataset } }); ok('CH-02 checkout: no exchange-rate tag; Stripe local-currency line', MODAL && !/exchange-rate source/.test(MODAL.body) && /Stripe may show this amount in your local currency\. You'll be charged £[\d,]+\.\d\d\./.test(MODAL.body)); closeModal();
+    learner('A'); go('browse'); const b = document.querySelector('main .btn.n1b-view'); ACT.buyCourse({ dataset: { id: b.dataset.id } }); /* 1B (PD-1B-01): the card opens the course details; was the card's Buy now */ ok('CH-02 checkout: no exchange-rate tag; Stripe local-currency line', MODAL && !/exchange-rate source/.test(MODAL.body) && /Stripe may show this amount in your local currency\. You'll be charged £[\d,]+\.\d\d\./.test(MODAL.body)); closeModal();
     const ind = allLearners().filter(l => l.country === 'India'); ok('CH-02 learners from India pay in GBP', ind.length > 0 && ind.every(l => l.cur === 'GBP'), ind.map(l => l.name + ':' + l.cur).join());
     setAdminIdentity('FA'); S.portal = 'admin'; go('f-ledger'); ok('CH-02 Finance ledger: no INR / AED', !/INR|AED|₹/.test(main()));
     SA(); go('a-learner', { id: ind[0].id }); ok('CH-03 no storage-region tag; data region UK', !/storage region/.test(html()) && /Data region\s*UK/.test(main()));

@@ -55,7 +55,7 @@
     e.status = 'Expired-Incomplete'; e.end = D(-2); go('course', { id: 'pn1' });
     const rb = document.querySelector('main [data-act="repurchase"]');
     ok('D3 re-purchase priced in GBP', rb && /£/.test(rb.textContent) && !/AED/.test(rb.textContent), rb && rb.textContent);
-    ACT.repurchase({ dataset: { id: 'pn1' } });
+    ACT.repurchase({ dataset: { id: 'pn1' } }); if (S.route === 'course-info') ACT.n1bBuy({ dataset: { id: S.params.id } }); // 1B (PD-1B-08): Re-purchase opens the course details first
     ok('D3 re-purchase checkout charges GBP', MODAL && /£/.test(MODAL.body), MODAL && MODAL.body.slice(0, 120));
     closeModal();
   });

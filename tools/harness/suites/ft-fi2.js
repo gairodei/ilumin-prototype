@@ -177,7 +177,7 @@
     go('f-dashboard'); ok('FI2-C the dashboard\'s overdue figure counts her', /Overdue amount/.test(main()) && odRows().some(o => o.v === 'CD1' && o.status === 'overdue'));
     learner('CD1'); go('dashboard'); ok('FI2-C Amira\'s dashboard shows the overdue payment', /overdue/i.test(main()));
     advance(15);
-    ok('FI2-C Day 30: no automatic pause for an agreed schedule (PD-CB-72 — client question), and it is logged', !A.accessPaused && ADMIN.audit.some(x => /automatic pause not applied/.test(x.action) && x.entity.includes(A.me.id)));
+    /* Point 5 (PD-5-04): the client confirmed the Day 30 automatic pause for every instalment learner, answering PD-CB-72. Was: no automatic pause for an agreed schedule */ ok('FI2-C Day 30: an agreed schedule is paused automatically too (PD-5-04; PD-CB-72 answered)', A.accessPaused === true && ADMIN.audit.some(x => x.action === 'Access paused (Day 30, automatic)' && x.entity.includes(A.me.id) && x.actor === 'System (overdue process)'));
     // Manual pause (CH-14) is per enrolment: Lena's course is unaffected
     FA(); ACT.chPause({ dataset: { l: A.me.id, e: 'nvq' } }); reason('Repeated missed payments');
     ok('FI2-C manual pause by Finance: Amira\'s programme only (CH-14)', !!(STORE.chPause || {})[chPKey(A.me.id, 'nvq')] && !(STORE.chPause || {})[chPKey(STORE.worlds.CD3.me.id, 'bk5')]);
@@ -186,7 +186,7 @@
     const o = odRows().find(x => x.v === 'CD1' && x.inst === r2.n); ACT.odRestore({ dataset: { id: o.id } }); $1('#ra-dt').value = D(late + 31 + 10).slice(0, 10); $1('#rsn').value = 'Will pay on payday'; press();
     ok('FI2-C payment arrangement: instalment under arrangement, no longer overdue', r2.arrangement && !!A.arrangeUntil && r2.status !== 'Overdue' && odRows().some(x => x.v === 'CD1' && x.status === 'arrangement'));
     advance(12);
-    ok('FI2-C the arrangement date passes unpaid: overdue again (not paused — it never was), Finance told', !r2.arrangement && r2.status === 'Overdue' && !A.accessPaused && STORE.fin.notifs.some(x => /Arrangement lapsed/.test(x.t)));
+    /* Point 5 (PD-5-04): the agreed schedule was paused at Day 30, so the arrangement restored a paused access and its lapse pauses it again ("new date missed → automatically pause again"). Was: not paused — it never was (PD-CB-72) */ ok('FI2-C the arrangement date passes unpaid: overdue again and paused again, Finance told', !r2.arrangement && r2.status === 'Overdue' && A.accessPaused === true && STORE.fin.notifs.some(x => /Arrangement lapsed — access re-paused/.test(x.t)));
     FA(); odRows().filter(x => x.v === 'CD1' && x.status === 'overdue').forEach(x => recordPayment(tgt('CD1|nvq|' + x.inst), x.amount, 'BACS-FI2C' + x.inst, 'Bank transfer', 'settled'));
     ok('FI2-C settled: nothing overdue for Amira, the overdue notice clears', !odRows().some(x => x.v === 'CD1') && !A.payOverdue);
     // Without an agreed schedule (test-only: Dev's pin removed) the existing Day 30 pause applies, and payment restores access
@@ -301,10 +301,10 @@
     S.params = { id: sc.id }; const old = _lfFI2('course');
     ok('CR M-13 OLD: the pause locked her separately paid short course "' + sc.title + '" too', !!old && /paused/i.test(old.title));
     go('course', { id: sc.id }); ok('FI2 M-13 her short course opens (no lock page)', !$1('.lockpage'));
-    go('assignments'); ok('FI2 M-13 her NVQ assignments are locked', !!$1('.lockpage') && /Access paused/.test($1('.lockpage').textContent));
-    go('course', { id: 'nvq' }); ok('FI2 M-13 her NVQ programme is locked', !!$1('.lockpage'));
+    go('assignments'); /* Point 5 (PD-5-01): a paused enrolment's pages open read-only under the Access paused explanation, with no action controls. Was: a lock page */ ok('FI2 M-13 her NVQ assignments are locked (read-only)', !!$1('main .n5-paused') && /Access paused/.test($1('main .n5-paused').textContent) && !$1('main [data-act="reviewSubmit"]'));
+    go('course', { id: 'nvq' }); ok('FI2 M-13 her NVQ programme is locked (read-only)', !!$1('main .n5-paused') && !$1('main [data-act="cfLearn"]'));
     FA(); ACT.chPause({ dataset: { l: C.me.id, e: chEnrolKey(sc) } }); reason('Test'); learner('C'); go('course', { id: sc.id });
-    ok('FI2 M-13 a manual pause (CH-14) of the short course locks it (per enrolment, unchanged)', !!$1('.lockpage'));
+    ok('FI2 M-13 a manual pause (CH-14) of the short course locks it (per enrolment, unchanged; read-only — PD-5-01)', !!$1('main .n5-paused') && !$1('main [data-act="openItem"]'));
     FA(); ACT.chRestore({ dataset: { l: C.me.id, e: chEnrolKey(sc) } }); reason('Restored');
     const o = odRows().find(x => x.v === 'C' && x.status === 'overdue'); ACT.odRestore({ dataset: { id: o.id } }); $1('#ra-dt').value = D(10).slice(0, 10); $1('#rsn').value = 'Arrangement'; press();
     learner('C'); go('assignments'); ok('FI2 M-13 a payment arrangement restores her NVQ access', !C.accessPaused && !$1('.lockpage'));

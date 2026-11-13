@@ -496,7 +496,8 @@
     // PD-FD-01: two more learner identities (Sam, Tom). Was: 11 shown, 14 in all.
     ACT.drAs({ dataset: { p: 'nvq-sp' } }); ACT.drSwitch(); ok('DR Switch demo user: the identity chooser dialog fits', all('#modal-root .dr-grp:not(.dr-more) [data-act="drAs"]').filter(shown).length === 14 && all('#modal-root [data-act="drAs"]').length === 17 /* TA-1 (PD-TA1-05). Was: 13 / 16 */ && !modalFits(), modalFits()); closeModal();
     // LP (PD-LP-15): Lena's only short course is active, so her card says "Continue learning"; a demo learner not enrolled on it buys it. Was: ACT.drAs({ dataset: { p: 'short' } })
-    ACT.drAs({ dataset: { p: 'nvq-sp' } }); go('browse'); click($1('main [data-act="buyCourse"]')); if (MODAL && /About you/.test(MODAL.title)) closeModal();
+    // 1B (PD-1B-01): the card opens the course details; "Continue to purchase" opens the checkout. Was: click the card's Buy now
+    ACT.drAs({ dataset: { p: 'nvq-sp' } }); go('browse'); click($1('main .btn.n1b-view')); click($1('main [data-act="n1bBuy"]')); if (MODAL && /About you/.test(MODAL.title)) closeModal();
     ok('DR simulated checkout (a demo learner): labelled; the dialog fits', shown($1('#modal-root .cd-sim')) && !modalFits(), modalFits()); closeModal();
     // the 101-learner Coordinator demo is an internal tool (developer mode, PD-DR-07)
     setAdminIdentity('A'); S.portal = 'admin'; S.signedIn = true; S.drDev = true;

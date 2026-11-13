@@ -83,7 +83,7 @@
     ok('DP-B1 the payment step offers the deposit with the amount and the remaining fee: £100 now, then £1,700 within 28 days', /Deposit \(holds your seat\) — £100\.00 now/.test(main()) && /then the £1,700\.00 balance within 28 days/.test(main()) && /Programme fee£1,800\.00/.test(main()));
     choose('deposit', 'bank');
     // PD-FD-01: deposit £100. Was: £300.
-    ok('DP-B1 bank transfer: the £100 to pay, the bank details and the reference', /Pay £100\.00 by bank transfer/.test(main()) && /Reference: IA-\d{5}-DEP/.test(main()) && /I've made the transfer — start now/.test(main()));
+    ok('DP-B1 bank transfer: the £100 to pay, the bank details and the reference', /Pay £100\.00 by bank transfer/.test(main()) && /Reference: IA-\d{5}-DEP/.test(main()) && /I've made the transfer/.test(main()) && !/start now/.test(main())); // 1A (PD-1A-05) supersedes "I've made the transfer — start now": a new enrolment doesn't start on payment
   });
   await T('DP-B2 pending bank-transfer deposit: seat held, not paid', async () => {
     const e1 = cdBatch().enrolled; click($1('main [data-act="suPay"]')); const p = pl(w), L = fpLedger(p); hold0 = p.deposit.hold;
