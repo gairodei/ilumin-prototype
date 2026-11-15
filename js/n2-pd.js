@@ -50,6 +50,20 @@ function n2Crits(a) {
   (a.acrit || []).forEach(code => { if (!out.some(x => x.code === code)) out.push({ code, qs: [] }); });
   return out;
 }
+/* PD-2-10: for a learner with staff-side records only, the PD outcome decides a criterion referred to the PD — as the PD outcome sets a
+   portal learner's criterion (staff.js pdOutcome: Met → Achieved and locked, Not Met → Action Required). Derived from the PD record,
+   nothing stored changes. Any open item → Added to PD; a PD Met (item Achieved) → Achieved, whatever marking says; the latest item
+   Returned to Action Required (PD Not Met) → Action Required, unless marking of the criterion was published after that outcome (a new
+   assessment — a portal learner's resubmission and re-marking moves the criterion on the same way). null = no PD referral: the
+   marking-derived state applies. markAt = when this criterion's latest published marking was published. */
+function n2PdSt(t, code, markAt) {
+  const its = t && t.items ? t.items.filter(i => i[0] === code) : []; if (!its.length) return null;
+  if (its.some(i => i[3] === 'Open')) return 'Added to PD';
+  if (its.some(i => i[3] === 'Achieved')) return 'Achieved';
+  if (its[its.length - 1][3] !== 'Returned to Action Required') return null;
+  const o = t.outcomes && t.outcomes[code], oAt = o && o.at ? Date.parse(o.at) : NaN, mAt = markAt ? Date.parse(markAt) : NaN;
+  return !isNaN(oAt) && !isNaN(mAt) && mAt > oAt ? null : 'Action Required';
+}
 // The learner's current record of a criterion: status, lock, open PD item; and whether this assignment's marking of it is published
 function n2State(s, a, code) {
   const L = s.L, w = L.v && STORE.worlds[L.v];
@@ -61,13 +75,33 @@ function n2State(s, a, code) {
   }
   // A learner with staff-side records only: the authoritative facts are this assignment's published release record (by the learner's own
   // copy of the assignment), the staff locks and the PD record — not the competency summary, which maps by the base definitions
-  const t = STORE.tas.pd.find(x => x.lid === L.lid), rel = STORE.tas.rel[s.key], lock = STORE.tas.locks[L.lid + '|' + code] || null;
+  const t = STORE.tas.pd.find(x => x.lid === L.lid), dup = STORE.tas.pd.filter(x => x.lid === L.lid).length > 1, rel = STORE.tas.rel[s.key], lock = STORE.tas.locks[L.lid + '|' + code] || null;
   const its = rel && rel.items ? a.qs.filter(q => qCrits(q).includes(code)).map(q => rel.items[q.id]).filter(Boolean) : [];
   const pub = its.length > 0 || (!!rel && (a.acrit || []).includes(code));
   const open = !!(t && t.items.some(i => i[0] === code && i[3] === 'Open')), j = n2Judg(s.key, code);
-  const pdMet = !!(t && t.items.some(i => i[0] === code && i[3] === 'Achieved') && !open); // a PD outcome Met for a staff-side record (item closed as Achieved)
-  const st = lock || pdMet ? 'Achieved' : open ? 'Added to PD' : its.some(x => x.exit === 'resub') || (j && j.value === 'Not Met') ? 'Action Required' : pub ? 'In Progress' : null;
-  return { live: false, t, st, lock, open, pd: !!t, pub };
+  const markAt = its.map(x => x.at || rel.at).filter(Boolean).sort().slice(-1)[0] || (rel && rel.at) || null, ps = n2PdSt(t, code, markAt); // PD-2-10
+  const st = lock ? 'Achieved' : ps || (its.some(x => x.exit === 'resub') || (j && j.value === 'Not Met') ? 'Action Required' : pub ? 'In Progress' : null);
+  return { live: false, t, dup, st, lock, open, pd: !!t, pub };
+}
+/* PD-2-09: a learner with staff-side records only and no PD record yet. The marking-time PD routes (CO-1 publication, CMA whole-assessment
+   exit) create that learner's STORE.tas.pd record when a criterion first goes to the PD; Add to PD now does the same on confirmation —
+   but only when the learner, enrolment and programme are unambiguous, since the record is kept per learner. '' = mapping is sound. */
+function n2MapWhy(s) {
+  const L = s && s.L, lid = L && L.lid;
+  if (!lid) return 'This submission has no learner ID, so no PD record can be created for it.';
+  const recs = (ADMIN.learners || []).filter(x => x.id === lid);
+  if (!recs.length) return `No learner record exists for ${lid}, so no PD record can be created.`;
+  if (recs.length > 1) return `More than one learner record has the ID ${lid}, so the PD record can't be matched to one learner.`;
+  if (Object.keys(STORE.worlds || {}).some(k => STORE.worlds[k] && STORE.worlds[k].me && STORE.worlds[k].me.id === lid)) return `${lid} also has a learner portal record, so it isn't clear which record the PD belongs to.`;
+  const b = L.batch && (ADMIN.batches || []).find(x => x.code === L.batch.code);
+  if (!b || b.short || !chCohLids(b).includes(lid)) return `${L.name || lid} isn't enrolled in ${L.batch ? L.batch.code : 'a batch'} for this programme, so no PD record can be created.`;
+  if (typeof acProgsOf === 'function' && acProgsOf(lid).size !== 1) return `${L.name || lid} is enrolled on more than one programme and the PD record is kept per learner, so it isn't clear which programme's PD this belongs to.`;
+  return '';
+}
+// The marking-time routes' record shape (co1-competency.js, cma-mapping.js); created once, only from a confirmed, authorised action
+function n2PdRecord(L) {
+  const have = STORE.tas.pd.find(x => x.lid === L.lid); if (have) return have;
+  const t = { lid: L.lid, name: L.name, items: [], session: null, history: [] }; STORE.tas.pd.push(t); return t;
 }
 // The latest published Assessor judgement of the criterion on this submission
 const n2Judg = (key, code) => (r3Judg(key) || []).filter(x => x.role === 'Assessor' && x.published && (x.crit === code)).slice(-1)[0] || null;
@@ -76,7 +110,8 @@ function n2EligWhy(s, a, code) {
   if (!n2Crits(a).some(x => x.code === code)) return `${code} isn't mapped to this assignment.`;
   const o = r3Out(s.key); if (o && o.result) return `The final outcome (${o.result}) has been declared for this assignment — its decisions are locked.`;
   const x = n2State(s, a, code);
-  if (!x.pd) return 'This learner has no Professional Discussion record.';
+  if (x.dup) return 'This learner has more than one Professional Discussion record, so the criterion can\'t be matched to one. Ask an administrator to check the records.';
+  if (!x.pd) { if (x.live) return 'This learner has no Professional Discussion record.'; const m = n2MapWhy(s); if (m) return m; } // staff-side: created on confirmation (PD-2-09)
   if (!x.pub) return `${code} hasn't been judged in published marking for this assignment yet.`;
   if (x.open || x.st === 'Added to PD') return `${code} is already in the Professional Discussion checklist.`;
   if (x.lock || x.st === 'Achieved') return `${code} is Met — only a criterion that is Not Met can be added to the PD.`;
@@ -111,18 +146,23 @@ function n2Apply(s, a, code, reason) {
     w.pd.items.unshift({ ref: code, unit: 'U' + code.split(' ')[0], from, reason, status: 'Open', go: 'assignment.' + a.id, by: me, at, aid: a.id, pv: typeof pdsPin === 'function' ? pdsPin(s) : null, init });
     notifyLearner(s.L.v, 'Assignments', 'Added to your Professional Discussion', `${me} added ${code} (${tag}) to your Professional Discussion. It will be discussed there; your assignment and its feedback are unchanged.`, 'progress..pd');
   } else {
-    const t = x.t; t.items.push([code, from, reason, 'Open']); t.meta = t.meta || {}; t.meta[code] = { by: me, at, aid: a.id, init };
+    const made = !x.t, t = n2PdRecord(s.L); t.items.push([code, from, reason, 'Open']); t.meta = t.meta || {}; t.meta[code] = { by: me, at, aid: a.id, init };
+    // A learner with staff-side records only has no learner inbox: as on the marking-time routes, nothing is sent; the change is audited
+    if (made) tasLog('PD', `${s.L.name} (${s.L.lid})`, 'PD record created', 'No PD record', 'PD record (no session scheduled)', `${role} ${me} — created to add ${code} from ${from} (PD-2-09)`);
   }
   tasLog('PD', `${s.L.name} · ${a.title}`, 'Criterion added to PD', `${code}: Action Required (Not Met)`, `${code}: Added to PD`, `${role} ${me} — ${reason}`);
   render(); toast(`${code} added to ${s.L.name}'s Professional Discussion checklist.`);
   return true;
 }
-// A learner without a learner record: an open PD item shows the criterion as Added to PD (their published marking is unchanged)
+// A learner without a learner record: the PD record decides a criterion referred to the PD (their published marking is unchanged) —
+// open → Added to PD whatever a later marking says; PD Met → Achieved; PD Not Met → Action Required unless marked again since (PD-2-10)
 const _pubN2 = co1Published;
 co1Published = function (L, codes) {
   const r = _pubN2.apply(this, arguments), t = L && STORE.tas.pd.find(x => x.lid === L.lid);
-  // An open PD item is pending: whatever a later published marking says, the criterion stays Added to PD until the PD outcome
-  if (t) t.items.forEach(i => { if (i[3] === 'Open' && r.st[i[0]] && r.st[i[0]] !== 'Achieved') r.st[i[0]] = 'Added to PD'; });
+  if (t) [...new Set(t.items.map(i => i[0]))].forEach(code => {
+    if (!r.st[code] || (r.src[code] && r.src[code].lock)) return; // no published record shown for it, or verified (locked)
+    const ps = n2PdSt(t, code, r.src[code] && r.src[code].at); if (ps) r.st[code] = ps;
+  });
   return r;
 };
 

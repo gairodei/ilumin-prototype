@@ -98,8 +98,23 @@ joinBtn = function (ev) { return ev && W && W.nvq && ev.course === W.nvq.title &
 // whose instalment had the same due date got no overdue notice, reminder or pause (PD-5-09)
 const _isN5od = initStore; initStore = function () { const r = _isN5od.apply(this, arguments); if (typeof STORE !== 'undefined' && STORE) STORE.fiOd = {}; return r; };
 let N5_SYSLOG = 0;
+// PD-5-11: learners whose Day 30 pause Point 5 applies (agreed schedule, not sponsored, no arrangement). FI-2's "automatic pause not
+// applied (PD-CB-72)" entry is not written for them: it contradicted the "Access paused (Day 30, automatic)" entry of the same evaluation.
+let N5_D30 = null;
+const N5_D30_OLD = 'Day 30 overdue — automatic pause not applied';
+const n5D30 = w => !!(w && w.me && fiPinned(w) && !chSponsored(w) && !w.arrangeUntil);
 const _logN5 = logA;
-logA = function () { const n0 = ADMIN.audit.length, r = _logN5.apply(this, arguments); if (N5_SYSLOG) for (let i = 0; i < ADMIN.audit.length - n0; i++) Object.assign(ADMIN.audit[i], { actor: N5_SYS, role: 'System', ip: '—' }); return r; };
+logA = function () {
+  if (N5_SYSLOG && N5_D30 && arguments[2] === N5_D30_OLD && N5_D30.has(arguments[1])) return undefined;
+  const n0 = ADMIN.audit.length, r = _logN5.apply(this, arguments); if (N5_SYSLOG) for (let i = 0; i < ADMIN.audit.length - n0; i++) Object.assign(ADMIN.audit[i], { actor: N5_SYS, role: 'System', ip: '—' }); return r;
+};
+// … and the Finance overdue list doesn't call their Day 30 "automatic pause not applied" (e.g. while a revised deadline is ahead)
+const _odRowsN5 = odRows;
+odRows = function () {
+  const out = _odRowsN5.apply(this, arguments);
+  (out || []).forEach(o => { if (o && o.v && /^Day 30 — automatic pause not applied/.test(o.last || '') && STORE.worlds[o.v] && fiPinned(STORE.worlds[o.v]) && !chSponsored(STORE.worlds[o.v])) o.last = 'Day 30'; });
+  return out;
+};
 const n5Pend = r => !!(r.confirming || r.status === 'Awaiting confirmation by Finance');
 const _odN5 = fiOdSync;
 fiOdSync = function () {
@@ -108,7 +123,7 @@ fiOdSync = function () {
   // 5. an automatic pause with an unpaid, late row awaiting confirmation isn't settled by that pending payment
   const hold = vs.filter(v => { const w = STORE.worlds[v]; return w.fiAutoPaused && w.accessPaused && fiLive(w).some(pl => pl.rows.some(r => n5Pend(r) && fpP(r.amount) > fpP(r.paid) && fiLate(r.due, w) > 0)); });
   hold.forEach(v => { STORE.worlds[v].fiAutoPaused = false; });
-  N5_SYSLOG++; let r;
+  N5_SYSLOG++; let r; const d30 = N5_D30;
   try {
     // An arrangement whose date passed unpaid lapses first (FI-2's own effects and wording), so the same evaluation sees the instalment
     // overdue again: FI-2 lapsed it after working out what was overdue, re-paused, then "settled" and restored in the same pass.
@@ -119,8 +134,10 @@ fiOdSync = function () {
       logA('Finance', who, 'Payment arrangement lapsed', 'Arrangement until ' + n5Fd(until), re ? 'Overdue — access paused again' : 'Overdue', 'The new due date passed unpaid (simulated date)');
       w.fiArrPaused = false;
     })); });
+    N5_D30 = new Set(vs.map(v => STORE.worlds[v]).filter(n5D30).map(w => `${chFullName(w)} (${w.me.id})`));
     r = _odN5.apply(this, arguments);
   } finally {
+    N5_D30 = d30;
     hold.forEach(v => { const w = STORE.worlds[v]; w.fiAutoPaused = true; w.accessPaused = true;
       if (!w.payOverdue) { const pl = fiLive(w).find(p => p.rows.some(x => n5Pend(x) && fpP(x.amount) > fpP(x.paid))), x = pl && pl.rows.find(y => n5Pend(y) && fpP(y.amount) > fpP(y.paid)); if (x) w.payOverdue = { label: 'Instalment ' + x.n, amount: fpM(fpP(x.amount) - fpP(x.paid)), due: x.due, e: pl.e, n: x.n, pending: true }; } });
     try { n5Pass(vs); } finally { N5_SYSLOG--; }

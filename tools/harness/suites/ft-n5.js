@@ -56,6 +56,7 @@
     atLate(r, 30); sync(); sync();
     ok('N5-3b / N5-4 / N5-5 Day 30: the second reminder and the automatic pause, once each', w().accessPaused === true && notes(/Overdue reminder \(Day 30\)/).length === 1 && notes(/^Access paused$/).length === 1 && aud(/^Access paused \(Day 30, automatic\)$/).length === 1);
     ok('N5-32 the automatic pause is attributed to the system, not to a staff member', aud(/^Access paused \(Day 30, automatic\)$/).every(x => x.actor === 'System (overdue process)' && x.role === 'System'));
+    ok('N5-33 (PD-5-11) no contradictory "Day 30 overdue — automatic pause not applied" entry beside the agreed schedule\'s Day 30 pause', aud(/^Day 30 overdue — automatic pause not applied$/).length === 0, J(aud(/Day 30/).map(x => x.action)));
     for (let i = 0; i < 4; i++) sync(); atLate(r, 31); sync();
     ok('N5-30 repeated evaluations: no duplicate reminders, pauses or audit entries', notes(/Overdue reminder \(Day 30\)/).length === 1 && notes(/^Access paused$/).length === 1 && aud(/^Access paused \(Day 30, automatic\)$/).length === 1 && notes(/^Instalment overdue$/).length === 1);
   });
@@ -112,6 +113,11 @@
     FA(); go('f-overdue'); ACT.odRestore({ dataset: { id: row().id } }); const until = D(1).slice(0, 10); $1('#ra-dt').value = new Date(now().getTime() + 5 * DAY).toISOString().slice(0, 10); reason('Point 5: agreed to pay in 5 days');
     ok('N5-23 Finance agrees a new date with a reason: access restored, the learner notified, audited', !w().accessPaused && !!w().arrangeUntil && notes(/new due date|restored/i).length >= 1 && ADMIN.audit.some(x => (x.entity || '').includes(chFullName(w())) && /arrangement|Restore/i.test(x.action) && /agreed to pay/.test(x.reason) && x.actor !== 'System (overdue process)'), J({ p: w().accessPaused, au: w().arrangeUntil, nt: w().notifs.slice(0, 3).map(n => n.title), a: ADMIN.audit.slice(0, 4).map(x => x.action + '/' + x.actor + '/' + x.reason), m: MODAL && MODAL.title, t: (document.querySelector('#toast-root') || {}).textContent }));
     pick('nvq-sp'); go('assignments'); ok('N5-24 the learner sees the agreed date respected (not paused)', !lk('assignments'));
+    // The original instalment is now more than 30 days overdue, but the Finance-approved date is still ahead: the overdue process runs
+    // again on a later day and must not re-pause (PD-5-11 also: the Finance list doesn't say "automatic pause not applied")
+    const p24 = notes(/^Access paused$/).length; Clock.freeze(new Date(Date.parse(w().arrangeUntil) - 2 * DAY).toISOString()); sync(); sync(); pick('nvq-sp'); go('assignments');
+    const lateNow = fiLate(r.due, w()); FA(); const o24 = row();
+    ok('N5-24b original instalment ' + lateNow + ' days overdue, revised date still ahead, process re-run: access stays restored, no new pause; Finance list shows the arrangement', lateNow > 31 && !w().accessPaused && !lk('assignments') && notes(/^Access paused$/).length === p24 && !!o24 && o24.status === 'arrangement' && /Restored until/.test(o24.access) && o24.last === 'Day 30', J({ late: lateNow, p: w().accessPaused, n: notes(/^Access paused$/).length, o: o24 && { s: o24.status, a: o24.access, l: o24.last } }));
     Clock.freeze(new Date(Date.parse(w().arrangeUntil) + 2 * DAY).toISOString()); sync(); sync();
     ok('N5-25 the agreed date passes unpaid: paused again automatically, once, as the system', w().accessPaused === true && !w().arrangeUntil && ADMIN.audit.filter(x => x.action === 'Payment arrangement lapsed' && (x.entity || '').includes(AM)).length === 1 && (ADMIN.audit.find(x => x.action === 'Payment arrangement lapsed') || {}).actor === 'System (overdue process)', J({ p: w().accessPaused, au: w().arrangeUntil, ap: w().fiArrPaused, rows: w().plans.find(p => p.e === 'nvq').rows.map(x => [x.n, x.status, !!x.arrangement]), a: ADMIN.audit.slice(0, 4).map(x => x.action + '/' + x.actor), now: now().toISOString() }));
   });

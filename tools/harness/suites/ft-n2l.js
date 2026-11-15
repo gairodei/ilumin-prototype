@@ -43,9 +43,10 @@
     const d = { items: {}, overall: 'Point 2 legacy re-mark.' }; markable(asg).forEach(q => { d.items[q.id] = { met: 'Met', verified: true, vby: TME().name, vat: now().toISOString(), exit: 'pass', rag: 'G', fb: 'Point 2 legacy re-mark.' }; });
     releaseFeedback(s, asg, d);
     ok('N2L-5 published re-marking with a verified Met doesn\'t lock or replace a criterion pending PD', !STORE.tas.locks[L.lid + '|' + bad] && st(s, asg, bad) === 'Added to PD' && item[3] === 'Open');
-    // A learner with no PD record: refused safely, nothing changes
+    // A learner with no PD record (PD-2-09 supersedes PD-2-07's refusal): checking eligibility creates nothing and the missing record is
+    // no longer a reason to refuse — the record is created only when an authorised Add to PD is confirmed (ft-n2r)
     const other = tasSubs(true).find(x => !x.live && !x.L.short && !x.L.v && !STORE.tas.pd.some(z => z.lid === x.L.lid));
-    if (other) { const why = n2EligWhy(other, tasAsg(other), n2Crits(tasAsg(other))[0].code); ok('N2L-6 a learner without a PD record is refused with a clear reason (or the criterion isn\'t eligible); nothing is created', !!why && !STORE.tas.pd.some(z => z.lid === other.L.lid), why); }
+    if (other) { const why = n2EligWhy(other, tasAsg(other), n2Crits(tasAsg(other))[0].code); ok('N2L-6 (PD-2-09) a learner without a PD record isn\'t refused for the missing record; checking eligibility creates nothing', why !== 'This learner has no Professional Discussion record.' && !STORE.tas.pd.some(z => z.lid === other.L.lid), why); }
     else ok('N2L-6 (every recorded learner in this data has a PD record)', true);
     // The PD assessor records Met → Achieved (locked by them)
     const pdName = chEff(L.lid, 'pd', L.batch), pk = Object.keys(TAS_USERS).find(x => TAS_USERS[x].name === pdName);

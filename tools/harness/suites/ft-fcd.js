@@ -111,7 +111,7 @@
     advance(29); ok('FCD-D after the hold date the seat stays secured (instalment 1 was paid in time); nothing overdue', seat(ava) === 'occupied' && !ava.admission.deposit.released && !odRows().some(o => o.v === ava.v)); back();
     const d2 = Math.ceil((new Date(pl(ava).rows[1].due) - now()) / DAY) + 31; advance(d2);
     const od = odRows().filter(o => o.v === ava.v);
-    ok('FCD-E a missed instalment 2 follows the existing overdue process (listed, Day 15 / Day 30; agreed schedule — automatic pause not applied, PD-CB-72); instalment 1 is not overdue', od.length >= 1 && od.every(o => o.inst > 1) && pl(ava).rows[1].status === 'Overdue' && pl(ava).rows[0].status === 'Paid' && seat(ava) === 'occupied', J(od.map(o => [o.inst, o.days, o.last])));
+    ok('FCD-E a missed instalment 2 follows the existing overdue process (listed, Day 15 / Day 30; agreed schedule — paused at Day 30 since PD-5-04, PD-CB-72 answered); instalment 1 is not overdue', od.length >= 1 && od.every(o => o.inst > 1) && pl(ava).rows[1].status === 'Overdue' && pl(ava).rows[0].status === 'Paid' && seat(ava) === 'occupied', J(od.map(o => [o.inst, o.days, o.last])));
     back();
   });
   await T('FCD-F/G expiry, bank transfers, the deadline', async () => {

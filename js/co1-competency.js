@@ -232,7 +232,10 @@ ACT.pdOutcome = (el, e) => {
     open.forEach((i, k) => {
       if ((live(i) ? i[4].status : i[3]) === before[k]) return; // not applied
       const rec = { result: pick[k], notes: notes[k], by: me, at }; n++;
-      if (live(i)) i[4].outcome = rec; else if (t) { t.outcomes = t.outcomes || {}; t.outcomes[i[0]] = rec; }
+      if (live(i)) i[4].outcome = rec; else if (t) { t.outcomes = t.outcomes || {}; t.outcomes[i[0]] = rec;
+        // PD-2-10: as for a portal learner (staff.js pdOutcome adds an improvement-plan action), a Not Met adds the next step to the
+        // staff-side improvement plan — the store "Add recommended action" uses for a learner without a learner record
+        if (pick[k] === 'Not Met') (STORE.tas.notes[lid] = STORE.tas.notes[lid] || []).push(['Recommendation', notes[k] || 'Provide written evidence for ' + i[0], at, `PD outcome Not Met · ${i[0]} · ${me}`]); }
       tasLog('PD', `${p.name} · ${i[0]}`, 'PD outcome recorded', 'Open', pick[k] === 'Met' ? 'Achieved' : 'Returned to Action Required', notes[k] || 'No notes');
     });
     if (n) { const s = p.v ? STORE.worlds[p.v].pd.session : t && t.session; if (s) Object.assign(s, { signedBy: me, signedAt: at }); else if (t) t.signOff = { by: me, at }; render(); }
