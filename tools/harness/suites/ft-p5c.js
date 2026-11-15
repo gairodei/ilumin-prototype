@@ -16,7 +16,7 @@
   const reset = () => { closeModal(); Clock.unfreeze(); CLOCK_SHIFT = 0; ACT.resetDemo(); closeModal(); window.ILM_P4_HARNESS = true; };
   const as = p => { closeModal(); ACT.drAs({ dataset: { p } }); S.signedIn = true; S.auth = null; S.ui = {}; };
   const B = (c = 'DEMO-L3-JAN27') => ADMIN.batches.find(b => b.code === c);
-  const mk = (code, start, o = {}) => { const s = B(), c = JSON.parse(J(s)); Object.assign(c, { code, label: code, start, end: new Date(Date.parse(start) + 380 * 864e5).toISOString(), enrolled: 0, roster: [], coh: [], status: 'Open', wait: 0, w1wait: [] }, o); delete c.tz; delete c.tzHist; ADMIN.batches.push(c); return c; };
+  const mk = (code, start, o = {}) => { const s = B(), c = JSON.parse(J(s)); Object.assign(c, { code, label: code, start, end: new Date(Date.parse(start) + 380 * 864e5).toISOString(), enrolled: 0, roster: [], coh: [], status: 'Open', wait: 0, w1wait: [] }, o); delete c.tz; delete c.tzHist; delete c.cf2Sched; ADMIN.batches.push(c); return c; }; // CF2: a clone doesn't take the original's builder record (its sessions stay with DEMO-L3-JAN27); it keeps the generated timetable as before
   const setTz = (b, tz) => { as('aca'); return p2SetTz(b, tz, 'P5C: Academy time zone for this batch').ok; };
   const opt = mode => r1Opts(cdPr().id).find(o => o.status === 'Active' && o.mode === mode);
   const apply = mode => { go('browse'); ACT.applyNvq({ dataset: { id: CATALOGUE.find(x => x.kind === 'nvq').id } }); const o = opt(mode), r = o && $1(`#modal-root input[name="r1-opt"][value="${o.id}"]`); if (r) r.checked = true; const out = prim(); if (out !== false) closeModal(); };

@@ -83,9 +83,12 @@
 
   await T('LP-E Sessions and attendance', async () => {
     pick('teacher'); go('t-sessions'); const reg = ($1('main .n4-tas') || {}).textContent || '';
-    ok('LP-E the template classes (Induction, Unit 1 class) are in Marcus Bell\'s attendance registers with the two added sessions', /Induction \(Zoom\)/.test(reg) && /Unit 1 class/.test(reg) && /mixed class/.test(reg) && /Self-Paced check-in/.test(reg));
+    // CF2 (PD-CF2-B1): the schedule builder's sessions (Induction, weekly class, check-ins, workshop) replace the old template's two classes
+    // ("Induction (Zoom)", "Unit 1 class", session DEMO-L3-JAN270). Was: those two titles and that ID.
+    ok('LP-E the schedule builder\'s classes (Induction, weekly class) are in Marcus Bell\'s attendance registers with the two added sessions', /Induction/.test(reg) && /Weekly live class/.test(reg) && /mixed class/.test(reg) && /Self-Paced check-in/.test(reg));
     // PD-FD-01: Sam (IA-L-32003) and Tom (IA-L-32004), both Self-Paced, are on the batch too. Was: all [32000, 32001]; check-in [32000].
-    ok('LP-E they are for all learners of the batch; the Self-Paced check-in only for the Self-Paced learners (Amira, Sam, Tom)', J(n4Eligible(s4bSessById('DEMO-L3-JAN270')).sort()) === J(['IA-L-32000', 'IA-L-32001', 'IA-L-32003', 'IA-L-32004']) && J(n4Eligible(s4bAllSess().find(s => /check-in/.test(s.title))).sort()) === J(['IA-L-32000', 'IA-L-32003', 'IA-L-32004']), J([n4Eligible(s4bSessById('DEMO-L3-JAN270')), n4Eligible(s4bAllSess().find(s => /check-in/.test(s.title)))]));
+    const ind = s4bAllSess().find(s => s.cf2 && s.title === 'Induction'), chk = s4bAllSess().find(s => !s.cf2 && /check-in/.test(s.title));
+    ok('LP-E they are for all learners of the batch; the Self-Paced check-in only for the Self-Paced learners (Amira, Sam, Tom)', J(n4Eligible(ind).sort()) === J(['IA-L-32000', 'IA-L-32001', 'IA-L-32003', 'IA-L-32004']) && J(n4Eligible(chk).sort()) === J(['IA-L-32000', 'IA-L-32003', 'IA-L-32004']), J([n4Eligible(ind), n4Eligible(chk)]));
     // a temporary session that has already happened (Add session, Self-Paced only), to record attendance
     pick('aca'); ACT.addSession({ dataset: { b: CD_B } }); $1('#se-n').value = 'LP past check-in'; $1('#se-d').value = D(-1, '10:00').slice(0, 16); $1('#se-m').value = '60'; const te = $1('#modal-root #se-t'); if (te) te.value = CD_TEACHER;
     $a('#modal-root .r2-g').forEach(x => { x.checked = (r1Opt(x.value) || {}).mode === 'Self-Paced'; }); let r = prim(), g = 0; while (r === false && MODAL && g++ < 3) r = prim(); closeModal();
@@ -229,7 +232,8 @@
     pick('nvq-fa'); go('calendar'); const ev0 = W.events.map(e => e.id);
     for (let k = 0; k < 3; k++) { syncTasBatches(); s4bSyncAll && s4bSyncAll(); CD_KEYS.forEach(v => s4bSyncWEv(STORE.worlds[v])); }
     go('calendar'); const ev1 = W.events.map(e => e.id), ids1 = s4bAllSess().map(s => s.id);
-    ok('LP-N template sessions keep stable IDs (DEMO-L3-JAN270, DEMO-L3-JAN271); re-syncing adds no session', J(ids0.filter(i => /^DEMO-L3-JAN27\d$/.test(i))) === J(['DEMO-L3-JAN270', 'DEMO-L3-JAN271']) && J(ids1) === J(ids0.concat(ps.id)) && new Set(ids1).size === ids1.length);
+    // CF2 (PD-CF2-B1): the batch's timetable sessions come from the schedule builder (session IDs). Was: the template IDs DEMO-L3-JAN270 / 271.
+    ok('LP-N timetable sessions keep stable IDs; re-syncing adds no session', ids0.filter(i => (s4bSessById(i) || {}).cf2).length === cdBatch().cf2Sched.n && !ids0.some(i => /^DEMO-L3-JAN27\d$/.test(i)) && J(ids1) === J(ids0.concat(ps.id)) && new Set(ids1).size === ids1.length);
     ok('LP-N no duplicate calendar entries (each ID once; unchanged by re-syncing)', J(ev1) === J(ev0) && new Set(ev1).size === ev1.length, J(ev1));
     ok('LP-N no new notifications from re-syncing', J(CD_KEYS.map(k => STORE.worlds[k].notifs.length)) === J(notif0) && J(STORE.tas.notifs || []) === tas0);
     ok('LP-N the recorded attendance (Dev, Late) is kept unchanged', J(N4().regs) === reg0 && N4().regs[ps.id].rows['IA-L-32001'].status === 'Late');
@@ -255,7 +259,8 @@
     // PD-FD-01: Sam and Tom are on the batch, awaiting admission review. Was: mcLids(b).length === 2.
     ok('LP-L one published programme, one batch, four NVQ learners (Amira and Dev admitted, Sam and Tom awaiting review), one short-course learner', ADMIN.programmes.filter(p => p.status === 'Active').length === 1 && ADMIN.batches.length === 1 && mcLids(b).length === 4 && J(['CD1', 'CD2', 'CD4', 'CD5'].map(k => STORE.worlds[k].admission.status)) === J(['Approved', 'Approved', 'Awaiting review', 'Awaiting review']) && CD_KEYS.every(k => STORE.worlds[k]) && STORE.worlds.CD3.enrolments.filter(e => e.kind === 'short').length === 1);
     // CF final (PD-CF-11): the client demo now has two synthetic resources on its programme (added by the demo build); Reset restores exactly those. Was: !S4B().res.some(r => r.pid === cdPr().id)
-    ok('LP-L no temporary records: only the two demo resources for the programme, four sessions, no submissions, judgements, outcomes or messages', J(S4B().res.filter(r => r.pid === cdPr().id).map(r => r.title).sort()) === J(['Sample handout: person-centred care (client demo)', 'Sample slides: agreeing a care plan (client demo)']) && !S4B().res.some(r => /LP handout/.test(r.title)) && s4bAllSess().length === 4 && dev.assignments.every(a => a.status === 'Not Started') && !r3Judg(dev.me.id + '~a10').length && !r3Out(dev.me.id + '~a10') && CD_KEYS.every(k => !STORE.worlds[k].threads.length) && !ADMIN.learners.some(l => /Nina Fresh/.test(l.name)));
+    // CF2 (PD-CF2-B1): the sessions are the schedule builder's plus the two added ones. Was: s4bAllSess().length === 4.
+    ok('LP-L no temporary records: only the two demo resources for the programme, the timetable sessions, no submissions, judgements, outcomes or messages', J(S4B().res.filter(r => r.pid === cdPr().id).map(r => r.title).sort()) === J(['Sample handout: person-centred care (client demo)', 'Sample slides: agreeing a care plan (client demo)']) && !S4B().res.some(r => /LP handout/.test(r.title)) && s4bAllSess().length === cdBatch().cf2Sched.n + 2 && dev.assignments.every(a => a.status === 'Not Started') && !r3Judg(dev.me.id + '~a10').length && !r3Out(dev.me.id + '~a10') && CD_KEYS.every(k => !STORE.worlds[k].threads.length) && !ADMIN.learners.some(l => /Nina Fresh/.test(l.name)));
     ok('LP-L allocations: Amira → Dr Helen Carter, Dev → Michael Osei; Teacher Marcus Bell; Assessor James Pryce', mcOf(STORE.worlds.CD1.me.id, b) === 'Dr Helen Carter' && mcOf(dev.me.id, b) === 'Michael Osei' && J(b.teachers) === J(['Marcus Bell', 'Omar Siddiqui']) && /* TA-1 */ chAllocOf(b).asg === 'James Pryce');
   });
 

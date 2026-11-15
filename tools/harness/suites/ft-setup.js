@@ -383,7 +383,8 @@
     fresh(); const L = STORE.aca.obsLib;
     ok('S3-05 one list: IA-1–IA-4 keep the form meaning; IA-5, IA-6 added; Academic entries re-coded IA-7 on', L.find(c => c.code === 'IA-1').title === 'Arrives on time and in uniform as per workplace policy' && L.find(c => c.code === 'IA-5').status === 'Active' && L.find(c => c.code === 'IA-6').status === 'Retired' && L.find(c => c.code === 'IA-7').title === 'Dignity and respect' && L.filter(c => c.form).map(c => c.code).join() === 'IA-1,IA-2,IA-3,IA-4');
     ok('S3-05 today\'s forms unchanged (IA-1–IA-4)', STORE.worlds.C.iaCriteria.map(x => x[0]).join() === 'IA-1,IA-2,IA-3,IA-4' && /IA-4/.test(formIA()));
-    SA(); ok('S3-05 Super Admin menu: Academic → Observation Criteria Library', ANAV.find(x => x[0] === 'Academic')[1].some(x => x[0] === 'k-obslib'));
+    // CF2 (PD-CF2-E1): one menu entry "Observation Criteria" (k-ocl) whose Legacy Criteria tab opens this list. Was: a separate k-obslib entry.
+    SA(); ok('S3-05 Super Admin menu: Academic → Observation Criteria (the legacy list on its Legacy Criteria tab)', ANAV.find(x => x[0] === 'Academic')[1].some(x => x[0] === 'k-ocl') && (go('k-ocl'), !!document.querySelector('main .cf2-octabs [data-go="k-obslib"]')));
     go('k-obslib'); ok('S3-05 the library page lists the merged list with "On observation forms"', /Observation Criteria Library/.test(main()) && /On observation forms/.test(main()) && /IA-15/.test(main()));
     ACT.kLib({ dataset: { id: '' } }); fill({ '#kl-t': 'Checks the person\'s identity before giving care', '#kl-d': 'Checks identity.' }); document.querySelector('#kl-f').checked = true; prim();
     const c = L[L.length - 1];
@@ -624,7 +625,9 @@
     role('finA'); const n0 = STORE.s3.trees['NV-L4'].length; ACT.nodeAdd({ dataset: { p: 'NV-L4', lvl: 'unit' } });
     ok('Access: Finance can\'t change the structure (refused, logged)', !MODAL && STORE.s3.trees['NV-L4'].length === n0 && ADMIN.audit[0].action === 'Blocked: change the structure');
     ACT.addType(); ok('Access: Finance can\'t change assessment types (refused, logged)', !MODAL && ADMIN.audit[0].action === 'Blocked: change assessment types');
-    ACT.kLib({ dataset: { id: '' } }); ok('Access: Finance can\'t change the library (refused, logged)', !MODAL && ADMIN.audit[0].action === 'Blocked: change the observation-criteria library');
+    // CF2 (PD-CF2-E1): the legacy list is read-only outside the Super Administrator's historical corrections, so the refusal is recorded as
+    // "Blocked: change the legacy criteria". Was: 'Blocked: change the observation-criteria library'.
+    const lib0F = JSON.stringify(s3Lib()); ACT.kLib({ dataset: { id: '' } }); ok('Access: Finance can\'t change the library (refused, logged; the list unchanged)', !MODAL && ADMIN.audit[0].action === 'Blocked: change the legacy criteria' && JSON.stringify(s3Lib()) === lib0F);
     dmpComply('NV-L3D'), ACT.kPubProg({ dataset: { id: 'NV-L3D' } }); ok('Access: Finance can\'t publish a programme', !MODAL && s3Pr('NV-L3D').status === 'Draft');
   });
 
@@ -2313,7 +2316,8 @@
   await T('S5c (24)(25) batch roster: CSV adding is truthfully unavailable; Add learner keeps capacity and active-batch rules', async () => {
     fresh(); SA(); const b = ADMIN.batches.find(x => x.status === 'Open' && x.enrolled < x.cap) || ADMIN.batches.find(x => x.status === 'Open'), r0 = JSON.stringify([b.roster, b.enrolled, b.wait]), n0 = lrnN();
     go('a-batches', { id: b.code, tab: 'roster' }); const bt = app().querySelector('main [data-act="s5cBatchCsv"]');
-    ok('S5c (24) the roster\'s "Bulk CSV" is shown as not available with the reason (it no longer opens the account import)', bt && bt.disabled && /isn't available yet/.test(bt.title) && !app().querySelector('main .row [data-act="importCsv"]'));
+    // CF2 (PD-CF2-F1, client request): the unused Bulk CSV entry is no longer shown. Was: shown disabled, "Bulk CSV (not available)", with the reason.
+    ok('S5c (24) / CF2-F1 the roster shows no Bulk CSV entry (and nothing there opens the account import)', !bt && !/Bulk CSV/.test(main()) && !app().querySelector('main .row [data-act="importCsv"]'));
     ACT.s5cBatchCsv(); ok('S5c (24) a direct call explains and changes nothing — no roster change, no account, no enrolment', /not available/.test(mroot().textContent) && JSON.stringify([b.roster, b.enrolled, b.wait]) === r0 && lrnN() === n0); closeModal();
     ACT.addToBatch({ dataset: { id: b.code } }); ok('S5c Add learner no longer lists "bulk CSV" as a method', !/bulk CSV, multi-select/.test(mroot().textContent) && /Adding by CSV isn't available yet/.test(mroot().textContent)); closeModal();
     const busy = new Set(ADMIN.batches.filter(x => ['Open', 'In Progress'].includes(x.status)).flatMap(x => batchRoster(x).map(r => r[1]))), free = ADMIN.learners.find(l => l.acct === 'Active' && l.rec === 'Active' && !busy.has(l.id));
@@ -2344,8 +2348,10 @@
     fresh(); SA(); const n0 = lrnN(), keep = JSON.stringify(ADMIN.batches.map(b => [b.code, b.intake, b.enrolled, b.wait, (b.roster || []).length])), imp0 = s5cStore().imports.length;
     dmpElig(); go('a-batches'); ACT.newBatch(); const dm = document.querySelector('#modal-root #nb-dm'); if (dm) dm.value = N2_MODES[0]; fill({ '#nb-c': 'CSVTEST-JAN27' }); prim(); // DM-P (PD-DM-16): an eligible course first (the list's first course)
     const ac = document.querySelector('#modal-root #nb-ac'); ac.value = [...ac.options].find(o => o.value).value; prim(); prim();
-    const bulk = document.querySelector('#modal-root input[name="nb-in"][value="Bulk (CSV)"]');
-    ok('S5c (1) the intake step marks "Bulk (CSV)" as not available, with the reason, and disables it', /Create batch — step 4 of 5/.test(MODAL.title) && bulk && bulk.disabled && /Bulk \(CSV\) — not available/.test(mroot().textContent) && /batch-eligibility rule/.test(mroot().textContent) && !/You upload a spreadsheet/.test(mroot().textContent));
+    // CF2 (PD-CF2-F1, client request): the intake step no longer shows the Bulk (CSV) option. Was: shown disabled, "Bulk (CSV) — not available", with
+    // the reason. The save-time refusal is unchanged: a crafted option is added to the step to check it below.
+    ok('S5c (1) / CF2-F1 the intake step shows no Bulk (CSV) option; Manual remains', /Create batch — step 4 of 5/.test(MODAL.title) && !document.querySelector('#modal-root input[name="nb-in"][value="Bulk (CSV)"]') && !/Bulk \(CSV\)/.test(mroot().textContent) && !!document.querySelector('#modal-root input[name="nb-in"][value="Manual"]'));
+    document.querySelector('#modal-root input[name="nb-in"]').insertAdjacentHTML('afterend', '<input type="radio" name="nb-in" value="Bulk (CSV)">'); const bulk = document.querySelector('#modal-root input[name="nb-in"][value="Bulk (CSV)"]');
     bulk.disabled = false; bulk.checked = true; const r = prim();
     ok('S5c (2) choosing it anyway (a re-enabled option) is refused when saving the step, and audited', r === false && /step 4 of 5/.test(MODAL.title) && ADMIN.audit[0].action === 'Blocked: unsupported intake rule');
     let made = false; openModal({ title: 'Create batch — step 5 of 5', body: '<dl class="kv"><dt>Intake rule</dt><dd>Bulk (CSV)</dd></dl>', actions: [{ label: 'Create batch', cls: 'btn-primary', fn: () => { made = true; } }] }); const r5 = prim(); closeModal();

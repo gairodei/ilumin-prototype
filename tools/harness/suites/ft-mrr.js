@@ -185,10 +185,16 @@
     COO('A'); const e = batchEvents(b).find(x => x.type === 'class'), st0 = e.start, after = new Date(new Date(b.end).getTime() + 30 * 864e5).toISOString().slice(0, 16);
     ACT.cooEditEv({ dataset: { b: code, id: e.id } }); $1('#ee-n').value = after; $1('#ee-r').value = 'after the end'; const r = prim(); closeModal();
     ok('MRR-29 a Coordinator can\'t move a session after the batch end date (PD-AC3-08); unchanged', r === false && batchEvents(b).find(x => x.id === e.id).start === st0);
+    // CF2 (PD-CF2-B1): a batch created with the schedule builder has no invented milestone / observation-window placeholders, so the demo
+    // batch has none to move. Was: MRR-40 moved the placeholder "Programme milestone: first review". The rule is checked on a batch that
+    // has one (the placeholder is created for the test only, through the same timeline store, as a pre-CF2 batch's timetable had it).
+    ok('MRR-40 (CF2) the builder batch carries no invented milestone or observation window', !!b.cf2Sched && !batchEvents(b).some(x => x.type === 'mile' || x.type === 'obs'));
+    if (b.cf2Sched) { b._mrrKeep = b.cf2Sched; delete b.cf2Sched; }
     const ms = batchEvents(b).find(x => x.type === 'mile' || x.type === 'obs'), n0 = [wA, wD].map(w => w.notifs.length);
     ACT.cooEditEv({ dataset: { b: code, id: ms.id } }); $1('#ee-n').value = new Date(new Date(ms.start).getTime() + 2 * 864e5).toISOString().slice(0, 16); $1('#ee-r').value = 'milestone'; $1('#ee-notify').checked = true; prim(); closeModal();
     const n1 = [wA, wD].map(w => w.notifs.length);
     ok('MRR-40 moving a milestone notifies the batch\'s learners as the toast says (was "Learners notified" with no notice)', n1[0] === n0[0] + 1 && n1[1] === n0[1] + 1 && /learners notified/.test(lastToast()), J([n0, n1]));
+    if (b._mrrKeep) { b.cf2Sched = b._mrrKeep; delete b._mrrKeep; }
   });
 
   await T('MRR-30 replaced batch Teacher: sessions listed, not moved (P-09)', async () => {

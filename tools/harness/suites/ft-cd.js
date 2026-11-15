@@ -124,8 +124,11 @@
     ok('CD-F demo deadlines: 5:00 PM UK time (17:00 GMT in Dec / Jan)', s2Defs().filter(d => cbAsgPid(d) === cdPr().id && d.status === 'Published').every(d => { const x = new Date(crDue(d, CD_B)); return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(x) === '17:00'; }));
     // LP (PD-LP-10, user decision A4): the schedule template's two classes are now session records too (attendance registers).
     // Was: 'CD-F two batch sessions added through Add session: …' with sess.length === 2 over every session of the batch.
-    const sess = s4bAllSess().filter(x => x.batch === CD_B && !x.tt), tt = s4bAllSess().filter(x => x.batch === CD_B && x.tt);
-    ok('CD-F the schedule template\'s classes are session records for all learners (Induction, Unit 1 class)', J(tt.map(x => x.title)) === J(['Induction (Zoom)', 'Unit 1 class']) && tt.every(x => !x.aud && x.teacher === CD_TEACHER));
+    // CF2 (PD-CF2-B1): the batch is created with the schedule builder ("Mixed delivery" template, version 1) — its sessions are real session
+    // records with their fee-option audiences. Was: the old "Level 3 standard" template's two placeholder classes (Induction (Zoom), Unit 1 class,
+    // x.tt) for all learners — that template generated the same five placeholders as every other and no longer exists.
+    const sess = s4bAllSess().filter(x => x.batch === CD_B && !x.tt && !x.cf2), tt = s4bAllSess().filter(x => x.batch === CD_B && x.cf2), FAo = r1Opts(cdPr().id).find(o => o.mode === 'Fully Assisted').id;
+    ok('CD-F the schedule builder\'s sessions are session records: Induction and the shared workshop for all learners, the weekly class for the Fully Assisted option', tt.length > 0 && tt.every(x => x.cf2.tpl === 'TPL-3' && x.teacher === CD_TEACHER) && tt.filter(x => /Induction|workshop/.test(x.title)).every(x => !x.aud) && tt.filter(x => x.title === 'Weekly live class').every(x => J(x.aud) === J([FAo])) && !s4bAllSess().some(x => x.tt));
     ok('CD-F two batch sessions added through Add session: a class for both fee options, a check-in for the Self-Paced option only', sess.length === 2 && sess.some(x => /mixed class/.test(x.title) && (x.aud || []).length === 2) && sess.some(x => /Self-Paced check-in/.test(x.title) && J(x.aud) === J([r1Opts(cdPr().id).find(o => o.mode === 'Self-Paced').id])));
     for (const [k, mode, fee] of [['CD1', 'Self-Paced', 1800], ['CD2', 'Fully Assisted', 2600]]) {
       const w = STORE.worlds[k], nm = chFullName(w), lid = w.me.id, pl = w.plans.find(p => p.e === 'nvq');

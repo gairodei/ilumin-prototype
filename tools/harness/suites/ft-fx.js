@@ -36,8 +36,10 @@
     ok('FX-A assignments: two published with deadlines for the batch, one draft (no others)', asg.length === 3 && asg.filter(d => d.status === 'Published' && !!crDue(d, CD_B)).length === 2 && asg.filter(d => d.status === 'Draft').length === 1);
     // LP (PD-LP-10, user decision A4): the template's two classes (Induction, Unit 1 class) are session records as well.
     // Was: 'FX-A sessions: the batch\'s two (a class for all, a Self-Paced check-in); no others' with ss.length === 2.
-    const ss = s4bAllSess();
-    ok('FX-A sessions: the batch\'s two added sessions (a class for all, a Self-Paced check-in) and the template\'s two classes; no others', ss.length === 4 && ss.every(x => x.batch === CD_B) && ss.filter(x => x.tt).length === 2);
+    // CF2 (PD-CF2-B1): the template's classes are now the schedule builder's sessions ("Mixed delivery", version 1). Was: ss.length === 4 with
+    // two old placeholder-template classes (x.tt).
+    const ss = s4bAllSess(), bs = ss.filter(x => x.cf2);
+    ok('FX-A sessions: the batch\'s two added sessions (a class for all, a Self-Paced check-in) and the schedule builder\'s sessions; no others', ss.every(x => x.batch === CD_B) && bs.length === cdBatch().cf2Sched.n && bs.length > 0 && ss.length === bs.length + 2 && !ss.some(x => x.tt));
     ok('FX-A observation configuration: workplace and Academy office, with one observation event', (() => { const c = n5PubCur(pr) || n5Shown(pr); return c && c.required === true && c.workplace === 'Permitted' && c.office === 'Available' && (c.events || []).length === 1; })());
     ok('FX-A one published short course (Moving and Handling People), in the admin list and the learner catalogue', ADMIN.courses.length === 1 && ADMIN.courses[0].status === 'Published' && CATALOGUE.filter(c => c.kind === 'short').map(c => c.title).join() === 'Moving and Handling People');
     ok('FX-A one agency account, with no learners, bundles or purchases', ADMIN.agencies.length === 1 && !ADMIN.bundles.length && !(STORE.agy.assign || []).length && !(STORE.agy.purchases || []).length);
