@@ -2088,3 +2088,16 @@ details.cbc3-tip > summary { margin-top: 0; }
 /* FB2 — the Course Duration sets payment dates: read-only line in Fees & Payment Plans, and each instalment option's spacing */
 .fb2-cdur { margin: 0 0 8px; }
 .fb2-pv { display: block; margin: 2px 0; overflow-wrap: anywhere; }
+
+/* CDA (17 Nov 2026): document requirements and assessment record downloads */
+.cda-dl, .cda-mdl { gap: 6px; flex-wrap: wrap; }
+.cda-mrow { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 2px 0; }
+.cda-pv h4 { margin: 0 0 6px; font-size: .9rem; }
+.cda-pv .grid-2 { gap: 14px; }
+.cda-tbl td .btn { margin: 2px 0; }
+.cda-fmts .row { gap: 12px; flex-wrap: wrap; }
+.cda-tm, .cda-cs, .cda-ar, .cda-la { margin: 8px 0; }
+.cda-moved { margin-top: 10px; }
+@media (max-width: 600px) { .cda-pv .grid-2 { grid-template-columns: minmax(0, 1fr); } }
+/* CDA-A1: eight builder steps — on a narrow container the numbered steps wrap into two rows of four (each stays at least 40px wide) */
+@container cb (max-width: 480px) { .cbr .cbr-steps ol { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); } }

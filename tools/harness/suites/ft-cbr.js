@@ -36,19 +36,20 @@
   let pr = null, id = null, pr2 = null, tr = null;
   await T('CBR-A structure', async () => {
     SA(); go('a-programmes', { id: 'new', tab: 'details' });
-    ok('CBR-A1 a new course shows the seven steps, locked until Course Details is saved', J(qa('.cbr-steps .cbr-st').map(b => b.dataset.tab)) === J(['details', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'review']) && qa('.cbr-st[disabled]').length === 6, J(keys()));
+    // CDA-A1 (PD-CDA-A01): Documents is step 2 — was seven steps without it
+    ok('CBR-A1 a new course shows the eight steps, locked until Course Details is saved', J(qa('.cbr-steps .cbr-st').map(b => b.dataset.tab)) === J(['details', 'admdocs', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'review']) && qa('.cbr-st[disabled]').length === 7, J(keys()));
     pr = make({ obs: true }); id = pr && pr.id;
     ok('CBR-A2 (1) "Save and continue" creates one Draft Level 3 programme (Version 1) and opens Curriculum', !!pr && pr.status === 'Draft' && pr.level === 'Level 3' && pr.version === 1 && S.params.tab === 'curriculum', pr ? pr.id + ' ' + pr.status : 'none');
     step(id, 'details');
-    ok('CBR-A3 seven steps in order, Course Details current, step numbers 1–7, no panel tabs', J(keys()) === J(['details', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'review']) && cur() === 'details' && J(qa('.cbr-n').map(n => n.textContent)) === J(['1', '2', '3', '4', '5', '6', '7']) && !qa('.cb-panels').length, J(keys()));
-    ok('CBR-A4 the footer has Back / Save draft / Save and continue on an editable Course Details', !!q('.cbr-foot [data-act="cbDetSave"]:not([data-next])') && !!q('.cbr-foot [data-act="cbrDetNext"][data-next="curriculum"]') && !qa('.cb-det-acts').length);
-    const bad = []; ['curriculum', 'assessments', 'observations', 'payments', 'documents', 'review'].forEach((k, i, a) => { step(id, k); if (cur() !== k) bad.push(k + ' not current'); const nx = q('.cbr-foot .btn-primary[data-go]'); if (i < a.length - 1 && (!nx || nx.dataset.tab !== a[i + 1])) bad.push(k + ': Next'); const bk = q('.cbr-foot .btn:not(.btn-primary)[data-go]'); if (!bk || bk.dataset.tab !== (i ? a[i - 1] : 'details')) bad.push(k + ': Back'); });
+    ok('CBR-A3 eight steps in order (CDA-A1), Course Details current, step numbers 1–8, no panel tabs', J(keys()) === J(['details', 'admdocs', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'review']) && cur() === 'details' && J(qa('.cbr-n').map(n => n.textContent)) === J(['1', '2', '3', '4', '5', '6', '7', '8']) && !qa('.cb-panels').length, J(keys()));
+    ok('CBR-A4 the footer has Back / Save draft / Save and continue on an editable Course Details', !!q('.cbr-foot [data-act="cbDetSave"]:not([data-next])') && !!q('.cbr-foot [data-act="cbrDetNext"][data-next="admdocs"]') /* CDA-A1: Next is Documents — was Curriculum */ && !qa('.cb-det-acts').length);
+    const bad = []; ['admdocs', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'review'].forEach((k, i, a) => { step(id, k); if (cur() !== k) bad.push(k + ' not current'); const nx = q('.cbr-foot .btn-primary[data-go]'); if (i < a.length - 1 && (!nx || nx.dataset.tab !== a[i + 1])) bad.push(k + ': Next'); const bk = q('.cbr-foot .btn:not(.btn-primary)[data-go]'); if (!bk || bk.dataset.tab !== (i ? a[i - 1] : 'details')) bad.push(k + ': Back'); });
     ok('CBR-A5 Back and Next go to the neighbouring steps', !bad.length, J(bad));
-    const old = { delivery: 'curriculum', dresources: 'curriculum', types: 'assessments', keys: 'assessments', obs: 'observations', events: 'observations', wpcrit: 'observations', fees: 'payments', payhist: 'payments', support: 'payments', letter: 'documents', docs: 'documents', structure: 'curriculum' }, wrong = [];
+    const old = { delivery: 'curriculum', dresources: 'curriculum', types: 'assessments', keys: 'assessments', obs: 'observations', events: 'observations', wpcrit: 'observations', fees: 'payments', payhist: 'payments', support: 'payments', letter: 'documents', docs: 'admdocs' /* CDA-A1: was documents */, structure: 'curriculum' }, wrong = [];
     Object.entries(old).forEach(([t, s]) => { step(id, t); if ((q('.cb') || { dataset: {} }).dataset.sec !== s) wrong.push(t); });
     ok('CBR-A6 every old address opens the step that now holds it (Resources & Delivery → Curriculum, types → Assessments …)', !wrong.length, J(wrong));
     step(id, 'types'); ok('CBR-A6 …and its own section is open (Manage assessment types)', !!q('#cbr-types .cbr2-tbox')); // CBR-2 (PD-CBR2-04): Manage Types opens in place — was a fold
-    step(id, 'docs'); ok('CBR-A6 …(Required enrolment documents)', !!q('details#cbr-docs[open]'));
+    step(id, 'docs'); ok('CBR-A6 …(Required enrolment documents: the Documents step — CDA-A1, was a fold in Offer Letters)', q('.cb').dataset.sec === 'admdocs' && !!q('.cda-ck'));
     step(id, 'curriculum'); ok('CBR-A7 no Zoom / live-session paragraph inside Curriculum & Outcomes', !/Zoom|live sessions/i.test(q('.cb-body').textContent));
   });
 
@@ -188,7 +189,7 @@
     const keep = J([d.workplace, d.office, ol1Cfg(d), cbEvOf(d).length]); step(id, 'details'); document.querySelector('#np-obs-no').checked = true; ACT.cbDetSave({ dataset: { id } });
     ok('CBR-E11 (4) turning observations off asks first and lists what is kept', !!MODAL && /Turn observations off/.test(MODAL.title) && /library categor/.test(MODAL.body)); press();
     step(id, 'payments');
-    ok('CBR-E12 (4) with No, the Observations step is hidden and the later steps renumber (Fees is 4)', n5Draft(pr).required === false && !keys().includes('observations') && q('.cbr-st.cur .cbr-n').textContent === '4' && /Step 4 of 6/.test(q('.cbr-hint').textContent));
+    ok('CBR-E12 (4) with No, the Observations step is hidden and the later steps renumber (Fees is 5 — CDA-A1: was 4 of 6)', n5Draft(pr).required === false && !keys().includes('observations') && q('.cbr-st.cur .cbr-n').textContent === '5' && /Step 5 of 7/.test(q('.cbr-hint').textContent));
     step(id, 'observations'); ok('CBR-E12 …its old address still opens, saying it isn\'t part of the course', /Not part of this course/.test(q('.cbr-hint').textContent));
     step(id, 'details'); document.querySelector('#np-obs-yes').checked = true; ACT.cbDetSave({ dataset: { id } });
     ok('CBR-E13 (4, 19) Yes again: the step is back with every setting kept', n5Draft(pr).required === true && J([n5Draft(pr).workplace, n5Draft(pr).office, ol1Cfg(n5Draft(pr)), cbEvOf(n5Draft(pr)).length]) === keep && (step(id, 'details'), keys().includes('observations')));
@@ -260,8 +261,8 @@
     const a1 = ADMIN.audit.length; ACT.cbrLt({ dataset: { p: 'NV-L3O' } }); ACT.cbrResNew({ dataset: { p: 'NV-L3O', lvl: 'prog' } }); ACT.cbrAsgNew({ dataset: { p: 'NV-L3O' } });
     ok('CBR-I3 …and refuses them when called directly (logged)', !MODAL && blocked(a1) >= 3);
     pr2 = make({ obs: false }); step(pr2.id, 'assessments');
-    ok('CBR-I4 (4) a course without observations has six steps; Next from Assessments goes to Fees', J(keys()) === J(['details', 'curriculum', 'assessments', 'payments', 'documents', 'review']) && q('.cbr-foot .btn-primary[data-go]').dataset.tab === 'payments');
-    step(pr2.id, 'review'); ok('CBR-I5 …Review is step 6 and references renumber (no "Section 7")', q('.cbr-st.cur .cbr-n').textContent === '6' && !/Section 7/.test(q('.cb').textContent));
+    ok('CBR-I4 (4) a course without observations has seven steps (CDA-A1: was six); Next from Assessments goes to Fees', J(keys()) === J(['details', 'admdocs', 'curriculum', 'assessments', 'payments', 'documents', 'review']) && q('.cbr-foot .btn-primary[data-go]').dataset.tab === 'payments');
+    step(pr2.id, 'review'); ok('CBR-I5 …Review is step 7 (CDA-A1: was 6) and references renumber (no "Section 7")', q('.cbr-st.cur .cbr-n').textContent === '7' && !/Section 7/.test(q('.cb').textContent));
   });
 
   await T('CBR-J navigation and unsaved work', async () => {

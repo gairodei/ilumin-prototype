@@ -118,10 +118,10 @@
   await T('CBX-A a new course from an empty draft: seven steps with descriptions, states and named Back / Next', async () => {
     fresh(); ACA(); P = make({ obs: true, title: 'CBX Level 3 course' });
     ok('CBX-A1 created as Draft Version 1 and opened in Curriculum & Outcomes', !!P && P.status === 'Draft' && cur() === 'curriculum');
-    ok('CBX-A1 seven steps in order (CBR): no Resources & Delivery', J(secKeys()) === J(['details', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'review']));
+    ok('CBX-A1 eight steps in order (CDA-A1: Documents is step 2 — was CBR\'s seven): no Resources & Delivery', J(secKeys()) === J(['details', 'admdocs', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'review']));
     ok('CBX-A1 the labels say what each step is', /Curriculum & Outcomes/.test(badge('curriculum')) && /Assessments/.test(badge('assessments')) && /Fees & Payment Plans/.test(badge('payments')) && /Offer Letters/.test(badge('documents')));
-    ok('CBX-A1 every step states its number and purpose', /Step 2 of 7/.test(q('.cbr-hint').textContent) && /Curriculum & Outcomes/.test(q('.cb-h').textContent)); // CBR-2: the step title names it; no description line
-    ok('CBX-A1 Back and Next name where they go', /Back: Course Details/.test(q('.cb-foot').textContent) && /Next: Assessments →/.test(q('.cb-foot .btn-primary').textContent));
+    ok('CBX-A1 every step states its number and purpose', /Step 3 of 8/.test(q('.cbr-hint').textContent) /* CDA-A1: was Step 2 of 7 */ && /Curriculum & Outcomes/.test(q('.cb-h').textContent)); // CBR-2: the step title names it; no description line
+    ok('CBX-A1 Back and Next name where they go', /Back: Documents/.test(q('.cb-foot').textContent) /* CDA-A1: was Course Details */ && /Next: Assessments →/.test(q('.cb-foot .btn-primary').textContent));
     ok('CBX-A2 states before anything is added: Course Details Complete; Curriculum Not started or to fix (one badge, the stronger); Assignments Optional', /Complete/.test(badge('details')) && /Not started|to fix/.test(badge('curriculum')) && !/Complete/.test(badge('curriculum')) && /Optional|to fix/.test(badge('assessments')), J([badge('details'), badge('curriculum'), badge('assessments')]));
     structure(P, true); go('a-programmes', { id: P.id, tab: 'curriculum' });
     ok('CBX-A3 the curriculum (Unit → Module → LO → criteria) made through Section 2: Curriculum Complete', /Complete/.test(badge('curriculum')) && (cbTree(P) || []).length === 1);
@@ -155,7 +155,7 @@
     ok('CBX-C3 …no batch or live-session controls in the builder of a Draft (batches and sessions are in Batch Management)', !q('[data-act="newBatch"]') && !/Zoom/.test(q('.cb-body').textContent));
     ok('CBX-C3 Learning resources: none yet, with Add from library / New resource at programme level', /None yet/.test(q('#cbr-resources .cbr-res').textContent) && !!q('#cbr-resources [data-act="cbr2Res"]')); // CBR-2 (PD-CBR2-03): one Add Resource (library or new)
     submitAndApprove(P); ACA(); go('a-programmes', { id: P.id, tab: 'review' });
-    ok('CBX-C4 Review & Publish summarises the six configuration steps, with the resources and learner types', qa('.cb-rv-sec').length === 6 && /Resources/.test(q('.cb-rv-sec[data-sec="curriculum"]').textContent) && /Learner types/.test(q('.cb-rv-sec[data-sec="details"]').textContent));
+    ok('CBX-C4 Review & Publish summarises the seven configuration steps (CDA-A1: Documents added — was six), with the resources and learner types', qa('.cb-rv-sec').length === 7 && /Resources/.test(q('.cb-rv-sec[data-sec="curriculum"]').textContent) && /Learner types/.test(q('.cb-rv-sec[data-sec="details"]').textContent));
     const blk = cbRvChecks(P).block; ok('CBX-C4 nothing blocks publishing', !blk.length, J(blk.map(b => b.msg)));
     click(q('[data-act="cbPublish"]')); reason('CBX create-to-publish');
     ok('CBX-C5 published from the screen: Active, Version 1, audited', P.status === 'Active' && P.version === 1 && ADMIN.audit.slice(0, 15).some(a => /publish/i.test(a.action) && String(a.entity).includes(P.id)));
@@ -192,11 +192,11 @@
     keys.forEach((k, i) => {
       go('a-programmes', { id, tab: k }); const h = q('h2.cb-h'), d = q('.cbr-hint'), nx = q('.cb-foot .btn-primary'), bk = qa('.cb-foot .btn:not(.btn-primary)')[0];
       if (!h || !h.textContent.includes(CB_SECTIONS[i][1])) bad.push(k + ': heading');
-      if (!d || !new RegExp(`Step ${i + 1} of 7`).test(d.textContent) || false) bad.push(k + ': description'); // CBR-2: "Step N of 7" without a description line
+      if (!d || !new RegExp(`Step ${i + 1} of 8`).test(d.textContent) || false) bad.push(k + ': description'); // CDA-A1: eight steps (was 7) // CBR-2: "Step N of 7" without a description line
       if (i < keys.length - 1) { if (!nx) bad.push(k + ': no Next'); else { nx.click(); if (cur() !== keys[i + 1]) bad.push(k + ': Next went to ' + cur()); } } else if (nx) bad.push(k + ': Next on the last step');
       go('a-programmes', { id, tab: k }); if (i > 0) { const b = qa('.cb-foot .btn:not(.btn-primary)')[0]; if (!b) bad.push(k + ': no Back'); else { b.click(); if (cur() !== keys[i - 1]) bad.push(k + ': Back went to ' + cur()); } }
     });
-    ok('CBX-G1 all seven steps: heading, "Step N of 7" with a description, Next to the following step and Back to the previous', !bad.length, J(bad));
+    ok('CBX-G1 all eight steps (CDA-A1): heading, "Step N of 8" with a description, Next to the following step and Back to the previous', !bad.length, J(bad));
     go('a-programmes', { id, tab: 'review' }); const fixes = qa('.cb-rv-fix').map(b => b.dataset.tab), wrong = fixes.filter(t => { const r = CB_ROUTE[t]; if (!r) return true; const ps = cbPanels(pr, r[0]).map(p => p[0]); return r[1] && !ps.includes(r[1]) && !(t === 'support' && cb8Managed(pr)); });
     ok('CBX-G2 every "Fix in" link on Review & Publish opens an existing step and tab', fixes.length > 0 && !wrong.length, J({ fixes, wrong }));
     fixes.slice(0, 3).forEach(t => { go('a-programmes', { id, tab: t }); }); ok('CBX-G2 …and they open (no missing page)', !/We can't find that page|undefined/.test(main()));

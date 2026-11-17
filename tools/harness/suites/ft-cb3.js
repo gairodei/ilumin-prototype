@@ -30,9 +30,10 @@
   await T('CB3-A Section 6 is "Offer Letter & Documents" — the offer letter is the course contract', async () => {
     fresh(); SA(); go('a-programmes', { id: 'NV-L3', tab: 'documents' });
     ok('CB3-A step 6 is named "Offer Letters" in the step bar and heading (CBR PD-CBR-01 supersedes "Offer Letter & Documents")', /Offer Letters/.test(q('.cb-sec[data-tab="documents"]').textContent) && /Offer Letters/.test(q('.cb-h').textContent));
-    ok('CB3-A two separate areas: the offer letter and, folded, "Required enrolment documents" (CBR: one page, no panel tabs)', !q('.cb-panels') && !!q('[data-act="chLetterUp"]') && /Required enrolment documents/.test(q('#cbr-docs > summary').textContent));
+    // CDA-A1 (PD-CDA-A01) supersedes the folded "Required enrolment documents" here: the checklist is the Documents step (Offer Letters links to it)
+    ok('CB3-A Offer Letters holds the offer letter; the required documents are the Documents step, linked from here', !q('.cb-panels') && !!q('[data-act="chLetterUp"]') && !q('#cbr-docs') && !!q('.cda-moved [data-tab="admdocs"]'));
     ok('CB3-A the letter is stated as the course contract; no separate contract card, entity or signing step is offered', /This offer letter is the course contract/.test(main()) && /there is no separate contract to sign/.test(main()) && !q('.cb-contract') && !/Learner contract/.test(main()) && !qa('[data-act]').some(b => /contract/i.test(b.dataset.act)));
-    ok('CB3-A old links still open the right area (.letter, .docs)', (go('a-programmes', { id: 'NV-L3', tab: 'docs' }), cur() === 'documents' && pan() === 'docs') && (go('a-programmes', { id: 'NV-L3', tab: 'letter' }), pan() === 'letter'));
+    ok('CB3-A old links still open the right area (.letter, .docs)', (go('a-programmes', { id: 'NV-L3', tab: 'docs' }), cur() === 'admdocs' && pan() === 'docs') /* CDA-A1: was the documents step */ && (go('a-programmes', { id: 'NV-L3', tab: 'letter' }), pan() === 'letter'));
   });
 
   await T('CB3-B a new course receives its first offer-letter version', async () => {
@@ -92,16 +93,19 @@
     fresh(); SA(); go('a-programmes', { id: 'NV-L3', tab: 'docs' });
     ok('CB3-G the checklist shows mandatory / optional, formats, maximum size, expiry, region, guidance and status', ['Mandatory', 'Formats', 'Max size', 'Has expiry', 'Applies to', 'Guidance', 'Status'].every(h => q('.s4-ck thead').textContent.includes(h)));
     ok('CB3-G Version history starts with the list in use before versions were kept', !!q('.cb-ckhist') && /Version 1/.test(q('.cb-ckhist').textContent) && /before checklists were versioned/.test(q('.cb-ckhist').textContent));
-    const pri = JSON.stringify(STORE.worlds.B.docs), v1 = s4List('NV-L3').v, items1 = JSON.stringify(s4List('NV-L3').items);
-    const tom = startSignup('E', 'NV-L3'); const tv = tom.signup.checklistV, tdocs = JSON.stringify(tom.docs); SA(); go('a-programmes', { id: 'NV-L3', tab: 'docs' });
+    // CDA-A3 (PD-CDA-A03): NV-L3 is published, so its list changes only in a new version (published with it). The history mechanism
+    // is checked on the Draft programme NV-N1, where a change makes a new checklist version at once (was: NV-L3 changed in place).
+    const pri = JSON.stringify(STORE.worlds.B.docs), l3 = JSON.stringify(s4List('NV-L3'));
+    const tom = startSignup('E', 'NV-L3'); const tv = tom.signup.checklistV, tdocs = JSON.stringify(tom.docs); SA(); go('a-programmes', { id: 'NV-N1', tab: 'docs' });
+    const v1 = s4List('NV-N1').v, items1 = JSON.stringify(s4List('NV-N1').items);
     q('[data-act="s4CkAdd"]').click(); document.querySelector('#ck-n').value = 'CB3 safeguarding certificate'; document.querySelector('#ck-m').value = '0'; document.querySelector('#ck-g').value = 'If you have one.'; reason('Optional extra');
-    const L = s4List('NV-L3');
-    ok('CB3-G adding a document makes Version 2; the history keeps a read-only copy of Version 1 and of Version 2', L.v === v1 + 1 && cbCkHist('NV-L3').some(x => x.v === v1 && JSON.stringify(x.items) === items1) && cbCkHist('NV-L3').some(x => x.v === L.v && x.items.some(i => i.name === 'CB3 safeguarding certificate')) && cbCkHist('NV-L3').every(x => Object.isFrozen(x) && Object.isFrozen(x.items)));
-    q('.cb-ckhist [data-act="cbCkView"][data-v="' + v1 + '"]').click(); ok('CB3-G "View" opens Version 1 read-only, without the new document', !!MODAL && /version 1/i.test(MODAL.title) && !/CB3 safeguarding certificate/.test(document.querySelector('#modal-root').textContent) && /Read-only/.test(document.querySelector('#modal-root').textContent)); closeModal();
-    const it = L.items.findIndex(i => i.name === 'CB3 safeguarding certificate'); ACT.s4CkRetire({ dataset: { p: 'NV-L3', i: String(it) } }); reason('Not needed');
-    ok('CB3-G retiring it makes Version 3, also kept (the item stays, retired)', s4List('NV-L3').v === v1 + 2 && cbCkHist('NV-L3').some(x => x.v === v1 + 2 && x.items.some(i => i.name === 'CB3 safeguarding certificate' && i.status === 'Retired')));
-    ok('CB3-G the applicant who started on Version 1 keeps Version 1 and their documents; Priya\'s seeded documents unchanged', tom.signup.checklistV === tv && tv === v1 && JSON.stringify(tom.docs) === tdocs && JSON.stringify(STORE.worlds.B.docs) === pri);
-    go('a-programmes', { id: 'NV-L3', tab: 'docs' }); ok('CB3-G the history shows how many applicants are on each version', /Applicants on it/.test(q('.cb-ckhist thead').textContent) && q(`.cb-ckhist tr[data-v="${v1}"]`).cells[5].textContent.trim() !== '0');
+    const L = s4List('NV-N1');
+    ok('CB3-G adding a document makes the next version; the history keeps a read-only copy of the earlier and the new version', L.v === v1 + 1 && cbCkHist('NV-N1').some(x => x.v === v1 && JSON.stringify(x.items) === items1) && cbCkHist('NV-N1').some(x => x.v === L.v && x.items.some(i => i.name === 'CB3 safeguarding certificate')) && cbCkHist('NV-N1').every(x => Object.isFrozen(x) && Object.isFrozen(x.items)));
+    go('a-programmes', { id: 'NV-N1', tab: 'docs' }); q('.cb-ckhist [data-act="cbCkView"][data-v="' + v1 + '"]').click(); ok('CB3-G "View" opens the earlier version read-only, without the new document', !!MODAL && new RegExp('version ' + v1, 'i').test(MODAL.title) && !/CB3 safeguarding certificate/.test(document.querySelector('#modal-root').textContent) && /Read-only/.test(document.querySelector('#modal-root').textContent)); closeModal();
+    const it = L.items.findIndex(i => i.name === 'CB3 safeguarding certificate'); ACT.s4CkRetire({ dataset: { p: 'NV-N1', i: String(it) } }); reason('Not needed');
+    ok('CB3-G retiring it makes the version after, also kept (the item stays, retired)', s4List('NV-N1').v === v1 + 2 && cbCkHist('NV-N1').some(x => x.v === v1 + 2 && x.items.some(i => i.name === 'CB3 safeguarding certificate' && i.status === 'Retired')));
+    ok('CB3-G NV-L3\'s applicant keeps their version and documents; NV-L3\'s list and Priya\'s seeded documents unchanged', tom.signup.checklistV === tv && JSON.stringify(tom.docs) === tdocs && JSON.stringify(s4List('NV-L3')) === l3 && JSON.stringify(STORE.worlds.B.docs) === pri);
+    go('a-programmes', { id: 'NV-L3', tab: 'docs' }); ok('CB3-G the history shows how many applicants are on each version', /Applicants on it/.test(q('.cb-ckhist thead').textContent) && q(`.cb-ckhist tr[data-v="${tv}"]`).cells[5].textContent.trim() !== '0');
     const fat = startSignup('F', 'NV-L3'); ok('CB3-G a new applicant gets the current checklist version', fat.signup.checklistV === s4List('NV-L3').v);
   });
 
@@ -128,7 +132,9 @@
     go('a-programmes', { id: 'NV-L3O', tab: 'docs' }); ok('CB3-I retired: the checklist and its history are read-only (no Add / Edit / Retire), History "View" still works', !q('[data-act="s4CkAdd"], [data-act="s4CkEdit"], [data-act="s4CkRetire"]') && !!q('.cb-ckhist [data-act="cbCkView"]'));
     fresh(); SYS(); go('a-programmes', { id: 'NV-N2', tab: 'docs' }); const a1 = ADMIN.audit.length; ACT.s4CkAdd({ dataset: { p: 'NV-N2' } });
     ok('CB3-I published new programme: its checklist is Super Admin only (S4a rule kept) — the System Admin is refused and logged', !MODAL && blocked(a1) && !q('.s4-ck [data-act="s4CkAdd"]'));
-    SA(); go('a-programmes', { id: 'NV-N2', tab: 'docs' }); ok('CB3-I …the Super Admin can edit it', !!q('.s4-ck [data-act="s4CkAdd"]'));
+    // CDA-A3 (PD-CDA-A03): the published version itself is read-only for everyone; the Super Admin changes it in a new version (was: edited in place)
+    SA(); go('a-programmes', { id: 'NV-N2', tab: 'docs' }); ok('CB3-I …the Super Admin sees it read-only, with "Create new version"', !q('.s4-ck [data-act="s4CkAdd"]') && !!q('.cda-note [data-act="s3WizVersion"]'));
+    ACT.s3WizVersion({ dataset: { id: 'NV-N2' } }); reason('CB3 version'); go('a-programmes', { id: 'NV-N2', tab: 'docs' }); ok('CB3-I …and can edit it in the new version', !!q('.s4-ck [data-act="s4CkAdd"]'));
     [['System Admin', SYS], ['Academic Admin', ACA], ['Super Admin', SA]].forEach(([who, enter]) => { fresh(); enter(); const n0 = chLetters('NV-L2').length; upload('NV-L2', 'Text for ' + who, who); ok(`CB3-I ${who}: can upload a letter version (seeded programme)`, chLetters('NV-L2').length === n0 + 1); });
     fresh(); SA(); go('a-programmes', { id: 'NV-L4', tab: 'letter' }); ok('CB3-I suspended programme: letter upload available as for a published one (no Suspended rule exists)', s3Pr('NV-L4').status === 'Suspended' && !!q('[data-act="chLetterUp"]'));
   });

@@ -647,7 +647,12 @@
   const farBatch = title => ADMIN.batches.find(b => b.course === title && ['Open', 'Planned'].includes(b.status) && daysTo(b.start) >= 30 && b.enrolled < b.cap);
   // Details, documents, the letter; then pay (bank transfer: no checkout pop-up) with the option asked for
   const finish4 = (w, opt, batch) => { chSetBatch(w, batch || farBatch(w.nvq.title)); (p3Pick(), ACT.suNext()); w.docs.forEach(d => { d.status = 'Submitted'; d.file = 'doc.pdf'; }); render(); (p3Pick(), ACT.suNext()); setUi('suSig', w.me.first + ' ' + w.me.last); setUi('suDecl', true); ACT.suSign(); setUi('suOpt', opt || 'instalment'); setUi('suMethod', 'bank'); render(); ACT.suPay(); closeModal(); return w; };
-  const ckAdd = (pid, o, r = 'Setup test') => { ACT.s4CkAdd({ dataset: { p: pid } }); fill(o); if (o['#ck-e']) document.querySelector('#ck-e').checked = true; reason(r); };
+  // CDA-A3 (PD-CDA-A03): a published programme's checklist now changes only in a new version, published with it (ft-cda / ft-cdal). The
+  // seeded programmes' new versions can't be published in this dataset (Finance fee-option gate), so these sign-up checks prepare the
+  // published lists the way the client demo's own set-up does (CDA_FIXTURE) — the same actions, audit and versions; the refusal of a
+  // direct change without it is checked first in S4-05.
+  const prep = f => { CDA_FIXTURE = true; try { return f(); } finally { CDA_FIXTURE = false; } };
+  const ckAdd = (pid, o, r = 'Setup test') => prep(() => { ACT.s4CkAdd({ dataset: { p: pid } }); fill(o); if (o['#ck-e']) document.querySelector('#ck-e').checked = true; reason(r); });
   const planSet = (pid, o) => { ACT.s4PlanEdit({ dataset: { p: pid } }); if ('dep' in o) { document.querySelector(`input[name="pp-dm"][value="${o.dep == null ? 'default' : 'own'}"]`).checked = true; if (o.dep != null) fill({ '#pp-dv': String(o.dep) }); } if (o.fee) fill({ '#pp-f': String(o.fee) }); if (o.n) fill({ '#pp-n': String(o.n) }); return reason(o.r || 'Setup test'); };
   const cfgSet = (d, h) => { ACT.s4CfgEdit(); fill({ '#cf-d': String(d), '#cf-h': String(h) }); return reason('Setup test'); };
 
@@ -656,15 +661,16 @@
     const opts = [...document.querySelectorAll('#clp option')].map(o => o.value);
     ok('S4-05 builder: the Programme list is the real programmes (not retired)', ['NV-L2', 'NV-L3', 'NV-L4', 'NV-L5', 'NV-N1', 'NV-N2'].every(x => opts.includes(x)) && !opts.includes('NV-L3O') && !!document.querySelector('[data-onchange="s4ClProg"]'));
     ok('S4-05 seeded from today\'s applicant documents: UK and UAE versions', ['Passport or UK photo driving licence|UK', 'Passport|UAE', 'Right to work (share code letter)|UK', 'Emirates ID and residence visa|UAE', 'Enhanced DBS certificate|UK', 'Police clearance certificate|UAE', 'CV|All'].every(k => s4List('NV-L3').items.some(i => i.name + '|' + i.applies === k)) && /Applies to/.test(main()));
+    { const a0 = ADMIN.audit.length, n = s4List('NV-L3').items.length; ACT.s4CkAdd({ dataset: { p: 'NV-L3' } }); ok('S4-05 (CDA-A3) a published programme\'s list isn\'t changed directly: refused, logged — a new version is needed', !MODAL && s4List('NV-L3').items.length === n && ADMIN.audit.length > a0 && /^Blocked/.test(ADMIN.audit[0].action)); closeModal(); }
     const v0 = s4List('NV-L3').v; ckAdd('NV-L3', { '#ck-n': 'Overseas qualification statement', '#ck-m': '0', '#ck-a': 'UAE', '#ck-f': 'PDF', '#ck-s': '3', '#ck-g': 'Only if your qualification is from outside the UK.' });
     const it = s4List('NV-L3').items.find(i => i.name === 'Overseas qualification statement');
     ok('S4-05 Add item: saved with every field, version up, audited, shown', !!it && !it.mand && it.applies === 'UAE' && it.max === '3 MB' && s4List('NV-L3').v === v0 + 1 && ADMIN.audit[0].action === 'Checklist item added' && /Overseas qualification statement/.test(main()));
-    ACT.s4CkAdd({ dataset: { p: 'NV-L3' } }); fill({ '#ck-n': 'Bad', '#ck-f': 'EXE' }); ok('S4-05 (negative) formats are checked', reason('x') === false); closeModal();
-    const cv = s4List('NV-L3').items.findIndex(i => i.name === 'CV'); ACT.s4CkEdit({ dataset: { p: 'NV-L3', i: cv } }); fill({ '#ck-s': '2' }); reason('Smaller CV files');
+    prep(() => { ACT.s4CkAdd({ dataset: { p: 'NV-L3' } }); fill({ '#ck-n': 'Bad', '#ck-f': 'EXE' }); ok('S4-05 (negative) formats are checked', reason('x') === false); closeModal(); });
+    const cv = s4List('NV-L3').items.findIndex(i => i.name === 'CV'); prep(() => { ACT.s4CkEdit({ dataset: { p: 'NV-L3', i: cv } }); fill({ '#ck-s': '2' }); reason('Smaller CV files'); });
     ok('S4-05 Edit: the change is saved and audited', s4List('NV-L3').items[cv].max === '2 MB' && ADMIN.audit[0].action === 'Checklist item changed');
-    const ref = s4List('NV-L3').items.findIndex(i => i.name === 'Employer reference letter'); ACT.s4CkRetire({ dataset: { p: 'NV-L3', i: ref } }); reason('Not needed');
+    const ref = s4List('NV-L3').items.findIndex(i => i.name === 'Employer reference letter'); prep(() => { ACT.s4CkRetire({ dataset: { p: 'NV-L3', i: ref } }); reason('Not needed'); });
     ok('S4-05 Retire: kept on the list as Retired, audited', s4List('NV-L3').items[ref].status === 'Retired' && ADMIN.audit[0].action === 'Checklist item retired');
-    ACT.s4CkMove({ dataset: { p: 'NV-L3', i: 1, d: -1 } }); ok('S4-05 Move: order changes, audited', s4List('NV-L3').items[0].name === 'Passport' && ADMIN.audit[0].action === 'Checklist order changed');
+    prep(() => ACT.s4CkMove({ dataset: { p: 'NV-L3', i: 1, d: -1 } })); ok('S4-05 Move: order changes, audited', s4List('NV-L3').items[0].name === 'Passport' && ADMIN.audit[0].action === 'Checklist order changed');
     ckAdd('NV-L2', { '#ck-n': 'Care Certificate (if you hold one)', '#ck-m': '0', '#ck-a': 'All', '#ck-f': 'PDF', '#ck-s': '5' });
     // New applicants: Daniel (UK) on Level 3, Fatima (UAE) on Level 2, Tom (country India) on Level 3
     const d = apply4('A', T3), dn = d.docs.map(x => x.name);

@@ -35,7 +35,9 @@
     apps.forEach(ap => { const pid = s4PidOfTitle(ap.programme), want = s4ItemsFor(pid, (ap.cf2Ck || {}).country || 'United Kingdom'); if (!ap.cf2Ck || ap.docs.length !== want.length || ap.docs.some((d, k) => d.name !== want[k].name || d.mand !== want[k].mand)) bad.push(ap.id); });
     ok('CF2L-A2-1 every agency NVQ application lists its programme\'s checklist with the items\' own mandatory flags (no forced mandatory)', apps.length > 0 && !bad.length && apps.some(ap => ap.docs.some(d => !d.mand)), J({ n: apps.length, bad }));
     SA(); const pid = 'NV-L2', L0 = s4List(pid), k = L0.items.findIndex(i => i.status === 'Active' && /Enhanced DBS/.test(i.name)), keep = J(apps.map(a => a.docs.map(d => [d.name, d.mand])));
-    go('a-programmes', { id: pid }); ACT.s4CkEdit({ dataset: { p: pid, i: String(k) } }); $1('#ck-m').value = '0'; reason('CF2L: DBS optional for this programme');
+    // CDA-A3 (PD-CDA-A03): NV-L2 is published — its list changes only in a new version, which this dataset can't publish (Finance gate);
+    // the change is prepared the way the client demo's set-up does (CDA_FIXTURE). Publication itself is checked in ft-cda.js (CDA-A3-4).
+    go('a-programmes', { id: pid }); CDA_FIXTURE = true; try { ACT.s4CkEdit({ dataset: { p: pid, i: String(k) } }); $1('#ck-m').value = '0'; reason('CF2L: DBS optional for this programme'); } finally { CDA_FIXTURE = false; }
     const L = learnerById(apps[0].lid), ap = ag1NvqApp({ id: 'AS-CF2L', kind: 'nvq', course: apps[0].programme, lid: apps[0].lid, learner: apps[0].name, agency: apps[0].agency, at: now().toISOString(), status: 'Admission pending', bundle: null }, L, null, true);
     ok('CF2L-A2-2 Enhanced DBS made optional on the programme is optional for a new agency applicant; existing applications keep their copy', !ap.docs.find(d => /Enhanced DBS/.test(d.name)).mand && ap.cf2Ck.v === L0.v && J(apps.map(a => a.docs.map(d => [d.name, d.mand]))) === keep);
   });

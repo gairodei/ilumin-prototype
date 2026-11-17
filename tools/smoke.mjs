@@ -69,7 +69,7 @@ document.getElementById('f').addEventListener('load', () => setTimeout(() => {
     const n = nav(cw, d); n.signIn(); n.side();
     r.navList = n.h1() === 'NVQ Programmes' && !n.is404() && n.rows() > 0 && cw.location.hash === '#a-programmes';
     n.q('main table tbody a[data-go="a-programmes"][data-id]').click();
-    r.navOpen = !n.is404() && /^#a-programmes\\.NV-/.test(cw.location.hash) && [6, 7].includes(d.querySelectorAll('main .cb-nav .cb-sec[data-tab]').length); // CB1 (PD-CB-01): the course-builder sections (was the tab bar); CBR (PD-CBR-01/02): seven steps, six without observations
+    r.navOpen = !n.is404() && /^#a-programmes\\.NV-/.test(cw.location.hash) && [7, 8].includes(d.querySelectorAll('main .cb-nav .cb-sec[data-tab]').length); // CB1 (PD-CB-01): the course-builder sections (was the tab bar); CDA-A1 (PD-CDA-A01): eight steps, seven without observations (was CBR seven / six)
     n.side(); n.q('main [data-act="chProgNew"]').click();
     r.navWizard = !cw.eval('MODAL') && /#a-programmes\\.new\\.details$/.test(cw.location.hash) && !!n.q('main .cb-new #np-t') && !!n.q('main #np-obs-yes'); // CB2 (PD-CB-14): Course Details of an unsaved course, not a dialog
     r.errs = (cw.__smokeErrs || []).slice();

@@ -50,7 +50,7 @@
   const oldNav = () => qa('.subtabs, ol.ch8-steps, .ch-nav').length;
   const blocked = (a0, re) => ADMIN.audit.slice(0, ADMIN.audit.length - a0).some(x => /^Blocked/.test(x.action) && (!re || re.test(x.action)));
   const state = () => JSON.stringify({ p: ADMIN.programmes.map(p => [p.id, p.status, p.version, !!p.nextDraft, p.title]), t: STORE.chProgTree, d: STORE.s3 && STORE.s3.drafts, l: STORE.chLetters, s: chSupports(), r1: STORE.r1, ck: STORE.s4 && STORE.s4.lists, n5: STORE.n5 && STORE.n5.draft });
-  const SECS = ['details', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'review']; // CBR (PD-CBR-01) supersedes CBX's eight sections: seven steps, Resources & Delivery folded into Curriculum
+  const SECS = ['details', 'admdocs', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'review']; // CDA-A1 (PD-CDA-A01): Documents is step 2 — was seven steps without it; // CBR (PD-CBR-01) supersedes CBX's eight sections: seven steps, Resources & Delivery folded into Curriculum
   const WRITE = CB_WRITE.concat(CB_HIDE_RO);
 
   await T('CB1-A create-programme entry point', async () => {
@@ -63,7 +63,7 @@
     const set = (s, v) => { const e = document.querySelector(s); e.value = v; e.dispatchEvent(new Event('change', { bubbles: true })); };
     set('#np-l', 'Level 4'); set('#np-t', 'Level 4 CB1 programme'); set('#np-r', 'QN 610/7777/1'); set('#np-d', '12'); set('#cbc3-dd-n', '12'); set('#np-du', 'months'); set('#np-p', '2400'); dmpPrice(); /* DM (PD-DM-01): no modes-offered field — was q('.cr-dm-c').click() */ q('#np-obs-no').click(); // CR (PD-CR-06, PD-CR-01): no course code; the modes offered are required
     q('[data-act="cbDetCreate"]').click(); const pr = (STORE.chNewProgs || []).slice(-1)[0];
-    ok('CB1-A "Save and continue" opens the new programme in the course builder (Curriculum, as before), seven steps (CBR; Observations hidden — the course has none), Draft, Version 1', !!pr && pr.title === 'Level 4 CB1 programme' && S.params.id === pr.id && cur() === 'curriculum' && qa('.cb-nav .cb-sec').length === 6 && /Draft/.test(q('.page-h').textContent) && /Version 1/.test(q('.page-h').textContent));
+    ok('CB1-A "Save and continue" opens the new programme in the course builder (Curriculum, as before), eight steps (CDA-A1: Documents added — was seven; Observations hidden — the course has none), Draft, Version 1', !!pr && pr.title === 'Level 4 CB1 programme' && S.params.id === pr.id && cur() === 'curriculum' && qa('.cb-nav .cb-sec').length === 7 && /Draft/.test(q('.page-h').textContent) && /Version 1/.test(q('.page-h').textContent));
     ok('CB1-A header: title, level, reference, status, version and "Version history"', q('.page-h h1').textContent === pr.title && /Level 4/.test(q('.page-h').textContent) && /QN 610\/7777\/1/.test(q('.page-h').textContent) && !!q('.page-h [data-tab="versions"]'));
     ok('CB1-A no old step bar or tab bar anywhere', oldNav() === 0);
     q('.cb-sec[data-tab="details"]').click(); ok('CB1-A Course Details: the details form, editable while Draft (CB2: "Save details" / "Save and continue")', cur() === 'details' && !!q('#np-t') && !!q('[data-act="cbDetSave"]'));
@@ -115,7 +115,8 @@
     ok('CB1-D Payment plan: the plan in force read-only (version and payment summary), owned by Finance', !!q('.cb-plan .e1-sum') && /Version \d+ in force/.test(q('.cb-plan').textContent) && /Finance → Payment Plans/.test(q('.cb-plan').textContent) && !/planned for CB/.test(q('.cb-plan').textContent) /* CB12 (PD-CB-81): was "planned for CB8" — the placeholder is removed */ && !qa('.cb-plan input').length);
     ok('CB1-D Observation fee rate: the existing control (Fully assisted selected)', document.querySelector('input[name="ch-sup"][value="Fully assisted"]').checked && !!q('[data-act="chSupSave"]'));
     open('NV-L3', 'documents'); ok('CB1-D Offer Letter & Documents: offer letter current version and Upload new version', pan() === 'letter' && /Current version/.test(main()) && !!q('[data-act="chLetterUp"]'));
-    open('NV-L3', 'docs'); ok('CB1-D …Enrolment documents: the programme\'s versioned checklist with Add item', !!q('.s4-ck') && !!q('[data-act="s4CkAdd"]'));
+    // CDA-A3 (PD-CDA-A03) supersedes "with Add item" on a published version: its list is read-only; a new version is created to change it
+    open('NV-L3', 'docs'); ok('CB1-D …Enrolment documents: the programme\'s versioned checklist, read-only for the published version, with "Create new version"', !!q('.s4-ck') && cur() === 'admdocs' && !q('[data-act="s4CkAdd"]') && !!q('.cda-note [data-act="newProgVersion"]'));
     // CB3 (PD-CB-20) supersedes the CB1 "no separate learner contract yet" card: the client confirmed the course contract IS the offer letter
     open('NV-L3', 'letter'); ok('CB1-D …the offer letter is stated as the course contract; no separate contract card', !q('.cb-contract') && /This offer letter is the course contract/.test(q('.cb-contract-note').textContent) && !/Learner contract/.test(main()));
     open('NV-L3', 'review'); ok('CB1-D Review & Publish: says Version 2 is published and how to change it', /Version 2 is published/.test(q('.cb-body').textContent));
@@ -151,8 +152,8 @@
 
   await T('CB1-F navigation between sections and panels', async () => {
     fresh(); SA(); open('NV-L3', 'details');
-    const walk = []; for (let i = 0; i < 6; i++) { q('.cb-foot .btn-primary').click(); walk.push(cur()); } // CBR: seven steps
-    ok('CB1-F the "next" button walks the seven steps in order', walk.join() === SECS.slice(1).join(), walk.join());
+    const walk = []; for (let i = 0; i < 7; i++) { q('.cb-foot .btn-primary').click(); walk.push(cur()); } // CDA-A1: eight steps (was CBR's seven)
+    ok('CB1-F the "next" button walks the eight steps in order', walk.join() === SECS.slice(1).join(), walk.join());
     ok('CB1-F …no "next" on the last section; "previous" goes back', !q('.cb-foot .btn-primary') && (q('.cb-foot .btn').click(), cur() === 'documents'));
     open('NV-L3', 'types'); ok('CB1-F an area opens within its step (CBR PD-CBR-01: assessment types are in Assessments, opened)', cur() === 'assessments' && pan() === 'types' && !!q('#cbr-types .cbr2-tbox') /* CBR-2 (PD-CBR2-04): Manage Types open in place — was a fold */ && /Assessment types/i.test(q('.cb-body').textContent));
     ok('CB1-F the address follows the section or panel (old links stay meaningful)', location.hash === '#a-programmes.NV-L3.types');
@@ -162,7 +163,7 @@
     fresh(); SA();
     const seeded = [['tree', 'curriculum', 'structure'], ['types', 'assessments', 'types'] /* CBR (PD-CBR-01): assessment types moved to Assessments */, ['versions', null, 'versions'], ['library', 'observations', 'obs'] /* CBX (PD-CBX-03): the legacy list is linked from Observation settings */, ['obs', 'observations', 'obs'], ['letter', 'documents', 'letter'], ['support', 'payments', 'support'], ['fees', 'payments', 'fees']];
     seeded.forEach(([t, s, p]) => { open('NV-L3', t); ok(`CB1-G seeded #a-programmes.NV-L3.${t} → ${s || 'Version history'}${p ? ' / ' + p : ''}`, (s ? cur() === s : !q('.cb-nav') && /Version history/.test(main())) && (pan() === p || (!q('.cb-panels') && p === 'versions')), cur() + '/' + pan()); });
-    SYS(); const wiz = [['details', 'details'], ['structure', 'curriculum'], ['obs', 'observations'], ['letter', 'documents'], ['docs', 'documents'], ['plan', 'payments'], ['review', 'review']];
+    SYS(); const wiz = [['details', 'details'], ['structure', 'curriculum'], ['obs', 'observations'], ['letter', 'documents'], ['docs', 'admdocs'] /* CDA-A1: the checklist moved to Documents — was documents */, ['plan', 'payments'], ['review', 'review']];
     wiz.forEach(([t, s]) => { open('NV-N1', t); ok(`CB1-G new-programme step #a-programmes.NV-N1.${t} → ${s}`, cur() === s); });
     open('NV-N1', 'nonsense'); ok('CB1-G an unknown tab opens Course Details of a new programme (as before)', cur() === 'details');
     location.hash = '#a-programmes.NV-L5.letter'; await new Promise(r => setTimeout(r, 30)); ok('CB1-G typing an old address (hash change) opens the section', S.params.id === 'NV-L5' && cur() === 'documents' && pan() === 'letter');
@@ -237,9 +238,10 @@
   });
 
   await T('CB1-M no data copies: builder changes reach the existing consumers', async () => {
-    fresh(); SA(); open('NV-L3', 'docs'); const n0 = s4List('NV-L3').items.length;
+    // CDA-A3 (PD-CDA-A03): a published programme's list changes only through a new version, so this uses the Draft programme NV-N1 (was NV-L3)
+    fresh(); SA(); open('NV-N1', 'docs'); const n0 = s4List('NV-N1').items.length;
     q('[data-act="s4CkAdd"]').click(); document.querySelector('#ck-n').value = 'CB1 document'; reason('CB1');
-    ok('CB1-M a checklist item added in the builder is in the programme\'s versioned checklist (what sign-up copies)', s4List('NV-L3').items.length === n0 + 1 && s4List('NV-L3').items.some(i => i.name === 'CB1 document'));
+    ok('CB1-M a checklist item added in the builder is in the programme\'s versioned checklist (what sign-up copies)', s4List('NV-N1').items.length === n0 + 1 && s4List('NV-N1').items.some(i => i.name === 'CB1 document'));
     open('NV-L3', 'letter'); const v0 = chLetterCur('NV-L3').v; q('[data-act="chLetterUp"]').click(); ACT.chLetterSample(); reason('CB1 letter');
     ok('CB1-M an offer letter uploaded in the builder is the current letter version (what applicants sign)', chLetterCur('NV-L3').v === v0 + 1);
   });

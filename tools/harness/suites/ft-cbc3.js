@@ -116,7 +116,7 @@
     step('NV-L3D', 'curriculum'); ACT.cbr2Types && 0; step('NV-L3D', 'assessments'); click(q('[data-act="cbr2Types"]'));
     const tip = q('.cbr2-tbox details.cbc3-tip'), sm = tip && tip.querySelector('summary');
     ok('CBC3-F4 tooltips: a disclosure with an accessible name, reachable by keyboard (focusable summary) and opened by it', !!sm && !!sm.getAttribute('aria-label') && (sm.focus(), document.activeElement === sm) && (sm.click(), tip.open) && /Each Learning Outcome uses one type/.test(tip.textContent));
-    ok('CBC3-F5 the seven approved steps, in order, with their names', J(CB_SECTIONS.map(s => s[0])) === J(['details', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'review']) && J(CB_SECTIONS.map(s => s[1])) === J(['Course Details', 'Curriculum & Outcomes', 'Assessments', 'Observations', 'Fees & Payment Plans', 'Offer Letters', 'Review & Publish']));
+    ok('CBC3-F5 the approved steps, in order, with their names (CDA-A1: Documents is step 2 — was seven steps)', J(CB_SECTIONS.map(s => s[0])) === J(['details', 'admdocs', 'curriculum', 'assessments', 'observations', 'payments', 'documents', 'review']) && J(CB_SECTIONS.map(s => s[1])) === J(['Course Details', 'Documents', 'Curriculum & Outcomes', 'Assessments', 'Observations', 'Fees & Payment Plans', 'Offer Letters', 'Review & Publish']));
     ok('CBC3-G learners\' pinned terms and schedules, signed letters and published programmes (status, version, duration) unchanged', J(JSON.parse(hist()).w) === J(JSON.parse(h0).w) && JSON.parse(hist()).sig === JSON.parse(h0).sig && J(JSON.parse(hist()).pub.filter(x => JSON.parse(h0).pub.some(y => y[0] === x[0] && y[2] !== 'Draft'))) === J(JSON.parse(h0).pub.filter(y => y[2] !== 'Draft')));
   });
 

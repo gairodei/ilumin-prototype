@@ -352,7 +352,7 @@
   await T('CBR2-J review', async () => {
     SA(); const p2 = make({ obs: false }); step(p2.id, 'review');
     const secs = qa('.cbr2-rv .cb-rv-sec').map(x => x.dataset.sec);
-    ok('CBR2-J1 one compact list: the six steps (Observations left out when not required), each with Edit', J(secs) === J(['details', 'curriculum', 'assessments', 'payments', 'documents']) && qa('.cbr2-rv .cb-rv-sec .cb-rv-st [data-go]').every(b => b.textContent === 'Edit') && qa('.cbr2-rv .cb-rv-sec .cb-rv-st [data-go]').length === 5 && !q('.cb-rv-todo'), J(secs));
+    ok('CBR2-J1 one compact list: the configuration steps (CDA-A1: Documents added; Observations left out when not required), each with Edit', J(secs) === J(['details', 'admdocs', 'curriculum', 'assessments', 'payments', 'documents']) && qa('.cbr2-rv .cb-rv-sec .cb-rv-st [data-go]').every(b => b.textContent === 'Edit') && qa('.cbr2-rv .cb-rv-sec .cb-rv-st [data-go]').length === 6 && !q('.cb-rv-todo'), J(secs));
     const st = k => (q(`.cbr2-rv .cb-rv-sec[data-sec="${k}"] .cb-rv-st .chip`) || {}).textContent || '';
     ok('CBR2-J2 statuses are real: Curriculum and Offer Letters "to fix" with their blockers listed under them; no green tick on them', /to fix/.test(st('curriculum')) && /to fix/.test(st('documents')) && qa('.cbr2-rv .cb-rv-sec[data-sec="curriculum"] .cbr2-rvi li').length >= 1 && !/Complete/.test(st('curriculum') + st('documents')));
     ok('CBR2-J3 Publish is disabled while anything blocks', !!q('[data-act="cbPublish"][disabled]'));

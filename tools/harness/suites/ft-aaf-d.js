@@ -114,8 +114,11 @@
       const a0 = ADMIN.audit.length; ACT.s4CkEdit({ dataset: { p: 'NV-N1', i: '0' } });
       ok('AAFD-18 the restriction is unchanged: a direct Edit is refused and logged', !MODAL && ADMIN.audit.length > a0 && /Blocked/.test(ADMIN.audit[0].action || ''));
       pick('sys'); go('a-programmes', { id: 'NV-N1', tab: 'docs' }); ok('AAFD-18 System Admin: the same explanation', /only the Super Administrator can add, edit, retire or reorder/.test(main()));
+      // CDA-A3 (PD-CDA-A03): the published version is read-only for everyone; the Super Administrator changes it in a new version (was: in place)
       pick('super'); go('a-programmes', { id: 'NV-N1', tab: 'docs' });
-      ok('AAFD-18 Super Administrator: the controls are explained; Edit, Retire and reorder are present; arrows have tooltips', /To change an item use Edit/.test(main()) && !!$1('main [data-act="s4CkEdit"]') && !!$1('main [data-act="s4CkRetire"]') && !!$1('main [data-act="s4CkMove"][title]') && !$1('main .aafd-cklock'));
+      ok('AAFD-18 Super Administrator: the published version is read-only, with "Create new version"', !$1('main [data-act="s4CkEdit"]') && !!$1('main .cda-note [data-act="s3WizVersion"]'));
+      ACT.s3WizVersion({ dataset: { id: 'NV-N1' } }); { const r = $1('#rsn'); if (r) r.value = 'AAFD-18'; const a = MODAL && MODAL.actions.find(x => /primary/.test(x.cls || '')); if (a && a.fn) a.fn(); closeModal(); } go('a-programmes', { id: 'NV-N1', tab: 'docs' });
+      ok('AAFD-18 Super Administrator, in the new version: the controls are explained; Edit, Retire and reorder are present; arrows have tooltips', /To change an item use Edit/.test(main()) && !!$1('main [data-act="s4CkEdit"]') && !!$1('main [data-act="s4CkRetire"]') && !!$1('main [data-act="s4CkMove"][title]') && !$1('main .aafd-cklock'));
     });
     SS.setItem('ft-aaf-d.keep', J(keep)); next(1); return;
   }

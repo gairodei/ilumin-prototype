@@ -74,8 +74,8 @@
   await T('CB12-E the seven steps in order', async () => { // CBR (PD-CBR-01) supersedes CBX's eight sections
     fresh(); SA(); open('NV-N1', 'details'); q('#cbr2-obs-yes').click(); // CBC1 (CBR-01): Next needs an explicit Yes / No — NV-N1's was never recorded
     const seen = [q('.cb').dataset.sec];
-    for (let i = 0; i < 6; i++) { const nx = q('.cb-foot .btn-primary'); if (!nx) break; nx.click(); seen.push(q('.cb').dataset.sec); } // CBR: seven steps (NV-N1's observations aren't answered No, so step 4 is shown)
-    ok('CB12-E "Next" walks Course Details → Curriculum & Outcomes → Assessments → Observations → Fees & Payment Plans → Offer Letters → Review & Publish', seen.join(',') === 'details,curriculum,assessments,observations,payments,documents,review', seen.join(','));
+    for (let i = 0; i < 7; i++) { const nx = q('.cb-foot .btn-primary'); if (!nx) break; nx.click(); seen.push(q('.cb').dataset.sec); } // CDA-A1: eight steps (was CBR's seven) (NV-N1's observations aren't answered No, so step 4 is shown)
+    ok('CB12-E "Next" walks Course Details → Documents → Curriculum & Outcomes → Assessments → Observations → Fees & Payment Plans → Offer Letters → Review & Publish', seen.join(',') === 'details,admdocs,curriculum,assessments,observations,payments,documents,review', seen.join(','));
     ok('CB12-E Review & Publish is the last step (no Next) and has Back to Offer Letters', !q('.cb-foot .btn-primary') && /Back: Offer Letters/.test(q('.cb-foot').textContent));
   });
 

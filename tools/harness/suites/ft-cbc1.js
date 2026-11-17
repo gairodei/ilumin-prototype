@@ -56,7 +56,7 @@
     ok('CBC1-F2 an unrelated Save draft keeps No', cbObsOf(pr) === false && (pr.qual || {}).glh === 334 && q('#cbr2-obs-no').checked);
     click(q('#cbr2-obs-yes')); ok('CBC1-F3 choosing Yes records Yes and shows the step', cbObsOf(pr) === true && steps(pr).includes('observations'));
     step('NV-N1', 'details'); type('#np-q-glh', '335'); saveDraft(); ok('CBC1-F4 an unrelated Save draft keeps Yes', cbObsOf(pr) === true && q('#cbr2-obs-yes').checked);
-    next(); ok('CBC1-F5 with an answer, Next goes on to Curriculum & Outcomes', S.params.tab === 'curriculum');
+    next(); ok('CBC1-F5 with an answer, Next goes on to Documents (CDA-A1: step 2 — was Curriculum & Outcomes)', S.params.tab === 'admdocs');
     ACT.cbrObsLoc({ dataset: { p: 'NV-N1', loc: 'wp', v: 'on' } }); step('NV-N1', 'details'); click(q('#cbr2-obs-no'));
     ok('CBC1-F6 Yes → No with configuration recorded asks first, listing what is kept', !!MODAL && /Turn observations off/.test(MODAL.title) && /Workplace|location|criteria/i.test(MODAL.body) && cbObsOf(pr) === true);
     click(mbtn(/Keep observations/)); ok('CBC1-F7 "Keep observations" leaves Yes', cbObsOf(pr) === true && !MODAL);

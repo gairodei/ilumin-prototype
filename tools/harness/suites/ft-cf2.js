@@ -49,8 +49,11 @@
     ok('CF2-A2-2 optional stays optional for the agency applicant (Enhanced DBS), mandatory stays mandatory; the checklist version is recorded', !ap.docs.find(d => /Enhanced DBS/.test(d.name)).mand && want.filter(i => i.mand).every(i => ap.docs.find(d => d.name === i.name).mand) && ap.cf2Ck.v === v0);
     const wa = STORE.worlds.CD1, before = J(wa.docs.map(d => [d.name, d.mand]));
     ok('CF2-A2-3 a direct sign-up uses the same checklist (pinned version, same mandatory flags)', wa.signup.checklistV === v0 && wa.docs.every(d => { const x = L0.items.find(i => i.name === d.name); return x && x.mand === d.mand && x.formats === d.formats; }), J(wa.docs.map(d => [d.name, d.mand])));
-    go('a-programmes', { id: pid, tab: 'documents' }); const k = L0.items.findIndex(i => i.status === 'Active' && i.mand && i.applies !== 'UAE');
+    // CDA-A3 (PD-CDA-A03): the published list changes in a new version and applies when it is published (was: edited in place)
+    ACT.s3WizVersion({ dataset: { id: pid } }); reason('CF2: new version'); go('a-programmes', { id: pid, tab: 'details' }); { const y = $1('main #cbr2-obs-yes'); y.checked = true; INP.cbr2Obs(y); if (MODAL) { const a = MODAL.actions.find(x => /danger|primary/.test(x.cls || '')); if (a && a.fn) a.fn(); closeModal(); } }
+    go('a-programmes', { id: pid, tab: 'admdocs' }); const k = L0.items.findIndex(i => i.status === 'Active' && i.mand && i.applies !== 'UAE');
     const name = L0.items[k].name; ACT.s4CkEdit({ dataset: { p: pid, i: String(k) } }); $1('#ck-m').value = '0'; reason('CF2: make it optional');
+    ACT.cbPublish({ dataset: { id: pid } }); reason('CF2: publish the version'); render();
     const ap2 = ag1NvqApp(seat('AS-CF2-2'), L, null, true);
     ok('CF2-A2-4 after a checklist change (new version), a new agency application gets the change; earlier applications and sign-ups keep theirs', s4List(pid).v === v0 + 1 && ap2.cf2Ck.v === v0 + 1 && !ap2.docs.find(d => d.name === name).mand && ap.docs.find(d => d.name === name).mand && J(wa.docs.map(d => [d.name, d.mand])) === before, J({ v: s4List(pid).v, name }));
     ok('CF2-A2-5 a new direct sign-up would get the change too (same source)', s4DocsFor(pid, 'United Kingdom').find(d => d.name === name).mand === false);
