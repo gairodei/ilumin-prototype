@@ -37,8 +37,12 @@ const D_OPEN = ['Awaiting consent', 'Pending approval'];
 const dOpenReq = (w, e) => { const r = dReq(w, e); return r && D_OPEN.includes(r.status) ? r : null; };
 // The state of one event for one learner
 function dState(w, ctx, e) {
-  const recs = dRecs(w, ctx, e), done = recs.find(o => o.status === 'Completed'); if (done) return { k: 'done', t: 'Completed', tone: 'green', rec: done };
-  const act = recs.find(o => ['Proposed', 'Confirmed'].includes(o.status)); if (act) return { k: 'active', t: act.status === 'Proposed' ? 'Date proposed' : 'Confirmed', tone: 'blue', rec: act };
+  // OC1 (PD-OC1-06): an open visit (first visit or follow-up) is the event's state; once a visit is signed off the event is Completed,
+  // and says so when criteria are still outstanding (a follow-up visit may then be proposed). Before OC1 a Completed record ended it.
+  const recs = dRecs(w, ctx, e), act = recs.find(o => ['Proposed', 'Confirmed'].includes(o.status));
+  if (act) return { k: 'active', t: act.dFu ? (act.status === 'Proposed' ? 'Follow-up — date proposed' : 'Follow-up confirmed') : act.status === 'Proposed' ? 'Date proposed' : 'Confirmed', tone: 'blue', rec: act };
+  const dones = recs.filter(o => o.status === 'Completed');
+  if (dones.length) { const fu = typeof oc1Outstanding === 'function' ? oc1Outstanding(w, ctx, e) : []; return { k: 'done', t: fu.length ? 'Completed — follow-up needed' : 'Completed', tone: fu.length ? 'amber' : 'green', rec: dones.slice().sort((x, y) => new Date(y.signed || y.at || 0) - new Date(x.signed || x.at || 0))[0], fu }; }
   const s = dSel(w, e.id), open = dOpenReq(w, e);
   // a learner's own request for the Academy office (CH-37) is shown whatever is selected, until it is decided
   if (open && open.source === 'learner') return { k: 'wait', t: open.status === 'Pending approval' ? 'Learner asked for the Academy office — waiting for the Coordinator' : 'Waiting for the learner', tone: 'amber', req: open };
@@ -164,9 +168,10 @@ function dFillEv() {
   const show = (x, on) => { if (x) { x.hidden = !on; x.style.display = on ? '' : 'none'; } };
   if (!ctx) { box.innerHTML = ''; show(crit, true); return; }
   show(crit, false); show(ia, false);
-  const opts = ctx.evs.map(e => ({ e, st: dState(w, ctx, e) })), ready = opts.filter(x => x.st.k === 'ready');
-  box.innerHTML = `<div class="field d-evf"><label for="d-ev-s">Observation (from the learner's Version ${ctx.v})</label><select class="select" id="d-ev-s" data-onchange="dEvPick">${opts.map(x => `<option value="${x.e.id}" ${x.st.k === 'ready' ? '' : 'disabled'}>${esc(x.e.name)} — ${esc(x.st.t)}</option>`).join('')}</select><span class="hint">Only observations whose location the Coordinator has chosen, and that are approved or permitted there, can be proposed.</span></div><div id="d-ev-info" class="small"></div>`;
-  const sel = document.getElementById('d-ev-s'); if (ready.length) sel.value = ready[0].e.id;
+  const opts = ctx.evs.map(e => ({ e, st: dState(w, ctx, e) })), fus = opts.filter(x => typeof oc1FuReady === 'function' && oc1FuReady(w, ctx, x.e, x.st)), ready = opts.filter(x => x.st.k === 'ready').concat(fus);
+  // OC1 (PD-OC1-07): a Completed observation with outstanding criteria offers a follow-up visit (its own option, value FU:<event>)
+  box.innerHTML = `<div class="field d-evf"><label for="d-ev-s">Observation (from the learner's Version ${ctx.v})</label><select class="select" id="d-ev-s" data-onchange="dEvPick">${opts.map(x => `<option value="${x.e.id}" ${x.st.k === 'ready' ? '' : 'disabled'}>${esc(x.e.name)} — ${esc(x.st.t)}</option>`).join('')}${fus.map(x => `<option value="FU:${x.e.id}">Follow-up — ${esc(x.e.name)} (${plural(x.st.fu.length, 'outstanding criterion', 'outstanding criteria')})</option>`).join('')}</select><span class="hint">Only observations whose location the Coordinator has chosen, and that are approved or permitted there, can be proposed. A follow-up targets the criteria still outstanding.</span></div><div id="d-ev-info" class="small"></div>`;
+  const sel = document.getElementById('d-ev-s'); if (ready.length) sel.value = (fus.includes(ready[0]) ? 'FU:' : '') + ready[0].e.id;
   if (send) send.disabled = !ready.length;
   if (!ready.length) { document.getElementById('d-ev-info').innerHTML = `<div class="note b-amber">${ic('info')}<div class="small">Nothing can be proposed for this learner yet: each observation needs its location chosen by the Coordinator${opts.some(x => x.st.req) ? ', and an Academy-office observation the learner\'s agreement and approval' : ''}${opts.some(x => x.st.k === 'wait' && /permission/.test(x.st.t)) ? ', and a workplace observation the workplace\'s permission' : ''}.</div></div>`; return; }
   INP.dEvPick(sel);
@@ -192,18 +197,24 @@ ACT.obPropose = el => {
   const a = MODAL.actions.find(x => x.label === 'Send proposal'); if (!a || a._d) return r; const f = a.fn; a._d = true;
   a.fn = (...x) => {
     const lid = mval('#op-l'), w = dW(lid), ctx = dCtx(w); if (!ctx) return f(...x); // the existing flow (no recorded events)
-    const e = ctx.evs.find(y => y.id === mval('#d-ev-s')), st = e && dState(w, ctx, e), s = e && dSel(w, e.id);
-    if (!e || !st || st.k !== 'ready') { tasLog('Observations', chFullName(w), 'Blocked: propose observation', '—', '—', e ? `${e.name}: ${st.t}` : 'No observation chosen'); toast(e ? `${e.name}: ${st.t}.` : 'Choose the observation.', 'err'); return false; }
+    const raw = mval('#d-ev-s'), fuId = /^FU:/.test(raw) ? raw.slice(3) : null, e = ctx.evs.find(y => y.id === (fuId || raw)), st = e && dState(w, ctx, e), s = e && dSel(w, e.id);
+    const okSt = !!st && (fuId ? typeof oc1FuReady === 'function' && oc1FuReady(w, ctx, e, st) : st.k === 'ready');
+    if (!e || !okSt) { tasLog('Observations', chFullName(w), 'Blocked: propose observation', '—', '—', e ? `${e.name}: ${fuId ? 'no follow-up is open' : st.t}` : 'No observation chosen'); toast(e ? `${e.name}: ${fuId ? 'a follow-up can\'t be proposed now' : st.t}.` : 'Choose the observation.', 'err'); return false; }
+    // OC1 (PD-OC1-04/05): the visit's own scope — chosen in the dialog, checked against the learner's version and the location
+    const sc = typeof oc1ScopeRead === 'function' ? oc1ScopeRead(w, ctx, e, s.loc, !!fuId) : null;
+    if (sc && sc.why) { tasLog('Observations', chFullName(w), 'Blocked: propose observation', '—', '—', `${e.name}: ${sc.why}`); toast(sc.why, 'err'); return false; }
     const office = s.loc === 'office', chosen = ($('input[name="op-lt"]:checked') || {}).value === 'office';
     if (office !== chosen) { tasLog('Observations', chFullName(w), 'Blocked: propose observation', '—', '—', 'Location differs from the Coordinator\'s choice'); toast(`${e.name} takes place at the ${dTxtLoc(s.loc).toLowerCase()} (the Coordinator's choice).`, 'err'); return false; }
     if (!office && dPerm(w) !== 'Granted') { toast('Workplace permission not granted.', 'err'); return false; }
     const c = dEvCrit(ctx, e), first = document.querySelector('#modal-root .op-c'); if (first && !document.querySelector('#modal-root .op-c:checked')) first.checked = true;
-    const n0 = w.observations.length, keep = STORE.chOffReq, rq = st.req;
+    const n0 = w.observations.length, keep = STORE.chOffReq, rq = st.req || dReq(w, e);
     if (office) { if (rq.status === 'Booked') rq.status = 'Approved'; STORE.chOffReq = [rq]; } // the CH-37 gate and booking act on this event's own request
     let out; try { out = f(...x); } finally { if (office) STORE.chOffReq = keep; }
     if (out === false || w.observations.length <= n0) return out;
-    const rec = w.observations[0]; Object.assign(rec, { dEv: e.id, dEvName: e.name, dV: ctx.v, dPid: ctx.pr.id, dLoc: s.loc, locType: office ? 'office' : 'work', loc: office ? 'Academy office' : (w.workplace || {}).name, scope: c.nvq.join(', '), dIa: office ? [] : c.ia.slice(), dEvTypes: (e.ev || []).slice() });
-    tasLog('Observations', chFullName(w), 'Observation event proposed', '—', `${e.name} · ${dTxtLoc(s.loc)} · ${fdt(rec.at)}`, `${ctx.pr.title} Version ${ctx.v}`);
+    const rec = w.observations[0]; Object.assign(rec, { dEv: e.id, dEvName: e.name, dV: ctx.v, dPid: ctx.pr.id, dLoc: s.loc, locType: office ? 'office' : 'work', loc: office ? 'Academy office' : (w.workplace || {}).name, scope: (sc ? sc.nvq : c.nvq).join(', '), dIa: office ? [] : (sc ? sc.ia : c.ia).slice(), dEvTypes: (e.ev || []).slice() });
+    if (sc) { const lib = !office && Array.isArray(sc.lib) ? sc.lib.slice() : null, libC = lib && typeof ol1SnapOf === 'function' ? ((ol1SnapOf(ctx.pr.id, ctx.v) || {}).wp || []).filter(i => lib.includes(i.id)).map(i => i.code) : [];
+      Object.assign(rec, { oc1: 1, dScope: { nvq: sc.nvq.slice(), ia: office ? [] : sc.ia.slice(), cats: office ? [] : sc.cats.slice(), ...(lib ? { lib } : {}) }, dFu: fuId ? { of: st.rec ? st.rec.id : null, crit: sc.nvq.concat(office ? [] : sc.ia, libC) } : null }); }
+    tasLog('Observations', chFullName(w), fuId ? 'Follow-up observation proposed' : 'Observation event proposed', '—', `${e.name} · ${dTxtLoc(s.loc)} · ${fdt(rec.at)}${sc ? ' · scope ' + (sc.nvq.concat(office ? [] : sc.ia).join(', ') || '—') + (sc.cats.length && !office ? ' + Academy ' + sc.cats.map(oc1CatCode).join(', ') : '') : ''}`, `${ctx.pr.title} Version ${ctx.v}${fuId && st.rec ? ' · follow-up to the visit of ' + fd(st.rec.at) : ''}`);
     return out;
   };
   return r;
@@ -222,7 +233,9 @@ function dChecklist(o) {
   const e = ctx.evs.find(x => x.id === o.src.dEv); if (!e) return null;
   const type = o.src.dLoc === 'office' ? 'office' : 'workplace', cl = n5Checklist(ctx.pr, ctx.cfg, type); if (!cl.ok) return { e, ctx, why: cl.why, items: [] };
   const tree = (w.tree || []).flatMap(u => u.mods.flatMap(m => m.los.flatMap(l => l.crit))), reqOf = code => { const c = tree.find(x => x.code === code); return c ? c.evReq || c.ev || '' : ''; };
-  return { e, ctx, type, items: cl.items.filter(i => e.crit.includes(i.code)).map(i => ({ set: i.kind === 'NVQ' ? 'nvq' : 'ia', code: i.code, d: i.d, kind: i.kind, req: i.kind === 'NVQ' ? (reqOf(i.code) || i.req) : '', types: ((i.ev && i.ev.types) || []).filter(t => (e.ev || []).includes(t)) })) };
+  // OC1 (PD-OC1-05): a visit proposed with its own scope records exactly that scope; earlier records keep the event's criteria
+  const sc = o.src.dScope, inScope = i => (sc ? (i.kind === 'NVQ' ? sc.nvq : sc.ia || []).includes(i.code) : e.crit.includes(i.code));
+  return { e, ctx, type, items: cl.items.filter(inScope).map(i => ({ set: i.kind === 'NVQ' ? 'nvq' : 'ia', code: i.code, d: i.d, kind: i.kind, req: i.kind === 'NVQ' ? (reqOf(i.code) || i.req) : '', types: ((i.ev && i.ev.types) || []).filter(t => (e.ev || []).includes(t)) })) };
 }
 function dRecScreen(o) {
   const cl = dChecklist(o); if (!cl) return null;
@@ -233,7 +246,8 @@ function dRecScreen(o) {
   <div class="note b-amber">${ic('shield')}<div class="small"><strong>Do not record service-user names or identifying information.</strong> Evidence must respect workplace privacy rules.</div></div>
   <div class="field"><label for="or-ctx">Context (setting, task, service users present — no identifying details)</label><textarea class="textarea" id="or-ctx" data-oninput="orF" data-f="ctx">${esc(dr.ctx)}</textarea></div>
   ${cl.why ? `<div class="note b-red">${ic('alert')}<div class="small">${esc(cl.why)}</div></div>` : ''}
-  <h2>NVQ criteria</h2>${cl.items.filter(i => i.set === 'nvq').map(i => dCritRow('nvq', i.code, i.d, 'Observation / Competency', i.req, i.types, dr.nvq[i.code] || {})).join('') || '<p class="small muted">None in this observation.</p>'}
+  ${o.src.dFu ? `<div class="note b-blue oc1-funote">${ic('info')}<div class="small"><strong>Follow-up visit.</strong> It records only the criteria still outstanding${o.src.dFu.of ? ' after an earlier signed visit' : ''}. The earlier signed record is unchanged.</div></div>` : ''}
+  <h2>NVQ criteria</h2>${typeof oc1RecNvq === 'function' ? oc1RecNvq(o, cl, dr) : cl.items.filter(i => i.set === 'nvq').map(i => dCritRow('nvq', i.code, i.d, 'Observation / Competency', i.req, i.types, dr.nvq[i.code] || {})).join('') || '<p class="small muted">None in this observation.</p>'}
   ${cl.type === 'office' ? '<p class="small muted">Academy office observation: NVQ criteria only.</p>' : cl.items.some(i => i.set === 'ia') ? `<h2>Illumin Academy criteria</h2><p class="xs muted">This programme version's Academy standard — internal quality, not qualification competency.</p>${cl.items.filter(i => i.set === 'ia').map(i => dCritRow('ia', i.code, i.d, 'Academy standard', '', i.types, dr.ia[i.code] || {})).join('')}` : ''}
   <fieldset class="field n5-fs"><legend class="lbl">Evidence recorded (permitted for this observation)</legend><div class="n5-evs">${(cl.e.ev || []).map(k => `<label class="check"><input type="checkbox" class="d-evt" value="${k}" ${evt.includes(k) ? 'checked' : ''} data-onchange="dEvt"><span>${esc((N5_EV.find(x => x[0] === k) || [k, k])[1])}</span></label>`).join('')}</div></fieldset>
   <div class="field"><label for="or-n">Observation notes and directly observed performance</label><textarea class="textarea" id="or-n" data-oninput="orF" data-f="notes">${esc(dr.notes)}</textarea></div>
@@ -268,8 +282,14 @@ ACT.orSign = el => {
       const me = TME().name, at = now().toISOString(), w = STORE.worlds[o.v], row = i => [i.code, i.d, d[i.set][i.code].o, d[i.set][i.code].c, d[i.set][i.code].m || ''];
       const report = { nvq: cl.items.filter(i => i.set === 'nvq').map(row), ia: cl.items.filter(i => i.set === 'ia').map(row), notes: d.notes || 'Signed off.', ctx: d.ctx || '', followUp: null, evidence: (d.att || []).map(f => f.name),
         dEv: { id: cl.e.id, name: cl.e.name, v: cl.ctx.v, pid: cl.ctx.pr.id, prog: cl.ctx.pr.title, loc: o.src.dLoc, types: evt, crit: cl.items.map(i => i.code) } };
+      if (o.src.dScope) Object.assign(report, { dScope: n5Clone(o.src.dScope), dFu: o.src.dFu ? n5Clone(o.src.dFu) : null, kept: [] });
       Object.assign(o.src, { status: 'Completed', report, signed: at, signedBy: me, postEntered: d.postEntered || null, ack: !!($('#ack-c') || {}).checked });
-      (w.tree || []).forEach(u => u.mods.forEach(m => m.los.forEach(lo => lo.crit.forEach(c => { const x = d.nvq[c.code]; if (!x || !cl.items.some(i => i.set === 'nvq' && i.code === c.code)) return; c.obs = { o: x.o, c: x.c }; if (x.o && x.c) { c.st = 'Achieved'; c.date = at; c.lock = { by: me, at }; c.src = `Observation · ${cl.e.name} · ${fd(o.at)}`; } else if (x.o && !x.c) c.st = 'Action Required'; else c.st = 'In Progress'; }))));
+      // OC1 (PD-OC1-09): each visit's result is added to the criterion's history; a criterion already Achieved and locked by an earlier
+      // signed-off assessment is never downgraded by a later visit (its current status stays; the later result is kept in the history)
+      (w.tree || []).forEach(u => u.mods.forEach(m => m.los.forEach(lo => lo.crit.forEach(c => { const x = d.nvq[c.code]; if (!x || !cl.items.some(i => i.set === 'nvq' && i.code === c.code)) return;
+        c.obsH = (c.obsH || []).concat([{ rec: o.src.id, ev: cl.e.id, name: cl.e.name, at: o.at, signed: at, by: me, o: x.o, c: x.c, fu: !!o.src.dFu, loc: o.src.dLoc }]);
+        if (c.st === 'Achieved' && c.lock) { if (report.kept) report.kept.push(c.code); return; }
+        c.obs = { o: x.o, c: x.c }; if (x.o && x.c) { c.st = 'Achieved'; c.date = at; c.lock = { by: me, at }; c.src = `Observation · ${cl.e.name} · ${fd(o.at)}${o.src.dFu ? ' (follow-up)' : ''}`; } else if (x.o && !x.c) c.st = 'Action Required'; else c.st = 'In Progress'; }))));
       (w.events || []).filter(e => e.type === 'obs' && keyOf(e.start) === keyOf(o.at)).forEach(e => { e.title = `Observation (completed) — ${cl.e.name}`; });
       notifyLearner(o.v, 'Schedule', 'Observation report available', `${me} signed off ${cl.e.name} (${fd(o.at)}).`, 'observations');
       delete STORE.tas.obsDraft[o.id]; tasLog('Observations', o.learner, 'Observation signed off', 'Confirmed', 'Completed (locked)', `${cl.e.name} · ${dTxtLoc(o.src.dLoc)} · Version ${cl.ctx.v}${d.postEntered ? ' · Post-entered' : ''}`);

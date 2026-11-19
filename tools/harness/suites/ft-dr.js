@@ -178,7 +178,7 @@
   await T('DR-K Demo controls: Switch demo user, Reset demo, developer mode', async () => {
     S.demoOpen = true; renderDemo(); const p = $1('#demo-root .demo-panel'), ctl = $a('#demo-root .demo-panel button, #demo-root .demo-panel input, #demo-root .demo-panel select').filter(b => !/demoToggle/.test(b.dataset.act || ''));
     // CF2 (PD-CF2-E): Demo controls also offer "Load Client Feedback 2.0 examples" (on request). Was: three controls only.
-    ok('DR-K the panel holds five controls: Switch demo user, Reset demo, Load Client Feedback 2.0 examples, Load assessment record examples (CDA PD-CDA-B07), Developer mode', !!p && J(ctl.map(b => b.dataset.act)) === J(['drSwitch', 'drReset', 'cf2Examples', 'cdaExamples', 'drDevOn']) && !p.querySelector('fieldset'), J(ctl.map(b => b.dataset.act)));
+    ok('DR-K the panel holds six controls: Switch demo user, Reset demo, Load Client Feedback 2.0 examples, Load assessment record examples (CDA PD-CDA-B07), Load observation planning examples (OC1 PD-OC1-14), Developer mode', !!p && J(ctl.map(b => b.dataset.act)) === J(['drSwitch', 'drReset', 'cf2Examples', 'cdaExamples', 'oc1Examples', 'drDevOn']) /* OC1 (PD-OC1-14): one more Demo control; was five: [..., 'cdaExamples', 'drDevOn'] */ && !p.querySelector('fieldset'), J(ctl.map(b => b.dataset.act)));
     ok('DR-K no scenario, variant, legacy or 101-learner controls in the client panel', !/Scenario|variant|legacy|101-learner|Aisha|Edge state/i.test(p.textContent));
     ok('DR-K it says who is signed in, and what Reset discards', /Viewing as Rachel Hughes — Academic Administrator/.test(p.textContent) && /Discards every change made in this browser tab/.test(p.textContent));
     click($1('#demo-root [data-act="drSwitch"]'));
