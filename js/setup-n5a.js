@@ -146,8 +146,7 @@ function n5Check(pr) {
     if (ia.length) warn.push(`Observations: ${plural(ia.length, 'Academy criterion is', 'Academy criteria are')} kept in this version for history but not used while observation isn't required`);
   }
   if (d.required === true) {
-    // OC1 (PD-OC1-01): the same condition (observation required = Yes, and no active Observation-type criteria); the message now names both corrections
-    if (!ok.length) { const off = all.length ? ` (${plural(all.length, 'Observation-type criterion is', 'Observation-type criteria are')} suspended or retired)` : ''; block.push(`Observations: observation is required for Version ${d.v}, but this version has no qualification observation criteria — no active Learning Outcome of the Observation type${off}. Either set the assessment type of the Learning Outcome(s) that learners must be observed on to Observation (Curriculum & Outcomes), or, if this course has no practical observations, set "Observation required" to No (Course Details). Knowledge outcomes are never converted automatically`); }
+    if (!ok.length) block.push('Observations: observation is required, but this version has no qualification observation criteria — give a Learning Outcome the Observation type (Curriculum & Outcomes)');
     if (!d.workplace) block.push('Observations: choose whether workplace observation is permitted');
     if (!d.office) block.push('Observations: choose whether an Academy-office observation is available as the approved alternative');
     if (d.workplace === 'Not permitted' && d.office === 'Not available') block.push('Observations: no way to observe — workplace observation isn\'t permitted and Academy-office observation isn\'t available');

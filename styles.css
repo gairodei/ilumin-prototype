@@ -2101,24 +2101,3 @@ details.cbc3-tip > summary { margin-top: 0; }
 @media (max-width: 600px) { .cda-pv .grid-2 { grid-template-columns: minmax(0, 1fr); } }
 /* CDA-A1: eight builder steps — on a narrow container the numbered steps wrap into two rows of four (each stays at least 40px wide) */
 @container cb (max-width: 480px) { .cbr .cbr-steps ol { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-
-/* OC1 (18 Nov 2026): observation coverage, plans and visits grouped Unit → Module → Learning Outcome; Academy categories nested */
-.oc1-u { margin: 6px 0; min-width: 0; }
-.oc1-uh { font-weight: 700; font-size: .86rem; }
-.oc1-m { margin: 2px 0 4px 10px; padding-left: 8px; border-left: 2px solid var(--line); min-width: 0; }
-.oc1-mh { font-weight: 600; font-size: .82rem; color: var(--muted); }
-.oc1-lo { margin: 2px 0 4px 6px; min-width: 0; }
-.oc1-loh { font-size: .8rem; }
-.oc1-cl { list-style: none; margin: 2px 0; padding: 0; min-width: 0; }
-.oc1-cl > li { margin: 2px 0; overflow-wrap: anywhere; }
-.oc1-cov { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: center; }
-.oc1-covp { display: flex; gap: 4px; flex-wrap: wrap; }
-.oc1-cat { margin: 4px 0; min-width: 0; }
-.oc1-catl { margin: 2px 0 4px 22px; padding: 0; list-style: disc; }
-.oc1-ro-sc, .oc1-vsc, .oc1-vis { display: block; overflow-wrap: anywhere; }
-.oc1-roprev summary { cursor: pointer; }
-.oc1-roprev-b { padding: 4px 0 6px; }
-.oc1-scope { max-height: 46vh; overflow: auto; }
-.oc1-res .oc1-gr th { background: var(--surface-2); font-size: .78rem; text-align: left; font-weight: 600; }
-.oc1-ach h3 { margin: 0; }
-.oc1-offnote, .oc1-out { margin: 6px 0; }

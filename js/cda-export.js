@@ -184,15 +184,12 @@ function cdaModDoc(w, u, m) {
   st.crit.forEach(({ c, l }) => B.push({ t: 'p', runs: [R_(c.code, { b: true }), R_(` — ${c.d} · ${l.type || ''} · ${c.st}${c.date ? ' ' + fd(c.date) : ''}${c.src ? ' · evidence: ' + c.src : ''}${c.lock ? ` · verified by ${c.lock.by}, ${cdaDt(c.lock.at)}` : ''}`)] }));
   B.push(...CDA_KEY_BLOCKS());
   st.asg.forEach(a => { B.push({ t: 'break' }); if (cdaHasRecord(a)) B.push(...cdaAsgBlocks(w, a)); else B.push({ t: 'h1', text: a.title }, { t: 'p', runs: [R_(`${a.status} — no answer was submitted for this assignment; its criteria were achieved through other evidence.`, { i: true })] }); });
-  // OC1 (PD-OC1-12): an observation belongs to this module when its signed report records one of the module's criteria (exact codes,
-  // not a text match), and each visit is named (observation, record ID, follow-up) with its outcome for each of the module's criteria
-  const codes = new Set(st.crit.map(x => x.c.code)), rCodes = r => (r.nvq || []).map(x => x[0]).concat((r.dEv && r.dEv.crit) || []), obs = (w.observations || []).filter(o => o.status === 'Completed' && rCodes(o.report || {}).some(cd => codes.has(cd)));
+  const codes = new Set(st.crit.map(x => x.c.code)), obs = (w.observations || []).filter(o => o.status === 'Completed' && [...codes].some(cd => JSON.stringify(o.report || {}).includes(cd)));
   B.push({ t: 'break' }, { t: 'h1', text: 'Observations' });
   if (!obs.length) B.push({ t: 'p', runs: [R_('No completed observation is recorded against this module\'s criteria.', { i: true })] });
   obs.forEach(o => {
     const r = o.report || {}, cf = r.cf2 || {};
-    B.push({ t: 'h3', text: `${r.dEv ? r.dEv.name + (r.dFu ? ' — follow-up visit' : '') + ' · ' : ''}${o.loc || 'Observation'} — ${cdaDt(o.at)}` }, { t: 'kv', rows: [['Observation record', o.id || '—'], ['Assessor', o.assessor || '—'], ['Status', o.status], ['Signed off', o.signed ? `${o.signedBy || o.assessor || ''} ${cdaDt(o.signed)}`.trim() : 'No']].concat(r.dEv ? [['Programme version', `Version ${r.dEv.v}`], ['Location', r.dEv.loc === 'office' ? 'Academy office' : 'Workplace']] : []) });
-    (r.nvq || []).filter(x => codes.has(x[0])).forEach(x => B.push({ t: 'p', runs: [R_(x[0], { b: true }), R_(` — ${x[2] ? 'Observed' : 'Not Yet Observed'} · ${x[3] ? 'Competent' : 'Not Yet Competent'}${x[4] ? ' — ' + x[4] : ''}`, { color: x[2] && x[3] ? CDA_RAG.G : CDA_RAG.R })] }));
+    B.push({ t: 'h3', text: `${o.loc || 'Observation'} — ${cdaDt(o.at)}` }, { t: 'kv', rows: [['Assessor', o.assessor || '—'], ['Status', o.status], ['Signed off', o.signed ? `${o.signedBy || o.assessor || ''} ${o.signedAt ? cdaDt(o.signedAt) : ''}`.trim() || 'Yes' : 'No']] });
     Object.entries((cf.perf || {}).nvq || {}).filter(([cd]) => codes.has(cd)).forEach(([cd, t]) => B.push({ t: 'p', runs: [R_(cd + ': ', { b: true }), R_(t)] }));
     Object.entries(cf.ev || {}).filter(([k]) => codes.has(k.split('|')[1])).forEach(([k, list]) => (list || []).forEach(f => B.push({ t: 'p', indent: 14, runs: [R_(`Evidence for ${k.split('|')[1]}: ${f.name}${f.by ? ' — added by ' + f.by : ''} (file kept in the learner's record, not included here)`, { i: true })] })));
     (r.ol1 || []).forEach(x => B.push({ t: 'p', indent: 14, runs: [R_(`${x.code || x.id || ''} ${x.out || ''}`.trim(), { color: x.out === 'Met' ? CDA_RAG.G : x.out ? CDA_RAG.R : undefined })] }));
