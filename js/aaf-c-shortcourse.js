@@ -263,7 +263,7 @@ chModulesTab = function (c) {
 // The g3 Low: Add module showed the bank's 10 questions until the next render — new modules now start with qs = [] (above)
 
 /* ---------- AA-11: SCORM package check (data only — nothing in the package runs) ---------- */
-const AAFC_ZIP_MAX = 300 * 1024 * 1024, AAFC_MAN_MAX = 2 * 1024 * 1024;
+const AAFC_ZIP_MAX = 300 * 1024 * 1024, AAFC_MAN_MAX = 2 * 1024 * 1024, AAFC_DIR_MAX = 16 * 1024 * 1024; // SCH: the zip directory read is bounded too
 const AAFC = { pending: null };
 async function aafcZipManifest(file) {
   const bad = why => ({ ok: false, why });
@@ -275,7 +275,7 @@ async function aafcZipManifest(file) {
   if (e < 0) return bad('This file isn\'t a valid .zip package (no zip directory found).');
   const n = tail.getUint16(e + 10, true), size = tail.getUint32(e + 12, true), off = tail.getUint32(e + 16, true);
   if (n === 0xffff || off === 0xffffffff || size === 0xffffffff) return bad('ZIP64 packages aren\'t supported in this prototype.');
-  if (!n) return bad('The .zip file is empty.'); if (off + size > file.size) return bad('This .zip file is damaged (its directory points outside the file).');
+  if (!n) return bad('The .zip file is empty.'); if (size > AAFC_DIR_MAX) return bad('The package\'s file list is too large to check (over 16 MB).'); if (off + size > file.size) return bad('This .zip file is damaged (its directory points outside the file).');
   const cd = new DataView(await file.slice(off, off + size).arrayBuffer()), dec = new TextDecoder('utf-8'); let p = 0, man = null;
   for (let k = 0; k < n; k++) {
     if (p + 46 > cd.byteLength || cd.getUint32(p, true) !== 0x02014b50) return bad('This .zip file is damaged (unreadable directory).');
@@ -295,7 +295,17 @@ async function aafcZipManifest(file) {
   if (man.method === 0) bytes = raw;
   else if (man.method === 8) {
     if (typeof DecompressionStream === 'undefined') return bad('This browser can\'t read compressed packages.');
-    try { const s = new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw')); bytes = await new Response(s).arrayBuffer(); } catch (x) { return bad('imsmanifest.xml couldn\'t be decompressed — the package may be damaged.'); }
+    // SCH (PD-SCH-04): inflated as a stream and stopped at 2 MB — the sizes in the zip directory are the package's own claim, so a
+    // manifest that inflates far beyond what it declares (a "zip bomb") is refused without ever being held in memory in full
+    const rd = new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader(), parts = []; let got = 0;
+    try {
+      for (;;) {
+        const { done, value } = await rd.read(); if (done) break; got += value.byteLength;
+        if (got > AAFC_MAN_MAX) { rd.cancel().catch(() => {}); return bad('imsmanifest.xml is too large to check (over 2 MB).'); }
+        parts.push(value);
+      }
+    } catch (x) { return bad('imsmanifest.xml couldn\'t be decompressed — the package may be damaged.'); }
+    bytes = await new Blob(parts).arrayBuffer();
   } else return bad('imsmanifest.xml uses a compression this prototype can\'t read.');
   if (bytes.byteLength > AAFC_MAN_MAX) return bad('imsmanifest.xml is too large to check (over 2 MB).');
   // Parsed as XML data: an XML document is never rendered, and no script in it runs
@@ -313,17 +323,15 @@ async function aafcZipManifest(file) {
 }
 const aafcPkgTxt = P => (P.sample ? 'Prototype sample — not a real package; its version is chosen below.' : `Checked: ${P.title ? `"${P.title}" · ` : ''}${P.version} · ${plural(P.scos, 'SCO')} · read from imsmanifest.xml. Nothing in the package was run.`);
 function aafcPkgShow() {
-  const P = ui('aafcPkg', null), box = $('#aafc-pk'), sv = $('#ci-sv'); if (!box) return;
+  const P = ui('aafcPkg', null), box = $('#aafc-pk'); if (!box) return;
   box.className = 'hint aafc-pkst' + (P && P.status === 'bad' ? ' aafc-bad' : '');
-  box.textContent = !P ? 'The package is checked in your browser when you choose it.' : P.status === 'checking' ? 'Checking the package…' : P.status === 'bad' ? 'Not accepted: ' + P.why : aafcPkgTxt(P);
-  if (sv) { const real = P && P.status === 'ok' && !P.sample; if (real) sv.value = P.version; sv.disabled = !!real; }
+  box.textContent = !P ? 'Select a ZIP: the package is validated in this browser when you select it. Nothing is uploaded.' : P.status === 'checking' ? 'Validating the package…' : P.status === 'bad' ? 'Invalid package: ' + P.why : aafcPkgTxt(P);
 }
+// SCH (PD-SCH-02): the SCORM version is never chosen by hand — setup-s1 no longer draws a version select or a sample button for SCORM
 const _srcAAFC = s1SrcField;
 s1SrcField = function (k) {
   const h = _srcAAFC.apply(this, arguments); if (k !== 'scorm') return h;
-  return h.replace('>Use a sample file</button>', '>Prototype: use a sample file (not a real package)</button>')
-    .replace('<label for="ci-sv" style="margin-top:8px">SCORM version</label>', '<label for="ci-sv" style="margin-top:8px">SCORM version <span class="xs muted">(read from a real package; chosen by hand only for the prototype sample)</span></label>')
-    + `<span class="hint aafc-pkst" id="aafc-pk" role="status"></span><p class="xs muted">The package must contain imsmanifest.xml declaring SCORM 1.2 or SCORM 2004. Only the manifest is read; the package's content is not run or kept in this prototype.</p>`;
+  return h + `<span class="hint aafc-pkst" id="aafc-pk" role="status"></span><p class="xs muted">The package must contain imsmanifest.xml declaring SCORM 1.2 or SCORM 2004; the version is read from it. Only the manifest is read; the package's content is not run or kept in this prototype.</p>`;
 };
 const _kindAAFC = INP.s1Kind; INP.s1Kind = function () { setUi('aafcPkg', null); const r = _kindAAFC.apply(this, arguments); aafcPkgShow(); return r; };
 const _fileAAFC = INP.s1File;
@@ -335,23 +343,26 @@ INP.s1File = function (el) {
   AAFC.pending = aafcZipManifest(f).catch(() => ({ ok: false, why: 'The package couldn\'t be read.' })).then(x => { const P = ui('aafcPkg', null); if (!P || P.tok !== tok) return x; setUi('aafcPkg', x.ok ? { status: 'ok', ...x } : { status: 'bad', why: x.why }); aafcPkgShow(); return x; });
   return r;
 };
-const _sampleAAFC = ACT.s1SampleFile; ACT.s1SampleFile = function () { const r = _sampleAAFC.apply(this, arguments); if (($('#ci-k') || {}).value === 'scorm') { setUi('aafcPkg', { status: 'ok', sample: true }); aafcPkgShow(); } return r; };
+// SCH (PD-SCH-03): a sample file isn't a package, so it can't stand in for one — refused for SCORM (other kinds keep their sample)
+const AAFC_NO_SAMPLE = 'Select a real SCORM ZIP. A prototype sample isn\'t a package, so it can\'t be validated.';
+const _sampleAAFC = ACT.s1SampleFile; ACT.s1SampleFile = function () { if (($('#ci-k') || {}).value === 'scorm') { if ($('#ci-f')) fieldErr('#ci-f', AAFC_NO_SAMPLE); return false; } return _sampleAAFC.apply(this, arguments); };
 const _itemSaveAAFC = s1ItemSave;
 s1ItemSave = function (c, it) {
   const k = it ? it.kind : ($('#ci-k') || {}).value; if (k !== 'scorm') return _itemSaveAAFC.apply(this, arguments);
   const P = ui('aafcPkg', null), sp = s1Spec(c), n0 = sp.items.length;
-  if (P && P.status === 'checking') return fieldErr('#ci-f', 'Still checking the package — try again in a moment'), false;
+  if (P && P.sample) return fieldErr('#ci-f', AAFC_NO_SAMPLE), false;
+  if (P && P.status === 'checking') return fieldErr('#ci-f', 'Still validating the package — try again in a moment'), false;
   if (P && P.status === 'bad') return fieldErr('#ci-f', P.why), false;
   if (!P && ui('s1File', '')) return fieldErr('#ci-f', 'Choose the package again so it can be checked'), false;
   const out = _itemSaveAAFC.apply(this, arguments); if (out === false || !P) return out;
   const x = it || (sp.items.length > n0 ? sp.items[sp.items.length - 1] : null); if (!x) return out;
-  x.pkg = P.sample ? { sample: true, file: x.src } : { file: P.file, size: P.size, title: P.title, version: P.version, scos: P.scos, launch: P.launch, checked: now().toISOString(), by: ADMIN.me.name };
-  if (!P.sample) x.scorm = P.version; setUi('aafcPkg', null); s1Keep(c); return out;
+  x.pkg = { file: P.file, size: P.size, title: P.title, version: P.version, scos: P.scos, launch: P.launch, checked: now().toISOString(), by: ADMIN.me.name };
+  x.scorm = P.version; setUi('aafcPkg', null); s1Keep(c); return out; // the detected version is the only version (PD-SCH-02)
 };
 const _contAAFC = s1Content;
 s1Content = function (c, sp) {
   let h = _contAAFC.apply(this, arguments);
-  sp.items.filter(i => i.kind === 'scorm').forEach(i => { const lbl = `SCORM package${i.scorm ? ' ' + i.scorm : ''}${i.src ? ' · ' + esc(i.src) : ''}`; h = h.replace(lbl, lbl + (i.pkg ? (i.pkg.sample ? ' · prototype sample (not checked)' : ` · checked: ${plural(i.pkg.scos, 'SCO')}`) : ' · not checked (added before package checks)')); });
+  sp.items.filter(i => i.kind === 'scorm').forEach(i => { const lbl = `SCORM package${i.scorm ? ' ' + i.scorm : ''}${i.src ? ' · ' + esc(i.src) : ''}`; h = h.replace(lbl, lbl + (i.pkg ? (i.pkg.sample ? ' · prototype sample (not checked)' : ` · validated: ${plural(i.pkg.scos, 'SCO')}`) : ' · not checked (added before package checks)')); });
   return h.replace('<p class="small muted">This course\'s own content. Each item belongs to a module; learners see it under that module. Changes apply to new enrolments.</p>', '<p class="small muted">Every item in this course, across its modules. To put new content in a module, use Add content on the module\'s card (Modules). Changes apply to new enrolments.</p>');
 };
 

@@ -23,7 +23,9 @@
   const fill = o => Object.entries(o).forEach(([k, v]) => { const e = $1(k); if (!e) throw new Error('missing ' + k); e.value = v; });
   const wait = ms => new Promise(r => setTimeout(r, ms));
   const lastAud = () => ADMIN.audit[0] || {}, sec = () => ADMIN.security.length;
-  const NOTE = 'SCORM demonstration only. Package execution, persistent storage, progress tracking and completion reporting are not implemented in this prototype.';
+  // SCH (PD-SCH-06) supersedes the AA-FOLLOWUP wording — was: 'SCORM demonstration only. Package execution, persistent storage, progress
+  // tracking and completion reporting are not implemented in this prototype.'
+  const NOTE = 'SCORM demonstration only. Package validation and metadata preview are available. Package storage, interactive playback, progress tracking, completion and score reporting will be implemented in the production LMS.';
   const GUIDE = 'Enter the course code provided by NCFE or the relevant awarding body.';
   // A .zip built here: [name, text] files, stored or deflated (only what the package check reads)
   const zipOf = async (files, deflate, name = 'pkg.zip') => {
@@ -82,16 +84,17 @@
         [await zipOf([['imsmanifest.xml', MAN12.replace('<schemaversion>1.2</schemaversion>', '<schemaversion>3.0</schemaversion>').replace('adlcp_rootv1p2', 'other')]], false, 'v3.zip'), /doesn't declare SCORM 1\.2 or SCORM 2004/],
         [await zipOf([['imsmanifest.xml', '<manifest><oops'], RUN], false, 'broken.zip'), /valid manifest/], [await zipOf([['imsmanifest.xml', MAN12.replace('adlcp:scormtype="sco"', 'adlcp:scormtype="asset"')]], false, 'nosco.zip'), /no SCO/]];
       for (const [file, re] of bad) { await put('#ci-f', file, 's1File'); const P = ui('aafcPkg', null), shown = $1('#aafc-pk').textContent; prim();
-        ok(`AAFU-2 invalid package refused and not saved: ${file.name}`, P.status === 'bad' && re.test(P.why) && shown.startsWith(`Not accepted (${file.name})`) && !!MODAL && sp.items.length === n0, J([P, shown])); }
+        ok(`AAFU-2 invalid package refused and not saved: ${file.name}`, P.status === 'bad' && re.test(P.why) && shown.startsWith(`Invalid package (${file.name})`) /* SCH PD-SCH-06: was `Not accepted (…)` */ && !!MODAL && sp.items.length === n0, J([P, shown])); }
       await put('#ci-f', await zipOf([['imsmanifest.xml', MAN12], RUN], false, 'hoist12.zip'), 's1File');
-      ok('AAFU-2 a SCORM 1.2 package: name, detected version and result shown; nothing in it ran; not stored', /^Valid SCORM package: hoist12\.zip · SCORM 1\.2 detected · "Hoist checks 1\.2" · 1 SCO\. .*isn't stored\.$/.test($1('#aafc-pk').textContent) && !window.__aafuRan, $1('#aafc-pk').textContent);
+      ok('AAFU-2 a SCORM 1.2 package: name, detected version and result shown; nothing in it ran; not stored', /^Validated SCORM package: hoist12\.zip · SCORM 1\.2 detected · "Hoist checks 1\.2" · 1 SCO\. .*isn't stored\.$/.test($1('#aafc-pk').textContent) && !window.__aafuRan, $1('#aafc-pk').textContent);
       press(); const it = sp.items.find(i => i.title === 'AAFU hoist checks');
       ok('AAFU-2 saved: detected version and package details only (no file content)', it && it.scorm === 'SCORM 1.2' && it.pkg.version === 'SCORM 1.2' && it.pkg.file === 'hoist12.zip' && !('data' in it.pkg) && m.items.includes(it.id), J(it && it.pkg));
-      ACT.s1ItemAdd({ dataset: { id: c.id, m: m.id } }); kind('scorm'); fill({ '#ci-t': 'AAFU disclosure 2004' }); $1('#ci-sv').value = 'SCORM 1.2';
+      ACT.s1ItemAdd({ dataset: { id: c.id, m: m.id } }); kind('scorm'); fill({ '#ci-t': 'AAFU disclosure 2004' }); // SCH (PD-SCH-02): there is no version select to set any more
+      ok('AAFU-2 no SCORM version can be chosen by hand (no select, no sample button)', !$1('#ci-sv') && !$1('#modal-root [data-act="s1SampleFile"]'));
       await put('#ci-f', await zipOf([['imsmanifest.xml', MAN04]], true, 'disc04.zip'), 's1File'); press(); const it2 = sp.items.find(i => i.title === 'AAFU disclosure 2004');
-      ok('AAFU-2 a deflated SCORM 2004 package is detected as 2004 whatever the select said', it2 && it2.scorm === 'SCORM 2004' && it2.pkg.scos === 2);
+      ok('AAFU-2 a deflated SCORM 2004 package is detected as 2004 (SCH: from the manifest only)', it2 && it2.scorm === 'SCORM 2004' && it2.pkg.scos === 2);
       go('a-courses', { id: c.id, tab: 'content' });
-      ok('AAFU-2 Content tab: the notice; each SCORM item says "demonstration only" with its check result', main().includes(NOTE) && /SCORM package SCORM 1\.2 · hoist12\.zip · checked: 1 SCO · demonstration only/.test(main()) && /checked: 2 SCOs · demonstration only/.test(main()));
+      ok('AAFU-2 Content tab: the notice; each SCORM item says "demonstration only" with its check result', main().includes(NOTE) && /SCORM package SCORM 1\.2 · hoist12\.zip · validated: 1 SCO · demonstration only/.test(main()) && /validated: 2 SCOs · demonstration only/ /* SCH: was "checked:" */.test(main()));
       go('a-courses', { id: c.id, tab: 'completion' }); const rule = $1('main .s1-rule[value="scorm"]');
       ok('AAFU-2 Completion rules: the SCORM rule can\'t be chosen and says why', rule && rule.disabled && /Not available — SCORM is a demonstration/.test(main()));
     });
@@ -101,12 +104,12 @@
       ok('AAFU-2 Add resource: the notice and a package status line', mtxt().includes(NOTE) && !!$1('#aafu-rpk'));
       fill({ '#rs-t': RNAME }); $1('#rs-y').value = 'SCORM';
       await put('#rs-f', await zipOf([['readme.txt', 'x']], false, 'res-bad.zip'), 's4bFile'); prim();
-      ok('AAFU-2 resource: an invalid package is refused, not saved', !!MODAL && S4B().res.length === n0 && /^Not accepted \(res-bad\.zip\): No imsmanifest/.test($1('#aafu-rpk').textContent), $1('#aafu-rpk').textContent);
+      ok('AAFU-2 resource: an invalid package is refused, not saved', !!MODAL && S4B().res.length === n0 && /^Invalid package \(res-bad\.zip\): No imsmanifest/ /* SCH: was "Not accepted" */.test($1('#aafu-rpk').textContent), $1('#aafu-rpk').textContent);
       await put('#rs-f', await zipOf([['imsmanifest.xml', MAN04], RUN], true, 'res04.zip'), 's4bFile');
-      ok('AAFU-2 resource: a SCORM 2004 package is detected; nothing ran', /^Valid SCORM package: res04\.zip · SCORM 2004 detected/.test($1('#aafu-rpk').textContent) && !window.__aafuRan);
+      ok('AAFU-2 resource: a SCORM 2004 package is detected; nothing ran', /^Validated SCORM package: res04\.zip · SCORM 2004 detected/.test($1('#aafu-rpk').textContent) && !window.__aafuRan);
       press(); const r = S4B().res[0]; rid = r && r.id;
       ok('AAFU-2 resource saved as a Draft with the checked package details', S4B().res.length === n0 + 1 && r.title === RNAME && r.kind === 'scorm' && r.pkg && r.pkg.version === 'SCORM 2004' && r.pkg.scos === 2 && r.status === 'Draft', J(r && r.pkg));
-      ACT.s4bPrev({ dataset: { id: rid } }); ok('AAFU-2 resource preview: the notice and package / version / validation; no completion action', mtxt().includes(NOTE) && /Package\s*res04\.zip/.test(mtxt()) && /SCORM 2004 — detected/.test(mtxt()) && /Valid — imsmanifest\.xml declares SCORM 2004 with 2 SCOs/.test(mtxt()) && !$1('#modal-root [data-act="resScorm"]')); closeModal();
+      ACT.s4bPrev({ dataset: { id: rid } }); ok('AAFU-2 resource preview: the notice and package / version / validation; no completion action', mtxt().includes(NOTE) && /Package\s*res04\.zip/.test(mtxt()) && /SCORM 2004 — detected/.test(mtxt()) && /Validated — imsmanifest\.xml declares SCORM 2004 with 2 SCOs/.test(mtxt()) && !$1('#modal-root [data-act="resScorm"]')); closeModal();
       ok('AAFU-2 the resources page carries the notice', main().includes(NOTE));
       ACT.s4bVer({ dataset: { id: rid } }); if (MODAL) { await put('#rs-f', await zipOf([['other.txt', 'x']], false, 'v2-bad.zip'), 's4bFile'); const t = $1('#rsn'); if (t) t.value = 'New package'; prim(); }
       ok('AAFU-2 resource new version: an invalid package is refused (version unchanged)', !!MODAL && s4bRes(rid).version === 1); closeModal();
@@ -152,7 +155,7 @@
       ok('AAFU-3 (setup) bought: the enrolment has the checked package', !!c && c.pkg && c.pkg.version === 'SCORM 1.2' && c.pkg.file === 'hoist12.zip' && c.pkg.scos === 1, J(c && c.pkg));
       if (!c) return; const st0 = c.state; go('course', { id: e.id, tab: 'content' }); ACT.openItem({ dataset: { e: e.id, id: c.id } });
       const adm = aafuPkg(s1Spec(s1Row(cid)).items.find(i => i.title === 'AAFU hoist checks')), lrn = aafuPkg(c);
-      ok('AAFU-3 the learner sees the package name, detected version and validation the admin saw', /Package\s*hoist12\.zip/.test(mtxt()) && /SCORM 1\.2 — detected from imsmanifest\.xml/.test(mtxt()) && /Valid — imsmanifest\.xml declares SCORM 1\.2 with 1 SCO/.test(mtxt()) && J([adm.name, adm.ver, adm.res]) === J([lrn.name, lrn.ver, lrn.res]), J([adm, lrn]));
+      ok('AAFU-3 the learner sees the package name, detected version and validation the admin saw', /Package\s*hoist12\.zip/.test(mtxt()) && /SCORM 1\.2 — detected from imsmanifest\.xml/.test(mtxt()) && /Validated — imsmanifest\.xml declares SCORM 1\.2 with 1 SCO/.test(mtxt()) && J([adm.name, adm.ver, adm.res]) === J([lrn.name, lrn.ver, lrn.res]), J([adm, lrn]));
       closeModal(); ok('AAFU-3 still not opened, not completed, not scored after the preview', c.state === st0 && c.state === 'Not opened' && !c.score && e.status === 'Active');
       SS.setItem('ft-aafu.keep', J({ cid, rid, eid: e.id, sc: c.id, w: buyer[1] }));
     });

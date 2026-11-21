@@ -184,7 +184,9 @@ function s1SrcField(k, it) {
   const v = esc(it ? it.src : '');
   if (k === 'video') return `<label for="ci-s">Vimeo video ID</label><input class="input mono" id="ci-s" value="${v}" placeholder="e.g. 824804225">`;
   if (k === 'link') return `<label for="ci-s">Web address (URL)</label><input class="input" id="ci-s" value="${v}" placeholder="https://">`;
-  return `<label for="ci-f">${k === 'scorm' ? 'SCORM package (.zip)' : 'File (PDF, DOCX or PPTX)'}</label><input class="input" type="file" id="ci-f" accept="${k === 'scorm' ? '.zip' : '.pdf,.docx,.pptx'}" data-onchange="s1File"><span class="hint"><span id="ci-fn">${v || 'No file chosen'}</span> · <button type="button" class="linklike" data-act="s1SampleFile">Use a sample file</button></span>${k === 'scorm' ? `<label for="ci-sv" style="margin-top:8px">SCORM version</label><select class="select" id="ci-sv">${['SCORM 1.2', 'SCORM 2004'].map(x => `<option ${it && it.scorm === x ? 'selected' : ''}>${x}</option>`).join('')}</select>` : ''}`;
+  // SCH (PD-SCH-02/03): a SCORM package is a selected ZIP only — no sample file and no hand-picked version (it is read from the manifest)
+  if (k === 'scorm') return `<label for="ci-f">SCORM package — select ZIP</label><input class="input" type="file" id="ci-f" accept=".zip" data-onchange="s1File"><span class="hint"><span id="ci-fn">${v ? `Current package: ${v}` : 'No ZIP selected'}</span>${it ? ' · select a new ZIP only to replace it' : ''}</span>`;
+  return `<label for="ci-f">File (PDF, DOCX or PPTX)</label><input class="input" type="file" id="ci-f" accept=".pdf,.docx,.pptx" data-onchange="s1File"><span class="hint"><span id="ci-fn">${v || 'No file chosen'}</span> · <button type="button" class="linklike" data-act="s1SampleFile">Use a sample file</button></span>`;
 }
 INP.s1Kind = el => { setUi('s1Kind', el.value); setUi('s1File', ''); $('#ci-src').innerHTML = s1SrcField(el.value, null); };
 INP.s1File = el => { const f = el.files[0]; setUi('s1File', f ? f.name : ''); $('#ci-fn').textContent = f ? f.name : 'No file chosen'; };
@@ -195,7 +197,7 @@ function s1ItemSave(c, it) {
   let src = '', scorm = '';
   if (k === 'video') { src = mval('#ci-s'); if (!/^\d{6,}$/.test(src)) return fieldErr('#ci-s', 'Enter the numeric Vimeo ID'), false; }
   else if (k === 'link') { src = mval('#ci-s'); if (!/^https?:\/\/\S+\.\S+/.test(src)) return fieldErr('#ci-s', 'Enter a full web address starting with https://'), false; }
-  else { src = ui('s1File', '') || (it ? it.src : ''); if (!src) return fieldErr('#ci-f', 'Choose a file'), false; if (k === 'scorm' && !/\.zip$/i.test(src)) return fieldErr('#ci-f', 'Upload a SCORM .zip package'), false; scorm = k === 'scorm' ? $('#ci-sv').value : ''; }
+  else { src = ui('s1File', '') || (it ? it.src : ''); if (!src) return fieldErr('#ci-f', 'Choose a file'), false; if (k === 'scorm' && !/\.zip$/i.test(src)) return fieldErr('#ci-f', 'Select a SCORM ZIP package'), false; scorm = k === 'scorm' && it ? it.scorm || '' : ''; } // SCH: kept as stored; a validated package sets it
   const mods = s1Mods(c);
   if (it) { const was = `${it.title} · ${it.src}`; Object.assign(it, { title, src, dur, scorm: scorm || it.scorm }); mods.forEach(m => { m.items = m.items.filter(i => i !== it.id); }); if (mid) mods.find(m => m.id === mid).items.push(it.id); s1Log(c, 'Content item changed', was, `${title} · ${src}`); }
   else { const n = Math.max(0, ...sp.items.map(x => +String(x.id).replace(/\D/g, '') || 0)) + 1, id = 'c' + n; sp.items.push({ id, kind: k, title, src, dur: dur || (k === 'doc' ? '1 page' : ''), scorm, state: 'Not opened', dl: k === 'doc', watch: 0, resume: '0:00', score: 0, status: 'Active' }); if (mid) mods.find(m => m.id === mid).items.push(id); s1Log(c, 'Content item added', '—', `${S1_KINDS.find(x => x[0] === k)[1]}: ${title}`); }

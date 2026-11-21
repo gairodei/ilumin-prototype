@@ -15,10 +15,14 @@
       module" rule can't be chosen and isn't counted for completion, progress, quiz unlocking or certificates. Stored rules,
       packages, release rules and learners' records are not rewritten: a SCORM state or score recorded earlier stays as it is,
       labelled as a seeded demo record; completed enrolments and their certificates are untouched.
+   SCH (21 Nov 2026; PD-SCH-01…07) — SCORM hardening, still Option C: aafuRCheck / aafuRDlg are the one save-time gate for every
+      Learning Resources SCORM path, now including the course builder's New resource (cbr-builder.js calls aafuRNew); no sample stands
+      in for a package; the version is the manifest's only; each resource version keeps its own validated details; the owner's notice.
    ============================================================ */
 'use strict';
 
-const AAFU_SC = 'SCORM demonstration only. Package execution, persistent storage, progress tracking and completion reporting are not implemented in this prototype.';
+// SCH (PD-SCH-06): the project owner's wording (21 Nov 2026) replaces the AA-FOLLOWUP notice; it says what is available as well as what isn't
+const AAFU_SC = 'SCORM demonstration only. Package validation and metadata preview are available. Package storage, interactive playback, progress tracking, completion and score reporting will be implemented in the production LMS.';
 const AAFU_SC_LRN = 'This is a preview of a feature planned for the full LMS, not a learning activity. Opening it doesn\'t count towards your progress, completion or certificate, and nothing is scored.';
 const AAFU_SC_ADM = 'Only the package\'s imsmanifest.xml is read, in this browser. The package isn\'t stored or run, and learners can\'t complete it or be scored on it.';
 const aafuNote = more => `<div class="note b-amber aafu-sc-note" role="note">${ic('info')}<div class="small"><strong>${esc(AAFU_SC)}</strong>${more ? ` ${esc(more)}` : ''}</div></div>`;
@@ -36,26 +40,28 @@ function aafuPkg(x) {
   const P = (x && x.pkg) || {}, name = P.file || (x && (x.src || x.ref)) || '';
   const ver = P.sample ? (x.scorm ? `${x.scorm} — chosen by hand (sample, not detected)` : 'Not detected (sample)') : P.version || (x && x.scorm) ? `${P.version || x.scorm}${P.version ? ' — detected from imsmanifest.xml' : ' — not detected'}` : 'Not recorded';
   const res = !x || !x.pkg ? 'Not checked — no package was checked for this item' : P.sample ? 'Not checked — prototype sample, not a real package'
-    : `Valid — imsmanifest.xml declares ${P.version}${P.scos ? ` with ${plural(P.scos, 'SCO')}` : ''}`;
+    : `Validated — imsmanifest.xml declares ${P.version}${P.scos ? ` with ${plural(P.scos, 'SCO')}` : ''}`;
   return { name: name || 'No package file recorded', title: P.title || '', ver, res };
 }
 const aafuPkgDl = x => { const p = aafuPkg(x); return `<dl class="kv aafu-pkg"><dt>Package</dt><dd class="mono">${esc(p.name)}</dd>${p.title ? `<dt>Title in manifest</dt><dd>${esc(p.title)}</dd>` : ''}<dt>SCORM version</dt><dd>${esc(p.ver)}</dd><dt>Validation</dt><dd>${esc(p.res)}</dd></dl>`; };
 
 /* ---------- Academic Admin: short-course content ---------- */
 const _srcAAFU = s1SrcField;
-s1SrcField = function (k) { const h = _srcAAFU.apply(this, arguments); return k === 'scorm' ? h + aafuNote(AAFU_SC_ADM) : h; };
+// SCH (PD-SCH-02): editing an item shows the package it already has (name, detected version, validation) above the ZIP field
+s1SrcField = function (k, it) { const h = _srcAAFU.apply(this, arguments); return k === 'scorm' ? (it ? `<div class="aafu-cur"><span class="lbl">Current package</span>${aafuPkgDl(it)}</div>` : '') + h + aafuNote(AAFU_SC_ADM) : h; };
+const aafuOkTxt = P => `Validated SCORM package: ${P.file} · ${P.version} detected${P.title ? ` · "${P.title}"` : ''} · ${plural(P.scos, 'SCO')}. Only imsmanifest.xml was read — nothing was run and the package isn't stored.`;
 const _pkShowAAFU = aafcPkgShow;
 aafcPkgShow = function () {
   const r = _pkShowAAFU.apply(this, arguments), P = ui('aafcPkg', null), box = $('#aafc-pk');
-  if (box && P && P.status === 'ok' && !P.sample) box.textContent = `Valid SCORM package: ${P.file} · ${P.version} detected${P.title ? ` · "${P.title}"` : ''} · ${plural(P.scos, 'SCO')}. Only imsmanifest.xml was read — nothing was run and the package isn't stored.`;
-  if (box && P && P.status === 'bad') box.textContent = `Not accepted${ui('s1File', '') ? ` (${ui('s1File', '')})` : ''}: ${P.why}`;
+  if (box && P && P.status === 'ok' && !P.sample) box.textContent = aafuOkTxt(P);
+  if (box && P && P.status === 'bad') box.textContent = `Invalid package${ui('s1File', '') ? ` (${ui('s1File', '')})` : ''}: ${P.why}`;
   return r;
 };
 const _contAAFU = s1Content;
 s1Content = function (c, sp) {
   let h = _contAAFU.apply(this, arguments); const sc = sp.items.filter(i => i.kind === 'scorm' && i.status === 'Active');
   if (!sc.length) return h;
-  sp.items.filter(i => i.kind === 'scorm').forEach(i => { h = h.replace(new RegExp(`(SCORM package${i.scorm ? ' ' + i.scorm : ''}${i.src ? ' · ' + esc(i.src).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : ''} · (?:checked: [^<·]*|prototype sample \\(not checked\\)|not checked \\(added before package checks\\)))`), '$1 · demonstration only'); });
+  sp.items.filter(i => i.kind === 'scorm').forEach(i => { h = h.replace(new RegExp(`(SCORM package${i.scorm ? ' ' + i.scorm : ''}${i.src ? ' · ' + esc(i.src).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : ''} · (?:validated: [^<·]*|prototype sample \\(not checked\\)|not checked \\(added before package checks\\)))`), '$1 · demonstration only'); });
   return h.replace('<section class="card"><div class="row-b s1-ch">', () => aafuNote(AAFU_SC_ADM) + '<section class="card"><div class="row-b s1-ch">');
 };
 // Completion rules: the SCORM rule can't be chosen (its stored value is shown and kept, but never counted)
@@ -71,9 +77,9 @@ const aafuRSample = n => /\(sample\)\.zip$/.test(String(n || ''));
 function aafuRShow() {
   const box = $('#aafu-rpk'); if (!box) return; const P = aafuRPk(), y = ($('#rs-y') || {}).value;
   box.className = 'hint aafu-rpk' + (P && P.status === 'bad' ? ' aafc-bad' : '');
-  box.textContent = y !== 'SCORM' ? '' : aafuRSample(ui('s4bFile', '')) ? 'Prototype sample — not a real package, so it isn\'t checked and no version is detected.'
-    : !P ? 'A SCORM .zip is checked in your browser when you choose it.' : P.status === 'checking' ? 'Checking the package…'
-    : P.status === 'bad' ? `Not accepted (${P.name}): ${P.why}` : `Valid SCORM package: ${P.file} · ${P.version} detected${P.title ? ` · "${P.title}"` : ''} · ${plural(P.scos, 'SCO')}. Only imsmanifest.xml was read — nothing was run and the package isn't stored.`;
+  box.textContent = y !== 'SCORM' ? '' : aafuRSample(ui('s4bFile', '')) ? AAFC_NO_SAMPLE
+    : !P ? 'Select a ZIP: the package is validated in this browser when you select it. Nothing is uploaded.' : P.status === 'checking' ? 'Validating the package…'
+    : P.status === 'bad' ? `Invalid package (${P.name}): ${P.why}` : aafuOkTxt(P);
 }
 const _rFileAAFU = INP.s4bFile;
 INP.s4bFile = function (el) {
@@ -83,14 +89,16 @@ INP.s4bFile = function (el) {
   AAFC.pending = aafcZipManifest(f).catch(() => ({ ok: false, why: 'The package couldn\'t be read.' })).then(x => { const P = aafuRPk(); if (!P || P.tok !== tok) return x; setUi('aafuRPk', x.ok ? { status: 'ok', name: f.name, ...x } : { status: 'bad', name: f.name, why: x.why }); aafuRShow(); return x; });
   return r;
 };
-const _rSampleAAFU = ACT.s4bSample; ACT.s4bSample = function () { const r = _rSampleAAFU.apply(this, arguments); setUi('aafuRPk', null); aafuRShow(); return r; };
-// A SCORM file is accepted only once its manifest has been checked; returns the package details, or false (field marked)
+// SCH (PD-SCH-03): no sample stands in for a SCORM package (refused when SCORM is the type, also in New version of a SCORM resource)
+const _rSampleAAFU = ACT.s4bSample; ACT.s4bSample = function () { if (($('#rs-y') || {}).value === 'SCORM') { if ($('#rs-f')) fieldErr('#rs-f', AAFC_NO_SAMPLE); return false; } const r = _rSampleAAFU.apply(this, arguments); setUi('aafuRPk', null); aafuRShow(); return r; };
+// A SCORM file is accepted only once its manifest has been validated; returns the package details, or false (field marked).
+// The one save-time gate for every Learning Resources SCORM path: Add resource, New version and the course builder's New resource (SCH C1).
 function aafuRCheck() {
   if (($('#rs-y') || {}).value !== 'SCORM') return null; const f = ui('s4bFile', ''), P = aafuRPk();
   if (!f || !/\.zip$/i.test(f)) return null; // the existing "Choose a file" / "Use a SCORM .zip file" checks answer
-  if (aafuRSample(f)) return { sample: true, file: f };
-  if (!P || P.name !== f) return fieldErr('#rs-f', 'Choose the package again so it can be checked'), false;
-  if (P.status === 'checking') return fieldErr('#rs-f', 'Still checking the package — try again in a moment'), false;
+  if (aafuRSample(f)) return fieldErr('#rs-f', AAFC_NO_SAMPLE), false;
+  if (!P || P.name !== f) return fieldErr('#rs-f', 'Select the ZIP again so it can be validated'), false;
+  if (P.status === 'checking') return fieldErr('#rs-f', 'Still validating the package — try again in a moment'), false;
   if (P.status === 'bad') return fieldErr('#rs-f', P.why), false;
   return { file: P.file, size: P.size, title: P.title, version: P.version, scos: P.scos, launch: P.launch, checked: now().toISOString(), by: ADMIN.me.name };
 }
@@ -102,10 +110,15 @@ function aafuRDlg(m0, after) {
   const a = MODAL.actions && MODAL.actions.find(x => x.cls && /primary/.test(x.cls)); if (a && a.fn) { const g = a.fn; a.fn = (...x) => { const pk = aafuRCheck(); if (pk === false) return false; const r = g(...x); if (r !== false && pk) after(pk); return r; }; }
   renderModal(); aafuRShow();
 }
+// SCH (PD-SCH-05): the validated details go on the resource and on the version entry they belong to — earlier versions keep theirs
+// (a version recorded before this has none, and none is invented). Package bytes are never kept, for any version.
+const aafuRSetPkg = (r, pk) => { if (!r) return; r.pkg = pk; const v = (r.versions || []).find(x => x.v === r.version); if (v) v.pkg = pk; };
+// A new Learning Resources record from a dialog (Add resource, or the course builder's New resource): the same check and notice
+function aafuRNew(m0) { const n0 = S4B().res.length; aafuRDlg(m0, pk => { if (S4B().res.length > n0) aafuRSetPkg(S4B().res[0], pk); }); }
 const _rAddAAFU = ACT.aUpload;
-ACT.aUpload = function () { setUi('aafuRPk', null); const m0 = MODAL, r = _rAddAAFU.apply(this, arguments); const n0 = S4B().res.length; aafuRDlg(m0, pk => { if (S4B().res.length > n0) S4B().res[0].pkg = pk; }); return r; };
+ACT.aUpload = function () { setUi('aafuRPk', null); const m0 = MODAL, r = _rAddAAFU.apply(this, arguments); aafuRNew(m0); return r; };
 const _rVerAAFU = ACT.s4bVer;
-ACT.s4bVer = function (el) { setUi('aafuRPk', null); const m0 = MODAL, r = _rVerAAFU.apply(this, arguments), res = s4bRes(el && el.dataset && el.dataset.id), v0 = res && res.version; aafuRDlg(m0, pk => { if (res && res.version > v0) res.pkg = pk; }); return r; };
+ACT.s4bVer = function (el) { setUi('aafuRPk', null); const m0 = MODAL, r = _rVerAAFU.apply(this, arguments), res = s4bRes(el && el.dataset && el.dataset.id), v0 = res && res.version; aafuRDlg(m0, pk => { if (res && res.version > v0) aafuRSetPkg(res, pk); }); return r; };
 // The list and the previews
 const _resScrAAFU = SCREENS['a-resources'];
 SCREENS['a-resources'] = function () { const h = _resScrAAFU.apply(this, arguments).split(AAFU_SEED_DESC).join(AAFU_SEED_DEMO); return S4B().res.some(r => r.kind === 'scorm' && r.status !== 'Retired') ? aafuAfterHead(h, aafuNote(AAFU_SC_ADM)) : h; };
@@ -201,6 +214,11 @@ ACT.resScorm = el => { const i = aafuResItems().find(x => x.id === (el && el.dat
 UXC.push(['AA-FOLLOWUP', 'Course codes simplified; SCORM a labelled demonstration (3 Nov 2026)', [
   'Course codes: NVQ Course Details has one code field, "Awarding body course code" — "Enter the course code provided by NCFE or the relevant awarding body." It stays required, as before. The Academy course code is no longer entered, checked or saved anywhere (form, Review & Publish, builder header). The internal programme ID is automatic and read-only. A code recorded earlier is kept and shown read-only as "Former Academy course code". Programme lists and the learner\'s Overview say "Awarding body course code".',
   'SCORM (client Option C): every SCORM view says "' + AAFU_SC + '" Choosing a .zip still checks imsmanifest.xml (SCORM 1.2 or 2004 detected; invalid packages refused) — now also for Learning Resources — and shows the package name, detected version and result. Learners see a preview with the same details and a Close button; nothing is completed, passed or scored, and opening it doesn\'t change progress. The "Complete the interactive SCORM module" rule can\'t be chosen and isn\'t counted. States and scores recorded earlier are kept and labelled.',
+]]);
+UXC.push(['SCH', 'SCORM demonstration made consistent across every entry point (21 Nov 2026)', [
+  'Every way of adding or replacing a SCORM package — short-course Add / Edit item, Learning Resources Add resource and New version, and the course builder\'s New resource — now validates the selected ZIP the same way (imsmanifest.xml, SCORM 1.2 or 2004, at least one SCO) and refuses an invalid package. The course builder previously accepted any .zip.',
+  'The SCORM version is read from the package only: the hand-picked version select is gone, and editing an item without selecting a new ZIP keeps its validated version. A prototype sample file can no longer stand in for a SCORM package. Records made earlier without a validated package still say "Not checked".',
+  'Each resource version records its own validated package details (Versions); older versions recorded without them say "not checked". The notice reads: "' + AAFU_SC + '"',
 ]]);
 const _aIdxAAFU = SCREENS['a-index'];
 SCREENS['a-index'] = p => _aIdxAAFU(p) + `<section class="card idx-sec"><h2>AA-FOLLOWUP — Course codes and SCORM demonstration</h2><ul class="idx-list">${[

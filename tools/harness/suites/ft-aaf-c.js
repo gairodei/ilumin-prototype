@@ -98,23 +98,28 @@
     await T('AAF-C AA-11 SCORM package check', async () => {
       const c = s1Row(id), m = s1Mods(c)[0], n0 = s1Spec(c).items.length; go('a-courses', { id, tab: 'modules' });
       click($1(`main [data-act="s1ItemAdd"][data-m="${m.id}"]`)); kind('scorm'); fill({ '#ci-t': 'Interactive moving' });
-      ok('AA-11 the sample path is labelled as a prototype sample', /Prototype: use a sample file \(not a real package\)/.test(mtxt()));
-      let P = await choose(await zipOf([['readme.txt', 'hi']], false)); ok('AA-11 a .zip without imsmanifest.xml is refused', P.status === 'bad' && /No imsmanifest\.xml/.test(P.why) && /Not accepted/.test($1('#aafc-pk').textContent));
+      // SCH (PD-SCH-03) supersedes AA-11's labelled sample path — was: /Prototype: use a sample file \(not a real package\)/ in the dialog
+      ok('AA-11/SCH no sample file for a SCORM package: no button, a direct call is refused and selects nothing', !/use a sample file/i.test(mtxt()) && ACT.s1SampleFile() === false && !ui('s1File', '') && !ui('aafcPkg', null));
+      let P = await choose(await zipOf([['readme.txt', 'hi']], false)); ok('AA-11 a .zip without imsmanifest.xml is refused', P.status === 'bad' && /No imsmanifest\.xml/.test(P.why) && /Invalid package/.test($1('#aafc-pk').textContent)); // SCH: was /Not accepted/
       prim(); ok('AA-11 an invalid package can\'t be saved', !!MODAL && s1Spec(c).items.length === n0);
       P = await choose(new File([new TextEncoder().encode('not a zip at all, sorry')], 'fake.zip')); ok('AA-11 a non-zip file named .zip is refused', P.status === 'bad' && /isn't a valid \.zip/.test(P.why), P.why);
       P = await choose(await zipOf([['imsmanifest.xml', MAN12.replace('<schemaversion>1.2</schemaversion>', '<schemaversion>9.9</schemaversion>').replace('adlcp_rootv1p2', 'other')]], false)); ok('AA-11 a manifest that isn\'t SCORM 1.2 or 2004 is refused', P.status === 'bad' && /doesn't declare SCORM 1\.2 or SCORM 2004/.test(P.why), P.why);
       P = await choose(await zipOf([['imsmanifest.xml', '<manifest><oops'], SCRIPT], false)); ok('AA-11 a broken manifest is refused', P.status === 'bad' && /valid manifest/.test(P.why), P.why);
       P = await choose(await zipOf([['imsmanifest.xml', MAN12], SCRIPT], false));
-      ok('AA-11 a SCORM 1.2 package: version, title and SCOs read from the manifest; the version select follows it', P.status === 'ok' && P.version === 'SCORM 1.2' && P.scos === 1 && P.title === 'Safe moving <b id="aafcx">test</b>' && $1('#ci-sv').disabled && $1('#ci-sv').value === 'SCORM 1.2', J(P));
-      ok('AA-11 nothing in the package ran and its title is shown as text', !window.__aafcRan && !$1('#aafcx') && /* AA-FOLLOWUP (PD-AAFU-03): was /Checked: "…"/ — now the name, detected version and result */ /Valid SCORM package: [^ ]+\.zip · SCORM 1\.2 detected · "Safe moving <b id="aafcx">test<\/b>"/.test($1('#aafc-pk').textContent));
+      // SCH (PD-SCH-02) supersedes "the version select follows it" (was: $1('#ci-sv').disabled && value 'SCORM 1.2') — there is no select
+      ok('AA-11 a SCORM 1.2 package: version, title and SCOs read from the manifest; no version select exists', P.status === 'ok' && P.version === 'SCORM 1.2' && P.scos === 1 && P.title === 'Safe moving <b id="aafcx">test</b>' && !$1('#ci-sv'), J(P));
+      ok('AA-11 nothing in the package ran and its title is shown as text', !window.__aafcRan && !$1('#aafcx') && /* AA-FOLLOWUP (PD-AAFU-03): was /Checked: "…"/ — now the name, detected version and result */ /Validated SCORM package: [^ ]+\.zip · SCORM 1\.2 detected · "Safe moving <b id="aafcx">test<\/b>"/.test($1('#aafc-pk').textContent));
       press(); const it = s1Spec(c).items[s1Spec(c).items.length - 1];
       ok('AA-11 saved with the detected version and package details (no file content kept)', it.kind === 'scorm' && it.scorm === 'SCORM 1.2' && it.pkg && it.pkg.version === 'SCORM 1.2' && it.pkg.scos === 1 && !('data' in it.pkg) && m.items.includes(it.id), J(it.pkg));
-      click($1(`main [data-act="s1ItemAdd"][data-m="${m.id}"]`)); kind('scorm'); fill({ '#ci-t': 'Hoist practice' }); $1('#ci-sv').value = 'SCORM 1.2';
+      click($1(`main [data-act="s1ItemAdd"][data-m="${m.id}"]`)); kind('scorm'); fill({ '#ci-t': 'Hoist practice' }); // SCH: no version select to set
       P = await choose(await zipOf([['imsmanifest.xml', MAN04]], true)); press(); const it2 = s1Spec(c).items.find(i => i.title === 'Hoist practice');
       ok('AA-11 a deflated SCORM 2004 package: detected as 2004 whatever the select said; 2 SCOs', P.version === 'SCORM 2004' && it2 && it2.scorm === 'SCORM 2004' && it2.pkg.scos === 2, J(P));
-      click($1(`main [data-act="s1ItemAdd"][data-m="${m.id}"]`)); kind('scorm'); fill({ '#ci-t': 'Sample scenario' }); ACT.s1SampleFile(); $1('#ci-sv').value = 'SCORM 2004'; press();
-      const it3 = s1Spec(c).items.find(i => i.title === 'Sample scenario'); ok('AA-11 the prototype sample path is kept and marked as a sample', it3 && it3.pkg && it3.pkg.sample && it3.scorm === 'SCORM 2004');
-      go('a-courses', { id, tab: 'content' }); ok('AA-11 the Content list says which packages were checked', /checked: 1 SCO/.test(main()) && /prototype sample \(not checked\)/.test(main()));
+      // SCH (PD-SCH-03) supersedes "the prototype sample path is kept and marked as a sample" (was: sample saved with pkg.sample and a
+      // hand-picked 'SCORM 2004') — a sample can't stand in for a package, so nothing is saved
+      const n3 = s1Spec(c).items.length; click($1(`main [data-act="s1ItemAdd"][data-m="${m.id}"]`)); kind('scorm'); fill({ '#ci-t': 'Sample scenario' }); ACT.s1SampleFile(); press();
+      ok('AA-11/SCH a SCORM item can\'t be saved from a sample file (no package selected)', !!MODAL && s1Spec(c).items.length === n3 && !s1Spec(c).items.some(i => i.title === 'Sample scenario')); closeModal();
+      go('a-courses', { id, tab: 'content' }); // SCH (PD-SCH-03/06) supersedes: was /checked: 1 SCO/ and /prototype sample \(not checked\)/ — no sample item exists; "validated" wording
+      ok('AA-11 the Content list says which packages were validated', /validated: 1 SCO\b/.test(main()) && /validated: 2 SCOs/.test(main()) && !/prototype sample/.test(main()));
     });
     await T('AAF-C AA-10 price request and approval', async () => {
       const c = s1Row(id); go('a-courses', { id, tab: 'details' }); ok('AA-10 the Academic Admin\'s price stays read-only', $1('#cd-g').readOnly);
@@ -148,7 +153,7 @@
       go('course', { id: e.id, tab: 'content' }); ACT.openItem({ dataset: { e: e.id, id: sc.id } });
       // AA-FOLLOWUP (PD-AAFU-04, client Option C) supersedes the manual completion — was: /Prototype: SCORM content is not executed; completion
       // is recorded manually/, then clicking "Record completion" gave state Completed, no score — now: the demonstration notice, no completion
-      ok('AA-11 the player says SCORM is a demonstration only; no fixed scenario, no "SCORM 1.2 player"', /SCORM demonstration only\. Package execution, persistent storage, progress tracking and completion reporting are not implemented in this prototype\./.test(mtxt()) && !/Mrs P has slipped/.test(mtxt()) && !/SCORM 1\.2 player/.test(mtxt()) && /SCORM 1\.2/.test(mtxt()));
+      ok('AA-11 the player says SCORM is a demonstration only; no fixed scenario, no "SCORM 1.2 player"', /* SCH PD-SCH-06: the owner's notice replaces "Package execution, persistent storage … not implemented in this prototype." */ /SCORM demonstration only\. Package validation and metadata preview are available\. Package storage, interactive playback, progress tracking, completion and score reporting will be implemented in the production LMS\./.test(mtxt()) && !/Mrs P has slipped/.test(mtxt()) && !/SCORM 1\.2 player/.test(mtxt()) && /SCORM 1\.2/.test(mtxt()));
       ok('AA-11 no completion action; a direct call records nothing, no score', !$1('#modal-root [data-act="scormFinish"]') && ACT.scormFinish({ dataset: { e: e.id, id: sc.id } }) === false && sc.state === 'Not opened' && !sc.score && !sc.manualAt && !/92%/.test(main()));
       go('course', { id: e.id, tab: 'overview' }); ok('AA-22 learner Overview: access period from enrolment, each quiz countdown, no course timer', /Time limits/.test(main()) && /45 days from your enrolment/.test(main()) && /20-minute countdown once started/.test(main()) && /no overall time limit/.test(main()));
       go('course', { id: 'bk5', tab: 'overview' }); ok('Demo 7: CD3\'s bk5 Overview shows its access period and quiz limits', /Time limits/.test(main()) && /days from your enrolment/.test(main()));

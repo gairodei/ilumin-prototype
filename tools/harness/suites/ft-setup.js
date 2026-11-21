@@ -106,8 +106,17 @@
     ok('S1-03 items saved with type, source and module', s1Spec(c).items.length === 2 && s1Spec(c).items[1].kind === 'video' && s1Spec(c).items[1].src === '824804225' && s1Mods(c).find(m => m.id === 'm2').items.includes('c2'));
     ACT.s1ItemAdd({ dataset: { id } }); let k = document.querySelector('#ci-k'); k.value = 'link'; INP.s1Kind(k); fill({ '#ci-t': 'NICE guidance', '#ci-s': 'not a url', '#ci-m': 'm2' }); prim(); ok('S1-03 link needs a full address', !!MODAL && /https/.test(mroot().textContent));
     fill({ '#ci-s': 'https://www.nice.org.uk/guidance/cg179' }); prim();
-    ACT.s1ItemAdd({ dataset: { id } }); k = document.querySelector('#ci-k'); k.value = 'scorm'; INP.s1Kind(k); fill({ '#ci-t': 'Interactive check', '#ci-m': 'm2' }); ACT.s1SampleFile(); document.querySelector('#ci-sv').value = 'SCORM 2004'; prim();
-    ok('S1-03 link and SCORM 2004 added', s1Spec(c).items.some(i => i.kind === 'link') && s1Spec(c).items.some(i => i.kind === 'scorm' && i.scorm === 'SCORM 2004'));
+    // SCH (PD-SCH-02/03) supersedes the sample file + hand-picked "SCORM 2004": a SCORM item needs a selected ZIP whose manifest is validated
+    ACT.s1ItemAdd({ dataset: { id } }); k = document.querySelector('#ci-k'); k.value = 'scorm'; INP.s1Kind(k); fill({ '#ci-t': 'Interactive check', '#ci-m': 'm2' });
+    ok('S1-03 (SCH) a sample file can\'t stand in for a SCORM package', ACT.s1SampleFile() === false && !document.querySelector('#ci-sv'));
+    const zipOne = (fn, text, name) => { const en = new TextEncoder(), nm = en.encode(fn), d = en.encode(text), lh = new DataView(new ArrayBuffer(30)), cd = new DataView(new ArrayBuffer(46)), e = new DataView(new ArrayBuffer(22));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint32(18, d.length, true); lh.setUint32(22, d.length, true); lh.setUint16(26, nm.length, true);
+      cd.setUint32(0, 0x02014b50, true); cd.setUint32(20, d.length, true); cd.setUint32(24, d.length, true); cd.setUint16(28, nm.length, true);
+      e.setUint32(0, 0x06054b50, true); e.setUint16(8, 1, true); e.setUint16(10, 1, true); e.setUint32(12, 46 + nm.length, true); e.setUint32(16, 30 + nm.length + d.length, true);
+      return new File([lh.buffer, nm, d, cd.buffer, nm, e.buffer], name, { type: 'application/zip' }); };
+    const pz = zipOne('imsmanifest.xml', '<?xml version="1.0"?><manifest identifier="M" xmlns:adlcp="http://www.adlnet.org/xsd/adlcp_v1p3"><metadata><schemaversion>2004 4th Edition</schemaversion></metadata><organizations default="O"><organization identifier="O"><title>Interactive check</title></organization></organizations><resources><resource identifier="R" adlcp:scormType="sco" href="index.html"/></resources></manifest>', 'interactive-check.zip');
+    { const inp = document.querySelector('#ci-f'), dt = new DataTransfer(); dt.items.add(pz); inp.files = dt.files; INP.s1File(inp); await AAFC.pending; } prim();
+    ok('S1-03 link and SCORM 2004 added (version detected from the package)', s1Spec(c).items.some(i => i.kind === 'link') && s1Spec(c).items.some(i => i.kind === 'scorm' && i.scorm === 'SCORM 2004' && i.pkg && i.pkg.version === 'SCORM 2004'));
     ACT.s1ItemMove({ dataset: { id, i: 'c2', d: '-1' } }); ok('S1-03 reorder', s1Spec(c).items[0].id === 'c2');
     ACT.s1ItemEdit({ dataset: { id, i: 'c1' } }); fill({ '#ci-t': 'Guide to the basics (v2)' }); prim(); ok('S1-03 edit', s1Spec(c).items.find(i => i.id === 'c1').title === 'Guide to the basics (v2)');
     ACT.s1ItemRetire({ dataset: { id, i: 'c4' } }); reason('Not needed'); ok('S1-03 retire (kept, out of its module)', s1Spec(c).items.find(i => i.id === 'c4').status === 'Retired' && !s1Mods(c).some(m => m.items.includes('c4')));

@@ -308,9 +308,9 @@ ACT.cbrResNew = el => {
   if (!cbrResCan(pr) || !s4bCanRes('add', null, pr.id)) return s4bRefuse('Learning Resources', cbEnt(pr), 'add resources');
   const tree = (cbTree(pr) || []).filter(cbrLive), u = x.lvl === 'prog' ? tree.find(y => y.mods.some(cbrLive)) : tree.find(y => y.code === x.u), m = x.lvl === 'mod' ? (u && u.mods.find(y => y.code === x.m)) : u && u.mods.find(cbrLive);
   if (!u || !m) { toast('Add a module first: every resource record belongs to a module in Learning Resources.', 'err'); return; }
-  setUi('s4bFile', '');
+  setUi('s4bFile', ''); setUi('aafuRPk', null); const m0 = MODAL;
   openModal({ title: 'New resource — ' + esc(cbrWhere(x.lvl, x.u, x.m)), size: 'lg', body: `<div class="form-grid"><div class="field full"><label for="rs-t">Title</label><input class="input" id="rs-t"></div><div class="field full"><label for="rs-d">Description</label><input class="input" id="rs-d"></div>
-    <div class="field"><label for="rs-y">Type</label><select class="select" id="rs-y">${S4B_TYPES.map(t => `<option>${t}</option>`).join('')}</select><span class="hint">SCORM packages are recorded and listed; this prototype doesn't play or track them.</span></div><div class="field"><label for="rs-u">Link (Vimeo video or link)</label><input class="input" id="rs-u" placeholder="https://"></div>
+    <div class="field"><label for="rs-y">Type</label><select class="select" id="rs-y">${S4B_TYPES.map(t => `<option>${t}</option>`).join('')}</select><span class="hint">A SCORM package is validated in this browser when you select its ZIP; only its details are recorded.</span></div><div class="field"><label for="rs-u">Link (Vimeo video or link)</label><input class="input" id="rs-u" placeholder="https://"></div>
     <div class="field full"><label for="rs-f">File (PDF, DOCX, PPT or SCORM .zip)</label><input class="input" type="file" id="rs-f" data-onchange="s4bFile"><span class="hint"><span id="rs-fn">No file chosen</span> — the file name is recorded; the file itself is simulated.</span><button type="button" class="linklike small" data-act="s4bSample">Prototype: use a sample file</button></div>
     <fieldset class="stack full" style="border:0;padding:0"><legend class="lbl">Release</legend><label class="check"><input type="radio" name="rs-k" value="now" checked> Immediately</label><label class="check"><input type="radio" name="rs-k" value="date"> On a date</label><div class="field"><label for="rs-dt">Release date</label><input class="input" type="date" id="rs-dt" value="${D(7).slice(0, 10)}"></div></fieldset></div>
     <p class="small muted">Saved as a Draft in Learning Resources and placed on ${esc(cbrWhere(x.lvl, x.u, x.m))}. Publish it here or in Learning Resources; learners see it from its release on.</p>`,
@@ -325,6 +325,9 @@ ACT.cbrResNew = el => {
       S_.res.unshift(r); s4bRows(); s4bLog('Learning Resources', `${r.title} (${id})`, 'Resource added', '—', `${s4bTxt(r)} · placed on ${cbrWhere(x.lvl, x.u, x.m)}`, 'Draft — course builder');
       s4bSyncAll(); render(); toast(`Saved as a Draft (${id}) and placed on ${cbrWhere(x.lvl, x.u, x.m)}.`);
     } }] });
+  // SCH C1 (PD-SCH-01): the same SCORM package validation, status line and demonstration notice as Learning Resources → Add resource
+  // (aafu-followup.js aafuRDlg / aafuRCheck) — an invalid, unvalidated or sample SCORM ZIP can't be saved from here either
+  aafuRNew(m0);
 };
 ACT.cbrResRm = el => {
   const pr = cbPr(el.dataset.p); if (!pr) return; if (!cbrResCan(pr)) return s4bRefuse('Learning Resources', cbEnt(pr), 'change resource placements');
